@@ -1,0 +1,11 @@
+{
+  "name": "Propo-Tienda",
+  "short_name": "Propo-Tienda",
+  "display": "fullscreen",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0a0a1a",
+  "start_url": "/",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

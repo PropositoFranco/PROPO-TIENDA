@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>PROPO-TIENDA · Registro</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Text:ital,wght@0,400;1,400&display=swap');
+:root{--gold:#d4af37;--gold2:#f5d06e;--gold3:#c8922a;--purple:#a855f7;--dark:#060310;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);font-family:'Crimson Text',serif;}
+
+/* BG CANVAS */
+#bgC{position:fixed;inset:0;z-index:0;}
+.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 40%,transparent 30%,rgba(0,0,0,.75) 100%);}
+
+/* GAME WRAP */
+.game{position:relative;z-index:10;width:100vw;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ── HEADER ── */
+.hbar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px 6px;flex-shrink:0;}
+.logo{font-family:'Cinzel',serif;font-size:13px;font-weight:900;letter-spacing:4px;
+  background:linear-gradient(135deg,var(--gold3),var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.sctr{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:rgba(160,130,200,.7);}
+.ptrack{height:3px;background:rgba(255,255,255,.06);margin:0 18px 0;border-radius:3px;overflow:hidden;flex-shrink:0;}
+.pfill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--gold3),var(--gold2));
+  box-shadow:0 0 8px rgba(212,175,55,.6);transition:width .6s cubic-bezier(.34,1.56,.64,1);}
+
+/* ── SCENES ── */
+.scene{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;
+  transform:translateX(60px);transition:none;}
+.scene.active{opacity:1;pointer-events:all;transform:translateX(0);
+  transition:opacity .45s ease,transform .45s cubic-bezier(.34,1.2,.64,1);}
+.scene.exit{opacity:0;transform:translateX(-80px);transition:opacity .3s ease,transform .3s ease;pointer-events:none;}
+
+/* ── MAESTRO ZONE (MOBILE-FIRST STORY STYLE) ── */
+.maestro-zone{
+  position:relative;flex:0 0 auto;
+  display:flex;align-items:flex-end;justify-content:center;
+  overflow:hidden;
+  /* Mobile: show maestro big on top */
+  height:42vh;min-height:200px;max-height:320px;
+}
+.maestro-zone::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:60%;
+  background:linear-gradient(to top,rgba(6,3,16,.98) 0%,rgba(6,3,16,.4) 60%,transparent 100%);
+  z-index:2;
+}
+.maestro-glow{
+  position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:300px;height:200px;
+  background:radial-gradient(ellipse,rgba(160,100,255,.25) 0%,transparent 70%);
+  z-index:1;animation:auraP 3s ease-in-out infinite;
+}
+@keyframes auraP{0%,100%{opacity:.6;transform:translateX(-50%) scale(1);}50%{opacity:1;transform:translateX(-50%) scale(1.1);}}
+.maestro-img{
+  position:relative;z-index:3;
+  height:100%;width:auto;max-width:85%;
+  object-fit:contain;object-position:center bottom;
+  filter:drop-shadow(0 0 25px rgba(160,100,255,.5)) drop-shadow(0 30px 50px rgba(0,0,0,.9));
+  animation:mFloat 3.5s ease-in-out infinite,mBreathe 4s ease-in-out infinite;
+  transform-origin:bottom center;
+}
+@keyframes mFloat{0%,100%{transform:translateY(0) rotate(0deg);}40%{transform:translateY(-14px) rotate(.5deg);}70%{transform:translateY(-7px) rotate(-.3deg);}}
+@keyframes mBreathe{0%,100%{filter:drop-shadow(0 0 20px rgba(160,100,255,.4)) drop-shadow(0 30px 50px rgba(0,0,0,.9));}50%{filter:drop-shadow(0 0 40px rgba(212,175,55,.35)) drop-shadow(0 30px 50px rgba(0,0,0,.9));}}
+
+/* Scene 0: maestro even bigger / centered like a story card */
+.s0 .maestro-zone{height:50vh;min-height:240px;max-height:380px;}
+.s0 .maestro-img{animation:mEntrance .9s cubic-bezier(.34,1.56,.64,1) both,mFloat 3.5s 1s ease-in-out infinite,mBreathe 4s 1s ease-in-out infinite;}
+@keyframes mEntrance{0%{opacity:0;transform:translateX(-100px) scale(.65) rotate(-8deg);}70%{transform:translateX(12px) scale(1.04) rotate(1deg);}100%{opacity:1;transform:translateX(0) scale(1) rotate(0);}}
+
+/* ── SCROLL PANEL AREA ── */
+.panel-area{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 12px 20px;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.panel-area::-webkit-scrollbar{display:none;}
+
+/* ── GAME PANEL ── */
+.gpanel{
+  background:linear-gradient(160deg,rgba(22,10,50,.98),rgba(12,6,30,.99));
+  border:1.5px solid rgba(212,175,55,.55);border-radius:16px;
+  padding:22px 20px 20px;position:relative;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(255,255,255,.04) inset,0 0 60px rgba(0,0,0,.9),0 0 40px rgba(212,175,55,.12),0 0 80px rgba(160,100,255,.08);
+  margin-top:-24px;}
+
+.gpanel::before{content:'';position:absolute;inset:0;border-radius:16px;
+  background:linear-gradient(135deg,rgba(212,175,55,.04) 0%,transparent 50%,rgba(160,100,255,.02) 100%);pointer-events:none;}
+.shim{position:absolute;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(212,175,55,.5),transparent);animation:shim 3s ease-in-out infinite;}
+.shim.t{top:0}.shim.b{bottom:0;background:linear-gradient(90deg,transparent,rgba(160,100,255,.3),transparent);animation-delay:1.5s;}
+@keyframes shim{0%,100%{opacity:.3;}50%{opacity:1;}}
+.oc{position:absolute;width:18px;height:18px;border-color:rgba(212,175,55,.5);border-style:solid;}
+.oc.tl{top:7px;left:7px;border-width:2px 0 0 2px;border-radius:3px 0 0 0}
+.oc.tr{top:7px;right:7px;border-width:2px 2px 0 0;border-radius:0 3px 0 0}
+.oc.bl{bottom:7px;left:7px;border-width:0 0 2px 2px;border-radius:0 0 0 3px}
+.oc.br{bottom:7px;right:7px;border-width:0 2px 2px 0;border-radius:0 0 3px 0}
+
+/* PANEL BADGE */
+.pbadge{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(212,175,55,.1);}
+.bnum{width:36px;height:36px;flex-shrink:0;
+  background:linear-gradient(135deg,#3b0764,#6b21a8);
+  border:2px solid var(--gold);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Cinzel',serif;font-size:18px;font-weight:900;color:var(--gold2);
+  box-shadow:0 0 20px rgba(212,175,55,.4),inset 0 1px 0 rgba(255,255,255,.1);
+  animation:bGlow 2s ease-in-out infinite alternate;}
+@keyframes bGlow{from{box-shadow:0 0 10px rgba(212,175,55,.3);}to{box-shadow:0 0 28px rgba(212,175,55,.8),0 0 55px rgba(212,175,55,.15);}}
+.btxt{font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;color:rgba(212,175,55,.9);text-transform:uppercase;}
+.bsub{font-family:'Crimson Text',serif;font-size:12px;color:rgba(180,150,220,.55);font-style:italic;margin-top:1px;}
+
+/* GEMS */
+.gems{display:flex;gap:7px;margin-bottom:12px;}
+.g{width:19px;height:19px;border-radius:50%;position:relative;animation:gP 2s ease-in-out infinite;flex-shrink:0;}
+.g::after{content:'';position:absolute;inset:3px;border-radius:50%;background:rgba(255,255,255,.25);}
+@keyframes gP{0%,100%{transform:scale(1);}50%{transform:scale(1.22);}}
+.g1{background:radial-gradient(circle at 35% 35%,#ff6b9d,#8b0038);box-shadow:0 0 9px rgba(255,50,100,.8);animation-delay:0s}
+.g2{background:radial-gradient(circle at 35% 35%,#5dbb6b,#1a5e1a);box-shadow:0 0 9px rgba(50,200,80,.8);animation-delay:.2s}
+.g3{background:radial-gradient(circle at 35% 35%,#a855f7,#4b0082);box-shadow:0 0 9px rgba(168,85,247,1);animation-delay:.4s}
+.g4{background:radial-gradient(circle at 35% 35%,#60a5fa,#1e3a8a);box-shadow:0 0 9px rgba(96,165,250,.8);animation-delay:.6s}
+.g5{background:radial-gradient(circle at 35% 35%,#fbbf24,#92400e);box-shadow:0 0 9px rgba(251,191,36,.8);animation-delay:.8s}
+
+/* TITLE */
+.ptitle{font-family:'Cinzel',serif;font-size:20px;font-weight:900;line-height:1.2;
+  background:linear-gradient(135deg,var(--gold3),var(--gold2),var(--gold3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;}
+.pdesc{color:rgba(210,185,240,.8);font-size:13px;line-height:1.65;font-family:'Crimson Text',serif;}
+.pdesc strong{color:var(--gold2);}.pdesc b{color:var(--gold3);}
+
+/* CHIP */
+.chip{display:flex;align-items:center;gap:7px;background:rgba(160,100,255,.07);
+  border:1px solid rgba(160,100,255,.22);border-radius:7px;padding:8px 10px;margin-bottom:10px;}
+.chip span{color:#d4b8ff;font-size:13px;font-family:'Crimson Text',serif;font-weight:600;}
+
+/* INPUTS */
+.flbl{font-family:'Cinzel',serif;font-size:12px;letter-spacing:2px;color:#e8d5ff;
+  text-transform:uppercase;margin-bottom:8px;display:block;font-weight:700;}
+.fbox{position:relative;margin-bottom:8px;}
+.fico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:rgba(212,175,55,.5);font-size:14px;pointer-events:none;}
+.rinp{width:100%;padding:14px 14px 14px 40px;background:rgba(40,20,80,.85);
+  border:1.5px solid rgba(212,175,55,.7);border-radius:10px;color:#fff5b0;
+  font-family:'Cinzel',serif;font-size:15px;font-weight:600;outline:none;transition:all .3s;letter-spacing:.5px;}
+.rinp:focus{border-color:rgba(212,175,55,.6);background:rgba(8,4,20,.97);box-shadow:0 0 0 3px rgba(212,175,55,.07),0 0 18px rgba(212,175,55,.12);}
+.rinp.err{border-color:rgba(239,68,68,.5);animation:shake .4s ease;}
+@keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-8px);}40%{transform:translateX(8px);}60%{transform:translateX(-5px);}80%{transform:translateX(5px);}}
+.etxt{color:#f87171;font-size:10px;font-family:'Cinzel',serif;letter-spacing:1px;margin:-4px 0 6px;display:none;}
+.etxt.show{display:block;}
+
+/* HINT */
+.hint{display:flex;align-items:center;gap:6px;margin:8px 0 10px;color:rgba(200,170,255,.75);font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;}
+.hhand{font-size:15px;animation:hb 1.5s ease-in-out infinite;}
+@keyframes hb{0%,100%{transform:translateY(0);}50%{transform:translateY(5px);}}
+
+/* BUTTONS */
+.bmain{width:100%;padding:15px;
+  background:linear-gradient(135deg,#b8820a,#e8c84a,#d4af37,#b8820a);background-size:200% auto;
+  border:none;border-radius:10px;color:#1a0800;
+  font-family:'Cinzel',serif;font-size:13px;font-weight:900;letter-spacing:4px;text-transform:uppercase;
+  cursor:pointer;position:relative;overflow:hidden;transition:all .3s;
+  box-shadow:0 4px 0 rgba(0,0,0,.4),0 6px 20px rgba(212,175,55,.35),inset 0 1px 0 rgba(255,255,255,.3);
+  animation:bshine 3s ease-in-out infinite;}
+@keyframes bshine{0%,100%{background-position:0% center;}50%{background-position:100% center;}}
+.bmain::before{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
+  transform:skewX(-20deg);animation:bswipe 3s ease-in-out infinite;}
+@keyframes bswipe{0%,60%,100%{left:-100%;}50%{left:160%;}}
+.bmain:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.4),0 4px 12px rgba(212,175,55,.3);}
+
+.bsec{padding:11px;background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.2);border-radius:8px;
+  color:rgba(212,175,55,.7);font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;cursor:pointer;
+  text-transform:uppercase;transition:all .3s;}
+.bsec:hover{background:rgba(212,175,55,.12);color:var(--gold2);}
+.brow{display:flex;gap:8px;margin-top:10px;}
+
+/* CHECK LIST */
+.clist{list-style:none;margin:10px 0;}
+.clist li{display:flex;align-items:flex-start;gap:8px;margin-bottom:7px;padding:8px 10px;
+  background:rgba(34,197,94,.04);border:1px solid rgba(34,197,94,.12);border-radius:7px;
+  color:rgba(210,185,240,.85);font-size:12px;font-family:'Crimson Text',serif;line-height:1.4;}
+.ci{color:#22c55e;font-size:14px;flex-shrink:0;}
+
+/* DATA PREVIEW */
+.dprev{margin:10px 0;border-radius:8px;overflow:hidden;border:1px solid rgba(212,175,55,.15);}
+.drow{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(212,175,55,.03);border-bottom:1px solid rgba(212,175,55,.07);}
+.drow:last-child{border-bottom:none;}
+.dkey{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:rgba(160,130,200,.6);min-width:68px;}
+.dval{font-family:'Cinzel',serif;font-size:11px;color:var(--gold2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* AVATAR GRID */
+.avgrid{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:12px 0;}
+.avopt{width:52px;height:52px;border-radius:12px;background:rgba(160,100,255,.08);
+  border:2px solid rgba(160,100,255,.2);display:flex;align-items:center;justify-content:center;
+  font-size:22px;cursor:pointer;transition:all .3s cubic-bezier(.34,1.56,.64,1);position:relative;}
+.avopt:active{transform:scale(.93);}
+.avopt.sel{border-color:var(--gold2);background:rgba(212,175,55,.14);box-shadow:0 0 18px rgba(212,175,55,.4);transform:scale(1.1);}
+.avopt.sel::after{content:'✓';position:absolute;bottom:-5px;right:-5px;width:18px;height:18px;
+  background:#22c55e;border-radius:50%;font-size:10px;color:white;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;}
+
+/* SUCCESS */
+.xbig{font-size:48px;text-align:center;margin:8px 0;animation:xspin 2s ease-in-out infinite;}
+@keyframes xspin{0%,100%{transform:rotate(-8deg) scale(1);}50%{transform:rotate(8deg) scale(1.15);}}
+.bpurple{width:100%;padding:15px;background:linear-gradient(135deg,#581c87,#9333ea,#6b21a8);background-size:200% auto;
+  border:none;border-radius:10px;color:#f3e8ff;font-family:'Cinzel',serif;font-size:12px;font-weight:900;
+  letter-spacing:3px;text-transform:uppercase;cursor:pointer;overflow:hidden;position:relative;
+  box-shadow:0 4px 0 rgba(0,0,0,.4),0 8px 25px rgba(147,51,234,.45);transition:all .3s;animation:bshine 3s ease-in-out infinite;}
+.bpurple:active{transform:translateY(2px);}
+
+/* DESKTOP: side by side */
+@media(min-width:640px){
+  .scene{flex-direction:row;}
+  .maestro-zone{width:40%;height:100%;max-height:none;min-height:unset;flex:0 0 40%;}
+  .maestro-zone::after{display:none;}
+  .panel-area{flex:1;display:flex;align-items:center;padding:20px 20px 20px 0;}
+  .gpanel{margin-top:0;width:100%;max-width:420px;}
+  .s0 .maestro-zone{width:45%;flex:0 0 45%;}
+  .maestro-img{max-width:none;width:100%;}
+}
+
+/* ── CLASH ROYALE ENHANCEMENTS ── */
+.bmain:hover{transform:translateY(-2px);box-shadow:0 6px 0 rgba(0,0,0,.4),0 10px 30px rgba(212,175,55,.55),inset 0 1px 0 rgba(255,255,255,.4);}
+.bpurple:hover{transform:translateY(-2px);box-shadow:0 6px 0 rgba(0,0,0,.4),0 10px 30px rgba(147,51,234,.6);}
+.bmain:active,.bpurple:active{transform:translateY(3px) scale(.97)!important;transition:transform .08s!important;}
+
+@keyframes panelIn{from{transform:scale(.93) translateY(18px);opacity:0;}to{transform:none;opacity:1;}}
+.scene.active .gpanel{animation:panelIn .45s cubic-bezier(.34,1.4,.64,1) both;}
+
+.flash-gold{position:fixed;inset:0;background:rgba(212,175,55,.12);z-index:999;pointer-events:none;animation:flashGold .35s ease forwards;}
+@keyframes flashGold{0%{opacity:1;}100%{opacity:0;}}
+
+.ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.28);transform:scale(0);animation:rippleOut .55s ease-out forwards;pointer-events:none;}
+@keyframes rippleOut{to{transform:scale(5);opacity:0;}}
+
+.rinp:focus{border-color:rgba(212,175,55,.75);background:rgba(8,4,20,.98);
+  box-shadow:0 0 0 3px rgba(212,175,55,.1),0 0 25px rgba(212,175,55,.18),inset 0 0 12px rgba(212,175,55,.04);}
+
+.avopt:hover:not(.sel){transform:scale(1.1);border-color:rgba(212,175,55,.45);background:rgba(212,175,55,.07);}
+
+.bnum{transition:transform .2s cubic-bezier(.34,1.56,.64,1);}
+.pbadge:hover .bnum{transform:scale(1.12) rotate(-5deg);}
+
+/* ── NITIDEZ DE TEXTO ── */
+*{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;}
+
+.flbl{text-shadow:0 0 12px rgba(220,190,255,.4);}
+
+.btxt{text-shadow:0 0 15px rgba(212,175,55,.6);}
+
+.rinp{text-shadow:0 1px 3px rgba(0,0,0,.8);}
+
+.bmain{text-shadow:0 1px 2px rgba(0,0,0,.5);}
+
+.chip span{text-shadow:0 0 10px rgba(180,140,255,.4);}
+
+.hint{color:rgba(210,185,255,.85);text-shadow:0 0 8px rgba(180,140,255,.3);}
+
+</style>
+</head>
+<body>
+<canvas id="bgC"></canvas>
+<div class="vignette"></div>
+
+<div class="game">
+  <div class="hbar">
+    <div class="logo">PROPO-TIENDA</div>
+    <div class="sctr" id="sctr">PASO 1 DE 6</div>
+  </div>
+  <div class="ptrack"><div class="pfill" id="pfill" style="width:8%"></div></div>
+
+  <!-- S0: BIENVENIDA -->
+  <div class="scene s0 active" id="s0">
+    <div class="maestro-zone">
+      <div class="maestro-glow"></div>
+      <img class="maestro-img" src="/assets/maestro_templario.png" />
+    </div>
+    <div class="panel-area">
+      <div class="gpanel">
+        <div class="shim t"></div><div class="shim b"></div>
+        <div class="oc tl"></div><div class="oc tr"></div><div class="oc bl"></div><div class="oc br"></div>
+        <div class="pbadge"><div class="bnum">1</div><div><div class="btxt">BIENVENIDO, TEMPLARIO</div><div class="bsub">El Templo del Propósito te espera</div></div></div>
+        <div class="gems"><div class="g g1"></div><div class="g g2"></div><div class="g g3"></div><div class="g g4"></div><div class="g g5"></div></div>
+        <div class="ptitle">¡Bienvenido a PROPO-TIENDA! 🏛️</div>
+        <p class="pdesc" style="margin-top:8px;">Has dado el primer paso para formar parte del <strong>Templo del Propósito</strong>.<br><br>Para continuar necesitamos verificar algunos datos importantes.</p>
+        <div class="hint" style="margin-top:12px;"><span class="hhand">👆</span><span>TOCA PARA CONTINUAR</span></div>
+        <button class="bmain" onclick="go(1)">Continuar &nbsp;›</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- S1: NOMBRES -->
+  <div class="scene" id="s1">
+    <div class="maestro-zone">
+      <div class="maestro-glow"></div>
+      <img class="maestro-img" src="/assets/maestro_templario.png" />
+    </div>
+    <div class="panel-area">
+      <div class="gpanel">
+        <div class="shim t"></div><div class="shim b"></div>
+        <div class="oc tl"></div><div class="oc tr"></div><div class="oc bl"></div><div class="oc br"></div>
+        <div class="pbadge"><div class="bnum">2</div><div><div class="btxt">PASO 1 DE 2</div><div class="bsub">Tu identidad en el Templo</div></div></div>
+        <label class="flbl">Tu nombre en la PROPO-TIENDA</label>
+        <div class="fbox"><span class="fico">👤</span><input class="rinp" type="text" id="skN" placeholder="Escribe tu nombre..."></div>
+        <div class="etxt" id="esk">⚠ Campo obligatorio</div>
+        <label class="flbl">Elige tu nombre dentro de la PROPO-TIENDA</label>
+        <div class="fbox"><span class="fico">⭐</span><input class="rinp" type="text" id="stN" placeholder="Tu nombre legendario en el Templo..."></div>
+        <div class="etxt" id="est">⚠ Elige un nombre para la PROPO-TIENDA</div>
+        <div class="hint"><span class="hhand">👆</span><span>AMBOS CAMPOS SON OBLIGATORIOS</span></div>
+        <button class="bmain" onclick="v1()">Continuar &nbsp;›</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- S2: CORREO -->
+ <div class="scene" id="s2">
+  <div class="maestro-zone">
+    <div class="maestro-glow"></div>
+    <img class="maestro-img" src="/assets/maestro_templario.png" />
+  </div>
+  <div class="panel-area">
+    <div class="gpanel">
+      <div class="shim t"></div><div class="shim b"></div>
+      <div class="oc tl"></div><div class="oc tr"></div><div class="oc bl"></div><div class="oc br"></div>
+      <div class="pbadge"><div class="bnum">2</div><div><div class="btxt">PASO 2 DE 6</div><div class="bsub">Tus credenciales de acceso</div></div></div>
+      <div style="margin-top:14px;">
+        <label class="flbl">Correo Electrónico</label>
+        <div class="fbox" style="position:relative;display:flex;align-items:center;">
+          <span class="fico">✉️</span>
+          <input class="rinp" type="email" id="emN" placeholder="tucorreo@ejemplo.com" style="flex:1;">
+        </div>
+        <div class="etxt" id="eem">⚠ Ingresa un correo válido</div>
+      </div>
+      
+      <div style="margin-top:14px;">
+        <label class="flbl">Contraseña</label>
+        <div class="fbox" style="position:relative;display:flex;align-items:center;">
+          <span class="fico">🔑</span>
+          <input class="rinp" type="password" id="pwN" placeholder="Mínimo 6 caracteres" style="flex:1;padding-right:48px;">
+          <button type="button" onclick="togglePw()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:20px;line-height:1;padding:4px;" id="pwEye">👁️</button>
+        </div>
+        <div class="etxt" id="epw">⚠ Mínimo 6 caracteres</div>
+      </div>
+      <button class="bmain" style="margin-top:18px;" onclick="v2()">Continuar &nbsp;›</button>
+    </div>
+  </div>
+</div>
+
+  <!-- S3: CONFIRMAR -->
+  <div class="scene" id="s3">
+    <div class="maestro-zone">
+      <div class="maestro-glow"></div>
+      <img class="maestro-img" src="/assets/maestro_templario.png" />
+    </div>
+    <div class="panel-area">
+      <div class="gpanel">
+        <div class="shim t"></div><div class="shim b"></div>
+        <div class="oc tl"></div><div class="oc tr"></div><div class="oc bl"></div><div class="oc br"></div>
+        <div class="pbadge"><div class="bnum">4</div><div><div class="btxt">¡DATOS IMPORTANTES!</div><div class="bsub">Verifica antes de continuar</div></div></div>
+        <ul class="clist">
+          <li><span class="ci">✅</span>Tu nombre en la PROPO-TIENDA será el que elegiste.</li>
+          <li><span class="ci">✅</span>Tu correo sea válido y accesible.</li>
+          <li><span class="ci">✅</span>Así podrás recibir tus recompensas sin problemas.</li>
+        </ul>
+        <div class="dprev">
+          <div class="drow"><span class="dkey">Nombre</span><span class="dval" id="pvsk">—</span></div>
+          <div class="drow"><span class="dkey">PROPO-TIENDA</span><span class="dval" id="pvst">—</span></div>
+          <div class="drow"><span class="dkey">Email</span><span class="dval" id="pvem">—</span></div>
+        </div>
+        <div class="brow">
+          <button class="bsec" onclick="go(1)">✏️ Editar</button>
+          <button class="bmain" style="flex:2;margin-top:0;" onclick="go(4)">Confirmar &nbsp;›</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S4: AVATAR -->
+  <div class="scene" id="s4">
+    <div class="maestro-zone">
+      <div class="maestro-glow"></div>
+      <!-- Cambiar el base64 gigante por: -->
+<img class="maestro-img" src="/assets/maestro_templario.png" />
+    </div>
+    <div class="panel-area">
+      <div class="gpanel">
+        <div class="shim t"></div><div class="shim b"></div>
+        <div class="oc tl"></div><div class="oc tr"></div><div class="oc bl"></div><div class="oc br"></div>
+        <div class="pbadge"><div class="bnum">5</div><div><div class="btxt">TU AVENTURA TE ESPERA</div><div class="bsub">Elige tu avatar inicial</div></div></div>
+        <p class="pdesc">Personaliza tu avatar y hazlo único. Podrás cambiar atuendos, accesorios y mucho más.</p>
+        <div class="avgrid">
+          <div class="avopt sel" onclick="selAv(this)">⚔️</div>
+          <div class="avopt" onclick="selAv(this)">🧙</div>
+          <div class="avopt" onclick="selAv(this)">🛡️</div>
+          <div class="avopt" onclick="selAv(this)">🗺️</div>
+          <div class="avopt" onclick="selAv(this)">📚</div>
+          <div class="avopt" onclick="selAv(this)">👑</div>
+        </div>
+        <button class="bmain" onclick="go(5)">✨ ¡Personalizar Avatar! &nbsp;›</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- S5: LISTO -->
+  <div class="scene" id="s5">
+    <div class="maestro-zone" style="--aura-color:rgba(212,175,55,.25);">
+      <div class="maestro-glow" style="background:radial-gradient(ellipse,rgba(212,175,55,.25) 0%,transparent 70%);"></div>
+      <img class="maestro-img" src="/assets/maestro_templario.png" />
+    </div>
+    <div class="panel-area">
+      <div class="gpanel">
+        <div class="shim t"></div><div class="shim b"></div>
+        <div class="oc tl"></div><div class="oc tr"></div><div class="oc bl"></div><div class="oc br"></div>
+        <div class="pbadge">
+          <div class="bnum" style="background:linear-gradient(135deg,#14532d,#15803d);border-color:#22c55e;color:#4ade80;box-shadow:0 0 20px rgba(34,197,94,.4);">6</div>
+          <div><div class="btxt" style="color:#4ade80;">¡TODO LISTO!</div><div class="bsub">Bienvenido al Templo</div></div>
+        </div>
+        <div class="xbig">🪙🏛️</div>
+        <p class="pdesc" style="text-align:center;margin:6px 0 14px;">
+          Tu transformación empieza <strong>ahora.</strong><br><br>
+          <span style="color:#f5d06e;">⚔️ Compite</span> en tiempo real contra otros Templarios.<br>
+          <span style="color:#a78bfa;">🗺️ Recibe</span> tu plan personalizado para dominar tus 8 territorios.<br>
+          <span style="color:#4ade80;">🏆 Acumula</span> PropoCoins, XP, mapas, claves y victorias rápidas.<br><br>
+          <span style="font-size:12px;color:rgba(212,175,55,.7);letter-spacing:1px;font-family:'Cinzel',serif;">EL MUNDO NO PODRÁ IGNORARTE.</span>
+        </p>
+        <button class="bpurple" onclick="goStore()">⚡ &nbsp;¡ENTRAR AL TEMPLO AHORA! &nbsp;›</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// BG CANVAS
+const cv=document.getElementById('bgC'),cx=cv.getContext('2d');
+let W,H,stars=[],parts=[];
+function rsz(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+rsz();addEventListener('resize',rsz);
+for(let i=0;i<120;i++) stars.push({x:Math.random(),y:Math.random()*.75,r:Math.random()*1.5+.3,o:Math.random(),d:Math.random()*.015+.004});
+const PC=['rgba(212,175,55','rgba(160,100,255','rgba(96,165,250','rgba(251,191,36'];
+for(let i=0;i<28;i++) parts.push({x:Math.random()*100,y:100+Math.random()*100,vx:(Math.random()-.5)*.2,vy:-(Math.random()*.4+.1),r:Math.random()*3+1,c:PC[Math.floor(Math.random()*4)],l:Math.random()*80,ml:80+Math.random()*60});
+function draw(){
+  const bg=cx.createRadialGradient(W/2,H*.3,0,W/2,H*.6,H);
+  bg.addColorStop(0,'#1a0a2e');bg.addColorStop(.4,'#0d0520');bg.addColorStop(.7,'#080312');bg.addColorStop(1,'#030108');
+  cx.fillStyle=bg;cx.fillRect(0,0,W,H);
+  const pg=cx.createRadialGradient(W/2,H,0,W/2,H,W*.6);
+  pg.addColorStop(0,'rgba(80,40,180,.1)');pg.addColorStop(1,'rgba(0,0,0,0)');
+  cx.fillStyle=pg;cx.fillRect(0,0,W,H);
+  stars.forEach(s=>{s.o+=s.d;if(s.o>1||s.o<0)s.d=-s.d;cx.beginPath();cx.arc(s.x*W,s.y*H,s.r,0,Math.PI*2);cx.fillStyle=`rgba(255,255,255,${s.o*.8})`;cx.fill();});
+  parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.l++;if(p.l>p.ml){p.x=Math.random()*100;p.y=H+10;p.l=0;p.ml=80+Math.random()*60;}const a=Math.sin(p.l/p.ml*Math.PI)*.8;cx.beginPath();cx.arc(p.x*W/100,p.y,p.r,0,Math.PI*2);cx.fillStyle=p.c+`,${a})`;cx.fill();});
+}
+(function loop(){draw();requestAnimationFrame(loop);})();
+
+// STEP LOGIC
+let cur=0;
+const D={sk:'',st:'',em:'',pw:''};
+const pct=[8,25,42,60,78,100];
+const lbl=['PASO 1 DE 6','PASO 2 DE 6','PASO 3 DE 6','PASO 4 DE 6','PASO 5 DE 6','PASO 6 DE 6'];
+function go(n){
+  const prev=document.getElementById('s'+cur);
+  prev.classList.remove('active');prev.classList.add('exit');
+  setTimeout(()=>prev.classList.remove('exit'),350);
+  cur=n;
+  document.getElementById('pfill').style.width=pct[n]+'%';
+  document.getElementById('sctr').textContent=lbl[n];
+  if(n===3){document.getElementById('pvsk').textContent=D.sk||'—';document.getElementById('pvst').textContent=D.st||'—';document.getElementById('pvem').textContent=D.em||'—';}
+  const nx=document.getElementById('s'+n);
+  nx.style.cssText='transform:translateX(60px);opacity:0;';
+  nx.classList.add('active');
+  requestAnimationFrame(()=>{nx.style.cssText='';});
+}
+function v1(){
+  let ok=true;
+  ['esk','skN','est','stN'].forEach(id=>document.getElementById(id).classList.remove('show','err'));
+  const sk=document.getElementById('skN').value.trim();
+  const st=document.getElementById('stN').value.trim();
+  if(!sk){document.getElementById('esk').classList.add('show');document.getElementById('skN').classList.add('err');ok=false;}
+  if(!st){document.getElementById('est').classList.add('show');document.getElementById('stN').classList.add('err');ok=false;}
+  if(ok){
+    // Pedir validación de nick al padre antes de avanzar
+    D.sk=sk;D.st=st;
+    window.parent.postMessage({ type: 'check-nick', nick: st }, '*');
+    // El padre responderá con 'nick-ok' o 'nick-taken'
+  }
+}
+function togglePw(){
+  const p=document.getElementById('pwN');
+  const eye=document.getElementById('pwEye');
+  p.type=p.type==='password'?'text':'password';
+  eye.textContent=p.type==='password'?'👁':'🙈';
+}
+
+function v2(){
+  document.getElementById('eem').classList.remove('show');document.getElementById('emN').classList.remove('err');
+  document.getElementById('epw').classList.remove('show');document.getElementById('pwN').classList.remove('err');
+  const em=document.getElementById('emN').value.trim();
+  const pw=document.getElementById('pwN').value.trim();
+  if(!em||!em.includes('@')||!em.includes('.')){document.getElementById('eem').classList.add('show');document.getElementById('emN').classList.add('err');return;}
+  if(!pw||pw.length<6){document.getElementById('epw').classList.add('show');document.getElementById('pwN').classList.add('err');return;}
+  D.em=em;D.pw=pw;go(3);
+}
+function selAv(el){document.querySelectorAll('.avopt').forEach(a=>a.classList.remove('sel'));el.classList.add('sel');}
+function goStore(){
+  // Obtener los inputs por su ID
+  const skoolInput = document.getElementById('skN');
+  const templarioInput = document.getElementById('stN');
+  const emailInput = document.getElementById('emN');
+  const avatar = document.querySelector('.avopt.sel');
+
+  const skoolName = skoolInput ? skoolInput.value : '';
+  const templarioName = templarioInput ? templarioInput.value : '';
+  const email = emailInput ? emailInput.value : '';
+
+  window.parent.postMessage({
+    type: 'register-complete',
+    skoolName: skoolName,
+    templarioName: templarioName,
+    email: email,
+    password: D.pw,
+    avatar: avatar ? avatar.textContent.trim() : '⚔️'
+  }, '*');
+
+  // El resto de tu código SFX y ripple se queda igual, solo no borres nada más.
+}
+
+  // ── SFX ENGINE ──
+const SFX={
+  _c:null,_g(){if(!this._c)try{this._c=new(window.AudioContext||window.webkitAudioContext)()}catch{}return this._c;},
+  _p(f,t='sine',d=.12,v=.06,dl=0){
+    try{const c=this._g();if(!c)return;const o=c.createOscillator(),g=c.createGain();
+    o.connect(g);g.connect(c.destination);o.type=t;o.frequency.value=f;
+    const T=c.currentTime+dl;g.gain.setValueAtTime(0,T);g.gain.linearRampToValueAtTime(v,T+.01);
+    g.gain.exponentialRampToValueAtTime(.001,T+d);o.start(T);o.stop(T+d+.01);}catch{}},
+  click(){this._p(660,'triangle',.08,.06);this._p(990,'sine',.06,.04,.04);},
+  next(){[440,550,700].forEach((f,i)=>this._p(f,'sine',.12,.05,i*.05));},
+  select(){this._p(1100,'sine',.07,.05);this._p(1400,'sine',.05,.03,.06);},
+  error(){this._p(200,'sawtooth',.1,.05);this._p(160,'sawtooth',.1,.04,.1);},
+  focus(){this._p(800,'sine',.05,.025);},
+  win(){[262,330,392,523,659,784,1047].forEach((f,i)=>this._p(f,'sine',.28,.09,i*.07));}
+};
+
+// ── RIPPLE en botones ──
+document.querySelectorAll('.bmain,.bpurple,.bsec').forEach(btn=>{
+  btn.style.overflow='hidden';btn.style.position='relative';
+  btn.addEventListener('pointerdown',e=>{
+    const r=document.createElement('span');r.className='ripple';
+    const rect=btn.getBoundingClientRect();const sz=Math.max(btn.clientWidth,btn.clientHeight);
+    r.style.cssText=`width:${sz}px;height:${sz}px;left:${e.clientX-rect.left-sz/2}px;top:${e.clientY-rect.top-sz/2}px;`;
+    btn.appendChild(r);setTimeout(()=>r.remove(),600);
+  });
+});
+
+// ── FLASH en transiciones ──
+const _go=go;
+window.go=function(n){
+  SFX.next();
+  const f=document.createElement('div');f.className='flash-gold';document.body.appendChild(f);
+  setTimeout(()=>f.remove(),400);
+  _go(n);
+};
+
+// ── Sonidos en inputs ──
+document.querySelectorAll('.rinp').forEach(i=>{
+  i.addEventListener('focus',()=>SFX.focus());
+});
+
+// ── Sonido en avatares ──
+document.querySelectorAll('.avopt').forEach(av=>{
+  av.addEventListener('click',()=>SFX.select());
+});
+
+// ── Escuchar nick tomado desde React ──
+window.addEventListener('message', function(e) {
+  if (e.data?.type === 'nick-taken') {
+    const est = document.getElementById('est');
+    const stN = document.getElementById('stN');
+    if (est) { est.textContent = '⚠ Ese nombre ya está en uso. Elige otro'; est.classList.add('show'); }
+    if (stN) { stN.classList.add('err'); stN.value = ''; stN.focus(); }
+    SFX.error();
+  }
+  if (e.data?.type === 'nick-ok') {
+    go(2); // ✅ Avanzar solo si el nick está libre
+  }
+});
+
+// ── Sonido en goStore ──
+const _gs=goStore;
+window.goStore=function(){
+  SFX.win();
+  // Fanfarria épica en capas
+  setTimeout(()=>{
+    [523,659,784,1047,1319].forEach((f,i)=>SFX._p(f,'sine',.4,.12,i*.08));
+  },200);
+  setTimeout(()=>{
+    [784,988,1175].forEach((f,i)=>SFX._p(f,'triangle',.3,.07,i*.1));
+  },600);
+  setTimeout(_gs,1100);
+};
+
+// ── Sonido en errores ──
+const _v2=v2;
+window.v1=function(){
+  const sk=document.getElementById('skN').value.trim();
+  const st=document.getElementById('stN').value.trim();
+  if(!sk||!st){ SFX.error(); }
+  // v1 original maneja el check-nick, no llamar _v1 aquí
+  // porque v1 ya fue sobreescrita por window.v1
+  ['esk','skN','est','stN'].forEach(id=>document.getElementById(id).classList.remove('show','err'));
+  if(!sk){document.getElementById('esk').classList.add('show');document.getElementById('skN').classList.add('err');return;}
+  if(!st){document.getElementById('est').classList.add('show');document.getElementById('stN').classList.add('err');return;}
+  D.sk=sk;D.st=st;
+  window.parent.postMessage({ type: 'check-nick', nick: st }, '*');
+};
+window.v2=function(){
+  const em=document.getElementById('emN').value.trim();
+  if(!em||!em.includes('@'))SFX.error(); _v2();
+};
+</script>
+</body>
+</html>
