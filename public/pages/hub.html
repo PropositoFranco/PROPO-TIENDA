@@ -83,7 +83,6 @@ body.perf-low .arch-icon,
 body.perf-low .continue-arrow,
 body.perf-low .bottom-coins,
 body.perf-low .nav-ranking,
-body.perf-low .portal-badge,
 body.perf-low .xp-fill,
 body.perf-low .portal.center,
 body.perf-low .portal.center::before,
@@ -127,7 +126,12 @@ body.perf-mid .arch { transition: none !important; }
 body.perf-mid .portal { transition: transform 0.2s !important; }
 body.perf-mid .arch-gem { animation-duration: 4s !important; }
 body.perf-mid .arch-platform { animation-duration: 4s !important; }
-body.perf-mid .portal-badge { animation: badgePop 0.4s cubic-bezier(0.175,0.885,0.32,1.4) both !important; }
+/* Badges always keep full animation even in mid/low perf */
+body.perf-mid .portal-badge,
+body.perf-low .portal-badge {
+  animation: badgePop 0.5s cubic-bezier(0.175,0.885,0.32,1.4) both,
+             badgePulse 2.2s ease-in-out 0.5s infinite !important;
+}
 
 /* Reducir drop-shadows en móvil */
 @media (max-width: 768px) {
@@ -962,16 +966,25 @@ body.perf-mid .portal-badge { animation: badgePop 0.4s cubic-bezier(0.175,0.885,
 .portal-badge.badge-stamp { background:linear-gradient(135deg,#ff1744,#ff6d00); color:#fff; border:3px solid #ff6d00; border-radius:4px; box-shadow:0 0 16px rgba(255,23,68,0.95),0 0 32px rgba(255,23,68,0.5),0 2px 8px rgba(0,0,0,0.9); transform:translateX(-50%) rotate(-8deg); letter-spacing:3px; font-size:11px; }
 @media (max-width: 768px) {
   .portal-badge {
-    min-width: 28px;
-    height: 20px;
-    font-size: 16px;
-    padding: 0 6px;
-    top: 6px;
+    min-width: 52px;
+    height: 34px;
+    font-size: 13px;
+    font-weight: 900;
+    padding: 0 12px;
+    top: -4px;
     left: 50%;
     transform: translateX(-50%);
-    border-radius: 10px;
-    border-width: 1.5px;
+    border-radius: 17px;
+    border-width: 2px;
+    letter-spacing: 1.5px;
+    animation: badgePop 0.5s cubic-bezier(0.175,0.885,0.32,1.4) both,
+               badgePulse 2.2s ease-in-out 0.5s infinite !important;
   }
+  .portal-badge.badge-free  { box-shadow:0 0 20px rgba(0,200,83,1),0 0 40px rgba(0,200,83,0.6),0 2px 8px rgba(0,0,0,0.9) !important; }
+  .portal-badge.badge-new   { box-shadow:0 0 20px rgba(41,121,255,1),0 0 40px rgba(41,121,255,0.6),0 2px 8px rgba(0,0,0,0.9) !important; }
+  .portal-badge.badge-alert { box-shadow:0 0 20px rgba(255,23,68,1),0 0 40px rgba(255,23,68,0.6),0 2px 8px rgba(0,0,0,0.9) !important; }
+  .portal-badge.badge-gold  { box-shadow:0 0 20px rgba(212,175,55,1),0 0 40px rgba(212,175,55,0.6),0 2px 8px rgba(0,0,0,0.9) !important; }
+  .portal-badge.badge-count { box-shadow:0 0 20px rgba(170,0,255,1),0 0 40px rgba(170,0,255,0.6),0 2px 8px rgba(0,0,0,0.9) !important; }
   .arch-icon {
     font-size: clamp(88px, 12vw, 176px);
   }
@@ -1862,12 +1875,23 @@ const isMobile = vw < 1024;
         line-height: 1.2 !important;
   }}
       .portal-badge {
-        font-size: clamp(20px,5vw,32px) !important;
-        min-width: clamp(48px,12vw,72px) !important;
-        height: clamp(32px,8vw,48px) !important;
-        padding: 0 clamp(8px,2vw,14px) !important;
-        border-radius: clamp(14px,3vw,22px) !important;
+        font-size: clamp(13px,3.5vw,18px) !important;
+        font-weight: 900 !important;
+        min-width: clamp(56px,14vw,80px) !important;
+        height: clamp(36px,9vw,50px) !important;
+        padding: 0 clamp(10px,2.5vw,16px) !important;
+        border-radius: clamp(18px,4vw,25px) !important;
+        border-width: 2px !important;
+        letter-spacing: 1.5px !important;
+        top: -6px !important;
+        animation: badgePop 0.5s cubic-bezier(0.175,0.885,0.32,1.4) both,
+                   badgePulse 2.2s ease-in-out 0.5s infinite !important;
       }
+      .portal-badge.badge-free  { box-shadow:0 0 22px rgba(0,200,83,1),0 0 44px rgba(0,200,83,0.6),0 2px 8px rgba(0,0,0,0.9) !important; }
+      .portal-badge.badge-new   { box-shadow:0 0 22px rgba(41,121,255,1),0 0 44px rgba(41,121,255,0.6),0 2px 8px rgba(0,0,0,0.9) !important; }
+      .portal-badge.badge-alert { box-shadow:0 0 22px rgba(255,23,68,1),0 0 44px rgba(255,23,68,0.6),0 2px 8px rgba(0,0,0,0.9) !important; }
+      .portal-badge.badge-gold  { box-shadow:0 0 22px rgba(212,175,55,1),0 0 44px rgba(212,175,55,0.6),0 2px 8px rgba(0,0,0,0.9) !important; }
+      .portal-badge.badge-count { box-shadow:0 0 22px rgba(170,0,255,1),0 0 44px rgba(170,0,255,0.6),0 2px 8px rgba(0,0,0,0.9) !important; }
       .arch-platform { display: none !important; }
       .arch-title {
       .arch-title {

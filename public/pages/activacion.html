@@ -476,10 +476,45 @@ let lastT=0;
 })(0);
 
 // STEP LOGIC
-let cur=0;
-const D={sk:'',st:'',em:'',pw:''};
 const pct=[8,25,42,60,78,100];
 const lbl=['PASO 1 DE 6','PASO 2 DE 6','PASO 3 DE 6','PASO 4 DE 6','PASO 5 DE 6','PASO 6 DE 6'];
+
+// ── Persistencia entre cambios de orientación ──
+const SS_KEY='templo_reg';
+function saveState(){
+  try{sessionStorage.setItem(SS_KEY,JSON.stringify({cur,D}));}catch{}
+}
+function loadState(){
+  try{
+    const raw=sessionStorage.getItem(SS_KEY);
+    if(!raw)return;
+    const s=JSON.parse(raw);
+    if(s&&typeof s.cur==='number'&&s.D){
+      Object.assign(D,s.D);
+      // Restore campos de texto
+      if(D.sk&&document.getElementById('skN'))document.getElementById('skN').value=D.sk;
+      if(D.st&&document.getElementById('stN'))document.getElementById('stN').value=D.st;
+      if(D.em&&document.getElementById('emN'))document.getElementById('emN').value=D.em;
+      // Ir al paso donde estaba (sin animación)
+      if(s.cur>0)goSilent(s.cur);
+    }
+  }catch{}
+}
+// Ir a un paso sin animación (para restaurar)
+function goSilent(n){
+  const prev=document.getElementById('s'+cur);
+  prev.classList.remove('active');
+  cur=n;
+  document.getElementById('pfill').style.width=pct[n]+'%';
+  document.getElementById('sctr').textContent=lbl[n];
+  if(n===3){document.getElementById('pvsk').textContent=D.sk||'—';document.getElementById('pvst').textContent=D.st||'—';document.getElementById('pvem').textContent=D.em||'—';}
+  const nx=document.getElementById('s'+n);
+  nx.style.cssText='';
+  nx.classList.add('active');
+}
+
+let cur=0;
+const D={sk:'',st:'',em:'',pw:''};
 function go(n){
   const prev=document.getElementById('s'+cur);
   prev.classList.remove('active');prev.classList.add('exit');
@@ -492,6 +527,7 @@ function go(n){
   nx.style.cssText='transform:translateX(60px);opacity:0;';
   nx.classList.add('active');
   requestAnimationFrame(()=>{nx.style.cssText='';});
+  saveState();
 }
 function v1(){
   let ok=true;
@@ -525,6 +561,8 @@ function v2(){
 }
 function selAv(el){document.querySelectorAll('.avopt').forEach(a=>a.classList.remove('sel'));el.classList.add('sel');}
 function goStore(){
+  // Limpiar estado guardado al completar el registro
+  try{sessionStorage.removeItem(SS_KEY);}catch{}
   // Obtener los inputs por su ID
   const skoolInput = document.getElementById('skN');
   const templarioInput = document.getElementById('stN');
@@ -603,9 +641,13 @@ window.addEventListener('message', function(e) {
     SFX.error();
   }
   if (e.data?.type === 'nick-ok') {
+    saveState();
     go(2); // ✅ Avanzar solo si el nick está libre
   }
 });
+
+// ── Restaurar estado al cargar (cambio de orientación) ──
+loadState();
 
 // ── Sonido en goStore ──
 const _gs=goStore;
