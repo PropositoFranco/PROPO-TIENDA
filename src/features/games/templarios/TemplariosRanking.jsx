@@ -1549,10 +1549,10 @@ const INNER_HTML = `
         <div class="podium-stage">
           <div class="podium-player p2">
             <div class="player-info" id="info2">
-              <div class="player-avatar">DF</div>
-              <div class="player-name">Daniel Franco</div>
-              <div class="player-title">Templario de Fuego</div>
-              <div class="player-pts">0 PTS</div>
+              <div class="player-avatar">—</div>
+              <div class="player-name">—</div>
+              <div class="player-title">—</div>
+              <div class="player-pts">— PTS</div>
             </div>
             <div class="podium-block" id="pod2">
               <div style="text-align:center">
@@ -1563,10 +1563,10 @@ const INNER_HTML = `
           </div>
           <div class="podium-player p1">
             <div class="player-info" id="info1">
-              <div class="player-avatar">DA</div>
-              <div class="player-name">Danielillo</div>
-              <div class="player-title">Templario de Fuego</div>
-              <div class="player-pts">208 PTS</div>
+              <div class="player-avatar">—</div>
+              <div class="player-name">—</div>
+              <div class="player-title">—</div>
+              <div class="player-pts">— PTS</div>
             </div>
             <div class="podium-block" id="pod1">
               <div style="text-align:center">
@@ -1577,10 +1577,10 @@ const INNER_HTML = `
           </div>
           <div class="podium-player p3">
             <div class="player-info" id="info3">
-              <div class="player-avatar">JA</div>
-              <div class="player-name">Jose Angel</div>
-              <div class="player-title">Templario de Luz</div>
-              <div class="player-pts">0 PTS</div>
+              <div class="player-avatar">—</div>
+              <div class="player-name">—</div>
+              <div class="player-title">—</div>
+              <div class="player-pts">— PTS</div>
             </div>
             <div class="podium-block" id="pod3">
               <div style="text-align:center">
@@ -1713,10 +1713,10 @@ const INNER_HTML = `
         <div class="podium-stage">
           <div class="podium-player p2">
             <div class="player-info visible">
-              <div class="player-avatar">DF</div>
-              <div class="player-name">Daniel Franco</div>
-              <div class="player-title">Templario de Fuego</div>
-              <div class="player-pts">0 PTS</div>
+              <div class="player-avatar">—</div>
+              <div class="player-name">—</div>
+              <div class="player-title">—</div>
+              <div class="player-pts">— PTS</div>
             </div>
             <div class="podium-block" id="mpod2">
               <div style="text-align:center"><span class="place-medal">🥈</span><div>2</div></div>
@@ -1724,10 +1724,10 @@ const INNER_HTML = `
           </div>
           <div class="podium-player p1">
             <div class="player-info visible">
-              <div class="player-avatar">DA</div>
-              <div class="player-name">Danielillo</div>
-              <div class="player-title">Templario de Fuego</div>
-              <div class="player-pts">208 PTS</div>
+              <div class="player-avatar">—</div>
+              <div class="player-name">—</div>
+              <div class="player-title">—</div>
+              <div class="player-pts">— PTS</div>
             </div>
             <div class="podium-block" id="mpod1">
               <div style="text-align:center"><span class="place-medal">👑</span><div>1</div></div>
@@ -1735,10 +1735,10 @@ const INNER_HTML = `
           </div>
           <div class="podium-player p3">
             <div class="player-info visible">
-              <div class="player-avatar">JA</div>
-              <div class="player-name">Jose Angel</div>
-              <div class="player-title">Templario de Luz</div>
-              <div class="player-pts">0 PTS</div>
+              <div class="player-avatar">—</div>
+              <div class="player-name">—</div>
+              <div class="player-title">—</div>
+              <div class="player-pts">— PTS</div>
             </div>
             <div class="podium-block" id="mpod3">
               <div style="text-align:center"><span class="place-medal">🥉</span><div>3</div></div>
