@@ -43,7 +43,7 @@ export default function WatermarkOverlay() {
             fontSize:      '11px',
             fontWeight:    700,
             letterSpacing: '2px',
-            color:         'rgba(212,175,55,0.12)',
+            color:         'rgba(212,175,55,0.08)',
             textTransform: 'uppercase',
           }}
         >
