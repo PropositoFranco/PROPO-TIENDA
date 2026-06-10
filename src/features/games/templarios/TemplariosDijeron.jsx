@@ -3554,13 +3554,13 @@ function NewMapScreen({ gameState, onNavigate, onEnterChamber, badgeCycle = 0, a
     if (!sb) return;
     const fetchRanking = () => {
       sb.from('templo_players')
-        .select('id, char_name, weekly_points, char_variant, player_rank')
+        .select('id, char_name, weekly_points, char_variant, player_rank, profiles(templario_name)')
         .order('weekly_points', { ascending: false })
         .limit(10)
         .then(({ data }) => {
           if (data) setRankList(data.map(p => ({
             id: p.id,
-            n: p.char_name || 'Templario',
+            n: p.profiles?.templario_name || p.char_name || 'Templario',
             p: p.weekly_points || 0,
             av: p.char_variant || 0,
             playerRank: p.player_rank || 0,
