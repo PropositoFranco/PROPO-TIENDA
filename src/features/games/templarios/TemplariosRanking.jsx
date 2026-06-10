@@ -3354,6 +3354,9 @@ const vipTag = '';
 
   const pcScroll = document.getElementById('pcRankingScroll');
   if (pcScroll) players.forEach(p => pcScroll.appendChild(buildRow(p)));
+
+  const mpScroll = document.getElementById('mp-ranking-scroll');
+  if (mpScroll) players.forEach(p => mpScroll.appendChild(buildRow(p)));
   setTimeout(() => {
       const _authState = useAuthStore.getState();
       const gcbProps = {

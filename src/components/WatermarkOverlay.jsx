@@ -1,27 +1,15 @@
-import { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
-import { supabase } from '../services/supabase';
+import { usePlayerStore } from '../store/usePlayerStore';
 
 export default function WatermarkOverlay() {
-  const user    = useAuthStore(s => s.user);
-  const isAdmin = useAuthStore(s => s.isAdmin);
-  const loading = useAuthStore(s => s.loading);
-  const [label, setLabel] = useState('');
+  const isAdmin      = useAuthStore(s => s.isAdmin);
+  const loading      = useAuthStore(s => s.loading);
+  const user         = useAuthStore(s => s.user);
+  const templarioName = usePlayerStore(s => s.templarioName);
 
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from('profiles')
-      .select('templario_name')
-      .eq('id', user.id)
-      .single()
-      .then(({ data }) => {
-        const name = data?.templario_name || user.email || 'TEMPLARIO';
-        setLabel(name.toUpperCase());
-      });
-  }, [user]);
+  if (loading || !user || isAdmin) return null;
 
-  if (loading || !user || isAdmin || !label) return null;
+  const label = (templarioName || user.email || 'TEMPLARIO').toUpperCase();
 
   const positions = [
     { left: '22%', top: '28%' },
@@ -55,7 +43,7 @@ export default function WatermarkOverlay() {
             fontSize:      '11px',
             fontWeight:    700,
             letterSpacing: '2px',
-            color:         'rgba(212,175,55,0.09)',
+            color:         'rgba(212,175,55,0.2)',
             textTransform: 'uppercase',
           }}
         >
