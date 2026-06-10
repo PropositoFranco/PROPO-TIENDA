@@ -9,23 +9,4 @@ export default defineConfig({
     port: 5173,
     allowedHosts: ['daydream-ooze-celtic.ngrok-free.dev']
   },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'vendor-react'
-            }
-            if (id.includes('@supabase')) {
-              return 'vendor-supabase'
-            }
-            if (id.includes('stripe')) {
-              return 'vendor-stripe'
-            }
-          }
-        }
-      }
-    }
-  }
 })
