@@ -55,7 +55,7 @@ export default function ReferralBattlePass() {
   const { curr, next, progress } = getLevelInfo(referidos);
 
   const copyCode = () => {
-    const shareLink = `https://propotienda.com/register?ref=${codigo}`;
+    const shareLink = `https://templodelpropositooficial.netlify.app/?ref=${codigo}`;
     navigator.clipboard?.writeText(shareLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

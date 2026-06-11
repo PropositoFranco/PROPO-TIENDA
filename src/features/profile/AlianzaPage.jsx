@@ -490,7 +490,7 @@ export default function AlianzaPage() {
   const [showModal, setShowModal] = useState(null);
 
   const codigoReferido = profile?.referral_code || "—";
-  const shareLink = `https://propotienda.com/register?ref=${codigoReferido}`;
+  const shareLink = `https://templodelpropositooficial.netlify.app/?ref=${codigoReferido}`;
   const shareText = `Entra al Templo del Propósito — primer mes por $1. Código: ${codigoReferido}`;
 
   useEffect(() => {
