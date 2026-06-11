@@ -490,7 +490,7 @@ export default function AlianzaPage() {
   const [showModal, setShowModal] = useState(null);
 
   const codigoReferido = profile?.referral_code || "—";
-  const shareLink = `https://propositoia.com/?ref=${codigoReferido}`;
+  const shareLink = `https://propotienda.com/register?ref=${codigoReferido}`;
   const shareText = `Entra al Templo del Propósito — primer mes por $1. Código: ${codigoReferido}`;
 
   useEffect(() => {
@@ -529,11 +529,11 @@ export default function AlianzaPage() {
   const { curr, next, progress } = getLevelInfo(referidosActivos);
 
   const copyCode = useCallback(() => {
-    navigator.clipboard?.writeText(codigoReferido);
+    navigator.clipboard?.writeText(shareLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2200);
     if (userId) missionsService.trackEvent(userId, 'refer_member');
-  }, [codigoReferido, userId]);
+  }, [shareLink, userId]);
 
   const handleCanjear = async (nivel, eventId) => {
     try {

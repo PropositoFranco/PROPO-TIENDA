@@ -55,7 +55,8 @@ export default function ReferralBattlePass() {
   const { curr, next, progress } = getLevelInfo(referidos);
 
   const copyCode = () => {
-    navigator.clipboard?.writeText(codigo);
+    const shareLink = `https://propotienda.com/register?ref=${codigo}`;
+    navigator.clipboard?.writeText(shareLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
