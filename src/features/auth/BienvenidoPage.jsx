@@ -869,7 +869,7 @@ export default function BienvenidoPage() {
 
   const redirectUrl = refCode
     ? `${window.location.origin}/register?ref=${refCode}`
-    : `${window.location.origin}/hub`;
+    : `${window.location.origin}/hazloapp`;
 
   // ── Estado del código ─────────────────────────────────────────────────────
   const [userCode,    setUserCode]    = useState(null);

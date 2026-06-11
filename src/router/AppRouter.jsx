@@ -8,6 +8,7 @@ import MembershipGuard from './MembershipGuard';
 import LoginPage from '../features/auth/LoginPage';
 import RegisterPage from '../features/auth/RegisterPage';
 import BienvenidoPage from '../features/auth/BienvenidoPage';
+import HazloAppPage from '../features/auth/HazloAppPage';
 import TerminosPage from '../features/offers/TerminosPage';
 import PaywallPage from '../features/academy/PaywallPage';
 import ReactivarPage from '../features/academy/ReactivarPage';
@@ -93,6 +94,7 @@ export default function AppRouter() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/bienvenido" element={<BienvenidoPage />} />
+          <Route path="/hazloapp" element={<HazloAppPage />} />
           <Route path="/terminos" element={<TerminosPage />} />
           <Route path="/arsenal-rpg" element={<ArsenalRPGPage />} />
 
