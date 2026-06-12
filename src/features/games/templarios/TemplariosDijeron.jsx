@@ -5588,26 +5588,7 @@ const QUESTION_CSS = [
   </div>
 )}
 
-{/* SOLO DESARROLLO - QUITAR EN PRODUCCIÓN */}
-<button 
-  onClick={async () => {
-    await sb.from('templo_players')
-      .update({ daily_attempts: {} })
-      .eq('id', CURRENT_USER.id);
-    G.dailyAttempts = {};
-    G.done = { c1: false, c2: false, c3: false, council: false };
-    G.ans = {};
-    location.reload();
-  }}
-  style={{
-    position:'fixed', bottom:8, right:8, opacity:0.3,
-    fontSize:10, zIndex:9999, background:'red',
-    color:'white', padding:'4px 8px', borderRadius:4,
-    border:'none', cursor:'pointer'
-  }}
->
-  reset daily
-</button>
+{/* botón de reset eliminado */}
 
     </div>
   );
