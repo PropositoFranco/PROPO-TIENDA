@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -9,6 +9,16 @@ export default function LoginPage() {
   const setSession = useAuthStore((s) => s.setSession);
   const loadProfile = useAuthStore((s) => s.loadProfile);
   const pushToast = useUIStore((s) => s.pushToast);
+
+  const smartNavigate = (profile) => {
+    if (!profile?.templario_name) {
+      navigate('/register', { replace: true });
+    } else if (!profile?.tutorial_completed) {
+      navigate('/tutorial', { replace: true });
+    } else {
+      navigate('/hub', { replace: true });
+    }
+  };
 
   const handleLoad = (e) => {
     try {
@@ -39,7 +49,8 @@ export default function LoginPage() {
         loadProfile().then(async () => {
   const { missionsService } = await import('../../services/missions.service');
   await missionsService.checkAndUpdateStreak(data.session.user.id);
-  navigate('/hub', { replace: true });
+  const profile = useAuthStore.getState().profile;
+          smartNavigate(profile);
 });
       }
     });
@@ -85,7 +96,11 @@ export default function LoginPage() {
           await missionsService.checkAndUpdateStreak(loginData.session.user.id);
           document.getElementById('login-frame')
             ?.contentWindow?.postMessage({ type: 'login-success' }, '*');
-          setTimeout(() => { pushToast('¡Bienvenido, Templario!'); navigate('/hub', { replace: true }); }, 800);
+          setTimeout(() => {
+            pushToast('¡Bienvenido, Templario!');
+            const profile = useAuthStore.getState().profile;
+            smartNavigate(profile);
+          }, 800);
         } catch (err) {
           console.error('Login error:', err);
           document.getElementById('login-frame')
@@ -195,12 +210,125 @@ export default function LoginPage() {
     return () => window.removeEventListener('message', handleMessage);
   }, [navigate]);
 
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [recoveryResult, setRecoveryResult] = useState('');
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+
+  const handleRecovery = async () => {
+    if (!recoveryEmail.trim()) return;
+    setRecoveryLoading(true);
+    setRecoveryResult('');
+    const { data } = await supabase
+      .from('access_codes')
+      .select('code')
+      .eq('user_email', recoveryEmail.trim().toLowerCase())
+      .eq('is_used', false)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data?.code) {
+      setRecoveryResult(`✅ Tu código es: ${data.code}`);
+    } else {
+      setRecoveryResult('❌ No encontramos un código con ese email. Escríbenos por WhatsApp.');
+    }
+    setRecoveryLoading(false);
+  };
+
   return (
-    <iframe
-      id="login-frame"
-      src="/pages/login.html"
-      onLoad={handleLoad}
-      style={{ width:'100vw', height:'100vh', border:'none', display:'block' }}
-    />
+    <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+      <iframe
+        id="login-frame"
+        src="/pages/login.html"
+        onLoad={handleLoad}
+        style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+      />
+
+      {/* Botón flotante de recuperación */}
+      {!showRecovery && (
+        <button
+          onClick={() => setShowRecovery(true)}
+          style={{
+            position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+            background: 'transparent', border: '1px solid rgba(212,175,55,0.3)',
+            borderRadius: 50, padding: '8px 20px', cursor: 'pointer',
+            fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: 3,
+            color: 'rgba(212,175,55,0.6)', whiteSpace: 'nowrap',
+          }}
+        >
+          🔍 ¿PERDISTE TU CÓDIGO?
+        </button>
+      )}
+
+      {/* Panel de recuperación */}
+      {showRecovery && (
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'radial-gradient(ellipse at 50% 50%,rgba(10,4,30,0.97),rgba(4,1,18,0.99))',
+          fontFamily: "'Cinzel',serif", padding: 24,
+        }}>
+          <div style={{ fontSize: 36, marginBottom: 16 }}>🔍</div>
+          <div style={{
+            fontSize: 'clamp(14px,3vw,18px)', fontWeight: 700, letterSpacing: '.05em',
+            background: 'linear-gradient(135deg,#f0c040,#d4af37)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text', marginBottom: 8, textAlign: 'center',
+          }}>Recuperar tu Código</div>
+          <div style={{
+            fontFamily: "'Raleway',sans-serif", fontSize: 13,
+            color: 'rgba(200,185,240,.6)', marginBottom: 24, textAlign: 'center', lineHeight: 1.6,
+          }}>Email con el que pagaste en Stripe</div>
+          <input
+            type="email"
+            placeholder="tu@email.com"
+            value={recoveryEmail}
+            onChange={e => setRecoveryEmail(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleRecovery()}
+            style={{
+              width: '100%', maxWidth: 320, padding: '12px 16px', borderRadius: 10,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(212,175,55,0.4)',
+              color: '#f5d06e', fontFamily: "'Raleway',sans-serif", fontSize: 15,
+              outline: 'none', marginBottom: 12, textAlign: 'center',
+            }}
+          />
+          {recoveryResult && (
+            <div style={{
+              fontFamily: "'Raleway',sans-serif",
+              color: recoveryResult.startsWith('✅') ? '#86efac' : '#ff6b6b',
+              fontSize: 13, marginBottom: 16, textAlign: 'center', maxWidth: 300, lineHeight: 1.6,
+            }}>
+              {recoveryResult}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={handleRecovery}
+              disabled={recoveryLoading}
+              style={{
+                padding: '11px 28px', borderRadius: 10, cursor: 'pointer',
+                background: 'linear-gradient(135deg,rgba(212,175,55,.2),rgba(124,58,237,.3))',
+                border: '1px solid rgba(212,175,55,.5)', color: '#d4af37',
+                fontFamily: "'Cinzel',serif", fontSize: 10, letterSpacing: 3,
+                opacity: recoveryLoading ? 0.6 : 1,
+              }}
+            >
+              {recoveryLoading ? 'Buscando...' : '⚔️ BUSCAR'}
+            </button>
+            <button
+              onClick={() => { setShowRecovery(false); setRecoveryResult(''); setRecoveryEmail(''); }}
+              style={{
+                padding: '11px 20px', borderRadius: 10, cursor: 'pointer',
+                background: 'transparent', border: '1px solid rgba(255,255,255,0.15)',
+                color: 'rgba(255,255,255,0.4)', fontFamily: "'Cinzel',serif",
+                fontSize: 10, letterSpacing: 2,
+              }}
+            >
+              VOLVER
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

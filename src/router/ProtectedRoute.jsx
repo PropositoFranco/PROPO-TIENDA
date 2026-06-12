@@ -26,6 +26,23 @@ export function ProtectedRoute() {
   }
   
   if (!user || !session) return <Navigate to="/login" replace />;
+
+  const profile = useAuthStore.getState().profile;
+  
+  // Si tiene sesión pero no tiene nombre → no terminó el registro
+  if (profile && !profile.templario_name) {
+    return <Navigate to="/register" replace />;
+  }
+
+  // Si tiene nombre pero no completó el tutorial
+  if (profile && profile.templario_name && !profile.tutorial_completed) {
+    const path = window.location.pathname;
+    const exempt = ['/tutorial', '/hazloapp', '/register', '/bienvenido'];
+    if (!exempt.some(e => path.startsWith(e))) {
+      return <Navigate to="/tutorial" replace />;
+    }
+  }
+
   return <Outlet />;
 }
 

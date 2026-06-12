@@ -198,9 +198,8 @@ export default function RegisterPage() {
           }
 
           await loadProfile();
-          localStorage.setItem('show_tstore_tutorial', '1');
           pushToast('¡Bienvenido al Templo!');
-          navigate('/hub');
+          navigate('/tutorial', { replace: true });
         }
       }
     };
