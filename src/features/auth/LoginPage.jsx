@@ -20,6 +20,11 @@ export default function LoginPage() {
     }
   };
 
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [recoveryResult, setRecoveryResult] = useState('');
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+
   const handleLoad = (e) => {
     try {
       const doc = e.target.contentDocument;
@@ -210,11 +215,6 @@ export default function LoginPage() {
     return () => window.removeEventListener('message', handleMessage);
   }, [navigate]);
 
-  const [showRecovery, setShowRecovery] = useState(false);
-  const [recoveryEmail, setRecoveryEmail] = useState('');
-  const [recoveryResult, setRecoveryResult] = useState('');
-  const [recoveryLoading, setRecoveryLoading] = useState(false);
-
   const handleRecovery = async () => {
     if (!recoveryEmail.trim()) return;
     setRecoveryLoading(true);
@@ -241,7 +241,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+    <div style={{ position: 'relative', width: '100vw', height: '100vh', background: '#0a0015' }}>
       <iframe
         id="login-frame"
         src="/pages/login.html"
