@@ -674,31 +674,18 @@ body {
     <div class="panel-glow"></div>
 
     <!-- TOGGLE NUEVO / REGRESA -->
-    <div style="display:flex;gap:6px;margin-bottom:16px;background:rgba(0,0,0,.3);border:1px solid rgba(212,175,55,.15);border-radius:12px;padding:4px;">
-      <button id="tab-new" onclick="setTab('new')" style="flex:1;padding:8px 0;border-radius:8px;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;transition:all .25s;background:linear-gradient(135deg,rgba(212,175,55,.25),rgba(180,100,255,.15));color:#f5d06e;border:1px solid rgba(212,175,55,.4);">✦ PRIMERA VEZ</button>
-      <button id="tab-back" onclick="setTab('back')" style="flex:1;padding:8px 0;border-radius:8px;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;transition:all .25s;background:transparent;color:rgba(212,175,55,.4);border:1px solid transparent;">↩ YA SOY MIEMBRO</button>
+    <div style="display:flex;gap:6px;margin-bottom:20px;background:rgba(0,0,0,.4);border:1px solid rgba(212,175,55,.15);border-radius:12px;padding:4px;">
+      <button id="tab-new" onclick="setTab('new')" style="flex:1;padding:10px 0;border-radius:8px;border:1px solid rgba(212,175,55,.4);cursor:pointer;font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;transition:all .25s;background:linear-gradient(135deg,rgba(212,175,55,.2),rgba(180,100,255,.1));color:#f5d06e;text-shadow:0 0 8px rgba(212,175,55,.4);">✦ PRIMERA VEZ</button>
+      <button id="tab-back" onclick="setTab('back')" style="flex:1;padding:10px 0;border-radius:8px;border:1px solid transparent;cursor:pointer;font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;transition:all .25s;background:transparent;color:rgba(212,175,55,.65);">↩ YA SOY MIEMBRO</button>
     </div>
 
-    <div id="txt-new" style="text-align:center;margin-bottom:8px;">
-      <!-- TOGGLE NUEVO / REGRESA -->
-    <div style="display:flex;gap:6px;margin-bottom:16px;background:rgba(0,0,0,.3);border:1px solid rgba(212,175,55,.15);border-radius:12px;padding:4px;">
-      <button id="tab-new" onclick="setTab('new')" style="flex:1;padding:8px 0;border-radius:8px;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;transition:all .25s;background:linear-gradient(135deg,rgba(212,175,55,.25),rgba(180,100,255,.15));color:#f5d06e;border:1px solid rgba(212,175,55,.4);">✦ PRIMERA VEZ</button>
-      <button id="tab-back" onclick="setTab('back')" style="flex:1;padding:8px 0;border-radius:8px;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;transition:all .25s;background:transparent;color:rgba(212,175,55,.4);border:1px solid transparent;">↩ YA SOY MIEMBRO</button>
-    </div>
-
-    <div id="txt-new" style="text-align:center;margin-bottom:8px;">
+    <div id="txt-new" style="text-align:center;margin-bottom:12px;">
       <div style="font-family:'Cinzel',serif;font-size:13px;letter-spacing:3px;background:linear-gradient(90deg,#c8922a,#f5d06e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Código de Invitación</div>
-      <div style="font-family:'Cinzel',serif;font-size:9px;color:rgba(212,175,55,.5);margin-top:4px;letter-spacing:1px;">Ingresa el código que te enviaron</div>
+      <div style="font-family:'Cinzel',serif;font-size:9px;color:rgba(212,175,55,.6);margin-top:4px;letter-spacing:1px;">Ingresa el código que te enviaron</div>
     </div>
-    <div id="txt-back" style="display:none;text-align:center;margin-bottom:8px;">
+    <div id="txt-back" style="display:none;text-align:center;margin-bottom:12px;">
       <div style="font-family:'Cinzel',serif;font-size:13px;letter-spacing:3px;background:linear-gradient(90deg,#a855f7,#c8922a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Bienvenido de Vuelta</div>
-      <div style="font-family:'Cinzel',serif;font-size:9px;color:rgba(180,140,255,.6);margin-top:4px;letter-spacing:1px;">Usa el mismo código con el que entraste</div>
-    </div>
-      <div style="font-family:'Cinzel',serif;font-size:9px;color:rgba(212,175,55,.5);margin-top:4px;letter-spacing:1px;">Ingresa el código que te enviaron</div>
-    </div>
-    <div id="txt-back" style="display:none;text-align:center;margin-bottom:8px;">
-      <div style="font-family:'Cinzel',serif;font-size:13px;letter-spacing:3px;background:linear-gradient(90deg,#a855f7,#c8922a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Bienvenido de Vuelta</div>
-      <div style="font-family:'Cinzel',serif;font-size:9px;color:rgba(180,140,255,.6);margin-top:4px;letter-spacing:1px;">Usa el mismo código con el que entraste</div>
+      <div style="font-family:'Cinzel',serif;font-size:9px;color:rgba(180,140,255,.7);margin-top:4px;letter-spacing:1px;">Ingresa tu correo y contraseña</div>
     </div>
 
     <div class="gems-row">
@@ -722,12 +709,12 @@ body {
     <div id="panel-back" style="display:none;">
       <label class="input-label">Correo electrónico</label>
       <div class="input-wrapper">
-        <input type="email" class="code-input" id="emailInput" placeholder="tu@correo.com" autocomplete="off">
+        <input type="email" class="code-input" id="emailInput" placeholder="tu@correo.com" autocomplete="off" style="font-family:'Crimson Text',serif;font-size:15px;letter-spacing:1px;text-transform:none;text-align:left;">
         <span class="input-icon">✉</span>
       </div>
       <label class="input-label" style="margin-top:12px;">Contraseña</label>
       <div class="input-wrapper">
-        <input type="password" class="code-input" id="passwordInput" placeholder="••••••••" autocomplete="off">
+        <input type="password" class="code-input" id="passwordInput" placeholder="••••••••" autocomplete="off" style="font-family:'Crimson Text',serif;font-size:15px;letter-spacing:1px;text-transform:none;text-align:left;">
         <span class="input-icon" onclick="togglePass()" style="cursor:pointer;">👁</span>
       </div>
     </div>
@@ -743,15 +730,27 @@ body {
 
   </div>
 
-  <div style="text-align:center;margin:20px 0 8px;animation:fadeIn 1s ease-out 1s both;opacity:0;">
-  <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:rgba(212,175,55,.3);margin-bottom:10px;text-transform:uppercase;">¿Aún no eres miembro?</div>
-  <a href="https://templodelpropositooficial.netlify.app/" target="_top"
-     style="display:inline-block;padding:10px 28px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;text-transform:uppercase;text-decoration:none;color:#f5d06e;background:linear-gradient(135deg,rgba(212,175,55,.08),rgba(160,100,255,.08));border:1px solid rgba(212,175,55,.25);border-radius:50px;transition:all .3s;box-shadow:0 0 20px rgba(212,175,55,.08);"
-     onmouseover="this.style.borderColor='rgba(212,175,55,.6)';this.style.boxShadow='0 0 28px rgba(212,175,55,.2)';this.style.color='#ffd700';"
-     onmouseout="this.style.borderColor='rgba(212,175,55,.25)';this.style.boxShadow='0 0 20px rgba(212,175,55,.08)';this.style.color='#f5d06e';">
-    ⚔️ &nbsp;Conoce el Templo
+  <div style="text-align:center;margin:24px 0 12px;position:relative;">
+  <div style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:4px;color:rgba(212,175,55,.9);margin-bottom:14px;text-transform:uppercase;text-shadow:0 0 12px rgba(212,175,55,.4);">¿Aún no eres miembro?</div>
+  <a href="https://templodelpropositooficial.netlify.app/" target="_top" style="
+    display:inline-flex;align-items:center;gap:10px;
+    padding:12px 32px;
+    font-family:'Cinzel',serif;font-size:10px;font-weight:700;
+    letter-spacing:4px;text-transform:uppercase;text-decoration:none;
+    color:#f5d06e;
+    background:transparent;
+    border:1px solid rgba(212,175,55,.4);
+    border-radius:50px;
+    box-shadow:0 0 16px rgba(212,175,55,.12);
+    transition:all .3s;"
+    onmouseover="this.style.borderColor='rgba(212,175,55,.7)';this.style.boxShadow='0 0 24px rgba(212,175,55,.25)';this.style.color='#ffd700';"
+    onmouseout="this.style.borderColor='rgba(212,175,55,.4)';this.style.boxShadow='0 0 16px rgba(212,175,55,.12)';this.style.color='#f5d06e';">
+    <span style="font-size:13px;">⚔️</span>
+    <span>Entrar al Templo</span>
   </a>
+  <div style="margin-top:10px;font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:rgba(212,175,55,.7);">Sin registro previo</div>
 </div>
+  <div style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:4px;color:rgba(212,175,55,.9);margin-bottom:14px;text-transform:uppercase;text-shadow:0 0 12px rgba(212,175,55,.4);">¿Aún no eres miembro?</div>
 
 <div class="footer-logo">
     <span>PROPO-TIENDA · TEMPLO DEL PROPÓSITO</span>
