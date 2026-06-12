@@ -219,18 +219,23 @@ export default function LoginPage() {
     if (!recoveryEmail.trim()) return;
     setRecoveryLoading(true);
     setRecoveryResult('');
-    const { data } = await supabase
-      .from('access_codes')
-      .select('code')
-      .eq('user_email', recoveryEmail.trim().toLowerCase())
-      .eq('is_used', false)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (data?.code) {
-      setRecoveryResult(`✅ Tu código es: ${data.code}`);
-    } else {
-      setRecoveryResult('❌ No encontramos un código con ese email. Escríbenos por WhatsApp.');
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/recover-code`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: recoveryEmail.trim() }),
+        }
+      );
+      const json = await res.json();
+      if (json.found && json.code) {
+        setRecoveryResult(`✅ Tu código es: ${json.code}`);
+      } else {
+        setRecoveryResult('❌ No encontramos un código con ese email. Escríbenos por WhatsApp.');
+      }
+    } catch (_) {
+      setRecoveryResult('❌ Error de conexión. Intenta de nuevo.');
     }
     setRecoveryLoading(false);
   };

@@ -986,20 +986,25 @@ export default function BienvenidoPage() {
     if (!recoveryEmail.trim()) return;
     setRecoveryLoading(true);
     setRecoveryError('');
-    const { data } = await supabase
-      .from('access_codes')
-      .select('code')
-      .eq('user_email', recoveryEmail.trim().toLowerCase())
-      .eq('is_used', false)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (data?.code) {
-      setUserCode(data.code);
-      setNeedsEmailRecovery(false);
-      setPhase('codigo');
-    } else {
-      setRecoveryError('No encontramos un código con ese email. Contacta soporte.');
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/recover-code`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: recoveryEmail.trim() }),
+        }
+      );
+      const json = await res.json();
+      if (json.found && json.code) {
+        setUserCode(json.code);
+        setNeedsEmailRecovery(false);
+        setPhase('codigo');
+      } else {
+        setRecoveryError('No encontramos un código con ese email. Contacta soporte.');
+      }
+    } catch (_) {
+      setRecoveryError('Error de conexión. Intenta de nuevo.');
     }
     setRecoveryLoading(false);
   };
