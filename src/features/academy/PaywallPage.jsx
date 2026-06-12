@@ -23,12 +23,69 @@ import useMembershipStore from '../../store/useMembershipStore';
 
 const PRICE_IDS = {
   despertar:  'price_1TX9qSHAhN6AYkd2KF8MWbgv',
-  triada:     'price_1TcXxLHAhN6AYkd2A5jmspxu',
+  paq1:       'price_1TXCGIHAhN6AYkd21yaDRR5J',
+  triada:     'price_1TfRQSHAhN6AYkd2hFme34SY',
   vip_1mes:   'price_1TcZBLHAhN6AYkd2eQKQ0zhN',
   vip_3meses: 'price_1TcZBLHAhN6AYkd2eQKQ0zhN',
 };
 
 const PLANS = [
+  {
+    id: 'paq1',
+    priceId: PRICE_IDS.paq1,
+    mode: 'payment',
+    name: 'Crea con IA',
+    subtitle: 'El primer paso del Creador',
+    price: '$39',
+    priceOld: '$79',
+    period: ' pago único',
+    color: '#34d399',
+    colorRgb: '52,211,153',
+    colorDark: '#059669',
+    icon: '⚡',
+    rarity: 'RARO',
+    rarityColor: '#34d399',
+    popular: false,
+    features: [
+      { icon: '🤖', text: 'Prompts y estructuras para crear con IA' },
+      { icon: '⚙️', text: 'Automatizaciones listas para usar' },
+      { icon: '🔗', text: 'Conexión con Stripe, Claude y ChatGPT' },
+      { icon: '🏗️', text: 'Bases para sistemas completos' },
+      { icon: '🧠', text: 'Deepseek · Claude.AI · ChatGPT' },
+      { icon: '📦', text: 'Acceso inmediato — descarga en 1 clic' },
+    ],
+    cta: 'Obtener Paquete 1',
+    gradient: 'linear-gradient(135deg, #001a0e 0%, #00110a 100%)',
+    glowColor: 'rgba(52,211,153,0.32)',
+  },
+  {
+    id: 'triada',
+    priceId: PRICE_IDS.triada,
+    mode: 'payment',
+    name: 'Tríada Fundador',
+    subtitle: 'El arsenal completo del Creador',
+    price: '$59',
+    priceOld: '$149',
+    period: ' pago único',
+    color: '#C084FC',
+    colorRgb: '192,132,252',
+    colorDark: '#9333ea',
+    icon: '👑',
+    rarity: 'LEGENDARIO',
+    rarityColor: '#C084FC',
+    popular: true,
+    features: [
+      { icon: '⚡', text: 'Pack 1 · Crea con IA — incluido completo' },
+      { icon: '🎨', text: 'Pack 2 · Edita sin Límites — incluido completo' },
+      { icon: '🏛️', text: '1 mes de acceso al Templo sin límites' },
+      { icon: '🏗️', text: 'Construye sistemas que trabajan por ti' },
+      { icon: '🔓', text: 'Acceso total — sin restricciones técnicas' },
+      { icon: '🔥', text: 'Mejor valor — ahorra $69 vs paquetes solos' },
+    ],
+    cta: 'Activar Tríada Completa',
+    gradient: 'linear-gradient(135deg, #1a0a2e 0%, #0d0618 100%)',
+    glowColor: 'rgba(192,132,252,0.4)',
+  },
   {
     id: 'despertar',
     priceId: PRICE_IDS.despertar,
@@ -56,34 +113,6 @@ const PLANS = [
     cta: 'Despertar mi Acceso',
     gradient: 'linear-gradient(135deg, #2a1f00 0%, #1a1200 100%)',
     glowColor: 'rgba(245,197,24,0.35)',
-  },
-  {
-    id: 'triada',
-    priceId: PRICE_IDS.triada,
-    mode: 'payment',
-    name: 'Tríada Fundador',
-    subtitle: 'El arsenal del Creador',
-    price: '$59',
-    priceOld: '$149',
-    period: ' pago único',
-    color: '#C084FC',
-    colorRgb: '192,132,252',
-    colorDark: '#9333ea',
-    icon: '👑',
-    rarity: 'LEGENDARIO',
-    rarityColor: '#C084FC',
-    popular: true,
-    features: [
-      { icon: '✅', text: 'Todo lo del Acceso del Despertar' },
-      { icon: '🤖', text: 'Pack 1 · Creador IA — páginas y automatizaciones' },
-      { icon: '🎨', text: 'Pack 2 · Editor Pro — personalizaciones avanzadas' },
-      { icon: '⚡', text: 'Prompts profesionales listos para usar' },
-      { icon: '🏗️', text: 'Construye sistemas que trabajan por ti' },
-      { icon: '🔓', text: 'Sin límites técnicos — acceso total al Templo' },
-    ],
-    cta: 'Activar Tríada Completa',
-    gradient: 'linear-gradient(135deg, #1a0a2e 0%, #0d0618 100%)',
-    glowColor: 'rgba(192,132,252,0.4)',
   },
 ];
 
@@ -1162,10 +1191,12 @@ const PaywallPage = () => {
     if (url) window.location.href = url;
   };
 
-  const handleActivatedComplete = useCallback(() => {
+  const handleActivatedComplete = useCallback(async () => {
+    // Recargar membresía desde Supabase antes de mostrar upsell
+    await useMembershipStore.getState().loadMembership(supabase, user?.id);
     setShowActivated(false);
     setShowUpsell(true);
-  }, []);
+  }, [user?.id]);
 
   const handleVipAccept = async (priceId) => {
     setLoadingVip(true); setError(null);

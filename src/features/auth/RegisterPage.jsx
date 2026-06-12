@@ -7,7 +7,8 @@ import { useUIStore } from '../../store/useUIStore';
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const refCode = searchParams.get('ref') || '';
+  const refCode     = searchParams.get('ref') || '';
+  const sessionId   = searchParams.get('session_id') || ''; // ← ID de sesión de Stripe si viene en URL
   const { session, loadProfile } = useAuthStore();
   const pushToast = useUIStore((s) => s.pushToast);
 
@@ -156,6 +157,46 @@ export default function RegisterPage() {
           if (email && password) {
             await supabase.auth.updateUser({ email, password });
           }
+          // Activar membresía pendiente del paquete si aplica
+          try {
+            // Construir el filtro OR con todos los identificadores disponibles
+            // para cubrir el caso de email temporal en Stripe vs email de registro
+            const emailFilters = [`user_email.eq.${email}`];
+            if (session?.user?.email && session.user.email !== email) {
+              emailFilters.push(`user_email.eq.${session.user.email}`);
+            }
+            if (sessionId) {
+              emailFilters.push(`session_id.eq.${sessionId}`);
+            }
+
+            const { data: pendingPkg } = await supabase
+              .from('package_downloads')
+              .select('id, package_type, membership_activated')
+              .or(emailFilters.join(','))
+              .eq('package_type', 'p3')
+              .eq('membership_activated', false)
+              .maybeSingle();
+
+            if (pendingPkg) {
+              const base = new Date();
+              base.setMonth(base.getMonth() + 1);
+              await supabase
+                .from('profiles')
+                .update({
+                  membership_expires_at: base.toISOString(),
+                  membership_status: 'active',
+                  paused_at: null,
+                })
+                .eq('id', userId);
+              await supabase
+                .from('package_downloads')
+                .update({ membership_activated: true })
+                .eq('id', pendingPkg.id);
+            }
+          } catch (e) {
+            console.error('Error activando membresía pendiente:', e);
+          }
+
           await loadProfile();
           localStorage.setItem('show_tstore_tutorial', '1');
           pushToast('¡Bienvenido al Templo!');

@@ -883,7 +883,25 @@ export default function BienvenidoPage() {
   useEffect(() => {
     async function fetchCode() {
       if (!sessionId) {
-        // Sin session_id — fallback local
+        // Sin session_id — intentar buscar por usuario autenticado
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data } = await supabase
+              .from('access_codes')
+              .select('code')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (data?.code) {
+              setUserCode(data.code);
+              setCodeLoading(false);
+              return;
+            }
+          }
+        } catch (_) {}
+        // Sin usuario ni código — fallback local
         setUserCode(generateCode());
         setCodeError(true);
         setCodeLoading(false);
@@ -894,6 +912,9 @@ export default function BienvenidoPage() {
         // Reintenta hasta 6 veces (el webhook puede tardar 1-2s en escribir el código)
         const MAX_RETRIES = 6;
         const DELAY_MS    = 1500;
+        const CACHE_KEY   = `tp_code_${sessionId}`;
+        const cached      = sessionStorage.getItem(CACHE_KEY);
+        if (cached) { setUserCode(cached); setCodeLoading(false); return; }
 
         for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
           const { data, error } = await supabase
@@ -905,6 +926,7 @@ export default function BienvenidoPage() {
           if (error) throw error;
 
           if (data?.code) {
+            sessionStorage.setItem(CACHE_KEY, data.code);
             setUserCode(data.code);
             setCodeLoading(false);
             return;

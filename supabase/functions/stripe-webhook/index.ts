@@ -10,6 +10,7 @@ const REFERRAL_XP        = 500;
 const REFERRAL_CRISTALES = 2000;
 const APP_URL            = Deno.env.get('APP_URL') ?? 'https://tu-dominio.com';
 
+
 // ─── Generador de código (mismo formato que el frontend: TP-99AB-88CD) ────────
 function generatePropoCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

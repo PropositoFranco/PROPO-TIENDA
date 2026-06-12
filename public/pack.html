@@ -1,0 +1,539 @@
+html = '''<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Templo del Propósito — Canjear Acceso</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Raleway:wght@300;400;600;700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh;overflow-x:hidden;background:#07041a;font-family:'Raleway',sans-serif}
+
+/* BG CANVAS */
+#bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+/* WRAP PRINCIPAL */
+#app{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(16px,4vw,40px) clamp(16px,4vw,32px)}
+
+/* PANTALLAS */
+.screen{display:none;flex-direction:column;align-items:center;width:100%;max-width:680px;animation:screenIn .5s cubic-bezier(.34,1.56,.64,1) both}
+.screen.active{display:flex}
+@keyframes screenIn{from{opacity:0;transform:translateY(30px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes screenOut{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(.92)}}
+
+/* LOGO TEMPLO */
+.templo-logo{font-family:'Cinzel',serif;font-size:clamp(9px,1.5vw,11px);letter-spacing:6px;color:rgba(212,175,55,.45);text-transform:uppercase;margin-bottom:clamp(24px,4vw,40px);text-align:center}
+.templo-logo span{color:rgba(212,175,55,.7)}
+
+/* ════════════ PANTALLA 1 — CÓDIGO ════════════ */
+#s1-char{width:clamp(100px,18vw,150px);margin-bottom:clamp(12px,2vw,20px);filter:drop-shadow(0 0 24px rgba(212,175,55,.5));animation:floatY 4s ease-in-out infinite}
+@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+
+#s1-badge{display:inline-flex;align-items:center;gap:8px;font-family:'Cinzel',serif;font-size:clamp(8px,1.5vw,10px);letter-spacing:4px;color:rgba(212,175,55,.7);border:1px solid rgba(212,175,55,.3);padding:5px 18px;border-radius:2px;margin-bottom:clamp(12px,2vw,18px);text-transform:uppercase}
+
+#s1 h1{font-family:'Cinzel',serif;font-size:clamp(22px,5vw,42px);font-weight:900;text-align:center;margin-bottom:10px;background:linear-gradient(135deg,#f0d060,#d4af37,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.15}
+#s1 p{font-size:clamp(13px,2vw,15px);color:rgba(232,223,192,.5);text-align:center;margin-bottom:clamp(24px,4vw,36px);line-height:1.7}
+
+.code-box{width:100%;background:rgba(14,11,34,.95);border:1px solid rgba(212,175,55,.25);border-radius:12px;padding:clamp(20px,3.5vw,32px);position:relative;overflow:hidden}
+.code-box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(212,175,55,.5),transparent)}
+
+.code-label{font-family:'Cinzel',serif;font-size:clamp(9px,1.5vw,11px);letter-spacing:4px;color:rgba(212,175,55,.5);text-transform:uppercase;margin-bottom:10px;display:block}
+.code-input-wrap{display:flex;gap:10px;flex-wrap:wrap}
+#code-input{flex:1;min-width:180px;padding:clamp(12px,2vw,16px) clamp(14px,2.5vw,20px);background:rgba(7,4,26,.9);border:1px solid rgba(212,175,55,.2);border-radius:8px;color:#f0d060;font-family:'Cinzel',serif;font-size:clamp(14px,2.5vw,18px);letter-spacing:4px;text-transform:uppercase;outline:none;transition:all .3s}
+#code-input:focus{border-color:rgba(212,175,55,.6);box-shadow:0 0 20px rgba(212,175,55,.1)}
+#code-input::placeholder{color:rgba(212,175,55,.2);letter-spacing:2px;font-size:clamp(10px,1.8vw,13px)}
+#btn-canjear{padding:clamp(12px,2vw,16px) clamp(24px,4vw,36px);background:linear-gradient(135deg,#d4af37,#a07820);color:#07041a;font-family:'Cinzel',serif;font-size:clamp(10px,1.8vw,12px);letter-spacing:3px;font-weight:700;border:none;border-radius:8px;cursor:pointer;text-transform:uppercase;transition:all .3s;white-space:nowrap}
+#btn-canjear:hover{transform:translateY(-2px);box-shadow:0 0 30px rgba(212,175,55,.4)}
+
+#code-error{font-size:clamp(11px,1.8vw,13px);color:#ef4444;text-align:center;margin-top:12px;font-family:'Cinzel',serif;letter-spacing:1px;min-height:18px;transition:opacity .3s}
+
+.demo-codes{margin-top:clamp(14px,2.5vw,22px);padding-top:clamp(14px,2.5vw,22px);border-top:1px solid rgba(212,175,55,.1)}
+.demo-codes p{font-size:clamp(10px,1.5vw,12px);color:rgba(212,175,55,.3);letter-spacing:2px;font-family:'Cinzel',serif;margin-bottom:8px;text-transform:uppercase}
+.demo-tags{display:flex;gap:8px;flex-wrap:wrap}
+.demo-tag{padding:4px 12px;border:1px solid rgba(212,175,55,.2);border-radius:4px;font-family:'Cinzel',serif;font-size:clamp(9px,1.5vw,11px);color:rgba(212,175,55,.4);cursor:pointer;transition:all .3s;letter-spacing:1px}
+.demo-tag:hover{border-color:rgba(212,175,55,.5);color:rgba(212,175,55,.8);background:rgba(212,175,55,.06)}
+
+/* ════════════ PANTALLA 2 — VALIDANDO ════════════ */
+#s2{text-align:center}
+.orb-container{position:relative;width:clamp(160px,30vw,220px);height:clamp(160px,30vw,220px);margin:clamp(20px,3vw,32px) auto}
+.orb-outer{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(212,175,55,.2);animation:spinSlow 8s linear infinite}
+.orb-mid{position:absolute;inset:20px;border-radius:50%;border:1px solid rgba(124,58,237,.3);animation:spinSlow 5s linear infinite reverse}
+.orb-inner{position:absolute;inset:40px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,.6),rgba(212,175,55,.3) 50%,transparent 70%);animation:pulsOrb 2s ease-in-out infinite}
+.orb-dot{position:absolute;width:8px;height:8px;border-radius:50%;background:#d4af37;box-shadow:0 0 12px rgba(212,175,55,.8);top:-4px;left:50%;transform:translateX(-50%)}
+@keyframes spinSlow{to{transform:rotate(360deg)}}
+@keyframes pulsOrb{0%,100%{transform:scale(.95);opacity:.7}50%{transform:scale(1.05);opacity:1}}
+
+#s2 h2{font-family:'Cinzel',serif;font-size:clamp(18px,3.5vw,28px);font-weight:700;color:#d4af37;margin-bottom:10px}
+#validate-msg{font-size:clamp(12px,2vw,14px);color:rgba(232,223,192,.45);letter-spacing:3px;font-family:'Cinzel',serif;text-transform:uppercase;min-height:20px;transition:all .4s}
+.progress-bar{width:100%;max-width:320px;height:3px;background:rgba(212,175,55,.1);border-radius:2px;margin:clamp(16px,3vw,24px) auto;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#d4af37);border-radius:2px;width:0%;transition:width .4s ease}
+
+/* ════════════ PANTALLA 3 — DESBLOQUEADO ════════════ */
+#s3{text-align:center}
+#unlock-burst{font-size:clamp(48px,10vw,80px);margin-bottom:clamp(10px,2vw,16px);animation:burst .6s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes burst{0%{transform:scale(0) rotate(-20deg);opacity:0}60%{transform:scale(1.2) rotate(5deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+#s3-title{font-family:'Cinzel',serif;font-size:clamp(24px,6vw,52px);font-weight:900;background:linear-gradient(135deg,#f0d060,#d4af37,#fff8dc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;animation:fadeD .6s .3s both}
+#s3-sub{font-size:clamp(13px,2vw,16px);color:rgba(232,223,192,.6);margin-bottom:clamp(20px,3vw,30px);animation:fadeD .6s .5s both}
+#s3-packs{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:clamp(20px,3vw,30px);animation:fadeD .6s .7s both}
+.pack-unlock{padding:clamp(8px,1.5vw,12px) clamp(16px,3vw,24px);border-radius:8px;font-family:'Cinzel',serif;font-size:clamp(9px,1.5vw,11px);letter-spacing:2px;text-transform:uppercase;border:1px solid;animation:packPop .5s cubic-bezier(.34,1.56,.64,1) both}
+.pack-p1{background:rgba(212,175,55,.1);border-color:rgba(212,175,55,.4);color:#f0d060;animation-delay:.8s}
+.pack-p2{background:rgba(124,58,237,.1);border-color:rgba(124,58,237,.4);color:#a78bfa;animation-delay:1s}
+.pack-mem{background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.3);color:#34d399;animation-delay:1.2s}
+@keyframes packPop{from{opacity:0;transform:scale(.5) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+#btn-ver-contenido{padding:clamp(14px,2.5vw,18px) clamp(36px,6vw,56px);background:linear-gradient(135deg,rgba(212,175,55,.2),rgba(124,58,237,.2));border:1px solid rgba(212,175,55,.5);color:#f0d060;font-family:'Cinzel',serif;font-size:clamp(10px,1.8vw,12px);letter-spacing:3px;text-transform:uppercase;border-radius:8px;cursor:pointer;transition:all .3s;animation:fadeD .6s 1.5s both}
+#btn-ver-contenido:hover{background:linear-gradient(135deg,rgba(212,175,55,.3),rgba(124,58,237,.3));box-shadow:0 0 30px rgba(212,175,55,.2);transform:translateY(-2px)}
+#s3-char{width:clamp(80px,15vw,120px);margin:0 auto clamp(12px,2vw,18px);filter:drop-shadow(0 0 20px rgba(212,175,55,.4));animation:floatY 3.5s ease-in-out infinite}
+
+/* ════════════ PANTALLA 4 — CONTENIDO ════════════ */
+#s4{width:100%}
+.content-header{text-align:center;margin-bottom:clamp(20px,3vw,32px)}
+.content-header h2{font-family:'Cinzel',serif;font-size:clamp(18px,3.5vw,28px);font-weight:700;color:#d4af37;margin-bottom:8px}
+.content-header p{font-size:clamp(12px,1.8vw,14px);color:rgba(232,223,192,.45);letter-spacing:2px;font-family:'Cinzel',serif;text-transform:uppercase}
+
+/* TABS DE PAQUETES */
+.pack-tabs{display:flex;gap:6px;background:rgba(14,11,34,.8);border:1px solid rgba(212,175,55,.15);border-radius:8px;padding:5px;margin-bottom:clamp(16px,3vw,24px);flex-wrap:wrap}
+.pack-tab{flex:1;min-width:80px;padding:clamp(8px,1.5vw,11px) 10px;text-align:center;font-family:'Cinzel',serif;font-size:clamp(9px,1.5vw,10px);letter-spacing:2px;color:rgba(232,223,192,.4);cursor:pointer;border-radius:5px;transition:all .3s;text-transform:uppercase;user-select:none}
+.pack-tab.active-tab{background:rgba(212,175,55,.12);color:#d4af37;border:1px solid rgba(212,175,55,.3)}
+.pack-tab:hover:not(.active-tab){color:rgba(232,223,192,.7);background:rgba(255,255,255,.03)}
+
+/* MÓDULOS / PASOS */
+.pack-content{display:none;animation:screenIn .4s ease both}
+.pack-content.visible{display:block}
+.module-step{background:rgba(14,11,34,.9);border:1px solid rgba(212,175,55,.12);border-radius:10px;margin-bottom:10px;overflow:hidden;cursor:pointer;transition:all .3s}
+.module-step:hover{border-color:rgba(212,175,55,.3)}
+.module-step.open{border-color:rgba(212,175,55,.35)}
+.ms-head{display:flex;align-items:center;gap:clamp(10px,2vw,16px);padding:clamp(14px,2.5vw,18px)}
+.ms-num{font-family:'Cinzel',serif;font-size:clamp(20px,4vw,32px);font-weight:900;color:rgba(212,175,55,.12);min-width:clamp(28px,4vw,40px);line-height:1}
+.ms-icon{width:clamp(36px,5vw,44px);height:clamp(36px,5vw,44px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:clamp(16px,2.5vw,20px);flex-shrink:0}
+.ms-text{flex:1}
+.ms-text h3{font-family:'Cinzel',serif;font-size:clamp(12px,2vw,14px);color:rgba(232,223,192,.9);letter-spacing:.5px;margin-bottom:4px}
+.ms-text p{font-size:clamp(11px,1.7vw,13px);color:rgba(232,223,192,.4);line-height:1.5}
+.ms-arrow{font-size:14px;color:rgba(212,175,55,.3);transition:transform .3s;flex-shrink:0}
+.module-step.open .ms-arrow{transform:rotate(180deg);color:rgba(212,175,55,.6)}
+.ms-body{max-height:0;overflow:hidden;transition:max-height .5s cubic-bezier(.4,0,.2,1)}
+.module-step.open .ms-body{max-height:500px}
+.ms-inner{padding:clamp(14px,2.5vw,20px);padding-top:0;border-top:1px solid rgba(212,175,55,.08)}
+.ms-inner p{font-size:clamp(13px,2vw,15px);color:rgba(232,223,192,.65);line-height:1.75;margin-bottom:12px}
+.ms-inner .tip{background:rgba(212,175,55,.06);border-left:2px solid rgba(212,175,55,.4);border-radius:0 6px 6px 0;padding:10px 14px;font-size:clamp(11px,1.7vw,13px);color:rgba(212,175,55,.7);line-height:1.6;font-style:italic}
+
+/* MEMBRESÍA BONUS */
+.mem-bonus{background:linear-gradient(135deg,rgba(52,211,153,.08),rgba(124,58,237,.08));border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:clamp(16px,2.5vw,22px);margin-top:clamp(16px,3vw,24px);display:none}
+.mem-bonus.show{display:block;animation:screenIn .5s ease both}
+.mem-bonus h3{font-family:'Cinzel',serif;font-size:clamp(12px,2vw,14px);color:#34d399;letter-spacing:2px;margin-bottom:8px}
+.mem-bonus p{font-size:clamp(12px,1.8vw,14px);color:rgba(232,223,192,.6);line-height:1.65}
+
+/* NOMBRE SELLADO */
+.sealed-name{text-align:center;margin-top:clamp(24px,4vw,36px);padding:clamp(14px,2.5vw,20px);background:rgba(7,4,26,.8);border:1px solid rgba(212,175,55,.15);border-radius:8px}
+.sealed-name p{font-family:'Cinzel',serif;font-size:clamp(9px,1.5vw,11px);letter-spacing:3px;color:rgba(212,175,55,.35);margin-bottom:6px;text-transform:uppercase}
+.sealed-name strong{font-family:'Cinzel',serif;font-size:clamp(13px,2.5vw,16px);color:rgba(212,175,55,.6);letter-spacing:2px}
+
+/* WATERMARK FIJO */
+#watermark{position:fixed;bottom:14px;right:14px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:rgba(212,175,55,.18);pointer-events:none;z-index:999;text-align:right}
+
+@keyframes fadeD{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeU{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* RESPONSIVE */
+@media(max-width:480px){
+  .code-input-wrap{flex-direction:column}
+  #btn-canjear{width:100%}
+  .pack-tabs{gap:4px}
+}
+</style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+
+<div id="app">
+
+  <!-- ══ PANTALLA 1 — INGRESAR CÓDIGO ══ -->
+  <div class="screen active" id="s1">
+    <div class="templo-logo">⚔ <span>Templo del Propósito</span> · Acceso Sellado</div>
+
+    <img src="''' + LAPTOP + '''" id="s1-char" alt="Guardián">
+
+    <div id="s1-badge">🔐 Canjear Acceso</div>
+
+    <h1>Ingresa tu<br>Código Sagrado</h1>
+    <p>Cada código es único e intransferible.<br>Al canjearlo queda sellado a tu nombre para siempre.</p>
+
+    <div class="code-box">
+      <span class="code-label">Código de acceso</span>
+      <div class="code-input-wrap">
+        <input id="code-input" type="text" placeholder="TP-00AA-00AA" maxlength="12" autocomplete="off" spellcheck="false">
+        <button id="btn-canjear">⚡ Canjear</button>
+      </div>
+      <div id="code-error"></div>
+
+      <div class="demo-codes">
+        <p>Prueba con estos códigos demo</p>
+        <div class="demo-tags">
+          <div class="demo-tag" onclick="setCode('PACK-P1-001')">⚡ Pack 1</div>
+          <div class="demo-tag" onclick="setCode('PACK-P2-001')">⚜️ Pack 2</div>
+          <div class="demo-tag" onclick="setCode('PACK-P3-001')">👑 Pack 3 Master</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PANTALLA 2 — VALIDANDO ══ -->
+  <div class="screen" id="s2">
+    <div class="templo-logo">⚔ <span>Templo del Propósito</span> · Verificando</div>
+    <div class="orb-container">
+      <div class="orb-outer"><div class="orb-dot"></div></div>
+      <div class="orb-mid"></div>
+      <div class="orb-inner"></div>
+    </div>
+    <h2>Verificando código</h2>
+    <div id="validate-msg">Consultando registros del Templo...</div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+  </div>
+
+  <!-- ══ PANTALLA 3 — DESBLOQUEADO ══ -->
+  <div class="screen" id="s3">
+    <div class="templo-logo">⚔ <span>Templo del Propósito</span> · Acceso Concedido</div>
+    <img src="''' + MAGO + '''" id="s3-char" alt="Maestro">
+    <div id="unlock-burst">🔓</div>
+    <div id="s3-title">¡ACCESO DESBLOQUEADO!</div>
+    <div id="s3-sub">Tu código ha sido sellado. Este acceso es tuyo para siempre.</div>
+    <div id="s3-packs"></div>
+    <button id="btn-ver-contenido" onclick="showContent()">⚔ Ver Mi Contenido →</button>
+  </div>
+
+  <!-- ══ PANTALLA 4 — CONTENIDO ══ -->
+  <div class="screen" id="s4">
+    <div class="templo-logo">⚔ <span>Templo del Propósito</span> · Tu Arsenal</div>
+    <div class="content-header">
+      <h2>Tu Arsenal Desbloqueado</h2>
+      <p>Selecciona un paquete para explorar</p>
+    </div>
+
+    <div class="pack-tabs" id="pack-tabs"></div>
+
+    <!-- PACK 1 -->
+    <div class="pack-content" id="pc-p1">
+      <div class="module-step" onclick="toggleStep(this)">
+        <div class="ms-head">
+          <div class="ms-num">01</div>
+          <div class="ms-icon" style="background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.3)">🧠</div>
+          <div class="ms-text">
+            <h3>Cómo piensa la IA — El secreto que nadie te dice</h3>
+            <p>La base de todo. Sin esto los demás pasos no funcionan.</p>
+          </div>
+          <div class="ms-arrow">▼</div>
+        </div>
+        <div class="ms-body"><div class="ms-inner">
+          <p>La inteligencia artificial no "entiende" — responde a patrones. Aprender a estructurar lo que le pides es la habilidad más poderosa que puedes desarrollar en 2026. No necesitas saber código, necesitas saber hablar.</p>
+          <div class="tip">💡 Tip: Piensa en la IA como un colaborador muy capaz pero que necesita contexto claro. Cuanto más específico seas, mejor resultado obtienes.</div>
+        </div></div>
+      </div>
+
+      <div class="module-step" onclick="toggleStep(this)">
+        <div class="ms-head">
+          <div class="ms-num">02</div>
+          <div class="ms-icon" style="background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.3)">🛠️</div>
+          <div class="ms-text">
+            <h3>Tu primera herramienta en menos de 20 minutos</h3>
+            <p>De cero a algo funcional que puedes usar hoy mismo.</p>
+          </div>
+          <div class="ms-arrow">▼</div>
+        </div>
+        <div class="ms-body"><div class="ms-inner">
+          <p>Vas a crear algo real desde cero. No un ejercicio teórico — una herramienta que resuelve algo concreto en tu vida o trabajo. El proceso es el mismo para cualquier cosa que quieras construir después.</p>
+          <div class="tip">💡 Tip: Empieza con algo pequeño pero útil. Una herramienta simple que usas todos los días vale más que un sistema complejo que nunca terminas.</div>
+        </div></div>
+      </div>
+
+      <div class="module-step" onclick="toggleStep(this)">
+        <div class="ms-head">
+          <div class="ms-num">03</div>
+          <div class="ms-icon" style="background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.3)">⚡</div>
+          <div class="ms-text">
+            <h3>Automatiza lo que más tiempo te roba</h3>
+            <p>Identifica y elimina tareas repetitivas de tu rutina.</p>
+          </div>
+          <div class="ms-arrow">▼</div>
+        </div>
+        <div class="ms-body"><div class="ms-inner">
+          <p>Hay tareas que haces todos los días que una herramienta puede hacer por ti en segundos. Aprende a identificarlas y a construir la solución exacta que necesitas, sin depender de apps de terceros.</p>
+          <div class="tip">💡 Tip: Haz una lista de las 3 cosas que más tiempo te consumen esta semana. Al menos una de ellas se puede automatizar con lo que aprenderás aquí.</div>
+        </div></div>
+      </div>
+
+      <div class="module-step" onclick="toggleStep(this)">
+        <div class="ms-head">
+          <div class="ms-num">04</div>
+          <div class="ms-icon" style="background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.3)">🎯</div>
+          <div class="ms-text">
+            <h3>Aplícalo en cualquier área de tu vida</h3>
+            <p>Negocios, salud, finanzas, creatividad — sin límite de área.</p>
+          </div>
+          <div class="ms-arrow">▼</div>
+        </div>
+        <div class="ms-body"><div class="ms-inner">
+          <p>El método es universal. Lo mismo que usas para organizar tu trabajo lo aplicas en tus finanzas personales, en tu rutina de salud, en tu negocio. Una habilidad, infinitas aplicaciones.</p>
+          <div class="tip">💡 Tip: El límite no está en la tecnología — está en lo que te permites imaginar. Si puedes describirlo con palabras, puedes construirlo.</div>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- PACK 2 -->
+    <div class="pack-content" id="pc-p2">
+      <div class="module-step" onclick="toggleStep(this)">
+        <div class="ms-head">
+          <div class="ms-num">01</div>
+          <div class="ms-icon" style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.35)">🔗</div>
+          <div class="ms-text">
+            <h3>Conecta procesos que antes vivían separados</h3>
+            <p>Sistemas que se hablan entre sí y trabajan como uno solo.</p>
+          </div>
+          <div class="ms-arrow">▼</div>
+        </div>
+        <div class="ms-body"><div class="ms-inner">
+          <p>La mayoría tiene decenas de herramientas que no se conectan. Aprende a crear el puente que hace que todo fluya como un sistema único e inteligente, sin depender de integraciones costosas.</p>
+          <div class="tip">💡 Tip: Piensa en tu flujo de trabajo actual. ¿Cuántas veces copias y pegas información de un lado a otro? Cada vez que haces eso, hay una automatización esperando ser construida.</div>
+        </div></div>
+      </div>
+
+      <div class="module-step" onclick="toggleStep(this)">
+        <div class="ms-head">
+          <div class="ms-num">02</div>
+          <div class="ms-icon" style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.35)">🏗️</div>
+          <div class="ms-text">
+            <h3>Construye sistemas a escala — sin techo</h3>
+            <p>Del prototipo al sistema complejo con el mismo método.</p>
+          </div>
+          <div class="ms-arrow">▼</div>
+        </div>
+        <div class="ms-body"><div class="ms-inner">
+          <p>No hay diferencia entre construir algo simple y algo avanzado — solo cambia el tamaño. El mismo proceso que usas para crear una herramienta pequeña escala a sistemas que manejan cientos de tareas automáticamente.</p>
+          <div class="tip">💡 Tip: No intentes construir el sistema perfecto desde el inicio. Empieza simple, prueba, itera. Los mejores sistemas son los que crecen con el uso real.</div>
+        </div></div>
+      </div>
+
+      <div class="module-step" onclick="toggleStep(this)">
+        <div class="ms-head">
+          <div class="ms-num">03</div>
+          <div class="ms-icon" style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.35)">⚙️</div>
+          <div class="ms-text">
+            <h3>Sistemas que trabajan mientras tú duermes</h3>
+            <p>Piloto automático real — no teoría, sino configuración concreta.</p>
+          </div>
+          <div class="ms-arrow">▼</div>
+        </div>
+        <div class="ms-body"><div class="ms-inner">
+          <p>Un sistema bien construido opera solo. Aprende a diseñar estructuras que toman decisiones, procesan información y entregan resultados sin que tengas que estar presente para cada paso.</p>
+          <div class="tip">💡 Tip: La meta no es trabajar menos — es que tu energía vaya a las decisiones que solo tú puedes tomar, mientras el sistema maneja el resto.</div>
+        </div></div>
+      </div>
+
+      <div class="module-step" onclick="toggleStep(this)">
+        <div class="ms-head">
+          <div class="ms-num">04</div>
+          <div class="ms-icon" style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.35)">🎨</div>
+          <div class="ms-text">
+            <h3>Personalización total — nada genérico</h3>
+            <p>Cada solución adaptada exactamente a ti, no a una plantilla.</p>
+          </div>
+          <div class="ms-arrow">▼</div>
+        </div>
+        <div class="ms-body"><div class="ms-inner">
+          <p>Las soluciones genéricas sirven para todos y no sirven para nadie. Aprende a construir exactamente lo que necesitas, con tus reglas, tu lógica y tus prioridades. Independencia total.</p>
+          <div class="tip">💡 Tip: Cada sistema que construyes es tuyo para siempre. No hay suscripción que cancele tu acceso, no hay empresa que decida cambiar cómo funciona. Es tuyo.</div>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- BONUS MEMBRESÍA -->
+    <div class="mem-bonus" id="mem-bonus">
+      <h3>🎖️ BONUS — 1 Mes de Membresía Activa</h3>
+      <p>Tu código incluye <strong style="color:#34d399">1 mes completo</strong> dentro del Templo del Propósito. Accede a la comunidad, la academia completa, el ranking, las misiones y todos los beneficios de miembro fundador. Se activa automáticamente al canjear este código.</p>
+    </div>
+
+    <div class="sealed-name" id="sealed-name">
+      <p>Acceso sellado a nombre de</p>
+      <strong id="user-name-display">—</strong>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<div id="watermark" id="wm">propotienda.com</div>
+
+<script>
+// ══ CONFIGURACIÓN DE CÓDIGOS DEMO ══
+const CODES = {
+  'PACK-P1-001': { packs: ['p1'], name: 'Usuario Templo' },
+  'PACK-P2-001': { packs: ['p2'], name: 'Usuario Templo' },
+  'PACK-P3-001': { packs: ['p1','p2','mem'], name: 'Usuario Templo' },
+};
+
+let currentUser = { name: '', packs: [] };
+
+// ══ CANVAS PARTÍCULAS ══
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let W, H, particles = [];
+function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+for(let i=0;i<70;i++) particles.push({
+  x: Math.random()*9999, y: Math.random()*9999,
+  vx: (Math.random()-.5)*.3, vy: -Math.random()*.4-.1,
+  r: Math.random()*1.5+.4,
+  gold: Math.random()>.4,
+  a: Math.random()*.7+.2
+});
+function drawBG(){
+  ctx.clearRect(0,0,W,H);
+  particles.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.y<-5){p.y=H+5;p.x=Math.random()*W;}
+    if(p.x<0)p.x=W; if(p.x>W)p.x=0;
+    ctx.beginPath(); ctx.arc(p.x%W,p.y%H,p.r,0,Math.PI*2);
+    ctx.fillStyle = p.gold ? `rgba(212,175,55,${p.a*.5})` : `rgba(124,58,237,${p.a*.35})`;
+    ctx.fill();
+  });
+  requestAnimationFrame(drawBG);
+}
+drawBG();
+
+// ══ UTILIDADES ══
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');});
+  const el = document.getElementById(id);
+  el.classList.add('active');
+  el.style.animation='none'; el.offsetHeight;
+  el.style.animation='';
+}
+
+function setCode(c){ document.getElementById('code-input').value=c; }
+
+function toggleStep(el){
+  const wasOpen = el.classList.contains('open');
+  document.querySelectorAll('.module-step.open').forEach(s=>s.classList.remove('open'));
+  if(!wasOpen) el.classList.add('open');
+}
+
+// ══ PANTALLA 2 — VALIDACIÓN ANIMADA ══
+const validateMsgs = [
+  'Consultando registros del Templo...',
+  'Verificando autenticidad del código...',
+  'Comprobando accesos asignados...',
+  'Sellando código a tu nombre...',
+  'Acceso confirmado ✓'
+];
+
+function runValidation(code, onSuccess, onError){
+  showScreen('s2');
+  const fill = document.getElementById('prog-fill');
+  const msg = document.getElementById('validate-msg');
+  let step = 0;
+  const total = validateMsgs.length;
+  const interval = setInterval(()=>{
+    if(step >= total){ clearInterval(interval); return; }
+    msg.style.opacity='0';
+    setTimeout(()=>{ msg.textContent=validateMsgs[step]; msg.style.opacity='1'; },200);
+    fill.style.width = ((step+1)/total*100)+'%';
+    step++;
+    if(step===total){
+      clearInterval(interval);
+      setTimeout(()=>{
+        const match = CODES[code.toUpperCase().trim()];
+        if(match){ onSuccess(match); }
+        else { onError(); }
+      },600);
+    }
+  },700);
+}
+
+// ══ PANTALLA 3 — DESBLOQUEADO ══
+function showUnlocked(data){
+  currentUser = { name: data.name || 'Templario', packs: data.packs };
+  const packsEl = document.getElementById('s3-packs');
+  packsEl.innerHTML='';
+  if(data.packs.includes('p1')){
+    packsEl.innerHTML+=`<div class="pack-unlock pack-p1">⚡ Paquete 1 — Herramientas Reales</div>`;
+  }
+  if(data.packs.includes('p2')){
+    packsEl.innerHTML+=`<div class="pack-unlock pack-p2">⚜️ Paquete 2 — Sin Límites</div>`;
+  }
+  if(data.packs.includes('mem')){
+    packsEl.innerHTML+=`<div class="pack-unlock pack-mem">🎖️ 1 Mes de Membresía Incluido</div>`;
+  }
+  // Partículas de celebración
+  spawnBurst();
+  showScreen('s3');
+}
+
+function spawnBurst(){
+  for(let i=0;i<40;i++){
+    particles.push({
+      x: W/2, y: H/2,
+      vx: (Math.random()-0.5)*6,
+      vy: (Math.random()-0.5)*6 - 2,
+      r: Math.random()*3+1,
+      gold: Math.random()>.3,
+      a: 1
+    });
+  }
+}
+
+// ══ PANTALLA 4 — CONTENIDO ══
+function showContent(){
+  const packs = currentUser.packs;
+  const tabsEl = document.getElementById('pack-tabs');
+  tabsEl.innerHTML='';
+
+  // Generar tabs según packs
+  if(packs.includes('p1')){
+    tabsEl.innerHTML+=`<div class="pack-tab" onclick="switchPack('p1',this)" data-pack="p1">⚡ Pack 1</div>`;
+  }
+  if(packs.includes('p2')){
+    tabsEl.innerHTML+=`<div class="pack-tab" onclick="switchPack('p2',this)" data-pack="p2">⚜️ Pack 2</div>`;
+  }
+
+  // Mostrar bonus membresía
+  if(packs.includes('mem')){
+    document.getElementById('mem-bonus').classList.add('show');
+  }
+
+  // Nombre sellado
+  document.getElementById('user-name-display').textContent = currentUser.name;
+  document.getElementById('watermark').textContent = `propotienda.com · ${currentUser.name}`;
+
+  showScreen('s4');
+
+  // Activar primer tab
+  const firstTab = tabsEl.querySelector('.pack-tab');
+  if(firstTab){ firstTab.click(); }
+}
+
+function switchPack(packId, tabEl){
+  document.querySelectorAll('.pack-tab').forEach(t=>t.classList.remove('active-tab'));
+  document.querySelectorAll('.pack-content').forEach(c=>c.classList.remove('visible'));
+  tabEl.classList.add('active-tab');
+  const pc = document.getElementById('pc-'+packId);
+  if(pc){ pc.classList.add('visible'); }
+}
+
+// ══ BOTÓN CANJEAR ══
+document.getElementById('btn-canjear').addEventListener('click', ()=>{
+  const code = document.getElementById('code-input').value.trim().toUpperCase();
+  const errEl = document.getElementById('code-error');
+  if(!code){ errEl.textContent='⚠ Ingresa tu código de acceso'; return; }
+  errEl.textContent='';
+  runValidation(code,
+    (data)=>{ setTimeout(()=>showUnlocked(data), 400); },
+    ()=>{
+      showScreen('s1');
+      errEl.textContent='✗ Código no válido o ya fue utilizado';
+    }
+  );
+});
+
+document.getElementById('code-input').addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('btn-canjear').click();
+});
+</script>
+</body>
+</html>'''

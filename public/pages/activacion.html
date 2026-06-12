@@ -513,6 +513,50 @@ function goSilent(n){
   nx.classList.add('active');
 }
 
+// ── Protección: solo funciona dentro del iframe de la app ──────────────────
+(function(){
+  try {
+    // Si window === window.top significa que está abierto directo en el navegador
+    // (no dentro de un iframe). En ese caso bloqueamos.
+    if (window.self === window.top) {
+      document.body.innerHTML = `
+        <div style="
+          min-height:100vh;display:flex;flex-direction:column;
+          align-items:center;justify-content:center;
+          background:#060310;font-family:'Georgia',serif;
+          color:rgba(212,175,55,0.6);text-align:center;padding:40px;
+        ">
+          <div style="font-size:48px;margin-bottom:24px;">⚔️</div>
+          <div style="font-family:'Georgia',serif;font-size:13px;letter-spacing:4px;text-transform:uppercase;margin-bottom:12px;">
+            Acceso Restringido
+          </div>
+          <div style="font-size:12px;color:rgba(212,175,55,0.35);letter-spacing:2px;">
+            Esta página solo está disponible dentro de la app del Templo.
+          </div>
+        </div>`;
+      throw new Error('blocked');
+    }
+  } catch(e) {
+    if (e.message === 'blocked') return;
+    // Si hay un error de cross-origin al leer window.top, significa que
+    // estamos en un iframe de dominio diferente — también bloqueamos.
+    document.body.innerHTML = `
+      <div style="
+        min-height:100vh;display:flex;flex-direction:column;
+        align-items:center;justify-content:center;
+        background:#060310;font-family:'Georgia',serif;
+        color:rgba(212,175,55,0.6);text-align:center;padding:40px;
+      ">
+        <div style="font-size:48px;margin-bottom:24px;">⚔️</div>
+        <div style="font-size:13px;letter-spacing:4px;text-transform:uppercase;margin-bottom:12px;">
+          Acceso Restringido
+        </div>
+      </div>`;
+    return;
+  }
+})();
+// ─────────────────────────────────────────────────────────────────────────────
+
 let cur=0;
 const D={sk:'',st:'',em:'',pw:''};
 function go(n){
@@ -529,20 +573,7 @@ function go(n){
   requestAnimationFrame(()=>{nx.style.cssText='';});
   saveState();
 }
-function v1(){
-  let ok=true;
-  ['esk','skN','est','stN'].forEach(id=>document.getElementById(id).classList.remove('show','err'));
-  const sk=document.getElementById('skN').value.trim();
-  const st=document.getElementById('stN').value.trim();
-  if(!sk){document.getElementById('esk').classList.add('show');document.getElementById('skN').classList.add('err');ok=false;}
-  if(!st){document.getElementById('est').classList.add('show');document.getElementById('stN').classList.add('err');ok=false;}
-  if(ok){
-    // Pedir validación de nick al padre antes de avanzar
-    D.sk=sk;D.st=st;
-    window.parent.postMessage({ type: 'check-nick', nick: st }, '*');
-    // El padre responderá con 'nick-ok' o 'nick-taken'
-  }
-}
+function v1(){/* reemplazada por window.v1 abajo */}
 function togglePw(){
   const p=document.getElementById('pwN');
   const eye=document.getElementById('pwEye');
@@ -650,13 +681,10 @@ window.addEventListener('message', function(e) {
 loadState();
 
 // ── Sonido en goStore ──
-const _gs=goStore;
-window.goStore=function(){
-  SFX.win();
-  setTimeout(()=>{
-    [523,659,784,1047,1319].forEach((f,i)=>SFX._p(f,'sine',.35,.1,i*.07));
-  },150);
-  setTimeout(_gs,600);
+window.v2=function(){
+  const em=document.getElementById('emN').value.trim();
+  if(!em||!em.includes('@')) SFX.error();
+  _v2();
 };
 
 // ── Sonido en errores ──

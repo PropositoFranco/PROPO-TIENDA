@@ -1,13 +1,17 @@
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export async function createCheckoutSession({ userId, referralCode, priceId }) {
+export async function createCheckoutSession({ userId, referralCode, priceId, supabase }) {
+  // Obtener el JWT real de la sesión activa del usuario
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData?.session?.access_token ?? ANON_KEY;
+
   const res = await fetch(`${FUNCTIONS_URL}/create-checkout`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'apikey': ANON_KEY,
-      'Authorization': `Bearer ${ANON_KEY}`,
+      'Authorization': `Bearer ${accessToken}`,
     },
     body: JSON.stringify({
       user_id: userId,
@@ -21,7 +25,11 @@ export async function createCheckoutSession({ userId, referralCode, priceId }) {
   else throw new Error(data.error || 'Error al crear sesión');
 }
 
-export async function createArsenalCheckout({ plan, userEmail }) {
+export async function createArsenalCheckout({ plan, userEmail, supabase }) {
+  // Obtener el JWT real de la sesión activa del usuario
+  const { data: sessionData } = await supabase?.auth?.getSession?.() ?? {};
+  const accessToken = sessionData?.session?.access_token ?? ANON_KEY;
+
   const OFFER_IDS = {
     basic: 'b18a2303-5bab-444f-b817-323a4ef6ff11',
     elite: '077216b1-0074-43d3-a680-ae018275eade',
@@ -36,7 +44,7 @@ export async function createArsenalCheckout({ plan, userEmail }) {
     headers: {
       'Content-Type': 'application/json',
       'apikey': ANON_KEY,
-      'Authorization': `Bearer ${ANON_KEY}`,
+      'Authorization': `Bearer ${accessToken}`,
     },
     body: JSON.stringify({
       price_id:          PRICE_IDS[plan],

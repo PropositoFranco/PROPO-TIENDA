@@ -71,13 +71,6 @@ if (freshStatus === 'active' || freshStatus === 'admin') {
   setCheckedStatus(useMembershipStore.getState().status);
 })();
 
-    // Fallback: si el store está vacío por alguna razón
-    (async () => {
-      const store = useMembershipStore.getState();
-      await store.loadMembership(supabase, user.id);
-      setCheckedStatus(useMembershipStore.getState().status);
-    })();
-
   }, [authLoading, user?.id, profile?.id]);
 
   // Auth cargando

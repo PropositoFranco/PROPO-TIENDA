@@ -14,6 +14,7 @@ import PaywallPage from '../features/academy/PaywallPage';
 import ReactivarPage from '../features/academy/ReactivarPage';
 import ArsenalRPGPage from '../features/arsenal/ArsenalRPGPage';
 
+const CanjeadorPage = lazy(() => import('../features/packages/CanjeadorPage'));
 const HubPage            = lazy(() => import('../features/hub/HubPage'));
 const StorePage          = lazy(() => import('../features/store/StorePage'));
 const LibraryPage        = lazy(() => import('../features/library/LibraryPage'));
@@ -94,6 +95,7 @@ export default function AppRouter() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/bienvenido" element={<BienvenidoPage />} />
+        <Route path="/canjear" element={<CanjeadorPage />} />
           <Route path="/hazloapp" element={<HazloAppPage />} />
           <Route path="/terminos" element={<TerminosPage />} />
           <Route path="/arsenal-rpg" element={<ArsenalRPGPage />} />
