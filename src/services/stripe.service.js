@@ -35,8 +35,8 @@ export async function createArsenalCheckout({ plan, userEmail, supabase }) {
     elite: '077216b1-0074-43d3-a680-ae018275eade',
   };
   const PRICE_IDS = {
-    basic: 'price_1TgAhpHAhN6AYkd2HLEtBwJX',
-    elite: 'price_1TgAj7HAhN6AYkd2iEubRvRU',
+    basic: 'price_1ThZWIHAhN6AYkd2ClzGP4kT',
+elite: 'price_1ThZUZHAhN6AYkd2iifFccnF',
   };
 
   const res = await fetch(`${FUNCTIONS_URL}/create-checkout`, {

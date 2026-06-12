@@ -22,11 +22,11 @@ import { useAuthStore } from '../../store/useAuthStore';
 import useMembershipStore from '../../store/useMembershipStore';
 
 const PRICE_IDS = {
-  despertar:  'price_1TX9qSHAhN6AYkd2KF8MWbgv',
-  paq1:       'price_1TXCGIHAhN6AYkd21yaDRR5J',
-  triada:     'price_1TfRQSHAhN6AYkd2hFme34SY',
-  vip_1mes:   'price_1TcZBLHAhN6AYkd2eQKQ0zhN',
-  vip_3meses: 'price_1TcZBLHAhN6AYkd2eQKQ0zhN',
+  despertar:  'price_1ThYHEHAhN6AYkd2g8RNLP9o',
+  paq1:       'price_1ThYVtHAhN6AYkd2lk07yXzk',
+  triada:     'price_1ThYY2HAhN6AYkd2Uemxo91V',
+  vip_1mes:   'price_1ThZVdHAhN6AYkd2XtTU0V9Y',
+  vip_3meses: 'price_1ThZRRHAhN6AYkd20HvGSMDB',
 };
 
 const PLANS = [

@@ -10,7 +10,7 @@ const ARSENAL_OFFER = {
   description:    '6 componentes JSX listos para tu proyecto',
   price:          '8',
   original_price: null,
-  stripe_price_id:'price_1TgAhpHAhN6AYkd2HLEtBwJX',
+  stripe_price_id:'price_1ThZWIHAhN6AYkd2ClzGP4kT',
   months_to_add:  0,
   is_subscription:false,
 };
