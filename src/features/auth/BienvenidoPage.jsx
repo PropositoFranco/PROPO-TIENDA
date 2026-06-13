@@ -967,6 +967,7 @@ function FaseExperiencia({ redirectUrl }) {
 export default function BienvenidoPage() {
   const [searchParams] = useSearchParams();
   const sessionId  = searchParams.get('session_id') || '';
+  const codeParam  = searchParams.get('code')       || '';
   const refCode    = searchParams.get('ref')        || '';
 
   const redirectUrl = refCode
@@ -1011,6 +1012,8 @@ export default function BienvenidoPage() {
 
   // Cargar código desde Supabase
   useEffect(() => {
+    // Si viene ?code= en la URL (desde correo de recuperación), usarlo directo
+    if (codeParam) { setUserCode(codeParam); setCodeLoading(false); return; }
     async function fetchCode() {
       if (!sessionId) {
         try {
