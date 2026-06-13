@@ -1416,6 +1416,7 @@ const useMembershipStore = create(
       renewsAt: state.renewsAt,
       currentWeek: state.currentWeek,
       userProtocolo: state.userProtocolo,
+      protocoLoFecha: state.protocoLoFecha,
       openedModules: state.openedModules,
       completedModules: state.completedModules,
     }),

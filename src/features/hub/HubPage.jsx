@@ -72,19 +72,14 @@ useEffect(() => {
       w: frameRef.current?.offsetWidth  || window.innerWidth,
       h: frameRef.current?.offsetHeight || window.innerHeight,
     });
-    // Mandar protocolo: primero el cacheado, luego el fresco de Supabase
-    const { userProtocolo: proto, protocoLoFecha: fecha } = useMembershipStore.getState();
-    const expirado = (() => {
-      if (!fecha) return false;
-      return Date.now() >= new Date(fecha).getTime() + 7 * 24 * 60 * 60 * 1000;
-    })();
-    sendToFrame('protocolo', expirado ? null : (proto ?? null));
+    // Mandar protocolo cacheado inmediato
+    const { userProtocolo: proto } = useMembershipStore.getState();
+    sendToFrame('protocolo', proto ?? null);
     // Refrescar desde Supabase y remandar
     if (user?.id) {
       useMembershipStore.getState().loadMembership(supabase, user.id).then(() => {
-        const { userProtocolo: p2, protocoLoFecha: f2 } = useMembershipStore.getState();
-        const exp2 = f2 ? Date.now() >= new Date(f2).getTime() + 7 * 24 * 60 * 60 * 1000 : false;
-        sendToFrame('protocolo', exp2 ? null : (p2 ?? null));
+        const { userProtocolo: p2 } = useMembershipStore.getState();
+        sendToFrame('protocolo', p2 ?? null);
       });
     }
 
@@ -114,44 +109,18 @@ useEffect(() => {
     sendToFrame('player', { level, xp, xpToNextLevel, rank, playerClass, templarioName });
   }, [level, xp, xpToNextLevel, rank, playerClass, templarioName]);
 
-  // ── Re-evaluar expiración cada 60s ───────────────────────────
-  useEffect(() => {
-    const tick = setInterval(() => {
-      const { userProtocolo: proto, protocoLoFecha: fecha } = useMembershipStore.getState();
-      if (!fecha) return;
-      const expirado = Date.now() >= new Date(fecha).getTime() + 7 * 24 * 60 * 60 * 1000;
-      sendToFrame('protocolo', expirado ? null : (proto ?? null));
-    }, 60_000);
-    return () => clearInterval(tick);
-  }, []);
+  
 
   // ── Mandar protocolo al iframe ────────────────────────────────
   const userProtocolo = useMembershipStore(state => state.userProtocolo);
-  const protocoLoFecha = useMembershipStore(state => state.protocoLoFecha);
-  const loadMembership = useMembershipStore(state => state.loadMembership);
+  
+  
 
-  // Refrescar protocolo desde Supabase cada vez que entra al hub
-  useEffect(() => {
-    if (!user?.id) return;
-    loadMembership(supabase, user.id).then(() => {
-      const { userProtocolo: proto, protocoLoFecha: fecha } = useMembershipStore.getState();
-      const expirado = (() => {
-        if (!fecha) return false;
-        return Date.now() >= new Date(fecha).getTime() + 7 * 24 * 60 * 60 * 1000;
-      })();
-      sendToFrame('protocolo', expirado ? null : (proto ?? null));
-    });
-  }, [user?.id]);
+  
 
   useEffect(() => {
-    const expirado = (() => {
-      if (!protocoLoFecha) return false;
-      const inicio = new Date(protocoLoFecha).getTime();
-      const siguiente = inicio + 7 * 24 * 60 * 60 * 1000;
-      return Date.now() >= siguiente;
-    })();
-    sendToFrame('protocolo', expirado ? null : (userProtocolo ?? null));
-  }, [userProtocolo, protocoLoFecha]);
+    sendToFrame('protocolo', userProtocolo ?? null);
+  }, [userProtocolo]);
 
   // ── BADGES — lógica real desde Supabase ──────────────────────
   useEffect(() => {
