@@ -275,8 +275,16 @@ export default function LoginPage() {
           }}>Recuperar tu Código</div>
           <div style={{
             fontFamily: "'Raleway',sans-serif", fontSize: 13,
-            color: 'rgba(200,185,240,.6)', marginBottom: 24, textAlign: 'center', lineHeight: 1.6,
-          }}>Email con el que pagaste en Stripe</div>
+            color: 'rgba(200,185,240,.6)', marginBottom: 24, textAlign: 'center', lineHeight: 1.8,
+          }}>
+            Ingresa el email con el que pagaste en Stripe.<br/>
+            Te enviaremos tu código de acceso si:<br/>
+            <span style={{ color: 'rgba(212,175,55,.7)' }}>
+              · Olvidaste tu contraseña<br/>
+              · Pagaste pero no completaste tu registro<br/>
+              · Perdiste tu código de invitación
+            </span>
+          </div>
           <input
             type="email"
             placeholder="tu@email.com"
