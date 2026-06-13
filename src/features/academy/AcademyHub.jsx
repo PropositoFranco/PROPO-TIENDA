@@ -565,10 +565,14 @@ const [mostrarRitual, setMostrarRitual] = useState(
 );
 const nombreParam = searchParams.get('nombre') || user?.user_metadata?.full_name || '';
 const emailParam  = searchParams.get('email')  || user?.email || '';
-const onRitualCompleto = useCallback(() => {
+const loadMembership = useMembershipStore(s => s.loadMembership);
+const onRitualCompleto = useCallback(async () => {
   setMostrarRitual(false);
   setSearchParams({}, { replace: true });
-}, [setSearchParams]);
+  if (user?.id) {
+    await loadMembership(user.id);
+  }
+}, [setSearchParams, user?.id, loadMembership]);
 
   const protocoLoFecha = useMembershipStore(s => s.protocoLoFecha);
 
