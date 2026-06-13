@@ -826,7 +826,7 @@ async function initSupabase() {
   CURRENT_USER = session.user;
   const { data: profile } = await sb
     .from('profiles')
-    .select('id, full_name, is_admin')
+    .select('id, templario_name, is_admin')
     .eq('id', CURRENT_USER.id)
     .single();
   CURRENT_PROFILE = profile;
@@ -860,13 +860,13 @@ async function fetchLB() {
   try {
     const { data, error } = await sb
       .from('templo_players')
-      .select('id, points, streak, correct, level, xp, char_gender, char_variant, char_name, daily_attempts, profiles(full_name)')
+      .select('id, points, streak, correct, level, xp, char_gender, char_variant, char_name, daily_attempts, profiles(templario_name)')
       .order('points', { ascending: false })
       .limit(100);
     if (error) { console.error('[fetchLB]', error.message); return []; }
     return (data || []).map(p => ({
       id: p.id,
-      n: p.char_name || p.profiles?.full_name || 'Templario',
+      n: p.char_name || p.profiles?.templario_name || 'Templario',
       p: p.points ?? 0,
       streak: p.streak ?? 0,
       correct: p.correct ?? 0,
@@ -896,7 +896,7 @@ async function saveLB() {
     player_rank: G.rank ?? 0,
     char_gender: G.gender || 'm',
     char_variant: G.charVariant ?? 0,
-    char_name: G.name || CURRENT_PROFILE?.full_name || 'Templario',
+    char_name: G.name || CURRENT_PROFILE?.templario_name || 'Templario',
     daily_attempts: G.dailyAttempts || {},
     updated_at: new Date().toISOString(),
   }, { onConflict: 'id' });
@@ -1028,7 +1028,7 @@ async function startGame() {
     }, 580);
   } else {
     // Primera vez - ir a selector de personaje
-    G.name = CURRENT_PROFILE?.full_name || '';
+    G.name = CURRENT_PROFILE?.templario_name || '';
     const app = document.getElementById('app');
     const flash = document.createElement('div');
     flash.style.cssText='position:fixed;inset:0;z-index:400;background:radial-gradient(ellipse at center,rgba(201,168,76,.9) 0%,rgba(10,7,2,.97) 65%,#000 100%);pointer-events:none;animation:csEpicFlash .55s ease forwards';
@@ -1413,8 +1413,8 @@ function playCinematic() {
   }));
 
   let playerGreeting = '';
-  if (typeof CURRENT_PROFILE !== 'undefined' && CURRENT_PROFILE?.full_name)
-    playerGreeting = CURRENT_PROFILE.full_name.toUpperCase();
+  if (typeof CURRENT_PROFILE !== 'undefined' && CURRENT_PROFILE?.templario_name)
+    playerGreeting = CURRENT_PROFILE.templario_name.toUpperCase();
   else if (typeof CURRENT_USER !== 'undefined' && CURRENT_USER?.email)
     playerGreeting = CURRENT_USER.email.split('@')[0].toUpperCase();
 
@@ -1739,7 +1739,6 @@ function renderCharPreview(){}
       const xpNext = level * 150;
       const xpPct  = Math.min(100, Math.round((xp / xpNext) * 100));
       const name   = window.G?.name
-                  || window.CURRENT_PROFILE?.full_name
                   || window.CURRENT_PROFILE?.templario_name
                   || 'Templario';
 
