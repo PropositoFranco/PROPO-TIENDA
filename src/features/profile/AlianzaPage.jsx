@@ -328,7 +328,7 @@ function LevelCard({ level, referidosActivos, onClaim, cuponActivo }) {
 
       {unlocked && cuponActivo && (
         <button
-          onClick={() => onClaim(level.nivel)}
+          onClick={() => onClaim(level.nivel, cuponActivo?.id)}
           onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 8px 30px ${level.glow}80`; e.currentTarget.style.transform = "scale(1.03)"; }}
           onMouseLeave={e => { e.currentTarget.style.boxShadow = `0 4px 20px ${level.glow}55`; e.currentTarget.style.transform = "scale(1)"; }}
           style={{ width: "100%", background: `linear-gradient(135deg,${level.color}ee,${level.glow})`, border: "none", borderRadius: "12px", padding: "13px", fontFamily: "'Cinzel',serif", fontSize: "10px", fontWeight: "700", color: "#fff", cursor: "pointer", letterSpacing: "0.12em", textTransform: "uppercase", boxShadow: `0 4px 20px ${level.glow}55`, transition: "all 0.25s", position: "relative", overflow: "hidden" }}>
@@ -667,7 +667,7 @@ export default function AlianzaPage() {
           <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,270px),1fr))" }}>
             {ALIANZA_LEVELS.map(level => {
               const cupon = cuponesDisponibles.find(c => c.nivel === level.nivel);
-              return <LevelCard key={level.nivel} level={level} referidosActivos={referidosActivos} cuponActivo={!!cupon} onClaim={(n) => setShowModal({ nivel: n, cupon })} />;
+              return <LevelCard key={level.nivel} level={level} referidosActivos={referidosActivos} cuponActivo={cupon} onClaim={(n, eventId) => setShowModal({ nivel: n, cupon })} />;
             })}
           </div>
         )}
