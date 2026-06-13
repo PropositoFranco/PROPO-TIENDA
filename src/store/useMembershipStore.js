@@ -1212,11 +1212,10 @@ const useMembershipStore = create(
             .maybeSingle();
 
           // ── 3. Leer protocolo ────────────────────────────────────────────
-          const userEmail = profileData?.email ?? '';
           const { data: protocoloData } = await supabaseClient
             .from('user_protocolo')
             .select('protocolo, semana, fecha')
-            .eq('email', userEmail)
+            .eq('user_id', userId)
             .maybeSingle();
 
           // ── 4. Calcular status — el admin tiene prioridad ─────────────────
