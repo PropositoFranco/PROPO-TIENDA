@@ -81,7 +81,7 @@ useEffect(() => {
     sendToFrame('protocolo', expirado ? null : (proto ?? null));
     // Refrescar desde Supabase y remandar
     if (user?.id) {
-      useMembershipStore.getState().loadMembership(user.id).then(() => {
+      useMembershipStore.getState().loadMembership(supabase, user.id).then(() => {
         const { userProtocolo: p2, protocoLoFecha: f2 } = useMembershipStore.getState();
         const exp2 = f2 ? Date.now() >= new Date(f2).getTime() + 7 * 24 * 60 * 60 * 1000 : false;
         sendToFrame('protocolo', exp2 ? null : (p2 ?? null));
@@ -133,7 +133,7 @@ useEffect(() => {
   // Refrescar protocolo desde Supabase cada vez que entra al hub
   useEffect(() => {
     if (!user?.id) return;
-    loadMembership(user.id).then(() => {
+    loadMembership(supabase, user.id).then(() => {
       const { userProtocolo: proto, protocoLoFecha: fecha } = useMembershipStore.getState();
       const expirado = (() => {
         if (!fecha) return false;
