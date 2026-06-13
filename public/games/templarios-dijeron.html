@@ -901,10 +901,7 @@ async function saveLB() {
     updated_at: new Date().toISOString(),
   }, { onConflict: 'id' });
   if (error) console.error('[saveLB]', error.message);
-  // Sync cristales del perfil/tienda con G.pts del juego
-  const store = usePlayerStore.getState();
-  const diff = G.pts - store.cristales;
-  if (diff !== 0) await store.addCristales(diff);
+  // Sync cristales omitido (solo disponible en contexto React)
 }
 
 /* ──────────────────────────────────────
