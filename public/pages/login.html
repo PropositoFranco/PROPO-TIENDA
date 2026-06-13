@@ -891,9 +891,7 @@ body {
   function handleForgotPassword(e) {
     e.preventDefault();
     const email = document.getElementById('emailInput').value.trim();
-    if (!email) { showMsg('Ingresa tu correo primero', 'error'); return; }
-    window.parent.postMessage({ type: 'forgot-password', email }, '*');
-    showMsg('Revisa tu correo para recuperar tu contraseña', 'success');
+    window.parent.postMessage({ type: 'open-recovery', email }, '*');
   }
 
   document.getElementById('codeInput').addEventListener('keypress', e => { if(e.key==='Enter') handleLogin(); });

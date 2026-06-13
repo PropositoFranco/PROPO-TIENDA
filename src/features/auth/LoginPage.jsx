@@ -251,10 +251,10 @@ export default function LoginPage() {
         }
       );
       const json = await res.json();
-      if (json.found && json.code) {
-        setRecoveryResult(`✅ Tu código es: ${json.code}`);
+      if (json.sent) {
+        setRecoveryResult('✅ Revisa tu correo — ahí está tu código de acceso.');
       } else {
-        setRecoveryResult('❌ No encontramos un código con ese email. Escríbenos por WhatsApp.');
+        setRecoveryResult('❌ No encontramos ese email. ¿Usaste otro al pagar?');
       }
     } catch (_) {
       setRecoveryResult('❌ Error de conexión. Intenta de nuevo.');
