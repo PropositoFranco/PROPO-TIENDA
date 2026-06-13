@@ -113,6 +113,28 @@ export default function LoginPage() {
         }
       }
 
+      // ── RECUPERAR CONTRASEÑA ─────────────────────────────────────────────
+      if (event.data?.type === 'forgot-password') {
+        const { email } = event.data;
+        if (!email) return;
+        try {
+          const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`,
+          });
+          if (error) throw error;
+          document.getElementById('login-frame')
+            ?.contentWindow?.postMessage({ type: 'login-success' }, '*');
+        } catch (err) {
+          console.error('Recovery error:', err);
+          document.getElementById('login-frame')
+            ?.contentWindow?.postMessage({
+              type: 'login-error',
+              message: 'No se pudo enviar el correo. Intenta de nuevo.',
+            }, '*');
+        }
+        return;
+      }
+
       // ── PRIMERA VEZ: código de activación ───────────────────────────────
       if (event.data?.type === 'login-activation') {
         const code = event.data.code;
@@ -249,21 +271,7 @@ export default function LoginPage() {
         style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
       />
 
-      {/* Botón flotante de recuperación */}
-      {!showRecovery && (
-        <button
-          onClick={() => setShowRecovery(true)}
-          style={{
-            position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)',
-            background: 'transparent', border: '1px solid rgba(212,175,55,0.3)',
-            borderRadius: 50, padding: '8px 20px', cursor: 'pointer',
-            fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: 3,
-            color: 'rgba(212,175,55,0.6)', whiteSpace: 'nowrap',
-          }}
-        >
-          🔍 ¿PERDISTE TU CÓDIGO?
-        </button>
-      )}
+      {/* recuperación de código movida al iframe login.html */}
 
       {/* Panel de recuperación */}
       {showRecovery && (
