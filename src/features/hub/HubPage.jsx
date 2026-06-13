@@ -72,14 +72,21 @@ useEffect(() => {
       w: frameRef.current?.offsetWidth  || window.innerWidth,
       h: frameRef.current?.offsetHeight || window.innerHeight,
     });
-    // Mandar protocolo inmediatamente al cargar el iframe
+    // Mandar protocolo: primero el cacheado, luego el fresco de Supabase
     const { userProtocolo: proto, protocoLoFecha: fecha } = useMembershipStore.getState();
     const expirado = (() => {
       if (!fecha) return false;
-      const inicio = new Date(fecha).getTime();
-      return Date.now() >= inicio + 7 * 24 * 60 * 60 * 1000;
+      return Date.now() >= new Date(fecha).getTime() + 7 * 24 * 60 * 60 * 1000;
     })();
     sendToFrame('protocolo', expirado ? null : (proto ?? null));
+    // Refrescar desde Supabase y remandar
+    if (user?.id) {
+      useMembershipStore.getState().loadMembership(user.id).then(() => {
+        const { userProtocolo: p2, protocoLoFecha: f2 } = useMembershipStore.getState();
+        const exp2 = f2 ? Date.now() >= new Date(f2).getTime() + 7 * 24 * 60 * 60 * 1000 : false;
+        sendToFrame('protocolo', exp2 ? null : (p2 ?? null));
+      });
+    }
 
     // Mandar tiros de ruleta al cargar
     const isVip = useAuthStore.getState().isVip?.() ?? false;
@@ -125,7 +132,15 @@ useEffect(() => {
 
   // Refrescar protocolo desde Supabase cada vez que entra al hub
   useEffect(() => {
-    if (user?.id) loadMembership(user.id);
+    if (!user?.id) return;
+    loadMembership(user.id).then(() => {
+      const { userProtocolo: proto, protocoLoFecha: fecha } = useMembershipStore.getState();
+      const expirado = (() => {
+        if (!fecha) return false;
+        return Date.now() >= new Date(fecha).getTime() + 7 * 24 * 60 * 60 * 1000;
+      })();
+      sendToFrame('protocolo', expirado ? null : (proto ?? null));
+    });
   }, [user?.id]);
 
   useEffect(() => {
