@@ -1200,7 +1200,7 @@ const useMembershipStore = create(
           // ── 1. Leer perfil (fuente de verdad del admin) ──────────────────
           const { data: profileData } = await supabaseClient
             .from('profiles')
-            .select('membership_type, membership_expires_at, membership_status, paused_at')
+            .select('membership_type, membership_expires_at, membership_status, paused_at, email')
             .eq('id', userId)
             .single();
 
