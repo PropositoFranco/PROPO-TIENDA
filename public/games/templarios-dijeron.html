@@ -418,9 +418,10 @@ canvas{position:fixed;inset:0;pointer-events:none}
 <canvas id="bgc"></canvas>
 <canvas id="ptc"></canvas>
 <div class="cbar" id="ct"></div>
-<div class="cbar" id="cb"></div>
+<div class="cbar" id="cb"></div>ss
 <div id="notifs"></div>
 
+<script>
 function createGameAudio() {
   let audioCtx = null, masterGain = null, ambientNodes = [];
   function init() {
@@ -441,7 +442,8 @@ function createGameAudio() {
   function playCinematicSequence(){if(!audioCtx)return;playRumble(0.1,3);playDrum(0.3,0.65);playHorn(0.9,174.6,2.2,0.19);playHorn(0.9,220,2.2,0.14);playDrum(2.6,0.7);playHorn(3.1,261.6,2,0.19);playHorn(3.1,392,2,0.12);playChime(3.55,1046.5,0.22);playChime(3.82,1318.5,0.18);playRumble(4,2);playDrum(4.3,0.72);playHorn(4.7,349.2,2.8,0.21);playHorn(4.7,523.2,2.8,0.13);playChime(5.1,1567.9,0.2);playDrum(5.55,0.68);playDrum(6,0.6);playChime(6.2,2093,0.15);}
   return { init, playCinematicSequence, startAmbientMusic, stopAmbient };
 }
-const GAME_AUDIO = createGameAudio();
+var GAME_AUDIO = createGameAudio();
+</script>
 
 <!-- CINEMATIC INTRO (opcional, se muestra solo la primera vez o si se fuerza) -->
 <div id="cin-screen">
@@ -1354,7 +1356,7 @@ function createGameAudio() {
   return { init, playCinematicSequence, startAmbientMusic, stopAmbient };
 }
 
-const GAME_AUDIO = createGameAudio();
+var GAME_AUDIO = createGameAudio();
 
 function playCinematic() {
   const sc = document.getElementById('cin-screen');
