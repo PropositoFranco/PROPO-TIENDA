@@ -1075,9 +1075,8 @@ export default function BienvenidoPage() {
         <div style={{fontSize:40,marginBottom:20}}>🔍</div>
         <div style={{
           fontSize:'clamp(14px,3vw,20px)',fontWeight:700,letterSpacing:'.05em',
-          background:'linear-gradient(135deg,#f0c040,#d4af37)',
-          WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',
-          backgroundClip:'text',marginBottom:8,textAlign:'center',
+          color:'#f0c040',
+          marginBottom:8,textAlign:'center',
         }}>Recuperar tu Código</div>
         <div style={{
           fontFamily:"'Raleway',sans-serif",fontSize:13,
