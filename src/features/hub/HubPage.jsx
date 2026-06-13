@@ -121,8 +121,14 @@ useEffect(() => {
   // ── Mandar protocolo al iframe ────────────────────────────────
   const userProtocolo = useMembershipStore(state => state.userProtocolo);
   const protocoLoFecha = useMembershipStore(state => state.protocoLoFecha);
+  const loadMembership = useMembershipStore(state => state.loadMembership);
+
+  // Refrescar protocolo desde Supabase cada vez que entra al hub
   useEffect(() => {
-    
+    if (user?.id) loadMembership(user.id);
+  }, [user?.id]);
+
+  useEffect(() => {
     const expirado = (() => {
       if (!protocoLoFecha) return false;
       const inicio = new Date(protocoLoFecha).getTime();
