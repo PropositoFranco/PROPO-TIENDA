@@ -826,12 +826,12 @@ async function initSupabase() {
   CURRENT_USER = session.user;
   const { data: profile } = await sb
     .from('profiles')
-    .select('id, templario_name, avatar, is_admin')
+    .select('id, full_name, is_admin')
     .eq('id', CURRENT_USER.id)
     .single();
   CURRENT_PROFILE = profile;
   // Asegurar que existe el registro en templo_players
-  await sb.from('templo_players').upsert({ id: CURRENT_USER.id }, { onConflict: 'id', ignoreDuplicates: true });
+  // upsert inicial omitido — se crea al confirmar char
   return true;
 }
 
@@ -1413,8 +1413,8 @@ function playCinematic() {
   }));
 
   let playerGreeting = '';
-  if (typeof CURRENT_PROFILE !== 'undefined' && CURRENT_PROFILE?.templario_name)
-    playerGreeting = CURRENT_PROFILE.templario_name.toUpperCase();
+  if (typeof CURRENT_PROFILE !== 'undefined' && CURRENT_PROFILE?.full_name)
+    playerGreeting = CURRENT_PROFILE.full_name.toUpperCase();
   else if (typeof CURRENT_USER !== 'undefined' && CURRENT_USER?.email)
     playerGreeting = CURRENT_USER.email.split('@')[0].toUpperCase();
 
