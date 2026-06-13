@@ -1215,7 +1215,7 @@ const useMembershipStore = create(
           const { data: protocoloData } = await supabaseClient
             .from('user_protocolo')
             .select('protocolo, semana, fecha')
-            .eq('user_id', userId)
+            .eq('email', profileData?.email ?? '')
             .maybeSingle();
 
           // ── 4. Calcular status — el admin tiene prioridad ─────────────────

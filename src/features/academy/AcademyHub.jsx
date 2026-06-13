@@ -21,6 +21,7 @@ import useMembershipStore, {
 } from '../../store/useMembershipStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { usePlayerStore } from '../../store/usePlayerStore';
+import { supabase } from '../../services/supabase';
 // ─── Tarjeta del módulo semanal (hero) ───────────────────────────────────────
 const CurrentModuleHero = ({ module, isCompleted }) => {
   const cfg = MODULE_TYPE_CONFIG[module.type];
@@ -570,7 +571,7 @@ const onRitualCompleto = useCallback(async () => {
   setMostrarRitual(false);
   setSearchParams({}, { replace: true });
   if (user?.id) {
-    await loadMembership(user.id);
+    await loadMembership(supabase, user.id);
   }
 }, [setSearchParams, user?.id, loadMembership]);
 
