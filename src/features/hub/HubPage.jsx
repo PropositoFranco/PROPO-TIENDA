@@ -64,7 +64,7 @@ useEffect(() => {
   }, []);
 
   const sendToFrame = (type, data) => {
-    frameRef.current?.contentWindow?.postMessage({ type, data }, '*');
+    frameRef.current?.contentWindow?.postMessage({ type, data }, window.location.origin);
   };
 
   const handleFrameLoad = () => {
@@ -122,7 +122,7 @@ useEffect(() => {
   const userProtocolo = useMembershipStore(state => state.userProtocolo);
   const protocoLoFecha = useMembershipStore(state => state.protocoLoFecha);
   useEffect(() => {
-    console.log('🏛 PROTOCOLO DEBUG:', { userProtocolo, protocoLoFecha });
+    
     const expirado = (() => {
       if (!protocoLoFecha) return false;
       const inicio = new Date(protocoLoFecha).getTime();
@@ -189,9 +189,7 @@ useEffect(() => {
         realProductIds = new Set((realProds || []).map(p => String(p.id).trim()));
       }
       const libraryCount = [...realProductIds].filter(id => !activatedIds.has(id)).length;
-      console.log('📦 productIds:', [...productIds]);
-      console.log('✅ activatedIds:', [...activatedIds]);
-      console.log('🔢 libraryCount:', libraryCount);
+      
 
       // ── Mapa gratuito por reclamar ────────────────────────────
       const { data: todosMapas } = await supabase
