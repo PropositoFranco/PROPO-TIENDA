@@ -681,12 +681,6 @@ window.addEventListener('message', function(e) {
 loadState();
 
 // ── Sonido en goStore ──
-window.v2=function(){
-  const em=document.getElementById('emN').value.trim();
-  if(!em||!em.includes('@')) SFX.error();
-  _v2();
-};
-
 // ── Sonido en errores ──
 const _v2=v2;
 window.v1=function(){
@@ -703,7 +697,8 @@ window.v1=function(){
 };
 window.v2=function(){
   const em=document.getElementById('emN').value.trim();
-  if(!em||!em.includes('@'))SFX.error(); _v2();
+  if(!em||!em.includes('@')){SFX.error();return;}
+  _v2();
 };
 </script>
 </body>
