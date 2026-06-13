@@ -136,15 +136,26 @@ export const useAuthStore = create(
           }
         }
 
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .maybeSingle();
 
+        if (!error && !data) {
+          for (let i = 0; i < 3 && !data; i++) {
+            await new Promise(r => setTimeout(r, 700));
+            const retry = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .maybeSingle();
+            data = retry.data;
+            error = retry.error;
+          }
+        }
+
         if (error || !data) {
-          // No desloguear — puede ser error de red o RLS temporal
-          // Solo limpiar el profile, mantener la sesión
           console.error('[Templo] loadProfile error:', error);
           set({ profile: null, loading: false });
           return;
