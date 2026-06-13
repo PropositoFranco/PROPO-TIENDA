@@ -21,14 +21,24 @@ export default function RegisterPage() {
         .select('user_email, code')
         .eq('stripe_session_id', sessionId)
         .maybeSingle();
-      if (data?.user_email) {
+      if (!data?.user_email) return;
+
+      // Reintentar hasta que el iframe esté listo
+      let attempts = 0;
+      const tryPost = () => {
         const iframe = document.querySelector('iframe');
-        iframe?.contentWindow?.postMessage({
-          type:  'prefill-email',
-          email: data.user_email,
-          code:  data.code,
-        }, '*');
-      }
+        if (iframe?.contentWindow) {
+          iframe.contentWindow.postMessage({
+            type:  'prefill-email',
+            email: data.user_email,
+            code:  data.code,
+          }, '*');
+        } else if (attempts < 10) {
+          attempts++;
+          setTimeout(tryPost, 500);
+        }
+      };
+      setTimeout(tryPost, 800);
     })();
   }, [sessionId]);
 

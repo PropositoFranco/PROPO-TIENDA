@@ -113,25 +113,10 @@ export default function LoginPage() {
         }
       }
 
-      // ── RECUPERAR CONTRASEÑA ─────────────────────────────────────────────
-      if (event.data?.type === 'forgot-password') {
-        const { email } = event.data;
-        if (!email) return;
-        try {
-          const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/reset-password`,
-          });
-          if (error) throw error;
-          document.getElementById('login-frame')
-            ?.contentWindow?.postMessage({ type: 'login-success' }, '*');
-        } catch (err) {
-          console.error('Recovery error:', err);
-          document.getElementById('login-frame')
-            ?.contentWindow?.postMessage({
-              type: 'login-error',
-              message: 'No se pudo enviar el correo. Intenta de nuevo.',
-            }, '*');
-        }
+      // ── RECUPERAR ACCESO ─────────────────────────────────────────────────
+      if (event.data?.type === 'open-recovery') {
+        setRecoveryEmail(event.data.email || '');
+        setShowRecovery(true);
         return;
       }
 
