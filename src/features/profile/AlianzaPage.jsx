@@ -7,6 +7,7 @@ import { supabase } from "../../services/supabase";
 import { useAuthStore } from "../../store/useAuthStore";
 import { usePlayerStore } from "../../store/usePlayerStore";
 import { missionsService } from "../../services/missions.service";
+import StripePaymentModal from "../../components/StripePaymentModal";
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 const ALIANZA_LEVELS = [
@@ -535,22 +536,11 @@ export default function AlianzaPage() {
     if (userId) missionsService.trackEvent(userId, 'refer_member');
   }, [shareLink, userId]);
 
-  const handleCanjear = async (nivel, eventId) => {
-    try {
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-bonus-checkout`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ event_id: eventId, user_id: userId }),
-      });
-      const data = await res.json();
-      if (data?.url) window.open(data.url, "_blank");
-    } catch (e) {
-      console.error("Error al crear checkout:", e);
-    }
+  const [payModal, setPayModal] = useState(null);
+
+  const handleCanjear = (nivel, eventId) => {
     setShowModal(null);
+    setPayModal({ eventId });
   };
 
   if (loading) return (
@@ -781,6 +771,20 @@ export default function AlianzaPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {payModal && (
+        <StripePaymentModal
+          offer={null}
+          userId={userId}
+          mode="alianza"
+          eventId={payModal.eventId}
+          onClose={() => setPayModal(null)}
+          onSuccess={() => {
+            setPayModal(null);
+            setCupones(prev => prev.filter(c => c.id !== payModal.eventId));
+          }}
+        />
       )}
     </div>
   );

@@ -23,7 +23,7 @@ const CARD_STYLE = {
   },
 };
 
-function CheckoutForm({ offer, userId, onSuccess, onClose }) {
+function CheckoutForm({ offer, userId, onSuccess, onClose, mode, eventId }) {
   const stripe    = useStripe();
   const elements  = useElements();
   const [loading, setLoading]     = useState(false);
@@ -40,28 +40,34 @@ function CheckoutForm({ offer, userId, onSuccess, onClose }) {
       // 1. Crear PaymentIntent via Edge Function
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({
-            user_id:     userId,
-            price_id:    offer.stripe_price_id,
-            offer_id:    offer.id,
-            offer_title: offer.title,
-            type:        'offer',
-            mode:        offer.is_subscription ? 'subscription' : 'payment',
-            success_url: `${window.location.origin}/offers?success=1`,
-            cancel_url:  `${window.location.origin}/offers`,
+      const isAlianza = mode === 'alianza';
+      const endpoint = isAlianza
+        ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-bonus-checkout`
+        : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`;
+
+      const bodyPayload = isAlianza
+        ? { event_id: eventId, user_id: userId }
+        : {
+            user_id:      userId,
+            price_id:     offer.stripe_price_id,
+            offer_id:     offer.id,
+            offer_title:  offer.title,
+            type:         'offer',
+            mode:         offer.is_subscription ? 'subscription' : 'payment',
+            success_url:  `${window.location.origin}/offers?success=1`,
+            cancel_url:   `${window.location.origin}/offers`,
             use_elements: true,
-          }),
-        }
-      );
+          };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify(bodyPayload),
+      });
 
       const { clientSecret, error: fnError } = await res.json();
       if (fnError) throw new Error(fnError);
@@ -158,7 +164,7 @@ function CheckoutForm({ offer, userId, onSuccess, onClose }) {
           transition: 'all .2s ease',
         }}
       >
-        {loading ? '⏳ PROCESANDO...' : `⚡ PAGAR $${offer.price} USD`}
+        {loading ? '⏳ PROCESANDO...' : `⚡ PAGAR $${offer?.price ?? '1'} USD`}
       </button>
     {/* Modal de términos encima del modal de pago */}
       {showTerminos && (
@@ -231,7 +237,7 @@ function CheckoutForm({ offer, userId, onSuccess, onClose }) {
   );
 }
 
-export default function StripePaymentModal({ offer, userId, onSuccess, onClose }) {
+export default function StripePaymentModal({ offer, userId, onSuccess, onClose, mode, eventId }) {
   // Bloquear scroll del body mientras el modal está abierto
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -285,10 +291,10 @@ export default function StripePaymentModal({ offer, userId, onSuccess, onClose }
             fontSize: '18px', fontWeight: 900,
             color: '#f0f0ff', lineHeight: 1.2,
           }}>
-            {offer.title}
+            {offer?.title ?? 'Bono Alianza — +1 mes'}
           </h2>
           <p style={{ margin: 0, fontSize: '13px', color: '#9090b8' }}>
-            {offer.description}
+            {offer?.description ?? 'Activa tu mes extra en el Templo del Propósito'}
           </p>
         </div>
 
@@ -301,16 +307,16 @@ export default function StripePaymentModal({ offer, userId, onSuccess, onClose }
           borderRadius: '10px',
           border: '1px solid rgba(180,79,255,0.15)',
         }}>
-          {offer.original_price && parseFloat(offer.original_price) > parseFloat(offer.price) && (
+          {offer?.original_price && parseFloat(offer.original_price) > parseFloat(offer.price) && (
             <span style={{ fontSize: '13px', color: '#555570', textDecoration: 'line-through' }}>
               ${offer.original_price}
             </span>
           )}
           <span style={{ fontSize: '28px', fontWeight: 900, color: '#ffd700' }}>
-            ${offer.price}
+            ${offer?.price ?? '1'}
           </span>
           <span style={{ fontSize: '13px', color: '#9090b8' }}>USD</span>
-          {offer.months_to_add > 0 && (
+          {(offer?.months_to_add ?? 0) > 0 && (
             <span style={{
               marginLeft: 'auto', fontSize: '11px', fontWeight: 700,
               color: '#5eead4', letterSpacing: '1px',
@@ -327,6 +333,8 @@ export default function StripePaymentModal({ offer, userId, onSuccess, onClose }
             userId={userId}
             onSuccess={onSuccess}
             onClose={onClose}
+            mode={mode}
+            eventId={eventId}
           />
         </Elements>
 
