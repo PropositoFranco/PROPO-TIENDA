@@ -280,9 +280,9 @@ export default function LoginPage() {
             Ingresa el email con el que pagaste en Stripe.<br/>
             Te enviaremos tu código de acceso si:<br/>
             <span style={{ color: 'rgba(212,175,55,.7)' }}>
-              · Olvidaste tu contraseña<br/>
-              · Pagaste pero no completaste tu registro<br/>
-              · Perdiste tu código de invitación
+              · ¿Olvidaste tu contraseña?<br/>
+              · ¿Pagaste pero no completaste tu registro?<br/>
+              · ¿Perdiste tu código de invitación?
             </span>
           </div>
           <input
