@@ -126,6 +126,16 @@ export const useAuthStore = create(
         const user = get().user;
         if (!user) return;
 
+        const session = get().session;
+        const expiresAt = session?.expires_at ?? 0;
+        const nowSecs = Math.floor(Date.now() / 1000);
+        if (expiresAt - nowSecs < 60) {
+          const { data: refreshed } = await supabase.auth.refreshSession().catch(() => ({ data: null }));
+          if (refreshed?.session) {
+            set({ session: refreshed.session, user: refreshed.session.user });
+          }
+        }
+
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
