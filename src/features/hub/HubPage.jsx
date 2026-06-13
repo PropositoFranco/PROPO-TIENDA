@@ -230,7 +230,7 @@ useEffect(() => {
       }
     });
 
-  }, [profile, user?.id, cristales, level, badgeTick]);
+  }, [profile?.id, user?.id, badgeTick]);
 
   // ── VIP RULETA SPINS → iframe ─────────────────────────────────
   useEffect(() => {
