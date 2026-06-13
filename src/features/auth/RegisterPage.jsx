@@ -41,9 +41,33 @@ export default function RegisterPage() {
         const userId = session?.user?.id;
 
         if (!userId) {
-          console.error('❌ Sin sesión activa');
-          pushToast('Error: inicia sesión de nuevo');
-          navigate('/auth');
+          // Crear cuenta nueva con email y password
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email,
+            password,
+          });
+          if (signUpError || !signUpData?.user) {
+            pushToast('Error al crear cuenta. Intenta de nuevo.');
+            return;
+          }
+          // Usar el userId recién creado para el resto del flujo
+          const newUserId = signUpData.user.id;
+          const { error } = await supabase.from('profiles').upsert({
+            id: newUserId,
+            email,
+            templario_name: templarioName,
+            avatar: avatar || '⚔️',
+            level: 1,
+            xp: 0,
+            cristales: 0,
+            rank: 'Bronce',
+            role: 'templario',
+            referral_code: Array.from({ length: 6 }, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random() * 36)]).join(''),
+          }, { onConflict: 'id' });
+          if (error) { pushToast('Error al guardar perfil'); return; }
+          await loadProfile();
+          pushToast('¡Bienvenido al Templo!');
+          navigate('/bienvenido', { replace: true });
           return;
         }
 
