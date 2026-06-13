@@ -1203,7 +1203,7 @@ const PaywallPage = () => {
     const origin = window.location.origin;
     const { data, error: fnError } = await supabase.functions.invoke('create-checkout', {
       body: { user_id:user?.id, price_id:priceId,
-        success_url:`${origin}/hub?vip=activado`, cancel_url:`${origin}/hub` },
+        success_url:`${origin}/register?vip=activado`, cancel_url:`${origin}/register` },
     });
     setLoadingVip(false);
     if (fnError || !data?.url) { setError(fnError?.message || 'Error al procesar VIP. Intenta de nuevo.'); return; }
@@ -1212,7 +1212,7 @@ const PaywallPage = () => {
 
   const handleVipDecline = () => {
     const confirmed = window.confirm('⚠️ ¿Seguro que quieres salir?\n\nEsta oferta del PropoPass VIP es exclusiva post-activación y probablemente no la veas de nuevo.');
-    if (confirmed) navigate('/hub', { replace: true });
+    if (confirmed) navigate('/register', { replace: true });
   };
 
   return (

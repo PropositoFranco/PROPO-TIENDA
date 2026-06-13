@@ -199,7 +199,7 @@ export default function RegisterPage() {
 
           await loadProfile();
           pushToast('¡Bienvenido al Templo!');
-          navigate('/tutorial', { replace: true });
+          navigate('/bienvenido', { replace: true });
         }
       }
     };
