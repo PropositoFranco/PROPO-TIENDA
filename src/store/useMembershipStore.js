@@ -1212,7 +1212,7 @@ const useMembershipStore = create(
             .maybeSingle();
 
           // ── 3. Leer protocolo ────────────────────────────────────────────
-          const userEmail = profileData?.email ?? (await supabaseClient.auth.getUser())?.data?.user?.email ?? '';
+          const userEmail = profileData?.email ?? '';
           const { data: protocoloData } = await supabaseClient
             .from('user_protocolo')
             .select('protocolo, semana, fecha')
