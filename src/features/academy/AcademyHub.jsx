@@ -854,7 +854,7 @@ const onRitualCompleto = useCallback(async () => {
         {/* Stats rápidas épicas */}
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
           {[
-            { icon: '✅', value: completedModules.length, label: 'Activaciones Templarias', color: '#10B981' },
+            { icon: '✅', value: completedModules.length, label: 'Activaciones Templarias Completadas', color: '#10B981' },
             { icon: '👁', value: openedCount, label: 'Explorados', color: '#60A5FA' },
             { icon: '⏰', value: `${weeksLeft}sem`, label: 'Restantes', color: '#F97316' },
             { icon: '🗓', value: `${memberDays}d`, label: 'Como miembro', color: '#F5C518' },
