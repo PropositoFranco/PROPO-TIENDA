@@ -7,7 +7,7 @@ import { supabase } from "../../services/supabase";
 import { useAuthStore } from "../../store/useAuthStore";
 import { usePlayerStore } from "../../store/usePlayerStore";
 import { missionsService } from "../../services/missions.service";
-import StripePaymentModal from "../../components/StripePaymentModal";
+import StripePaymentModal from "../offers/StripePaymentModal.jsx";
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 const ALIANZA_LEVELS = [
