@@ -73,7 +73,8 @@ if (freshStatus === 'active' || freshStatus === 'admin') {
 
   }, [authLoading, user?.id, profile?.id]);
 
-  // Auth cargando
+  // Auth cargando — pero si ya sabemos que no hay usuario, redirigir de inmediato
+  if (authLoading && !user) return <Navigate to="/login" state={{ from: location }} replace />;
   if (authLoading) return <MembershipLoading />;
 
   // Sin usuario

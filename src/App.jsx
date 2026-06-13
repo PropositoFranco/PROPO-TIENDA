@@ -10,6 +10,7 @@ import './styles/globals.css';
 import { useAppConfig } from './hooks/useAppConfig';
 import MaintenancePage from './features/auth/MaintenancePage';
 import WatermarkOverlay from './components/WatermarkOverlay';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const AppRouter = lazy(() => import('./router/AppRouter'));
 
@@ -67,16 +68,10 @@ export default function App() {
 
   useEffect(() => {
     const updatePath = () => setCurrentPath(window.location.pathname);
-    const pingLogin = () => {
-      if (!user) return;
-      import('./services/supabase').then(({ supabase }) => {
-        supabase.from('profiles').update({ last_login_date: new Date().toISOString() }).eq('id', user.id).then(() => {});
-      });
-    };
     window.addEventListener('popstate', updatePath);
     const origPush    = window.history.pushState.bind(window.history);
     const origReplace = window.history.replaceState.bind(window.history);
-    window.history.pushState    = (...args) => { origPush(...args);    updatePath(); pingLogin(); };
+    window.history.pushState    = (...args) => { origPush(...args);    updatePath(); };
     window.history.replaceState = (...args) => { origReplace(...args); updatePath(); };
     return () => {
       window.removeEventListener('popstate', updatePath);
@@ -125,6 +120,7 @@ export default function App() {
       : <RotateScreen>{content}</RotateScreen>;
 
   return (
+    <ErrorBoundary>
     <>
       <WatermarkOverlay />
       {showAnn && (
@@ -216,5 +212,6 @@ export default function App() {
       )}
       {wrapped}
     </>
+    </ErrorBoundary>
   );
 }

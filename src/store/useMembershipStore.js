@@ -11,6 +11,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { supabase } from '../services/supabase';
 
 // ─── Configuración de módulos ───────────────────────────────────────────────
 // Todos los módulos existen aquí desde el principio.
@@ -1294,7 +1295,8 @@ const useMembershipStore = create(
           } catch (_) {}
 
           return memberStatus === 'active';
-        } catch {
+        } catch (err) {
+          console.error('[Templo] loadMembership falló:', err);
           set({ status: 'inactive' });
           return false;
         }
@@ -1304,16 +1306,15 @@ const useMembershipStore = create(
        * Marca un módulo como "abierto" (visto por primera vez).
        * Se llama automáticamente al entrar a la ruta del módulo.
        */
-      openModule: async (supabaseClient, userId, slug) => {
+      openModule: async (userId, slug) => {
         const { openedModules } = get();
-        if (openedModules.includes(slug)) return; // ya registrado
+        if (openedModules.includes(slug)) return;
 
         const newOpened = [...openedModules, slug];
         set({ openedModules: newOpened });
 
-        // Sincroniza con BD en background — no bloquea la UI
-        if (supabaseClient && userId) {
-          supabaseClient
+        if (userId) {
+          supabase
             .from('module_progress')
             .upsert({ user_id: userId, module_slug: slug, opened_at: new Date().toISOString() })
             .then(() => {}).catch(console.error);
@@ -1323,7 +1324,7 @@ const useMembershipStore = create(
       /**
        * Marca un módulo como completado y otorga recompensas.
        */
-      completeModule: async (supabaseClient, userId, slug) => {
+      completeModule: async (userId, slug) => {
         const { completedModules } = get();
         if (completedModules.includes(slug)) return;
 
@@ -1332,8 +1333,8 @@ const useMembershipStore = create(
 
         set({ completedModules: [...completedModules, slug] });
 
-        if (supabaseClient && userId) {
-          supabaseClient
+        if (userId) {
+          supabase
             .from('module_progress')
             .upsert({
               user_id: userId,
@@ -1353,13 +1354,13 @@ const useMembershipStore = create(
        * Escucha cambios en user_protocolo en tiempo real.
        * Llama esto después de loadMembership().
        */
-      subscribeProtocolo: (supabaseClient, userEmail) => {
-        if (!supabaseClient || !userEmail) return () => {};
+      subscribeProtocolo: (userEmail) => {
+        if (!userEmail) return () => {};
         // Evitar canales duplicados
-        supabaseClient.removeChannel(
-          supabaseClient.channel('protocolo-realtime')
+        supabase.removeChannel(
+          supabase.channel('protocolo-realtime')
         );
-        const channel = supabaseClient
+        const channel = supabase
           .channel('protocolo-realtime')
           .on(
             'postgres_changes',
@@ -1379,12 +1380,12 @@ const useMembershipStore = create(
             }
           )
           .subscribe();
-        return () => supabaseClient.removeChannel(channel);
+        return () => supabase.removeChannel(channel);
       },
 
-      syncProgress: async (supabaseClient, userId) => {
-        if (!supabaseClient || !userId) return;
-        const { data } = await supabaseClient
+      syncProgress: async (userId) => {
+        if (!userId) return;
+        const { data } = await supabase
           .from('module_progress')
           .select('module_slug, opened_at, completed_at')
           .eq('user_id', userId);

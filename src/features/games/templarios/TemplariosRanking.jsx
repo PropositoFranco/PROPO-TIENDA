@@ -3008,7 +3008,7 @@ const all = data || [];
 
 const ids = all.map(p => p.id);
 const { data: profilesData } = await sbR
-  .from('profiles')
+  .from('public_profiles')
   .select('id, templario_name')
   .in('id', ids);
 const profilesMap = {};

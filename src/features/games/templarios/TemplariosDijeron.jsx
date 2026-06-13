@@ -1699,7 +1699,7 @@ async function fetchLB() {
     // Traer nombres reales de profiles
     const ids = (data || []).map(p => p.id);
     const { data: profs } = await sb
-      .from('profiles')
+      .from('public_profiles')
       .select('id, templario_name')
       .in('id', ids);
     const profMap = {};

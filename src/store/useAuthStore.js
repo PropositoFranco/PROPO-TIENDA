@@ -133,8 +133,10 @@ export const useAuthStore = create(
           .maybeSingle();
 
         if (error || !data) {
-          await supabase.auth.signOut().catch(() => {});
-          set({ user: null, profile: null, session: null, isAdmin: false, loading: false });
+          // No desloguear — puede ser error de red o RLS temporal
+          // Solo limpiar el profile, mantener la sesión
+          console.error('[Templo] loadProfile error:', error);
+          set({ profile: null, loading: false });
           return;
         }
 
@@ -148,7 +150,7 @@ export const useAuthStore = create(
           const membershipStore = (await import('./useMembershipStore')).default.getState();
           await Promise.all([
             membershipStore.loadMembership(supabase, user.id),
-            membershipStore.syncProgress(supabase, user.id),
+            membershipStore.syncProgress(user.id),
           ]);
 
           const { default: useMembershipStore } = await import('./useMembershipStore');
@@ -166,7 +168,7 @@ export const useAuthStore = create(
             } catch (_) {}
           }
 
-          membershipStore.subscribeProtocolo(supabase, user.email);
+          membershipStore.subscribeProtocolo(user.email);
 
           // ── NUEVO: recalcular nivel si el XP ya superó el umbral ──
           // Detecta usuarios "atascados" y los sube automáticamente al nivel correcto
