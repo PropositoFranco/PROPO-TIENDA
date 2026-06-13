@@ -7,10 +7,30 @@ import { useUIStore } from '../../store/useUIStore';
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const refCode     = searchParams.get('ref') || '';
-  const sessionId   = searchParams.get('session_id') || ''; // ← ID de sesión de Stripe si viene en URL
+  const refCode   = searchParams.get('ref') || '';
+  const sessionId = searchParams.get('session_id') || '';
   const { session, loadProfile } = useAuthStore();
   const pushToast = useUIStore((s) => s.pushToast);
+
+  // Precargar email desde Stripe si viene session_id en la URL
+  useEffect(() => {
+    if (!sessionId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('access_codes')
+        .select('user_email, code')
+        .eq('stripe_session_id', sessionId)
+        .maybeSingle();
+      if (data?.user_email) {
+        const iframe = document.querySelector('iframe');
+        iframe?.contentWindow?.postMessage({
+          type:  'prefill-email',
+          email: data.user_email,
+          code:  data.code,
+        }, '*');
+      }
+    })();
+  }, [sessionId]);
 
   useEffect(() => {
     const handleMessage = async (event) => {
@@ -37,11 +57,10 @@ export default function RegisterPage() {
       }
 
       if (event.data?.type === 'register-complete') {
-       const { templarioName, email, password, avatar } = event.data;
+        const { templarioName, email, password, avatar } = event.data;
         const userId = session?.user?.id;
 
         if (!userId) {
-          // Crear cuenta nueva con email y password
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email,
             password,
@@ -50,7 +69,6 @@ export default function RegisterPage() {
             pushToast('Error al crear cuenta. Intenta de nuevo.');
             return;
           }
-          // Usar el userId recién creado para el resto del flujo
           const newUserId = signUpData.user.id;
           const { error } = await supabase.from('profiles').upsert({
             id: newUserId,
@@ -65,9 +83,38 @@ export default function RegisterPage() {
             referral_code: Array.from({ length: 6 }, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random() * 36)]).join(''),
           }, { onConflict: 'id' });
           if (error) { pushToast('Error al guardar perfil'); return; }
-          await loadProfile();
-          pushToast('¡Bienvenido al Templo!');
-          navigate('/bienvenido', { replace: true });
+          // Activar membresía si tiene pago en access_codes con su email
+try {
+  const { data: paid } = await supabase
+    .from('access_codes')
+    .select('id, amount_paid')
+    .eq('user_email', email)
+    .eq('is_used', false)
+    .maybeSingle();
+
+  if (paid) {
+    await supabase
+      .from('profiles')
+      .update({
+        membership_status:     'active',
+membership_type:       'paid',
+        membership_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        paused_at:             null,
+      })
+      .eq('id', userId || newUserId);
+
+    await supabase
+      .from('access_codes')
+      .update({ is_used: true, used_by: userId || newUserId })
+      .eq('id', paid.id);
+  }
+} catch (e) {
+  console.error('Error activando membresía por access_code:', e);
+}
+
+await loadProfile();
+pushToast('¡Bienvenido al Templo!');
+navigate('/bienvenido', { replace: true });
           return;
         }
 
@@ -115,10 +162,9 @@ export default function RegisterPage() {
           .eq('id', userId)
           .single();
 
-        const referralCode = existing?.referral_code || 
+        const referralCode = existing?.referral_code ||
           Array.from({ length: 6 }, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random() * 36)]).join('');
 
-        // ✅ VERIFICAR si el templario_name ya está tomado por OTRO usuario
         const { data: nickTaken } = await supabase
           .from('profiles')
           .select('id')
@@ -128,7 +174,6 @@ export default function RegisterPage() {
 
         if (nickTaken) {
           pushToast('⚠️ Ese nombre ya está en uso. Elige otro.');
-          // Mandar mensaje de vuelta al iframe para que muestre error
           const iframe = document.querySelector('iframe');
           if (iframe?.contentWindow) {
             iframe.contentWindow.postMessage({ type: 'nick-taken' }, '*');
@@ -136,7 +181,6 @@ export default function RegisterPage() {
           return;
         }
 
-        // ✅ VERIFICAR si este userId ya tiene perfil completo (no sobreescribir)
         const { data: existingProfile } = await supabase
           .from('profiles')
           .select('id, templario_name, level, xp')
@@ -150,14 +194,12 @@ export default function RegisterPage() {
           .upsert(
             yaRegistrado
               ? {
-                  // Si ya existe perfil completo: SOLO actualizar email/avatar, NO tocar stats ni nick
                   id: userId,
                   email: email,
                   avatar: avatar || existingProfile.avatar || '⚔️',
                   referral_code: referralCode,
                 }
               : {
-                  // Perfil nuevo: insertar todo
                   id: userId,
                   email: email,
                   templario_name: templarioName,
@@ -181,10 +223,8 @@ export default function RegisterPage() {
           if (email && password) {
             await supabase.auth.updateUser({ email, password });
           }
-          // Activar membresía pendiente del paquete si aplica
+
           try {
-            // Construir el filtro OR con todos los identificadores disponibles
-            // para cubrir el caso de email temporal en Stripe vs email de registro
             const emailFilters = [`user_email.eq.${email}`];
             if (session?.user?.email && session.user.email !== email) {
               emailFilters.push(`user_email.eq.${session.user.email}`);
@@ -221,9 +261,38 @@ export default function RegisterPage() {
             console.error('Error activando membresía pendiente:', e);
           }
 
-          await loadProfile();
-          pushToast('¡Bienvenido al Templo!');
-          navigate('/bienvenido', { replace: true });
+          // Activar membresía si tiene pago en access_codes con su email
+try {
+  const { data: paid } = await supabase
+    .from('access_codes')
+    .select('id, amount_paid')
+    .eq('user_email', email)
+    .eq('is_used', false)
+    .maybeSingle();
+
+  if (paid) {
+    await supabase
+      .from('profiles')
+      .update({
+        membership_status:     'active',
+membership_type:       'paid',
+        membership_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        paused_at:             null,
+      })
+      .eq('id', userId);
+
+    await supabase
+      .from('access_codes')
+      .update({ is_used: true, used_by: userId })
+      .eq('id', paid.id);
+  }
+} catch (e) {
+  console.error('Error activando membresía por access_code:', e);
+}
+
+await loadProfile();
+pushToast('¡Bienvenido al Templo!');
+navigate('/bienvenido', { replace: true });
         }
       }
     };

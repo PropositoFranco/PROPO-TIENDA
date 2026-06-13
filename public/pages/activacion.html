@@ -664,6 +664,15 @@ document.querySelectorAll('.avopt').forEach(av=>{
 
 // ── Escuchar nick tomado desde React ──
 window.addEventListener('message', function(e) {
+  if (e.data?.type === 'prefill-email') {
+    const emInput = document.getElementById('emN');
+    if (emInput && e.data.email) {
+      emInput.value = e.data.email;
+      emInput.readOnly = true;
+      emInput.style.opacity = '0.6';
+      emInput.style.cursor = 'not-allowed';
+    }
+  }
   if (e.data?.type === 'nick-taken') {
     const est = document.getElementById('est');
     const stN = document.getElementById('stN');

@@ -1266,8 +1266,10 @@ const useMembershipStore = create(
             if (profileStatus === 'paused' && pausedAt) {
               const daysPaused = (Date.now() - pausedAt.getTime()) / (1000 * 60 * 60 * 24);
               memberStatus = daysPaused > 32 ? 'locked' : 'paused';
-            } else if (adminType === 'free' || !adminType) {
-              memberStatus = 'inactive';
+            } else if (profileData?.membership_status === 'active' && adminExpires && adminExpires > now) {
+  memberStatus = 'active';
+} else if (adminType === 'free' || !adminType) {
+  memberStatus = 'inactive';
             } else {
               memberStatus = 'expired';
             }
