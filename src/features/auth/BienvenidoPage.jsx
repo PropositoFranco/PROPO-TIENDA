@@ -981,6 +981,7 @@ export default function BienvenidoPage() {
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryError, setRecoveryError] = useState('');
+  const [recoverySent, setRecoverySent] = useState(false);
 
   const handleEmailRecovery = async () => {
     if (!recoveryEmail.trim()) return;
@@ -996,10 +997,9 @@ export default function BienvenidoPage() {
         }
       );
       const json = await res.json();
-      if (json.found && json.code) {
-        setUserCode(json.code);
-        setNeedsEmailRecovery(false);
-        setPhase('codigo');
+      if (json.sent) {
+        setRecoveryError('');
+        setRecoverySent(true);
       } else {
         setRecoveryError('No encontramos un código con ese email. Contacta soporte.');
       }
@@ -1016,12 +1016,22 @@ export default function BienvenidoPage() {
         try {
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
-            const { data } = await supabase
+            // Busca primero por user_id
+            let { data } = await supabase
               .from('access_codes').select('code')
               .eq('user_id', user.id)
               .order('created_at', { ascending: false })
               .limit(1).maybeSingle();
             if (data?.code) { setUserCode(data.code); setCodeLoading(false); return; }
+            // Si no encuentra, busca por email del usuario logueado
+            if (user.email) {
+              const { data: byEmail } = await supabase
+                .from('access_codes').select('code')
+                .eq('user_email', user.email)
+                .order('created_at', { ascending: false })
+                .limit(1).maybeSingle();
+              if (byEmail?.code) { setUserCode(byEmail.code); setCodeLoading(false); return; }
+            }
           }
         } catch (_) {}
         setCodeLoading(false); setNeedsEmailRecovery(true); return;
@@ -1100,19 +1110,36 @@ export default function BienvenidoPage() {
             {recoveryError}
           </div>
         )}
-        <button
-          onClick={handleEmailRecovery}
-          disabled={recoveryLoading}
-          style={{
-            padding:'12px 32px',borderRadius:10,cursor:'pointer',
-            background:'linear-gradient(135deg,rgba(212,175,55,.2),rgba(124,58,237,.3))',
-            border:'1px solid rgba(212,175,55,.5)',color:'#d4af37',
-            fontFamily:"'Cinzel',serif",fontSize:11,letterSpacing:3,
-            opacity: recoveryLoading ? 0.6 : 1,
-          }}
-        >
-          {recoveryLoading ? 'Buscando...' : '⚔️ RECUPERAR CÓDIGO'}
-        </button>
+        {recoverySent ? (
+          <div style={{
+            textAlign:'center',padding:'20px 24px',
+            background:'rgba(212,175,55,0.08)',
+            border:'1px solid rgba(212,175,55,0.3)',
+            borderRadius:12,maxWidth:320,
+          }}>
+            <div style={{fontSize:32,marginBottom:12}}>📬</div>
+            <div style={{color:'#f0c040',fontFamily:"'Cinzel',serif",fontSize:13,letterSpacing:2,marginBottom:8}}>
+              CÓDIGO ENVIADO
+            </div>
+            <div style={{color:'rgba(200,185,240,.7)',fontFamily:"'Raleway',sans-serif",fontSize:12,lineHeight:1.6}}>
+              Revisa tu correo — ahí está tu código de acceso.
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={handleEmailRecovery}
+            disabled={recoveryLoading}
+            style={{
+              padding:'12px 32px',borderRadius:10,cursor:'pointer',
+              background:'linear-gradient(135deg,rgba(212,175,55,.2),rgba(124,58,237,.3))',
+              border:'1px solid rgba(212,175,55,.5)',color:'#d4af37',
+              fontFamily:"'Cinzel',serif",fontSize:11,letterSpacing:3,
+              opacity: recoveryLoading ? 0.6 : 1,
+            }}
+          >
+            {recoveryLoading ? 'Buscando...' : '⚔️ RECUPERAR CÓDIGO'}
+          </button>
+        )}
       </div>
     </>
   );
