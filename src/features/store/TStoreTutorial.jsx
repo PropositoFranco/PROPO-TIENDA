@@ -229,7 +229,7 @@ const STEPS=[
   {screen:"arsenal",    highlight:null,            master:"Tu Arsenal Personal.",                sub:"Aquí viven todas las herramientas que has desbloqueado. Este es tu poder acumulado, tu legado en construcción.",btn:"Continuar"},
   {screen:"arsenal",    highlight:"filters_territory",master:"Filtra por Territorio.",           sub:"Tu Arsenal puede filtrarse por territorios para acceder rápidamente a herramientas de un área específica.",btn:"Continuar"},
   {screen:"arsenal",    highlight:"filters_type",  master:"Filtra por Tipo de Herramienta.",     sub:"También puedes organizar tu Arsenal según el tipo: Claves, Victorias Rápidas o Mapas del Templo.",btn:"Finalizar"},
-  {screen:"final",      highlight:null,            master:"El templo te espera, Peregrino.",     sub:"Ya conoces los secretos de la Propo-Tienda. Tu camino comienza ahora. Tu propósito te llama.",btn:"Entrar al Templo"},
+  {screen:"final",      highlight:null,            master:"El templo te espera, Templario.",     sub:"Ya conoces los secretos de la Propo-Tienda. Tu camino comienza ahora. Tu propósito te llama.",btn:"Entrar al Templo"},
 ];
 
 // ─── TITLE SHIMMER ───────────────────────────────────────
