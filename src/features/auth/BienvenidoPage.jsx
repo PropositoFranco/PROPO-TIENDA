@@ -972,7 +972,7 @@ export default function BienvenidoPage() {
 
   const redirectUrl = refCode
     ? `${window.location.origin}/register?ref=${refCode}`
-    : `${window.location.origin}/hazloapp`;
+    : `${window.location.origin}/tutorial`;
 
   const [userCode,    setUserCode]    = useState(null);
   const [codeLoading, setCodeLoading] = useState(true);
