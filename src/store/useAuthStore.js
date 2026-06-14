@@ -58,9 +58,10 @@ export const useAuthStore = create(
 
       initAuth: async () => {
         if (get().user && get().session) {
-          set({ loading: false });
-          get().loadProfile();
-        }
+  set({ loading: false });
+  await get().loadProfile();
+  return;
+}
 
         const safetyTimer = setTimeout(() => {
           if (get().loading) {
