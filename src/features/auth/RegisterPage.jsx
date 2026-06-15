@@ -25,6 +25,12 @@ export default function RegisterPage() {
         .maybeSingle();
       if (!data?.user_email) return;
 
+      // Si hay sesión activa de OTRO usuario, cerrarla antes de proceder
+      const { data: { user: activeUser } } = await supabase.auth.getUser();
+      if (activeUser && activeUser.email !== data.user_email) {
+        await supabase.auth.signOut();
+      }
+
       // Guardar referral_code del pago para usarlo como fallback
       if (data.referral_code) refCodeFromStripe.current = data.referral_code;
 
