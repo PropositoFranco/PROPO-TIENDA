@@ -499,7 +499,10 @@ export default function AlianzaPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
       setUserId(user.id);
-      const { count } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("referrer_id", user.id).eq("status", "active");
+      const { count } = await supabase.from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("referred_by", user.id)
+        .eq("membership_type", "base");
       setReferidosActivos(count || 0);
       if (count && count > 0) {
         missionsService.trackProgress(user.id, 'referrals_count', count);
