@@ -74,13 +74,27 @@ export default function RegisterPage() {
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email,
             password,
-            options: { data: { referral_code: refCode || '' } },
+            options: { data: { referral_code: refCode || null } },
           });
           if (signUpError || !signUpData?.user) {
             pushToast('Error al crear cuenta. Intenta de nuevo.');
             return;
           }
           const newUserId = signUpData.user.id;
+          const refProfile = refCode ? await supabase
+            .from('profiles')
+            .select('id')
+            .eq('referral_code', refCode.toUpperCase())
+            .maybeSingle()
+            .then(r => r.data) : null;
+
+          // Leer lo que el trigger ya guardó para no pisarlo
+          const { data: triggerData } = await supabase
+            .from('profiles')
+            .select('referral_code, referred_by')
+            .eq('id', newUserId)
+            .maybeSingle();
+
           const { error } = await supabase.from('profiles').upsert({
             id: newUserId,
             email,
@@ -91,7 +105,9 @@ export default function RegisterPage() {
             cristales: 0,
             rank: 'Bronce',
             role: 'templario',
-            referral_code: Array.from({ length: 6 }, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random() * 36)]).join(''),
+            referral_code: triggerData?.referral_code ||
+              Array.from({ length: 6 }, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random() * 36)]).join(''),
+            referred_by: triggerData?.referred_by || refProfile?.id || null,
           }, { onConflict: 'id' });
           if (error) { pushToast('Error al guardar perfil'); return; }
           // Activar membresía si tiene pago en access_codes con su email
