@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -13,17 +13,21 @@ export default function RegisterPage() {
   const pushToast = useUIStore((s) => s.pushToast);
 
   // Precargar email desde Stripe si viene session_id en la URL
+  const refCodeFromStripe = useRef('');
+
   useEffect(() => {
     if (!sessionId) return;
     (async () => {
       const { data } = await supabase
         .from('access_codes')
-        .select('user_email, code')
+        .select('user_email, code, referral_code')
         .eq('stripe_session_id', sessionId)
         .maybeSingle();
       if (!data?.user_email) return;
 
-      // Reintentar hasta que el iframe esté listo
+      // Guardar referral_code del pago para usarlo como fallback
+      if (data.referral_code) refCodeFromStripe.current = data.referral_code;
+
       let attempts = 0;
       const tryPost = () => {
         const iframe = document.querySelector('iframe');
@@ -81,10 +85,11 @@ export default function RegisterPage() {
             return;
           }
           const newUserId = signUpData.user.id;
-          const refProfile = refCode ? await supabase
+          const effectiveRefCode = refCode || refCodeFromStripe.current || '';
+          const refProfile = effectiveRefCode ? await supabase
             .from('profiles')
             .select('id')
-            .eq('referral_code', refCode.toUpperCase())
+            .eq('referral_code', effectiveRefCode.toUpperCase())
             .maybeSingle()
             .then(r => r.data) : null;
 
@@ -179,11 +184,12 @@ navigate('/bienvenido', { replace: true });
         }
 
         let referredBy = null;
-        if (refCode) {
+        const effectiveRefCodeExisting = refCode || refCodeFromStripe.current || '';
+        if (effectiveRefCodeExisting) {
           const { data: referrer } = await supabase
             .from('profiles')
             .select('id, xp, cristales')
-            .eq('referral_code', refCode.toUpperCase())
+            .eq('referral_code', effectiveRefCodeExisting.toUpperCase())
             .single();
 
           if (referrer) {
