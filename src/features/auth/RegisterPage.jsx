@@ -74,6 +74,7 @@ export default function RegisterPage() {
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email,
             password,
+            options: { data: { referral_code: refCode || '' } },
           });
           if (signUpError || !signUpData?.user) {
             pushToast('Error al crear cuenta. Intenta de nuevo.');
