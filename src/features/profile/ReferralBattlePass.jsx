@@ -39,11 +39,11 @@ export default function ReferralBattlePass() {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
-      store.syncProgconst { count } = await supabase
+      const { count } = await supabase
         .from("profiles").select("*", { count: "exact", head: true })
         .eq("referred_by", user.id)
         .eq("membership_type", "base");
-      setReferidos(count || 0);ress(uid);
+      setReferidos(count || 0);
       const { count: c2 } = await supabase
         .from("referral_events").select("*", { count: "exact", head: true })
         .eq("user_id", user.id).eq("event_type", "bonus_earned").eq("claimed", false);
