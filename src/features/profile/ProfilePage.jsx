@@ -2885,7 +2885,7 @@ export default function ProfilePage() {
       setUserIdReady(true);
       if (uid) {
         const store = useMembershipStore.getState();
-        store.syncProgress(supabase, uid);
+        store.syncProgress(uid);
       }
     });
     const t = setTimeout(() => SFX.reveal(), 400);
