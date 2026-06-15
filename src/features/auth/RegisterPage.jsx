@@ -91,11 +91,28 @@ export default function RegisterPage() {
             return;
           }
           const newUserId = signUpData.user.id;
-          const effectiveRefCode = refCode || refCodeFromStripe.current || '';
+
+          const { data: accessCodeRow } = await supabase
+            .from('access_codes')
+            .select('referral_code')
+            .eq('user_email', email.trim().toLowerCase())
+            .not('referral_code', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          const effectiveRefCode = (
+            refCode ||
+            accessCodeRow?.referral_code ||
+            refCodeFromStripe.current ||
+            localStorage.getItem('pending_ref_code') ||
+            ''
+          ).toUpperCase();
+
           const refProfile = effectiveRefCode ? await supabase
             .from('profiles')
             .select('id')
-            .eq('referral_code', effectiveRefCode.toUpperCase())
+            .eq('referral_code', effectiveRefCode)
             .maybeSingle()
             .then(r => r.data) : null;
 
@@ -190,12 +207,28 @@ navigate('/bienvenido', { replace: true });
         }
 
         let referredBy = null;
-        const effectiveRefCodeExisting = refCode || refCodeFromStripe.current || '';
+        const { data: accessCodeRowExisting } = await supabase
+          .from('access_codes')
+          .select('referral_code')
+          .eq('user_email', email.trim().toLowerCase())
+          .not('referral_code', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const effectiveRefCodeExisting = (
+          refCode ||
+          accessCodeRowExisting?.referral_code ||
+          refCodeFromStripe.current ||
+          localStorage.getItem('pending_ref_code') ||
+          ''
+        ).toUpperCase();
+
         if (effectiveRefCodeExisting) {
           const { data: referrer } = await supabase
             .from('profiles')
             .select('id, xp, cristales')
-            .eq('referral_code', effectiveRefCodeExisting.toUpperCase())
+            .eq('referral_code', effectiveRefCodeExisting)
             .single();
 
           if (referrer) {

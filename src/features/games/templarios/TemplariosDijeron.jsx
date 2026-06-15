@@ -3049,7 +3049,6 @@ function CharSelect({ onConfirm }) {
   const variants = CHAR_VARIANTS[gender];
   const currentVariant = variants[variant];
 
-  // Resolución fija del canvas — se escala con CSS
   const CW = 340, CH = 500;
 
   useEffect(() => {
@@ -3065,17 +3064,12 @@ function CharSelect({ onConfirm }) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let startTime = performance.now();
-
     function draw(now) {
       const elapsed = now - startTime;
       const t = elapsed * 0.001;
       ctx.clearRect(0, 0, CW, CH);
-
-      // Fondo oscuro atmosférico
       ctx.fillStyle = '#05020C';
       ctx.fillRect(0, 0, CW, CH);
-
-      // Resplandor dorado pulsante desde el suelo
       const pulse = 0.55 + Math.sin(t * 1.7) * 0.25;
       const groundGlow = ctx.createRadialGradient(CW/2, CH*0.92, 0, CW/2, CH*0.92, CW*0.8);
       groundGlow.addColorStop(0, `rgba(201,168,76,${0.45*pulse})`);
@@ -3083,15 +3077,11 @@ function CharSelect({ onConfirm }) {
       groundGlow.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = groundGlow;
       ctx.fillRect(0, 0, CW, CH);
-
-      // Aura mística desde arriba (violeta suave)
       const topGlow = ctx.createRadialGradient(CW/2, CH*0.12, 0, CW/2, CH*0.12, CW*0.55);
       topGlow.addColorStop(0, `rgba(110,60,200,${0.10*pulse})`);
       topGlow.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = topGlow;
       ctx.fillRect(0, 0, CW, CH);
-
-      // Partículas flotantes
       const seed = Math.floor(t * 0.3);
       for (let i = 0; i < 12; i++) {
         const px = ((Math.sin(i * 2.4 + seed) * 0.5 + 0.5) * CW * 0.8) + CW * 0.1;
@@ -3105,24 +3095,19 @@ function CharSelect({ onConfirm }) {
         ctx.fill();
       }
       ctx.globalAlpha = 1;
-
       const floorY = CH * 0.87;
-
-      // Línea del suelo dorada
       const lineGrad = ctx.createLinearGradient(0, floorY, CW, floorY);
-      lineGrad.addColorStop(0,    'rgba(201,168,76,0)');
-      lineGrad.addColorStop(0.2,  `rgba(201,168,76,${0.7*pulse})`);
-      lineGrad.addColorStop(0.5,  `rgba(232,201,122,${pulse})`);
-      lineGrad.addColorStop(0.8,  `rgba(201,168,76,${0.7*pulse})`);
-      lineGrad.addColorStop(1,    'rgba(201,168,76,0)');
+      lineGrad.addColorStop(0, 'rgba(201,168,76,0)');
+      lineGrad.addColorStop(0.2, `rgba(201,168,76,${0.7*pulse})`);
+      lineGrad.addColorStop(0.5, `rgba(232,201,122,${pulse})`);
+      lineGrad.addColorStop(0.8, `rgba(201,168,76,${0.7*pulse})`);
+      lineGrad.addColorStop(1, 'rgba(201,168,76,0)');
       ctx.strokeStyle = lineGrad;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(0, floorY);
       ctx.lineTo(CW, floorY);
       ctx.stroke();
-
-      // Sombra del personaje
       ctx.save();
       ctx.globalAlpha = 0.38 * pulse;
       ctx.fillStyle = '#000';
@@ -3130,18 +3115,13 @@ function CharSelect({ onConfirm }) {
       ctx.ellipse(CW/2, floorY + 6, 46, 10, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
-
-      // Personaje
       drawCSChar(ctx, CW/2, floorY, currentVariant, gender, elapsed, CW, CH);
-
-      // Viñeta
       const vig = ctx.createRadialGradient(CW/2, CH*0.5, CH*0.08, CW/2, CH*0.5, CW*0.8);
       vig.addColorStop(0, 'rgba(0,0,0,0)');
       vig.addColorStop(0.6, 'rgba(0,0,0,0.04)');
       vig.addColorStop(1, 'rgba(0,0,0,0.78)');
       ctx.fillStyle = vig;
       ctx.fillRect(0, 0, CW, CH);
-
       rafRef.current = requestAnimationFrame(draw);
     }
     rafRef.current = requestAnimationFrame(draw);
@@ -3166,158 +3146,200 @@ function CharSelect({ onConfirm }) {
 
   const isMobile = window.innerWidth < 700;
 
+  if (isMobile) {
+    // ── LAYOUT MÓVIL: pantalla completa sin scroll ──────────────
+    const weaponIcon = (w) => w === 'sword' ? '⚔' : w === 'axe' ? '🪓' : w === 'lance' ? '🗡️' : w === 'staff' ? '🔮' : w === 'bow' ? '🏹' : '🔨';
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 20,
+        background: 'linear-gradient(160deg,#030210 0%,#07040F 60%,#0A0702 100%)',
+        display: 'flex', flexDirection: 'column',
+        fontFamily: "'Cinzel', serif",
+        overflow: 'hidden',
+      }}>
+        <style>{`
+          @keyframes csGoldPulse{0%,100%{opacity:.7}50%{opacity:1}}
+          @keyframes csCharGlow{0%,100%{box-shadow:0 0 30px rgba(201,168,76,0.15)}50%{box-shadow:0 0 55px rgba(201,168,76,0.35)}}
+          @keyframes csSlideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+          @keyframes csVariantIn{from{transform:scale(.94);opacity:0}to{transform:scale(1);opacity:1}}
+        `}</style>
+
+        {/* ── ZONA SUPERIOR: título + canvas ── */}
+        <div style={{
+          position: 'relative',
+          flex: '0 0 auto',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          paddingTop: 'max(env(safe-area-inset-top, 0px), 10px)',
+          background: 'radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.09) 0%, transparent 65%)',
+        }}>
+          {/* Título */}
+          <div style={{
+            fontFamily: "'Cinzel Decorative', serif",
+            fontSize: 'clamp(0.7rem, 4vw, 0.95rem)',
+            color: '#E8C97A',
+            letterSpacing: '.22em',
+            textTransform: 'uppercase',
+            marginBottom: '2px',
+            textShadow: '0 0 20px rgba(232,201,122,0.5)',
+            animation: 'csGoldPulse 3s ease-in-out infinite',
+          }}>Elige tu Templario</div>
+
+          {/* Subtítulo personaje */}
+          <div style={{
+            fontSize: '0.55rem',
+            color: 'rgba(201,168,76,0.55)',
+            letterSpacing: '.3em',
+            textTransform: 'uppercase',
+            marginBottom: '4px',
+          }}>{currentVariant.name}</div>
+
+          {/* Canvas personaje — compacto */}
+          <div style={{ position: 'relative', animation: 'csCharGlow 3s ease-in-out infinite' }}>
+            <canvas
+              ref={canvasRef}
+              width={CW} height={CH}
+              style={{
+                display: 'block',
+                width: 'min(54vw, 200px)',
+                height: 'auto',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* ── ZONA INFERIOR: controles ── */}
+        <div style={{
+          flex: 1,
+          display: 'flex', flexDirection: 'column',
+          background: 'linear-gradient(0deg,#07040A 0%,rgba(10,7,2,0.97) 100%)',
+          borderTop: '1px solid rgba(201,168,76,0.2)',
+          padding: '10px 14px',
+          gap: '8px',
+          overflowY: 'auto',
+          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
+          animation: 'csSlideUp .38s cubic-bezier(.34,1.1,.64,1)',
+        }}>
+
+          {/* Selector género */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {[
+              { g: 'm', icon: '⚔', label: 'Hombre', activeColor: 'rgba(80,160,90,.9)', inactiveColor: 'rgba(60,120,70,.3)', activeBg: 'linear-gradient(135deg,#0A1A0C,#183020)', textColor: '#88C890' },
+              { g: 'f', icon: '🏹', label: 'Mujer',  activeColor: 'rgba(220,150,50,.9)', inactiveColor: 'rgba(200,130,40,.35)', activeBg: 'linear-gradient(135deg,#150E06,#261808)', textColor: '#E8A84C' },
+            ].map(({ g, icon, label, activeColor, inactiveColor, activeBg, textColor }) => (
+              <div key={g} onClick={() => selectGender(g)} style={{
+                flex: 1, textAlign: 'center',
+                background: gender === g ? activeBg : 'rgba(255,255,255,0.03)',
+                border: `1.5px solid ${gender === g ? activeColor : 'rgba(78,62,38,0.4)'}`,
+                borderRadius: '10px', padding: '7px 4px', cursor: 'pointer',
+                transition: 'all .2s',
+                boxShadow: gender === g ? `0 0 16px ${activeColor}44` : 'none',
+              }}>
+                <div style={{ fontSize: '1.15rem', marginBottom: '2px' }}>{icon}</div>
+                <div style={{ fontFamily: "'Cinzel',serif", fontSize: '.58rem', color: gender === g ? textColor : 'rgba(201,168,76,0.4)' }}>{label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Label variantes */}
+          <div style={{ fontSize: '.48rem', letterSpacing: '.28em', color: 'rgba(201,168,76,0.55)', marginTop: '2px' }}>ESTILO DE COMBATE</div>
+
+          {/* Variantes — horizontal scroll en móvil */}
+          <div style={{
+            display: 'flex', gap: '7px',
+            overflowX: 'auto', paddingBottom: '4px',
+            scrollbarWidth: 'none',
+          }}>
+            {variants.map((v, idx) => {
+              const sel = variant === idx;
+              return (
+                <div key={idx} onClick={() => selectVariant(idx)} style={{
+                  flexShrink: 0,
+                  minWidth: '100px',
+                  background: sel ? 'linear-gradient(135deg,#2E2214,#1E1608)' : 'linear-gradient(135deg,#181008,#110C05)',
+                  border: `1.5px solid ${sel ? '#E8C97A' : 'rgba(78,62,38,0.5)'}`,
+                  borderRadius: '10px', padding: '8px 10px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '7px',
+                  transition: 'all .2s',
+                  boxShadow: sel ? '0 0 18px rgba(201,168,76,0.25)' : 'none',
+                  animation: sel ? 'csVariantIn .2s ease' : 'none',
+                }}>
+                  <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{weaponIcon(v.weapon)}</span>
+                  <div>
+                    <div style={{ fontFamily: "'Cinzel',serif", fontSize: '.6rem', color: sel ? '#E8C97A' : '#8A7050', lineHeight: 1.2 }}>{v.name}</div>
+                    <div style={{ fontSize: '.5rem', color: sel ? 'rgba(201,168,76,0.6)' : 'rgba(138,112,80,0.5)', marginTop: '2px' }}>{v.weaponName}</div>
+                  </div>
+                  {sel && <div style={{ fontSize: '.65rem', color: '#F4C542', marginLeft: 'auto' }}>◆</div>}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Botón confirmar */}
+          <button onClick={confirmCharacter} style={{
+            fontFamily: "'Cinzel', serif",
+            fontSize: '.75rem',
+            letterSpacing: '.18em',
+            background: 'linear-gradient(135deg,#8A6020,#C9A84C,#E8C97A,#C9A84C,#8A6020)',
+            border: 'none', borderRadius: '12px',
+            padding: '.85rem 1rem',
+            cursor: 'pointer',
+            width: '100%',
+            color: '#0A0702', fontWeight: 700,
+            boxShadow: '0 0 28px rgba(201,168,76,0.35)',
+            marginTop: 'auto',
+          }}>⚔ Confirmar Templario</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── LAYOUT DESKTOP (sin cambios) ──────────────────────────────
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 20,
       background: '#060308',
-      display: 'flex',
-      flexDirection: isMobile ? 'column' : 'row',
-      overflowY: isMobile ? 'auto' : 'hidden',
+      display: 'flex', flexDirection: 'row',
+      overflowY: 'hidden',
       fontFamily: "'Cinzel', serif",
     }}>
-
-      {/* ══ PANEL PERSONAJE ══ */}
       <div style={{
-        position: 'relative',
-        flexShrink: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
+        position: 'relative', flexShrink: 0,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'flex-end',
         background: 'linear-gradient(160deg, #030210 0%, #07040F 55%, #0A0702 100%)',
-        borderRight: isMobile ? 'none' : '1px solid rgba(201,168,76,0.18)',
-        borderBottom: isMobile ? '1px solid rgba(201,168,76,0.15)' : 'none',
-        ...(isMobile
-          ? { width: '100%', paddingTop: '1rem', paddingBottom: 0 }
-          : { width: '380px', height: '100vh', overflow: 'hidden' }
-        ),
+        borderRight: '1px solid rgba(201,168,76,0.18)',
+        width: '380px', height: '100vh', overflow: 'hidden',
       }}>
-
-        {/* Resplandor de fondo detrás del canvas */}
-        <div style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: 'radial-gradient(ellipse at 50% 35%, rgba(201,168,76,0.07) 0%, transparent 65%)',
-        }} />
-
-        {/* Nombre + subtítulo del personaje (arriba del canvas) */}
-        <div style={{
-          position: 'absolute', top: isMobile ? '0.8rem' : '1.4rem',
-          left: 0, right: 0, textAlign: 'center', zIndex: 2, padding: '0 1rem',
-        }}>
-          <div style={{
-            fontFamily: "'Cinzel Decorative', serif",
-            fontSize: isMobile ? 'clamp(0.85rem, 4.5vw, 1.1rem)' : '1.05rem',
-            color: '#F4C542',
-            letterSpacing: '.14em',
-            textShadow: '0 0 28px rgba(244,197,66,0.65)',
-            marginBottom: '0.25rem',
-          }}>
-            {currentVariant.name}
-          </div>
-          <div style={{
-            fontSize: '0.5rem',
-            color: 'rgba(201,168,76,0.5)',
-            letterSpacing: '.32em',
-            textTransform: 'uppercase',
-          }}>
-            {currentVariant.sub}
-          </div>
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at 50% 35%, rgba(201,168,76,0.07) 0%, transparent 65%)' }} />
+        <div style={{ position: 'absolute', top: '1.4rem', left: 0, right: 0, textAlign: 'center', zIndex: 2, padding: '0 1rem' }}>
+          <div style={{ fontFamily: "'Cinzel Decorative', serif", fontSize: '1.05rem', color: '#F4C542', letterSpacing: '.14em', textShadow: '0 0 28px rgba(244,197,66,0.65)', marginBottom: '0.25rem' }}>{currentVariant.name}</div>
+          <div style={{ fontSize: '0.5rem', color: 'rgba(201,168,76,0.5)', letterSpacing: '.32em', textTransform: 'uppercase' }}>{currentVariant.sub}</div>
         </div>
-
-        {/* Canvas del personaje — grande */}
-        <canvas
-          ref={canvasRef}
-          width={CW}
-          height={CH}
-          style={{
-            display: 'block',
-            position: 'relative', zIndex: 1,
-            width: isMobile ? `min(${CW}px, 90vw)` : `${CW}px`,
-            height: 'auto',
-            marginTop: isMobile ? '3.5rem' : '4rem',
-          }}
-        />
+        <canvas ref={canvasRef} width={CW} height={CH} style={{ display: 'block', position: 'relative', zIndex: 1, width: `${CW}px`, height: 'auto', marginTop: '4rem' }} />
       </div>
-
-      {/* ══ PANEL CONTROLES ══ */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        padding: isMobile ? '1.2rem 1rem 3rem' : '2rem 1.8rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '.55rem',
-        background: 'linear-gradient(180deg, #0A0702 0%, #070504 100%)',
-      }}>
-
-        {/* Título */}
-        <div style={{
-          fontFamily: "'Cinzel Decorative', serif",
-          fontSize: 'clamp(0.85rem, 4vw, 1.25rem)',
-          color: '#E8C97A',
-          letterSpacing: '.1em',
-          marginBottom: '.1rem',
-        }}>ELIGE TU TEMPLARIO</div>
-
-        {/* Separador */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '2rem 1.8rem', display: 'flex', flexDirection: 'column', gap: '.55rem', background: 'linear-gradient(180deg, #0A0702 0%, #070504 100%)' }}>
+        <div style={{ fontFamily: "'Cinzel Decorative', serif", fontSize: 'clamp(0.85rem, 4vw, 1.25rem)', color: '#E8C97A', letterSpacing: '.1em', marginBottom: '.1rem' }}>ELIGE TU TEMPLARIO</div>
         <div style={{ height: '1px', background: 'linear-gradient(90deg, rgba(201,168,76,0.65), rgba(201,168,76,0.1), transparent)', marginBottom: '.3rem' }} />
-
-        {/* Label género */}
         <div style={{ fontSize: '.52rem', letterSpacing: '.28em', color: '#C9A84C' }}>GÉNERO</div>
-
-        {/* Botones género */}
         <div style={{ display: 'flex', gap: '.5rem' }}>
           {[
             { g: 'm', icon: '⚔', label: 'Hombre', activeColor: 'rgba(80,160,90,.9)', inactiveColor: 'rgba(60,120,70,.3)', activeBg: 'linear-gradient(135deg,#0A1A0C,#183020)', inactiveBg: 'linear-gradient(135deg,#0E1A10,#172815)', textColor: '#88C890' },
-            { g: 'f', icon: '🏹', label: 'Mujer',  activeColor: 'rgba(220,150,50,.9)', inactiveColor: 'rgba(200,130,40,.35)', activeBg: 'linear-gradient(135deg,#150E06,#261808)', inactiveBg: 'linear-gradient(135deg,#1A1008,#2E1E0A)', textColor: '#E8A84C' },
+            { g: 'f', icon: '🏹', label: 'Mujer', activeColor: 'rgba(220,150,50,.9)', inactiveColor: 'rgba(200,130,40,.35)', activeBg: 'linear-gradient(135deg,#150E06,#261808)', inactiveBg: 'linear-gradient(135deg,#1A1008,#2E1E0A)', textColor: '#E8A84C' },
           ].map(({ g, icon, label, activeColor, inactiveColor, activeBg, inactiveBg, textColor }) => (
-            <div
-              key={g}
-              onClick={() => selectGender(g)}
-              style={{
-                flex: 1,
-                background: gender === g ? activeBg : inactiveBg,
-                border: `2px solid ${gender === g ? activeColor : inactiveColor}`,
-                borderRadius: '10px',
-                padding: '.65rem .4rem',
-                cursor: 'pointer',
-                textAlign: 'center',
-                transition: 'all .2s',
-                boxShadow: gender === g ? `0 0 18px ${activeColor}55` : 'none',
-              }}
-            >
+            <div key={g} onClick={() => selectGender(g)} style={{ flex: 1, background: gender === g ? activeBg : inactiveBg, border: `2px solid ${gender === g ? activeColor : inactiveColor}`, borderRadius: '10px', padding: '.65rem .4rem', cursor: 'pointer', textAlign: 'center', transition: 'all .2s', boxShadow: gender === g ? `0 0 18px ${activeColor}55` : 'none' }}>
               <div style={{ fontSize: '1.3rem', marginBottom: '.25rem' }}>{icon}</div>
               <div style={{ fontFamily: "'Cinzel',serif", fontSize: '.62rem', color: textColor }}>{label}</div>
             </div>
           ))}
         </div>
-
-        {/* Label variante */}
-        <div style={{ fontSize: '.52rem', letterSpacing: '.28em', color: '#C9A84C', marginTop: '.4rem' }}>ESTILO DE COMBATE</div>
-
-        {/* Lista de variantes */}
+        <div style={{ fontSize: '.52rem', letterSpacing: '.28em', color: '#C9A84C', marginTop: '.2rem' }}>ESTILO DE COMBATE</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '.32rem' }}>
           {variants.map((v, idx) => {
             const sel = variant === idx;
-            const weaponIcon = v.weapon === 'sword' ? '⚔' : v.weapon === 'axe' ? '🪓' : v.weapon === 'lance' ? '🗡️' : v.weapon === 'staff' ? '🔮' : v.weapon === 'bow' ? '🏹' : '🔨';
+            const wIcon = v.weapon === 'sword' ? '⚔' : v.weapon === 'axe' ? '🪓' : v.weapon === 'lance' ? '🗡️' : v.weapon === 'staff' ? '🔮' : v.weapon === 'bow' ? '🏹' : '🔨';
             return (
-              <div
-                key={idx}
-                onClick={() => selectVariant(idx)}
-                style={{
-                  background: sel ? 'linear-gradient(135deg,#2E2214,#1E1608)' : 'linear-gradient(135deg,#181008,#110C05)',
-                  border: `1px solid ${sel ? '#E8C97A' : 'rgba(78,62,38,0.6)'}`,
-                  borderRadius: '10px',
-                  padding: '.65rem .85rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '.65rem',
-                  transition: 'all .2s',
-                  boxShadow: sel ? '0 0 22px rgba(201,168,76,0.22)' : 'none',
-                }}
-              >
-                <span style={{ fontSize: '1.35rem', flexShrink: 0 }}>{weaponIcon}</span>
+              <div key={idx} onClick={() => selectVariant(idx)} style={{ background: sel ? 'linear-gradient(135deg,#2E2214,#1E1608)' : 'linear-gradient(135deg,#181008,#110C05)', border: `1px solid ${sel ? '#E8C97A' : 'rgba(78,62,38,0.6)'}`, borderRadius: '10px', padding: '.65rem .85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '.65rem', transition: 'all .2s', boxShadow: sel ? '0 0 22px rgba(201,168,76,0.22)' : 'none' }}>
+                <span style={{ fontSize: '1.35rem', flexShrink: 0 }}>{wIcon}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontFamily: "'Cinzel',serif", fontSize: '.65rem', color: sel ? '#E8C97A' : '#B8A070', marginBottom: '.1rem' }}>{v.name}</div>
                   <div style={{ fontSize: '.54rem', color: '#8A7050' }}>{v.weaponName}</div>
@@ -3327,27 +3349,7 @@ function CharSelect({ onConfirm }) {
             );
           })}
         </div>
-
-        {/* Botón confirmar */}
-        <button
-          onClick={confirmCharacter}
-          style={{
-            fontFamily: "'Cinzel', serif",
-            fontSize: '.78rem',
-            letterSpacing: '.18em',
-            background: 'linear-gradient(135deg,#8A6020,#C9A84C,#E8C97A,#C9A84C,#8A6020)',
-            border: 'none',
-            borderRadius: '10px',
-            padding: '.9rem 1rem',
-            cursor: 'pointer',
-            marginTop: '.6rem',
-            width: '100%',
-            color: '#0A0702',
-            fontWeight: 700,
-            boxShadow: '0 0 28px rgba(201,168,76,0.28)',
-          }}
-        >⚔ Confirmar Templario</button>
-
+        <button onClick={confirmCharacter} style={{ fontFamily: "'Cinzel', serif", fontSize: '.78rem', letterSpacing: '.18em', background: 'linear-gradient(135deg,#8A6020,#C9A84C,#E8C97A,#C9A84C,#8A6020)', border: 'none', borderRadius: '10px', padding: '.9rem 1rem', cursor: 'pointer', marginTop: '.6rem', width: '100%', color: '#0A0702', fontWeight: 700, boxShadow: '0 0 28px rgba(201,168,76,0.28)' }}>⚔ Confirmar Templario</button>
       </div>
     </div>
   );
