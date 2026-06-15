@@ -45,6 +45,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) localStorage.setItem('pending_ref_code', ref.toUpperCase());
+  }, []);
+
+  useEffect(() => {
     initAuth();
   }, []);
 

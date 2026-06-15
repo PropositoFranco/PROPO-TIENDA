@@ -7,6 +7,13 @@ import { useUIStore } from '../../store/useUIStore';
 export default function LoginPage() {
   const navigate = useNavigate();
   const setSession = useAuthStore((s) => s.setSession);
+
+  // Guardar ?ref= apenas alguien llega a esta página
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) localStorage.setItem('pending_ref_code', ref.toUpperCase());
+  }, []);
   const loadProfile = useAuthStore((s) => s.loadProfile);
   const pushToast = useUIStore((s) => s.pushToast);
 
@@ -162,15 +169,17 @@ export default function LoginPage() {
             await loadProfile();
             document.getElementById('login-frame')
               ?.contentWindow?.postMessage({ type: 'login-success' }, '*');
-            setTimeout(() => { pushToast('¡Bienvenido al Templo!'); navigate('/register', { replace: true }); }, 800);
+            const pendingRef = localStorage.getItem('pending_ref_code') || '';
+            setTimeout(() => { pushToast('¡Bienvenido al Templo!'); navigate(`/register${pendingRef ? `?ref=${pendingRef}` : ''}`, { replace: true }); }, 800);
             return;
           }
 
           // Código válido → registro nuevo
+          const pendingRef = localStorage.getItem('pending_ref_code') || '';
           const { data: authData, error: authErr } = await supabase.auth.signUp({
             email: `user_${codeRow.id}@t-store.app`,
             password: code.trim().toUpperCase(),
-            options: { data: { code: code.trim().toUpperCase(), templario_name: 'Nuevo Templario', avatar: 'default' } },
+            options: { data: { code: code.trim().toUpperCase(), templario_name: 'Nuevo Templario', avatar: 'default', referral_code: pendingRef || null } },
           });
           if (authErr) throw authErr;
 
@@ -208,7 +217,7 @@ export default function LoginPage() {
 
           document.getElementById('login-frame')
             ?.contentWindow?.postMessage({ type: 'login-success' }, '*');
-          setTimeout(() => { pushToast('¡Bienvenido al Templo!'); navigate('/register', { replace: true }); }, 800);
+          setTimeout(() => { pushToast('¡Bienvenido al Templo!'); navigate(`/register${pendingRef ? `?ref=${pendingRef}` : ''}`, { replace: true }); }, 800);
 
         } catch (err) {
           console.error('Activation error:', err);
