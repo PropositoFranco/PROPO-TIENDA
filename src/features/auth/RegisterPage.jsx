@@ -208,6 +208,7 @@ navigate('/bienvenido', { replace: true });
                   email: email,
                   avatar: avatar || existingProfile.avatar || '⚔️',
                   referral_code: referralCode,
+                  ...(referredBy ? { referred_by: referredBy } : {}),
                 }
               : {
                   id: userId,
