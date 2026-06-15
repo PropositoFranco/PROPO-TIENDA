@@ -88,12 +88,45 @@ export default function RegisterPage() {
             .maybeSingle()
             .then(r => r.data) : null;
 
-          // Leer lo que el trigger ya guardó para no pisarlo
+          // Leer lo que el trigger guardó (si lo hizo)
           const { data: triggerData } = await supabase
             .from('profiles')
             .select('referral_code, referred_by')
             .eq('id', newUserId)
             .maybeSingle();
+
+          // referred_by: trigger > frontend > null (triple fallback)
+          const resolvedReferredBy = triggerData?.referred_by || refProfile?.id || null;
+
+          // Si el frontend resolvió el referido pero el trigger no lo procesó, hacerlo aquí
+          if (resolvedReferredBy && !triggerData?.referred_by) {
+            const { data: referrerProfile } = await supabase
+              .from('profiles')
+              .select('id, xp, cristales')
+              .eq('id', resolvedReferredBy)
+              .maybeSingle();
+
+            const { data: config } = await supabase
+              .from('referral_configs')
+              .select('*')
+              .eq('is_active', true)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (referrerProfile && config) {
+              await supabase.from('profiles').update({
+                xp: (referrerProfile.xp || 0) + (config.xp_reward_a || 500),
+                cristales: (referrerProfile.cristales || 0) + (config.coins_reward_a || 2000),
+              }).eq('id', resolvedReferredBy);
+
+              await supabase.from('referral_events').insert({
+                referrer_id: resolvedReferredBy,
+                referred_id: newUserId,
+                config_id: config.id,
+              });
+            }
+          }
 
           const { error } = await supabase.from('profiles').upsert({
             id: newUserId,
@@ -107,7 +140,7 @@ export default function RegisterPage() {
             role: 'templario',
             referral_code: triggerData?.referral_code ||
               Array.from({ length: 6 }, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random() * 36)]).join(''),
-            referred_by: triggerData?.referred_by || refProfile?.id || null,
+            referred_by: resolvedReferredBy,
           }, { onConflict: 'id' });
           if (error) { pushToast('Error al guardar perfil'); return; }
           // Activar membresía si tiene pago en access_codes con su email
