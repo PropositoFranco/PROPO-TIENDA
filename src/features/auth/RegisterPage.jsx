@@ -124,7 +124,7 @@ try {
       .from('profiles')
       .update({
         membership_status:     'active',
-membership_type:       'paid',
+membership_type:       'base',
         membership_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         paused_at:             null,
       })
@@ -210,7 +210,7 @@ navigate('/bienvenido', { replace: true });
 
         const { data: existingProfile } = await supabase
           .from('profiles')
-          .select('id, templario_name, level, xp')
+          .select('id, templario_name, level, xp, referred_by, avatar')
           .eq('id', userId)
           .maybeSingle();
 
@@ -225,7 +225,7 @@ navigate('/bienvenido', { replace: true });
                   email: email,
                   avatar: avatar || existingProfile.avatar || '⚔️',
                   referral_code: referralCode,
-                  ...(referredBy ? { referred_by: referredBy } : {}),
+                  ...(referredBy ? { referred_by: referredBy } : existingProfile?.referred_by ? { referred_by: existingProfile.referred_by } : {}),
                 }
               : {
                   id: userId,
@@ -303,7 +303,7 @@ try {
       .from('profiles')
       .update({
         membership_status:     'active',
-membership_type:       'paid',
+membership_type:       'base',
         membership_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         paused_at:             null,
       })
