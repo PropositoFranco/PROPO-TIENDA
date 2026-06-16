@@ -266,7 +266,7 @@ function LevelNode({ lvl, index, referidosActivos, isLast }) {
 }
 
 // ─── LEVEL CARD ──────────────────────────────────────────────────────────────
-function LevelCard({ level, referidosActivos, onClaim, cuponActivo }) {
+function LevelCard({ level, referidosActivos, onClaim, cuponActivo, cuponesCanjeados }) {
   const unlocked = referidosActivos >= level.referidos;
   const isNext = !unlocked && (level.nivel === 1 || referidosActivos >= ALIANZA_LEVELS[level.nivel - 2].referidos);
   const isCurrent = unlocked && (!ALIANZA_LEVELS[level.nivel] || referidosActivos < ALIANZA_LEVELS[level.nivel].referidos);
