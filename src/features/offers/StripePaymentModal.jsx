@@ -85,8 +85,14 @@ function CheckoutForm({ offer, userId, onSuccess, onClose, mode, eventId }) {
       if (stripeError) throw new Error(stripeError.message);
 
       if (paymentIntent.status === 'succeeded') {
-        onSuccess();
-      }
+  if (isAlianza && eventId) {
+    await supabase
+      .from('referral_events')
+      .update({ claimed: true })
+      .eq('id', eventId);
+  }
+  onSuccess();
+}
     } catch (err) {
       setError(err.message);
     } finally {
