@@ -336,9 +336,9 @@ function LevelCard({ level, referidosActivos, onClaim, cuponActivo }) {
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg,transparent 40%,rgba(255,255,255,0.22) 50%,transparent 60%)", backgroundSize: "200% 100%", animation: "alianza-shimmer 2s infinite" }} />
         </button>
       )}
-      {unlocked && !cuponActivo && (
-        <div style={{ padding: "10px", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.25)", borderRadius: "12px", textAlign: "center", fontFamily: "'Cinzel',serif", fontSize: "10px", fontWeight: "700", color: "#34d399", letterSpacing: "0.1em" }}>✓ Canjeado</div>
-      )}
+      {unlocked && !cuponActivo && cuponesCanjeados?.includes(level.nivel) && (
+  <div style={{ padding: "10px", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.25)", borderRadius: "12px", textAlign: "center", fontFamily: "'Cinzel',serif", fontSize: "10px", fontWeight: "700", color: "#34d399", letterSpacing: "0.1em" }}>✓ Canjeado</div>
+)}
     </div>
   );
 }
@@ -481,7 +481,8 @@ export default function AlianzaPage() {
 
   const [userId, setUserId]                     = useState(null);
   const [referidosActivos, setReferidosActivos]  = useState(0);
-  const [cuponesDisponibles, setCupones]         = useState([]);
+  const [cuponesDisponibles, setCupones] = useState([]);
+const [cuponesCanjeados, setCuponesCanjeados] = useState([]);
   const [rankingAlianzas, setRanking]            = useState([]);
   const [alianzaUsuario, setAlianzaUsuario]      = useState(null);
   const [loading, setLoading]                    = useState(true);
@@ -508,19 +509,20 @@ export default function AlianzaPage() {
         missionsService.trackProgress(user.id, 'referrals_count', count);
       }
       const { data: eventos } = await supabase
-        .from("referral_events")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("event_type", "bonus_earned")
-        .eq("claimed", false)
-        .gt("expires_at", new Date().toISOString());
-      if (eventos) {
-        setCupones(eventos.map((e) => ({
-          id: e.id,
-          nivel: e.nivel,
-          diasRestantes: Math.ceil((new Date(e.expires_at).getTime() - Date.now()) / 86400000),
-        })).filter(c => c.diasRestantes > 0));
-      }
+  .from("referral_events")
+  .select("*")
+  .eq("user_id", user.id)
+  .eq("event_type", "bonus_earned");
+if (eventos) {
+  setCupones(eventos
+    .filter(e => !e.claimed && new Date(e.expires_at) > new Date())
+    .map((e) => ({
+      id: e.id,
+      nivel: e.nivel,
+      diasRestantes: Math.ceil((new Date(e.expires_at).getTime() - Date.now()) / 86400000),
+    })).filter(c => c.diasRestantes > 0));
+  setCuponesCanjeados(eventos.filter(e => e.claimed).map(e => e.nivel));
+}
       const { data: alianzaData } = await supabase.from("alianzas").select("*").eq("leader_id", user.id).maybeSingle();
       setAlianzaUsuario(alianzaData);
       const { data: topAlianzas } = await supabase.from("alianzas").select("*").order("puntuacion_semanal", { ascending: false }).limit(5);
@@ -670,7 +672,7 @@ export default function AlianzaPage() {
           <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,270px),1fr))" }}>
             {ALIANZA_LEVELS.map(level => {
               const cupon = cuponesDisponibles.find(c => c.nivel === level.nivel);
-              return <LevelCard key={level.nivel} level={level} referidosActivos={referidosActivos} cuponActivo={cupon} onClaim={(n, eventId) => setShowModal({ nivel: n, cupon })} />;
+              return <LevelCard key={level.nivel} level={level} referidosActivos={referidosActivos} cuponActivo={cupon} cuponesCanjeados={cuponesCanjeados} onClaim={(n, eventId) => setShowModal({ nivel: n, cupon })} />;
             })}
           </div>
         )}
