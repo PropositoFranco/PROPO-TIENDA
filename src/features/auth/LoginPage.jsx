@@ -188,6 +188,18 @@ export default function LoginPage() {
             .from('access_codes')
             .update({ is_used: true, used_by: authData.user.id, used_at: new Date().toISOString() })
             .eq('id', codeRow.id);
+            // ── Activar membresía según campaign_id ──
+const meses = codeRow.campaign_id === 'sorteo-ganador' ? 6 : 1;
+const base = new Date();
+base.setMonth(base.getMonth() + meses);
+await supabase
+  .from('profiles')
+  .update({
+    membership_type:       'paid',
+    membership_expires_at: base.toISOString(),
+    updated_at:            new Date().toISOString(),
+  })
+  .eq('id', authData.user.id);
 
           // ── Generar código de referido único para este usuario ──
           const refCode = Math.random().toString(36).substring(2, 7).toUpperCase();

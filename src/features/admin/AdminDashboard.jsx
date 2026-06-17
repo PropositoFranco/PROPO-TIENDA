@@ -3625,6 +3625,7 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
             { href:'/admin/milestone-prizes',  bg:'linear-gradient(135deg,#1a8a30,#0a4018)', color:'#fff',    shadow:'rgba(46,213,115,0.4)',  border:'rgba(46,213,115,0.3)', label:'🏆 HITOS'     },
             { href:'/admin/ranking-banners',   bg:'linear-gradient(135deg,#1a6a8a,#0a3040)', color:'#fff',    shadow:'rgba(46,160,213,0.4)',  border:'rgba(46,160,213,0.3)', label:'🖼️ BANNERS'   },
             { href:'/admin/vip-level-rewards', bg:'linear-gradient(135deg,#f5d06e,#7c3aed)', color:'#fff',    shadow:'rgba(212,175,55,0.5)',  border:'rgba(212,175,55,0.3)', label:'👑 VIP'        },
+            { href:'/admin/sorteos', bg:'linear-gradient(135deg,#cc44ff,#6b0a8a)', color:'#fff', shadow:'rgba(204,68,255,0.5)', border:'rgba(204,68,255,0.3)', label:'🎲 SORTEOS' },
           ].map(btn => (
             <a key={btn.href} href={btn.href} style={{
               background: btn.bg, color: btn.color,

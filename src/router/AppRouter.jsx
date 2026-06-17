@@ -39,6 +39,8 @@ const AdminMilestonePrizes = lazy(() => import('../features/admin/AdminMilestone
 const CompetenciaPremios   = lazy(() => import('../features/admin/CompetenciaPremios'));
 const RankingBannersAdmin  = lazy(() => import('../features/admin/RankingBannersAdmin'));
 const VipLevelRewardsAdmin = lazy(() => import('../features/admin/VipLevelRewardsAdmin'));
+const SorteoAdminPage = lazy(() => import('../features/sorteo/SorteoAdminPage'));
+const SorteoPage = lazy(() => import('../features/sorteo/SorteoPage'));
 
 function CatchAll() {
   const { loading } = useAuthStore();
@@ -101,9 +103,11 @@ export default function AppRouter() {
           <Route path="/hazloapp" element={<HazloAppPage />} />
           <Route path="/terminos" element={<TerminosPage />} />
           <Route path="/arsenal-rpg" element={<ArsenalRPGPage />} />
+          <Route path="/sorteo/:eventoId" element={<SorteoPage />} />
 
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/sorteos" element={<SorteoAdminPage />} />
             <Route path="/admin/level-rewards" element={<LevelRewardsAdmin />} />
             <Route path="/admin/referral-config" element={<ReferralConfigPage />} />
             <Route path="/admin/ranking-prizes" element={<RankingPrizesAdmin />} />
