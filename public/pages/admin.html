@@ -1475,7 +1475,12 @@
   ══════════════════════════════════════ */
   const supabaseClient = window.supabase.createClient(
     'https://hdwzhwuhlrtrmhnecypm.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkd3pod3VobHJ0cm1obmVjeXBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyMTUxMjQsImV4cCI6MjA5Mzc5MTEyNH0.bTgW5aIQpslxbtZdKcacvMUMAKUSwcb3StA-OumIUmw'
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkd3pod3VobHJ0cm1obmVjeXBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyMTUxMjQsImV4cCI6MjA5Mzc5MTEyNH0.bTgW5aIQpslxbtZdKcacvMUMAKUSwcb3StA-OumIUmw',
+    {
+      auth: {
+        storageKey: 'tstore-admin-auth'
+      }
+    }
   );
   const ADMIN_PASS = 'Templo2026Admin!';
 

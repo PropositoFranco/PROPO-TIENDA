@@ -411,7 +411,7 @@ const loadKpis = async () => {
       // Top usuarios por misiones completadas
       supabase.from('user_missions').select('user_id').gte('completed_at', startOf30d.toISOString()).limit(500),
       // Productos más vendidos
-      supabase.from('order_items').select('product_id, products(title)').limit(500),
+      supabase.from('orders').select('items').not('items', 'is', null).limit(500),
       // Top Templarios del juego
       supabase.from('templo_players').select('id, char_name, weekly_points, correct, xp, streak, level').order('weekly_points', { ascending:false }).limit(5),
       // Evidencias enviadas últimos 7 días
@@ -449,7 +449,7 @@ const loadKpis = async () => {
     const topBuyersIds = Object.entries(ordersByUser).sort((a,b) => b[1]-a[1]).slice(0,5).map(([id,cnt]) => ({ id, cnt }));
     let topBuyersEnriched = topBuyersIds;
     if (topBuyersIds.length) {
-      const { data: buyerProfiles } = await supabase.from('profiles').select('id, templario_name').in('id', topBuyersIds.map(b => b.id));
+      const { data: mProfiles } = await supabase.from('profiles').select('id, templario_name').in('id', topMissionIds.map(m => m.id).filter(Boolean));
       const bmap = {}; (buyerProfiles || []).forEach(p => { bmap[p.id] = p.templario_name; });
       topBuyersEnriched = topBuyersIds.map(b => ({ ...b, name: bmap[b.id] || b.id.slice(0,8) }));
     }
@@ -460,17 +460,22 @@ const loadKpis = async () => {
     const topMissionIds = Object.entries(missionsByUser).sort((a,b) => b[1]-a[1]).slice(0,5).map(([id,cnt]) => ({ id, cnt }));
     let topMissionEnriched = topMissionIds;
     if (topMissionIds.length) {
-      const { data: mProfiles } = await supabase.from('profiles').select('id, templario_name').in('id', topMissionIds.map(m => m.id));
+      const { data: mProfiles } = await supabase.from('profiles').select('id, templario_name').in('id', topMissionIds.map(m => m.id).filter(Boolean));
       const mmap = {}; (mProfiles || []).forEach(p => { mmap[p.id] = p.templario_name; });
       topMissionEnriched = topMissionIds.map(m => ({ ...m, name: mmap[m.id] || m.id.slice(0,8) }));
     }
 
     // Productos más vendidos
     const productCount = {};
-    (productsSold || []).forEach(item => {
-      const title = item.products?.title || item.product_id?.slice(0,10) || '?';
-      productCount[title] = (productCount[title] || 0) + 1;
+(productsSold || []).forEach(order => {
+  try {
+    const parsed = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+    (Array.isArray(parsed) ? parsed : []).forEach(item => {
+      const key = item.product_id?.slice(0, 8) || '?';
+      productCount[key] = (productCount[key] || 0) + 1;
     });
+  } catch (_) {}
+});
     const topProducts = Object.entries(productCount).sort((a,b) => b[1]-a[1]).slice(0,5).map(([title,cnt]) => ({ title, cnt }));
 
     // Evidencias por día últimos 7d
@@ -488,7 +493,7 @@ const loadKpis = async () => {
     const templarioIds = (topTemplarios || []).map(p => p.id);
     let templarioNames = {};
     if (templarioIds.length) {
-      const { data: tProfiles } = await supabase.from('profiles').select('id, templario_name').in('id', templarioIds);
+      const { data: tProfiles } = await supabase.from('profiles').select('id, templario_name').in('id', templarioIds.filter(Boolean));
       (tProfiles || []).forEach(p => { templarioNames[p.id] = p.templario_name; });
     }
     const topTemplariosEnriched = (topTemplarios || []).map(p => ({ ...p, name: templarioNames[p.id] || p.char_name || 'Templario' }));
@@ -643,7 +648,7 @@ const loadPrizes = async () => {
     };
   });
   const ids = (playerData || []).map(p => p.id);
-  const { data: profileData } = await supabase.from('profiles').select('id, templario_name').in('id', ids);
+  const { data: profileData } = await supabase.from('profiles').select('id, templario_name').in('id', ids.filter(Boolean));
   const nameMap = {};
   (profileData || []).forEach(p => { nameMap[p.id] = p.templario_name; });
   setPrizes(builtPrizes);
@@ -694,7 +699,7 @@ const handleAwardPrizes = async () => {
     const { data: activePrizes } = await supabase.from('ranking_prizes')
       .select('*').eq('is_active', true).order('position');
     const { data: profiles } = await supabase.from('profiles')
-      .select('id, templario_name, xp, cristales').in('id', (players || []).map(p => p.id));
+      .select('id, templario_name, xp, cristales').in('id', (players || []).map(p => p.id).filter(Boolean));
     const profileMap = {};
     const nameMap = {};
     (profiles || []).forEach(p => { profileMap[p.id] = p; nameMap[p.id] = p.templario_name; });
@@ -751,7 +756,7 @@ const handleAwardPrizes = async () => {
       setHistoryLoad(false);
       return;
     }
-    const userIds = [...new Set(data.map(r => r.user_id))];
+    const userIds = [...new Set(data.map(r => r.user_id).filter(Boolean))];
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, templario_name, email')
@@ -802,7 +807,7 @@ const loadInfractions = async (search, page) => {
       const { data, count, error } = await q;
       if (error) throw error;
 
-      const uniqueUserIds = [...new Set((data || []).map(r => r.user_id))];
+      const uniqueUserIds = [...new Set((data || []).map(r => r.user_id).filter(Boolean))];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, templario_name, email, posting_restricted_until')
@@ -960,7 +965,7 @@ const handleAwardCommunityPrizes = async () => {
       .limit(10);
     const { data: profiles } = await supabase.from('profiles')
       .select('id, xp, cristales')
-      .in('id', (players || []).map(p => p.user_id));
+      .in('id', (players || []).map(p => p.user_id).filter(Boolean));
     const profileMap = {};
     (profiles || []).forEach(p => { profileMap[p.id] = p; });
     const activePrizes = communityPrizes.filter(p => p.period === communityPeriod && p.is_active);

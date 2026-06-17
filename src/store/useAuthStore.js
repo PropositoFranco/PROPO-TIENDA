@@ -58,8 +58,18 @@ export const useAuthStore = create(
 
       initAuth: async () => {
         if (get().user && get().session) {
-  set({ loading: false });
-  await get().loadProfile();
+  const { data: { session: freshSession }, error: sessionError } =
+    await supabase.auth.getSession();
+
+  if (!freshSession || sessionError) {
+    await supabase.auth.signOut().catch(() => {});
+    set({ user: null, profile: null, session: null, loading: false });
+    return;
+  }
+
+  set({ session: freshSession, user: freshSession.user });
+await get().loadProfile();
+set({ loading: false });
   return;
 }
 
@@ -95,8 +105,9 @@ export const useAuthStore = create(
             set({ profile: null, isAdmin: false });
           }
 
-          set({ session, user: session.user, loading: false });
-          await get().loadProfile();
+          set({ session, user: session.user });
+await get().loadProfile();
+set({ loading: false });
 
           if (!get()._realtimeChannel) {
             const channel = supabase
@@ -124,24 +135,32 @@ export const useAuthStore = create(
       },
 
       loadProfile: async () => {
-        const user = get().user;
-        if (!user) return;
+  const user = get().user;
+  if (!user) return;
 
-        const session = get().session;
-        const expiresAt = session?.expires_at ?? 0;
-        const nowSecs = Math.floor(Date.now() / 1000);
-        if (expiresAt - nowSecs < 60) {
-          const { data: refreshed } = await supabase.auth.refreshSession().catch(() => ({ data: null }));
-          if (refreshed?.session) {
-            set({ session: refreshed.session, user: refreshed.session.user });
-          }
-        }
+  const session = get().session;
+  const expiresAt = session?.expires_at ?? 0;
+  const nowSecs = Math.floor(Date.now() / 1000);
+  if (expiresAt - nowSecs < 60) {
+    const { data: refreshed } = await supabase.auth.refreshSession().catch(() => ({ data: null }));
+    if (refreshed?.session) {
+      set({ session: refreshed.session, user: refreshed.session.user });
+    } else {
+      // El token expiró y no se pudo refrescar — limpiar estado y salir
+      await supabase.auth.signOut().catch(() => {});
+      set({ user: null, profile: null, session: null, loading: false });
+      return;
+    }
+  }
 
         let { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .maybeSingle();
+
+        console.log('[DEBUG] user.id en loadProfile:', user.id);
+        console.log('[DEBUG] resultado profiles:', { data, error });
 
         if (!error && !data) {
           for (let i = 0; i < 3 && !data; i++) {
@@ -157,10 +176,10 @@ export const useAuthStore = create(
         }
 
         if (error || !data) {
-          console.error('[Templo] loadProfile error:', error);
-          set({ profile: null, loading: false });
-          return;
-        }
+  console.warn('[Templo] loadProfile: no se encontró perfil para user:', get().user?.id);
+  set({ profile: null, loading: false });
+  return;
+}
 
         if (!error && data) {
           set({ profile: data, isAdmin: data.is_admin === true });

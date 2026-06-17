@@ -64,6 +64,7 @@ export default function SorteoAdminPage() {
   const [form,          setForm]          = useState({ nombre: '', cupo: 10 });
   const [errForm,       setErrForm]       = useState('');
   const [copiado,       setCopiado]       = useState('');
+  const [masterStats,   setMasterStats]   = useState(null);
 
   // ── CSS ──────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -98,7 +99,7 @@ export default function SorteoAdminPage() {
       .from('sorteos')
       .select(`
         id, numero_ronda, cupo, estado,
-        sorteo_participantes(id, nombre, email, es_ganador, cupon_code)
+        sorteo_participantes(id, nombre, email, es_ganador, cupon_code, cupon_aceptado, premio_visto, premio_entregado, tipo_premio)
       `)
       .eq('evento_id', eventoId)
       .order('numero_ronda', { ascending: false })
@@ -152,15 +153,47 @@ export default function SorteoAdminPage() {
     setCopiado(eventoId);
     setTimeout(() => setCopiado(''), 2000);
   };
+  
+  
+
+  const cargarMasterStats = useCallback(async () => {
+    const [
+      { count: totalEventos },
+      { count: totalRondas },
+      { count: totalRegistrados },
+      { count: totalGanadores },
+      { count: totalEntregados },
+      { count: totalAceptaron },
+      { count: totalVieron },
+    ] = await Promise.all([
+      supabase.from('sorteo_eventos').select('id', { count: 'exact', head: true }),
+      supabase.from('sorteos').select('id', { count: 'exact', head: true }),
+      supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }),
+      supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }).eq('es_ganador', true),
+      supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }).eq('premio_entregado', true),
+      supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }).eq('cupon_aceptado', true),
+      supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }).eq('premio_visto', true),
+    ]);
+    const convRate = totalGanadores > 0 ? Math.round((totalAceptaron / totalGanadores) * 100) : 0;
+    setMasterStats({ totalEventos, totalRondas, totalRegistrados, totalGanadores, totalEntregados, totalAceptaron, totalVieron, convRate });
+  }, []);
+
+  useEffect(() => { cargarMasterStats(); }, [cargarMasterStats]);
 
   // ── Estadísticas de un evento ─────────────────────────────────────────────────
   const statsEvento = (eventoId) => {
     const rs = rondas[eventoId] || [];
     const completadas = rs.filter(r => r.estado === 'completado');
-    const totalGanadores = completadas.reduce((s, r) => s + (r.sorteo_participantes?.length || 0), 0);
-    const totalBecas = completadas.reduce((s, r) => s + (r.sorteo_participantes?.filter(p => p.es_ganador).length || 0), 0);
+    const todasRondas = rs; // incluye abierta
+    const todosParticipantes = todasRondas.flatMap(r => r.sorteo_participantes || []);
+    const totalRegistrados = todosParticipantes.length;
+    const totalGanadores = todosParticipantes.filter(p => p.es_ganador).length;
+    const totalEntregados = todosParticipantes.filter(p => p.premio_entregado).length;
+    const totalAceptaron = todosParticipantes.filter(p => p.es_ganador && p.cupon_aceptado).length;
+    const totalVieron = todosParticipantes.filter(p => p.es_ganador && p.premio_visto).length;
+    const mediaAceptacion = totalGanadores > 0 ? Math.round((totalAceptaron / totalGanadores) * 100) : 0;
     const rondaActiva = rs.find(r => r.estado === 'abierto');
-    return { completadas: completadas.length, totalGanadores, totalBecas, rondaActiva };
+    return { completadas: completadas.length, totalRondas: rs.length, totalRegistrados, totalGanadores, totalEntregados, totalAceptaron, totalVieron, mediaAceptacion, rondaActiva };
   };
 
   // ── RENDER ───────────────────────────────────────────────────────────────────
@@ -179,6 +212,28 @@ export default function SorteoAdminPage() {
           Crea eventos de rifa continua — cada QR abre rondas automáticas sin parar.
         </p>
       </div>
+
+      {/* Master Stats */}
+      {masterStats && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 10, marginBottom: 28 }}>
+          {[
+            { label: 'EVENTOS',      value: masterStats.totalEventos,    icon: '🎲', color: C.gold },
+            { label: 'RONDAS',       value: masterStats.totalRondas,     icon: '🔁', color: C.goldDim },
+            { label: 'REGISTRADOS',  value: masterStats.totalRegistrados,icon: '⚔️', color: C.text },
+            { label: 'GANADORES',    value: masterStats.totalGanadores,  icon: '👑', color: C.gold },
+            { label: 'ENTREGADOS',   value: masterStats.totalEntregados, icon: '📦', color: '#60A5FA' },
+            { label: 'ACEPTARON',    value: masterStats.totalAceptaron,  icon: '✅', color: C.green },
+            { label: 'VIERON',       value: masterStats.totalVieron,     icon: '👁', color: C.purple },
+            { label: 'CONVERSIÓN',   value: `${masterStats.convRate}%`,  icon: '📈', color: masterStats.convRate > 50 ? C.green : masterStats.convRate > 20 ? C.gold : C.red },
+          ].map(s => (
+            <div key={s.label} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 12px', textAlign: 'center' }}>
+              <div style={{ fontSize: 20, marginBottom: 6 }}>{s.icon}</div>
+              <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 22, color: s.color, lineHeight: 1 }}>{s.value}</div>
+              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 7, letterSpacing: 2, color: C.muted, marginTop: 5 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Formulario crear evento */}
       <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: 'clamp(20px,4vw,28px)', marginBottom: 32, animation: 'fadeIn .4s ease both' }}>
@@ -259,14 +314,23 @@ export default function SorteoAdminPage() {
                       </span>
                       {abierto && rs.length > 0 && (
                         <>
+                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 1 }}>
+                            ⚔️ {stats.totalRegistrados} registrados
+                          </span>
                           <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.gold, letterSpacing: 1 }}>
-                            👑 {stats.totalBecas} becas
+                            👑 {stats.totalGanadores} ganadores
+                          </span>
+                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.green, letterSpacing: 1 }}>
+                            ✅ {stats.totalAceptaron}/{stats.totalGanadores} aceptaron ({stats.mediaAceptacion}%)
+                          </span>
+                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: '#60A5FA', letterSpacing: 1 }}>
+                            📦 {stats.totalEntregados} entregados
+                          </span>
+                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.purple, letterSpacing: 1 }}>
+                            👁 {stats.totalVieron} vieron
                           </span>
                           <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 1 }}>
-                            ⚔️ {stats.totalGanadores} total
-                          </span>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 1 }}>
-                            {stats.completadas} rondas completadas
+                            🔁 {stats.totalRondas} rondas
                           </span>
                         </>
                       )}
@@ -390,6 +454,12 @@ export default function SorteoAdminPage() {
                                     )}
                                     <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, marginLeft: 'auto' }}>
                                       {ronda.sorteo_participantes?.length || 0} guerreros
+                                      {(() => {
+                                        const ganadores = ronda.sorteo_participantes?.filter(p => p.es_ganador) || [];
+                                        const aceptaron = ganadores.filter(p => p.cupon_aceptado).length;
+                                        const vieron = ganadores.filter(p => p.premio_visto).length;
+                                        return ganadores.length > 0 ? ` · ✅${aceptaron}/${ganadores.length} · 👁${vieron}` : '';
+                                      })()}
                                     </span>
                                   </div>
                                 );

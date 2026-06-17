@@ -634,6 +634,8 @@ export default function SorteoPage() {
   const [guardando,      setGuardando]      = useState(false);
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
   const [copiado,        setCopiado]        = useState(false);
+  const [fraseIdx,       setFraseIdx]       = useState(0);
+  const [fraseVisible,   setFraseVisible]   = useState(true);
 
   // refs declarados arriba junto a setScreen
 
@@ -659,10 +661,11 @@ export default function SorteoPage() {
   const cargarRonda = useCallback(async () => {
     if (!eventoId) return null;
     const { data } = await supabase
-      .from('sorteos').select('*')
-      .eq('evento_id', eventoId).eq('estado', 'abierto').single();
-    setRondaActual(data || null);
-    return data || null;
+  .from('sorteos').select('*')
+  .eq('evento_id', eventoId).eq('estado', 'abierto')
+  .maybeSingle();  // ← maybeSingle en vez de single
+setRondaActual(data || null);
+return data || null;
   }, [eventoId]);
 
   const cargarParticipantes = useCallback(async (sorteoId) => {
@@ -874,6 +877,33 @@ export default function SorteoPage() {
   const faltantes  = Math.max(0, cupoTotal - cupoActual);
   const lleno      = faltantes === 0;
   const rondaNum   = rondaActual?.numero_ronda || (historial[0]?.numero_ronda || 0) + 1;
+  // ── Frases psicológicas rotantes ─────────────────────────────────────────
+  const FRASES_ESPERA = [
+    { texto: "¿Qué cambiarías primero si ganaras hoy?",          sub: "El ganador ya lo sabe." },
+    { texto: "El destino no sortea al azar.",                    sub: "Sortea al que ya decidió." },
+    { texto: "Solo uno será elegido esta ronda.",                sub: "Ese uno ya está en esta sala." },
+    { texto: "¿Qué versión de ti entraría al Templo hoy?",      sub: "Esa es la que merece ganar." },
+    { texto: "Cada segundo que esperas, otro desistió.",         sub: "Tú sigues aquí. Eso ya te distingue." },
+    { texto: "La beca no transforma. Tú ya decidiste hacerlo.", sub: "El Templo solo acelera lo inevitable." },
+    { texto: "¿Cuánto tiempo llevas postergando tu cambio?",    sub: "Hoy ese tiempo se acaba." },
+    { texto: "El Templo no busca al más suertudo.",             sub: "Busca al que llegó primero." },
+    { texto: "El que gana no es diferente a ti.",               sub: "Solo estaba listo antes." },
+    { texto: "¿Qué diría tu yo de dentro de un año?",          sub: "Mira bien esta pantalla." },
+    { texto: "El silencio antes del sorteo siempre dice algo.", sub: "Escúchalo." },
+    { texto: "Hay guerreros que esperan.",                      sub: "Y hay guerreros que ya saben que van a ganar." },
+  ];
+
+  useEffect(() => {
+    if (screen !== SCREEN.ESPERA) return undefined;
+    const ciclo = setInterval(() => {
+      setFraseVisible(false);
+      setTimeout(() => {
+        setFraseIdx(i => (i + 1) % FRASES_ESPERA.length);
+        setFraseVisible(true);
+      }, 600);
+    }, 16000);
+    return () => clearInterval(ciclo);
+  }, [screen]);
 
   // ── PANTALLA: LOADING ─────────────────────────────────────────────────────
   if (screen === SCREEN.LOADING) {
@@ -977,6 +1007,59 @@ export default function SorteoPage() {
             </button>
           </div>
 
+          {/* Carta del Maestro — ritual de cierre */}
+          <div style={{
+            position: 'relative',
+            background: 'linear-gradient(160deg,rgba(255,215,0,0.07),rgba(10,5,26,0.7),rgba(255,215,0,0.05))',
+            border: '1px solid rgba(255,215,0,0.3)',
+            borderRadius: 20, padding: 'clamp(22px,5vw,32px) clamp(20px,5vw,30px)',
+            marginBottom: 26, textAlign: 'center', overflow: 'hidden',
+            animation: 'fadeUp 1.1s ease both',
+          }}>
+            {/* Líneas de luz */}
+            <div style={{ position: 'absolute', top: 0, left: '10%', right: '10%', height: '1px', background: 'linear-gradient(90deg,transparent,rgba(255,215,0,0.6),transparent)' }} />
+            <div style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: '1px', background: 'linear-gradient(90deg,transparent,rgba(204,68,255,0.3),transparent)' }} />
+
+            {/* Eyebrow */}
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 5, color: 'rgba(255,215,0,0.5)', marginBottom: 16 }}>
+              ✦ MENSAJE DEL MAESTRO ✦
+            </div>
+
+            {/* Carta */}
+            <div style={{
+              fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
+              fontSize: 'clamp(14px,3.8vw,17px)',
+              color: 'rgba(255,255,255,0.82)',
+              lineHeight: 1.85, letterSpacing: 0.3,
+              marginBottom: 18,
+            }}>
+              El Templo no sortea al azar.<br />
+              <span style={{ color: C.gold }}>Sortea al que ya estaba listo.</span>
+            </div>
+
+            {/* Divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 18px', justifyContent: 'center' }}>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255,215,0,0.15)' }} />
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: 'rgba(255,215,0,0.35)', letterSpacing: 3 }}>👑</span>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255,215,0,0.15)' }} />
+            </div>
+
+            <div style={{
+              fontFamily: 'Cinzel, serif', fontWeight: 900,
+              fontSize: 'clamp(13px,3.5vw,16px)',
+              color: C.gold, letterSpacing: 2, lineHeight: 1.5,
+              marginBottom: 6,
+            }}>
+              Bienvenido, Templario.
+            </div>
+            <div style={{
+              fontFamily: 'Crimson Text, serif', fontSize: 'clamp(12px,3.2vw,14px)',
+              color: 'rgba(255,255,255,0.45)', letterSpacing: 1, fontStyle: 'italic',
+            }}>
+              Tu transformación comienza ahora.
+            </div>
+          </div>
+
           <a
             href={`https://buy.stripe.com/9B68wP59t2pA1lQeKQenS0x?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}`}
             target="_blank" rel="noopener noreferrer"
@@ -1011,18 +1094,82 @@ export default function SorteoPage() {
             <Maestro size={120} animate="slow" />
           </div>
 
+          {/* Sello de presentación */}
           <div style={{ fontSize: 38, marginBottom: 10 }}>⚜️</div>
+
+          {/* Reencuadre narrativo épico */}
+          <div style={{
+            position: 'relative',
+            background: 'linear-gradient(160deg,rgba(155,89,255,0.09),rgba(10,5,26,0.6),rgba(155,89,255,0.06))',
+            border: '1px solid rgba(155,89,255,0.28)',
+            borderRadius: 20, padding: 'clamp(22px,5vw,32px) clamp(20px,5vw,30px)',
+            marginBottom: 26, textAlign: 'center', overflow: 'hidden',
+            animation: 'fadeUp 0.8s ease both',
+          }}>
+            {/* Línea superior púrpura */}
+            <div style={{ position: 'absolute', top: 0, left: '12%', right: '12%', height: '1px', background: 'linear-gradient(90deg,transparent,rgba(155,89,255,0.55),transparent)' }} />
+            {/* Línea inferior dorada tenue */}
+            <div style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: '1px', background: 'linear-gradient(90deg,transparent,rgba(255,215,0,0.25),transparent)' }} />
+
+            {/* Eyebrow */}
+            <div style={{
+              fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 5,
+              color: 'rgba(155,89,255,0.65)', marginBottom: 14,
+            }}>
+              ✦ EL TEMPLO HABLA ✦
+            </div>
+
+            {/* Frase principal */}
+            <div style={{
+              fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
+              fontSize: 'clamp(15px,4.2vw,20px)',
+              background: 'linear-gradient(135deg,#e0c8ff,#CC44FF,#b090ff)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+              lineHeight: 1.4, letterSpacing: 1, marginBottom: 14,
+            }}>
+              No fuiste elegido por el azar.
+            </div>
+
+            {/* Frase secundaria — el reencuadre real */}
+            <div style={{
+              fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
+              fontSize: 'clamp(14px,3.8vw,17px)',
+              color: 'rgba(255,255,255,0.78)',
+              lineHeight: 1.75, letterSpacing: 0.3, marginBottom: 16,
+            }}>
+              Fuiste elegido por tu decisión de estar aquí.<br />
+              <span style={{ color: 'rgba(204,68,255,0.85)' }}>Eso ya te separa del 95% que nunca llegó.</span>
+            </div>
+
+            {/* Divider decorativo */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '16px 0', justifyContent: 'center' }}>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(155,89,255,0.2)' }} />
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: 'rgba(155,89,255,0.45)', letterSpacing: 3 }}>⚔</span>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(155,89,255,0.2)' }} />
+            </div>
+
+            {/* Recompensa del guerrero — frase cierre */}
+            <div style={{
+              fontFamily: 'Cinzel, serif', fontSize: 'clamp(9px,2.5vw,11px)',
+              letterSpacing: 2, color: 'rgba(255,255,255,0.45)',
+              lineHeight: 1.6,
+            }}>
+              ESTE CUPÓN ES LA RECOMPENSA DEL GUERRERO<br />
+              QUE SE PRESENTÓ SIN IMPORTAR EL RESULTADO
+            </div>
+          </div>
+
           <h1 style={{
             fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
-            fontSize: 'clamp(18px,5vw,26px)', marginBottom: 10,
+            fontSize: 'clamp(17px,4.5vw,24px)', marginBottom: 10,
             background: `linear-gradient(135deg,${C.purple},#e0a0ff)`,
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
             letterSpacing: 2,
           }}>TU PASE DE GUERRERO</h1>
 
-          <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 15, color: C.muted, fontStyle: 'italic', lineHeight: 1.75, marginBottom: 28 }}>
-            El Templo te da la bienvenida con un regalo.<br />
-            <span style={{ color: C.purple }}>Primer mes por solo $1 USD</span> — menos que una Coca‑Cola.
+          <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 15, color: C.muted, fontStyle: 'italic', lineHeight: 1.75, marginBottom: 24 }}>
+            Tu regalo de entrada al Templo:<br />
+            <span style={{ color: C.purple, fontWeight: 600 }}>primer mes por solo $1 USD.</span>
           </p>
 
           {/* Cupón */}
@@ -1053,18 +1200,26 @@ export default function SorteoPage() {
             href={`https://buy.stripe.com/7sY9ATfO77JUe8CgSYenS0w?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}`}
             target="_blank" rel="noopener noreferrer"
             style={{
-              display: 'block', padding: '15px',
+              display: 'block', padding: '17px',
               borderRadius: 14,
               background: `linear-gradient(135deg,${C.purple},#6b0a8a)`,
               color: '#fff', fontFamily: 'Cinzel, serif',
-              fontSize: 11, letterSpacing: 3, fontWeight: 900,
+              fontSize: 12, letterSpacing: 3, fontWeight: 900,
               textDecoration: 'none',
-              boxShadow: '0 4px 24px rgba(204,68,255,0.28)',
-              marginBottom: 14,
+              boxShadow: '0 4px 24px rgba(204,68,255,0.35)',
+              marginBottom: 10,
+              animation: 'btnPulse 2.8s ease-in-out infinite',
             }}
           >
-            ⚔️ PRIMER MES $1 → ENTRAR AL TEMPLO
+            ⚔️ ENTRAR AL TEMPLO — PRIMER MES $1
           </a>
+          <p style={{
+            fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
+            fontSize: 12, color: 'rgba(255,255,255,0.28)',
+            textAlign: 'center', marginBottom: 14, letterSpacing: 0.5,
+          }}>
+            El cupón ya está pre-aplicado. Solo confirma tu acceso.
+          </p>
 
           
 
@@ -1073,6 +1228,8 @@ export default function SorteoPage() {
       </div>
     );
   }
+
+
 
   // ── PANTALLA: ESPERA ──────────────────────────────────────────────────────
   if (screen === SCREEN.ESPERA) {
@@ -1125,9 +1282,59 @@ export default function SorteoPage() {
           </div>
 
           {!lleno && (
-            <p style={{ textAlign: 'center', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3, color: 'rgba(255,255,255,0.15)', animation: 'pulse 2.2s ease-in-out infinite' }}>
-              · ACTUALIZANDO EN TIEMPO REAL ·
-            </p>
+            <>
+              {/* Oráculo — frase psicológica rotante */}
+              <div style={{
+                position: 'relative',
+                margin: '8px 0 16px',
+                padding: 'clamp(18px,4vw,28px) clamp(20px,5vw,36px)',
+                background: 'linear-gradient(135deg,rgba(155,89,255,0.08),rgba(255,215,0,0.05),rgba(155,89,255,0.06))',
+                border: '1px solid rgba(155,89,255,0.25)',
+                borderRadius: 20,
+                textAlign: 'center',
+                overflow: 'hidden',
+                transition: 'opacity 0.6s ease, transform 0.6s ease',
+                opacity: fraseVisible ? 1 : 0,
+                transform: fraseVisible ? 'translateY(0) scale(1)' : 'translateY(6px) scale(0.98)',
+              }}>
+                {/* Línea superior dorada */}
+                <div style={{ position: 'absolute', top: 0, left: '15%', right: '15%', height: '1px', background: 'linear-gradient(90deg,transparent,rgba(255,215,0,0.5),transparent)' }} />
+                {/* Línea inferior púrpura */}
+                <div style={{ position: 'absolute', bottom: 0, left: '15%', right: '15%', height: '1px', background: 'linear-gradient(90deg,transparent,rgba(155,89,255,0.4),transparent)' }} />
+
+                <div style={{
+                  fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 5,
+                  color: 'rgba(155,89,255,0.7)', marginBottom: 12,
+                }}>
+                  ✦ ORÁCULO DEL TEMPLO ✦
+                </div>
+
+                <div style={{
+                  fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
+                  fontSize: 'clamp(15px,4vw,20px)',
+                  background: 'linear-gradient(135deg,#fff4a0,#FFD700)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                  lineHeight: 1.35, letterSpacing: 1,
+                  marginBottom: 12,
+                  textShadow: 'none',
+                }}>
+                  {FRASES_ESPERA[fraseIdx].texto}
+                </div>
+
+                <div style={{
+                  fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
+                  fontSize: 'clamp(13px,3.5vw,15px)',
+                  color: 'rgba(155,89,255,0.85)',
+                  letterSpacing: 0.5, lineHeight: 1.5,
+                }}>
+                  {FRASES_ESPERA[fraseIdx].sub}
+                </div>
+              </div>
+
+              <p style={{ textAlign: 'center', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3, color: 'rgba(255,255,255,0.12)', animation: 'pulse 2.2s ease-in-out infinite' }}>
+                · ACTUALIZANDO EN TIEMPO REAL ·
+              </p>
+            </>
           )}
 
           {historial.length > 0 && <HistorialRondas historial={historial} onToggle={() => setMostrarHistorial(v => !v)} mostrar={mostrarHistorial} />}
@@ -1168,6 +1375,56 @@ export default function SorteoPage() {
         <div style={{ textAlign: 'center', margin: 'clamp(24px,5vw,36px) 0 clamp(16px,4vw,24px)' }}>
           <Maestro size={clamp(160, 200)} animate="float" glow epic />
         </div>
+
+        {/* Ticker de prueba social — último ganador */}
+        {historial.length > 0 && (() => {
+          const ultimaRonda = historial.find(r => r.sorteo_participantes?.some(p => p.es_ganador));
+          const ultimoGanador = ultimaRonda?.sorteo_participantes?.find(p => p.es_ganador);
+          if (!ultimoGanador) return null;
+          const nombre = ultimoGanador.nombre || '';
+          const inicial = nombre.charAt(0).toUpperCase();
+          const apellido = nombre.split(' ')[1] ? nombre.split(' ')[1].charAt(0).toUpperCase() + '.' : '';
+          const nombreCorto = `${nombre.split(' ')[0]} ${apellido}`.trim();
+          return (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: 'rgba(255,215,0,0.04)',
+              border: '1px solid rgba(255,215,0,0.18)',
+              borderRadius: 50,
+              padding: '8px 16px 8px 8px',
+              marginBottom: 20,
+              animation: 'fadeUp 0.8s ease both',
+              justifyContent: 'center',
+            }}>
+              {/* Avatar inicial */}
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                background: 'linear-gradient(135deg,rgba(255,215,0,0.25),rgba(204,68,255,0.15))',
+                border: '1.5px solid rgba(255,215,0,0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'Cinzel, serif', fontWeight: 900,
+                fontSize: 11, color: C.gold,
+              }}>
+                {inicial}
+              </div>
+              {/* Texto */}
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap' }}>
+                <span style={{ color: C.goldDim }}>👑 Última beca:</span>
+                {' '}
+                <span style={{ color: C.gold, fontWeight: 700 }}>{nombreCorto}</span>
+                {' · '}
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>Ronda #{ultimaRonda.numero_ronda}</span>
+              </span>
+              {/* Punto verde pulsante */}
+              <div style={{
+                width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                background: C.green,
+                boxShadow: `0 0 8px ${C.green}`,
+                animation: 'pulse 1.8s ease-in-out infinite',
+              }} />
+            </div>
+          );
+        })()}
 
         {/* Premio principal épico */}
         <div style={{ marginBottom: 20, animation: 'floatBeca 3.5s ease-in-out infinite' }}>
