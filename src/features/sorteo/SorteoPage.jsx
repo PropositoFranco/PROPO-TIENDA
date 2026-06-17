@@ -975,7 +975,7 @@ return data || null;
 
           <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 16, color: C.muted, fontStyle: 'italic', lineHeight: 1.8, marginBottom: 28 }}>
             El Templo del Propósito te concede<br />
-            <span style={{ color: C.gold, fontWeight: 700, fontSize: 19 }}>6 meses de membresía completa</span>
+            <span style={{ color: C.gold, fontWeight: 700, fontSize: 19 }}>6 meses de membresía — valor $294 USD</span>
           </p>
 
           {/* Código de acceso */}
@@ -1452,7 +1452,7 @@ return data || null;
               🏆 BECA COMPLETA
             </div>
             <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 14, color: 'rgba(255,215,0,0.8)', fontStyle: 'italic', textAlign: 'center', marginBottom: 16 }}>
-              6 meses de acceso total a Propotienda — valor $534 USD
+              6 meses de acceso total a Propotienda — valor $294 USD
             </div>
 
             {/* Beneficios en grid */}
