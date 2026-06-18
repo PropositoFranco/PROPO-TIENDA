@@ -249,6 +249,8 @@ export default function AdminDashboard() {
   const productsRef = useRef(null);
 
   // ── Equipo Admin ──────────────────────────────────────────────────────────
+  const [leftOpen,  setLeftOpen]  = useState(false);
+  const [rightOpen, setRightOpen] = useState(false);
   const [showPrizes,  setShowPrizes]  = useState(false);
   const [showCats,    setShowCats]    = useState(false);
   const [cats,        setCats]        = useState([]);
@@ -3112,8 +3114,129 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
         </div>
       )}
 
-      {/* ══ BARRA DE NAVEGACIÓN ══ */}
-      <div style={{
+      {/* ── BARRA DE NAVEGACIÓN ══ */}
+      <style>{`
+        @media (max-width: 767px) {
+          .admin-nav-bar {
+            height: auto !important;
+            padding: 0 !important;
+            background: transparent !important;
+            pointer-events: none !important;
+          }
+          .admin-nav-center { display: none !important; }
+
+          .admin-nav-left {
+            position: fixed !important;
+            top: 60px !important;
+            left: 0 !important;
+            width: 140px !important;
+            max-height: 70vh !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            -webkit-overflow-scrolling: touch !important;
+            scrollbar-width: none !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 5px !important;
+            padding: 8px 6px !important;
+            background: rgba(10,4,20,0.97) !important;
+            border-right: 1px solid rgba(212,175,55,0.2) !important;
+            border-bottom: 1px solid rgba(212,175,55,0.2) !important;
+            border-radius: 0 0 12px 0 !important;
+            z-index: 9998 !important;
+            pointer-events: auto !important;
+            transition: transform 0.25s ease !important;
+          }
+          .admin-nav-left.collapsed {
+            transform: translateX(-100%) !important;
+          }
+          .admin-nav-left::-webkit-scrollbar { display: none !important; }
+
+          .admin-nav-right {
+            position: fixed !important;
+            top: 60px !important;
+            right: 0 !important;
+            width: 140px !important;
+            max-height: 70vh !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            -webkit-overflow-scrolling: touch !important;
+            scrollbar-width: none !important;
+            flex-direction: column !important;
+            align-items: flex-end !important;
+            gap: 5px !important;
+            padding: 8px 6px !important;
+            background: rgba(10,4,20,0.97) !important;
+            border-left: 1px solid rgba(212,175,55,0.2) !important;
+            border-bottom: 1px solid rgba(212,175,55,0.2) !important;
+            border-radius: 0 0 0 12px !important;
+            z-index: 9998 !important;
+            pointer-events: auto !important;
+            transition: transform 0.25s ease !important;
+          }
+          .admin-nav-right.collapsed {
+            transform: translateX(100%) !important;
+          }
+          .admin-nav-right::-webkit-scrollbar { display: none !important; }
+
+          .admin-nav-left a, .admin-nav-left button,
+          .admin-nav-right a, .admin-nav-right button {
+            width: 100% !important;
+            box-sizing: border-box !important;
+            font-size: 10px !important;
+            padding: 7px 10px !important;
+            white-space: nowrap !important;
+            justify-content: flex-start !important;
+          }
+
+          .mob-toggle-left, .mob-toggle-right {
+            display: flex !important;
+          }
+          .mob-toggle-left {
+            position: fixed !important;
+            top: 14px !important;
+            left: 10px !important;
+            z-index: 10000 !important;
+          }
+          .mob-toggle-right {
+            position: fixed !important;
+            top: 14px !important;
+            right: 10px !important;
+            z-index: 10000 !important;
+          }
+        }
+        @media (min-width: 768px) {
+          .mob-toggle-left, .mob-toggle-right { display: none !important; }
+        }
+      `}</style>
+      {/* ── BOTONES TOGGLE MÓVIL ── */}
+      <button
+        className="mob-toggle-left"
+        onClick={() => { setLeftOpen(v => !v); setRightOpen(false); }}
+        style={{
+          background: leftOpen ? 'rgba(192,132,252,0.3)' : 'rgba(10,4,20,0.92)',
+          border: '1px solid rgba(192,132,252,0.5)',
+          borderRadius: 8, color: '#C084FC',
+          fontFamily: 'Cinzel,serif', fontWeight: 900, fontSize: 11,
+          padding: '5px 10px', cursor: 'pointer', letterSpacing: 1,
+          boxShadow: '0 2px 12px rgba(192,132,252,0.3)',
+        }}
+      >{leftOpen ? '✕ MENÚ' : '☰ MENÚ'}</button>
+
+      <button
+        className="mob-toggle-right"
+        onClick={() => { setRightOpen(v => !v); setLeftOpen(false); }}
+        style={{
+          background: rightOpen ? 'rgba(245,197,24,0.3)' : 'rgba(10,4,20,0.92)',
+          border: '1px solid rgba(245,197,24,0.5)',
+          borderRadius: 8, color: '#F5C518',
+          fontFamily: 'Cinzel,serif', fontWeight: 900, fontSize: 11,
+          padding: '5px 10px', cursor: 'pointer', letterSpacing: 1,
+          boxShadow: '0 2px 12px rgba(245,197,24,0.3)',
+        }}
+      >{rightOpen ? '✕ ADMIN' : '⚙ ADMIN'}</button>
+
+      <div className="admin-nav-bar" style={{
         position: 'fixed', top: 0, left: 0, right: 0,
         height: 68, zIndex: 9999,
         background: 'linear-gradient(180deg,#0d0618 80%,rgba(13,6,24,0))',
@@ -3125,7 +3248,7 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
       }}>
 
         {/* Columna izquierda — Academia */}
-        <div style={{
+        <div className={`admin-nav-left${leftOpen ? '' : ' collapsed'}`} style={{
           display: 'flex', flexDirection: 'column',
           gap: 5, alignItems: 'flex-start',
           pointerEvents: 'auto',
@@ -3492,7 +3615,7 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
         </div>
 
         {/* ── STATS VIVOS — centro navbar ── */}
-        <div style={{
+        <div className="admin-nav-center" style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           justifyContent: 'flex-start', gap: 4, pointerEvents: 'auto',
           paddingTop: 6,
@@ -3619,7 +3742,7 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
         </div>
 
         {/* Columna derecha — Admin */}
-        <div style={{
+        <div className={`admin-nav-right${rightOpen ? '' : ' collapsed'}`} style={{
           display: 'flex', flexDirection: 'column',
           gap: 5, alignItems: 'flex-end',
           pointerEvents: 'auto',
