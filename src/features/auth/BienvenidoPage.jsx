@@ -979,11 +979,48 @@ export default function BienvenidoPage() {
   const [codeError,   setCodeError]   = useState(false);
   const [phase,       setPhase]       = useState('unlock');
   const [needsEmailRecovery, setNeedsEmailRecovery] = useState(false);
+const [needsCodeEntry, setNeedsCodeEntry] = useState(false);
+const [manualCode, setManualCode] = useState('');
+const [manualCodeError, setManualCodeError] = useState('');
+const [manualCodeLoading, setManualCodeLoading] = useState(false);
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryError, setRecoveryError] = useState('');
   const [recoverySent, setRecoverySent] = useState(false);
 
+  const handleManualCode = async () => {
+  const trimmed = manualCode.trim().toUpperCase();
+  if (!trimmed) { setManualCodeError('Ingresa tu código'); return; }
+  setManualCodeLoading(true); setManualCodeError('');
+  try {
+    const { data, error } = await supabase
+      .from('access_codes')
+      .select('code, is_used, membership_type, duration_months')
+      .eq('code', trimmed)
+      .maybeSingle();
+    if (error || !data) { setManualCodeError('Código no encontrado. Verifica e intenta de nuevo.'); setManualCodeLoading(false); return; }
+    if (data.is_used) { setManualCodeError('Este código ya fue usado.'); setManualCodeLoading(false); return; }
+    // Asociar el código al usuario logueado si hay sesión
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('access_codes').update({ 
+  user_id: user.id, 
+  user_email: user.email,
+  used_by: user.id,
+  is_used: true,
+  used_at: new Date().toISOString()
+}).eq('code', trimmed);
+      }
+    } catch (_) {}
+    setUserCode(data.code);
+    setCodeLoading(false);
+    setNeedsCodeEntry(false);
+  } catch (_) {
+    setManualCodeError('Error al verificar el código. Intenta de nuevo.');
+  }
+  setManualCodeLoading(false);
+};
   const handleEmailRecovery = async () => {
     if (!recoveryEmail.trim()) return;
     setRecoveryLoading(true);
@@ -1044,7 +1081,7 @@ export default function BienvenidoPage() {
             }
           }
         } catch (_) {}
-        setCodeLoading(false); setNeedsEmailRecovery(true); return;
+        setCodeLoading(false); setNeedsCodeEntry(true); return;
     }
       try {
         const MAX_RETRIES = 6, DELAY_MS = 1500;
@@ -1083,6 +1120,67 @@ export default function BienvenidoPage() {
     };
   }, []);
 
+  if (needsCodeEntry) return (
+  <>
+    <style>{globalStyles}</style>
+    <div style={{
+      position:'fixed',inset:0,display:'flex',flexDirection:'column',
+      alignItems:'center',justifyContent:'center',
+      background:'radial-gradient(ellipse at 50% 50%,rgba(20,10,50,0.98),rgba(4,1,18,1))',
+      fontFamily:"'Cinzel',serif",padding:24,
+    }}>
+      <div style={{fontSize:40,marginBottom:20}}>⚔️</div>
+      <div style={{
+        fontSize:'clamp(14px,3vw,20px)',fontWeight:700,letterSpacing:'.05em',
+        color:'#f0c040',marginBottom:8,textAlign:'center',
+      }}>Ingresa tu Código de Acceso</div>
+      <div style={{
+        fontFamily:"'Raleway',sans-serif",fontSize:13,
+        color:'rgba(200,185,240,.6)',marginBottom:28,textAlign:'center',lineHeight:1.6,
+      }}>El código que te compartió el Templo</div>
+      <input
+        type="text"
+        placeholder="Ej: G5PM-U6SH"
+        value={manualCode}
+        onChange={e => setManualCode(e.target.value.toUpperCase())}
+        onKeyDown={e => e.key === 'Enter' && handleManualCode()}
+        style={{
+          width:'100%',maxWidth:340,padding:'12px 16px',borderRadius:10,
+          background:'rgba(255,255,255,0.05)',border:'1px solid rgba(212,175,55,0.4)',
+          color:'#f5d06e',fontFamily:"'Raleway',sans-serif",fontSize:17,
+          outline:'none',marginBottom:12,textAlign:'center',letterSpacing:3,
+        }}
+      />
+      {manualCodeError && (
+        <div style={{color:'#ff6b6b',fontSize:12,marginBottom:12,textAlign:'center',maxWidth:300}}>
+          {manualCodeError}
+        </div>
+      )}
+      <button
+        onClick={handleManualCode}
+        disabled={manualCodeLoading}
+        style={{
+          padding:'12px 32px',borderRadius:10,cursor:'pointer',
+          background:'linear-gradient(135deg,rgba(212,175,55,.2),rgba(124,58,237,.3))',
+          border:'1px solid rgba(212,175,55,.5)',color:'#d4af37',
+          fontFamily:"'Cinzel',serif",fontSize:11,letterSpacing:3,
+          opacity: manualCodeLoading ? 0.6 : 1,
+        }}
+      >
+        {manualCodeLoading ? 'Verificando...' : '⚔️ ACTIVAR CÓDIGO'}
+      </button>
+      <div
+        onClick={() => { setNeedsCodeEntry(false); setNeedsEmailRecovery(true); }}
+        style={{
+          marginTop:20,color:'rgba(200,185,240,.4)',fontSize:11,
+          fontFamily:"'Raleway',sans-serif",cursor:'pointer',letterSpacing:1,
+        }}
+      >
+        ¿No tienes código? Recuperar por email →
+      </div>
+    </div>
+  </>
+);
   if (needsEmailRecovery) return (
     <>
       <style>{globalStyles}</style>
