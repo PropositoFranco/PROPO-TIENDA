@@ -1049,17 +1049,21 @@ const [manualCodeLoading, setManualCodeLoading] = useState(false);
             const { data: profile } = await supabase
               .from('profiles').select('templario_name, membership_status')
               .eq('id', user.id).maybeSingle();
-            if (profile?.templario_name && profile?.membership_status === 'active') {
-              window.location.replace('/hub'); return;
-            }
-            // Busca primero por user_id
+            // Busca código por used_by (becarios) primero
             let { data } = await supabase
+              .from('access_codes').select('code')
+              .eq('used_by', user.id)
+              .order('created_at', { ascending: false })
+              .limit(1).maybeSingle();
+            if (data?.code) { setUserCode(data.code); setCodeLoading(false); return; }
+            // Busca por user_id
+            const { data: byUserId } = await supabase
               .from('access_codes').select('code')
               .eq('user_id', user.id)
               .order('created_at', { ascending: false })
               .limit(1).maybeSingle();
-            if (data?.code) { setUserCode(data.code); setCodeLoading(false); return; }
-            // Si no encuentra, busca por email del usuario logueado
+            if (byUserId?.code) { setUserCode(byUserId.code); setCodeLoading(false); return; }
+            // Busca por email
             if (user.email) {
               const { data: byEmail } = await supabase
                 .from('access_codes').select('code')
@@ -1067,6 +1071,10 @@ const [manualCodeLoading, setManualCodeLoading] = useState(false);
                 .order('created_at', { ascending: false })
                 .limit(1).maybeSingle();
               if (byEmail?.code) { setUserCode(byEmail.code); setCodeLoading(false); return; }
+            }
+            // Solo mandar al hub si tiene perfil completo Y no tiene ningún código asociado
+            if (profile?.templario_name && profile?.membership_status === 'active') {
+              window.location.replace('/hub'); return;
             }
           }
         } catch (_) {}

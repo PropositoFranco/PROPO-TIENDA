@@ -206,13 +206,9 @@ try {
   console.error('Error activando membresía por access_code:', e);
 }
 
-await loadProfile();
+await useAuthStore.getState().loadProfile();
 pushToast('¡Bienvenido al Templo!');
-{
-  const { data: { user: cu } } = await supabase.auth.getUser();
-  const isPlaceholder = cu?.email?.endsWith('@t-store.app') ?? false;
-  navigate(isPlaceholder ? '/tutorial' : '/bienvenido', { replace: true });
-}
+navigate('/bienvenido', { replace: true });
           return;
         }
 
@@ -353,6 +349,17 @@ pushToast('¡Bienvenido al Templo!');
               pushToast('Error al finalizar registro. Intenta de nuevo.');
               return;
             }
+            // Re-autenticar con las nuevas credenciales porque updateUserById invalida el JWT
+            const { data: reAuth, error: reAuthErr } = await supabase.auth.signInWithPassword({
+              email: email.trim().toLowerCase(),
+              password: password,
+            });
+            if (reAuthErr || !reAuth?.session) {
+              pushToast('Error al finalizar sesión. Intenta iniciar sesión manualmente.');
+              return;
+            }
+            // Sincronizar nueva sesión en el store antes de continuar
+            useAuthStore.getState().setSession(reAuth.session);
           }
 
           try {
@@ -427,13 +434,9 @@ try {
   console.error('Error activando membresía por access_code:', e);
 }
 
-await loadProfile();
+await useAuthStore.getState().loadProfile();
 pushToast('¡Bienvenido al Templo!');
-{
-  const { data: { user: cu } } = await supabase.auth.getUser();
-  const isPlaceholder = cu?.email?.endsWith('@t-store.app') ?? false;
-  navigate(isPlaceholder ? '/tutorial' : '/bienvenido', { replace: true });
-}
+navigate('/bienvenido', { replace: true });
         }
       }
     };
