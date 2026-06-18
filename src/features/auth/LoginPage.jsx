@@ -183,32 +183,8 @@ export default function LoginPage() {
           });
           if (authErr) throw authErr;
 
-          // Marcar código como usado
-          await supabase
-            .from('access_codes')
-            .update({ is_used: true, used_by: authData.user.id, used_at: new Date().toISOString() })
-            .eq('id', codeRow.id);
-            // ── Activar membresía según membership_type y duration_months del código ──
-const mType = codeRow.membership_type || 'standard';
-const months = codeRow.duration_months || 1;
-const expiresAt = mType === 'vip' && !codeRow.duration_months
-  ? null
-  : (() => { const d = new Date(); d.setMonth(d.getMonth() + months); return d.toISOString(); })();
-// Obtener sesión real aunque signUp no la devuelva directamente
-          let finalSession = authData.session;
-          if (!finalSession) {
-            const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
-              email: `user_${codeRow.id}@t-store.app`,
-              password: code.trim().toUpperCase(),
-            });
-            if (!signInErr && signInData?.session) {
-              finalSession = signInData.session;
-            } else {
-              const { data: sessionData } = await supabase.auth.getSession();
-              finalSession = sessionData?.session ?? null;
-            }
-          }
-
+          // Sesión del signUp — Supabase la devuelve con immediate_login_after_signup
+          const finalSession = authData.session;
           if (!finalSession) {
             document.getElementById('login-frame')
               ?.contentWindow?.postMessage({ type: 'login-error', message: 'Error al iniciar sesión. Intenta de nuevo.' }, '*');
@@ -216,14 +192,14 @@ const expiresAt = mType === 'vip' && !codeRow.duration_months
           }
 
           setSession(finalSession);
-          await new Promise(r => setTimeout(r, 800));
 
-          // ── Generar código de referido único para este usuario ──
-          const refCode = Math.random().toString(36).substring(2, 7).toUpperCase();
-          await supabase
-            .from('profiles')
-            .update({ referral_code: refCode })
-            .eq('id', authData.user.id);
+          // Activar código vía RPC SECURITY DEFINER — bypasea RLS y dispara el trigger de membresía
+          await supabase.rpc('activar_codigo_acceso', {
+            p_code_id: codeRow.id,
+            p_user_id: authData.user.id,
+          });
+
+          await new Promise(r => setTimeout(r, 800));
 
           await loadProfile();
           const { missionsService } = await import('../../services/missions.service');
