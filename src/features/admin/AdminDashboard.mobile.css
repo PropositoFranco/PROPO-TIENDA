@@ -1,0 +1,164 @@
+/* ═══════════════════════════════════════════════════
+   AdminDashboard — MÓVIL ÚNICAMENTE
+   Solo afecta max-width: 767px. PC no se toca.
+═══════════════════════════════════════════════════ */
+
+@media (max-width: 767px) {
+
+  .admin-nav-bar {
+    height: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    pointer-events: none !important;
+    overflow: visible !important;
+  }
+
+  .admin-nav-center {
+    display: none !important;
+  }
+
+  /* ── PANEL IZQUIERDO ── */
+  .admin-nav-left {
+    position: fixed !important;
+    top: 52px !important;
+    left: 0 !important;
+    width: 170px !important;
+    max-height: calc(100vh - 52px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 4px !important;
+    padding: 10px 8px 20px !important;
+    background: rgba(8, 3, 18, 0.98) !important;
+    border-right: 1px solid rgba(192, 132, 252, 0.25) !important;
+    border-bottom: 1px solid rgba(192, 132, 252, 0.15) !important;
+    border-radius: 0 0 14px 0 !important;
+    z-index: 9998 !important;
+    pointer-events: auto !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.6) !important;
+    transform: translateX(0) !important;
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .admin-nav-left.collapsed {
+    transform: translateX(-105%) !important;
+  }
+
+  .admin-nav-left::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .admin-nav-left a,
+  .admin-nav-left button {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 10px !important;
+    padding: 8px 10px !important;
+    white-space: nowrap !important;
+    justify-content: flex-start !important;
+    border-radius: 8px !important;
+    margin: 0 !important;
+  }
+
+  /* ── PANEL DERECHO ── */
+  .admin-nav-right {
+    position: fixed !important;
+    top: 52px !important;
+    right: 0 !important;
+    width: 170px !important;
+    max-height: calc(100vh - 52px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 4px !important;
+    padding: 10px 8px 20px !important;
+    background: rgba(8, 3, 18, 0.98) !important;
+    border-left: 1px solid rgba(245, 197, 24, 0.25) !important;
+    border-bottom: 1px solid rgba(245, 197, 24, 0.15) !important;
+    border-radius: 0 0 0 14px !important;
+    z-index: 9998 !important;
+    pointer-events: auto !important;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.6) !important;
+    transform: translateX(0) !important;
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .admin-nav-right.collapsed {
+    transform: translateX(105%) !important;
+  }
+
+  .admin-nav-right::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .admin-nav-right a,
+  .admin-nav-right button {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 10px !important;
+    padding: 8px 10px !important;
+    white-space: nowrap !important;
+    justify-content: flex-start !important;
+    border-radius: 8px !important;
+    margin: 0 !important;
+  }
+
+  /* ── BOTONES TOGGLE ── */
+  .mob-toggle-left,
+  .mob-toggle-right {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .mob-toggle-left {
+    position: fixed !important;
+    top: 10px !important;
+    left: 8px !important;
+    z-index: 10001 !important;
+    width: 38px !important;
+    height: 30px !important;
+    padding: 0 !important;
+    font-size: 14px !important;
+    border-radius: 8px !important;
+    line-height: 1 !important;
+  }
+
+  .mob-toggle-right {
+    position: fixed !important;
+    top: 10px !important;
+    right: 8px !important;
+    z-index: 10001 !important;
+    width: 38px !important;
+    height: 30px !important;
+    padding: 0 !important;
+    font-size: 14px !important;
+    border-radius: 8px !important;
+    line-height: 1 !important;
+  }
+
+  /* ── OVERLAY ── */
+  .mob-sidebar-overlay {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 9997 !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    backdrop-filter: blur(2px) !important;
+  }
+}
+
+/* PC: ocultar toggles y overlay */
+@media (min-width: 768px) {
+  .mob-toggle-left,
+  .mob-toggle-right,
+  .mob-sidebar-overlay {
+    display: none !important;
+  }
+}
