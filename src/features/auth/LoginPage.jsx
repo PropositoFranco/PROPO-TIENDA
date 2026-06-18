@@ -194,14 +194,16 @@ const months = codeRow.duration_months || 1;
 const expiresAt = mType === 'vip' && !codeRow.duration_months
   ? null
   : (() => { const d = new Date(); d.setMonth(d.getMonth() + months); return d.toISOString(); })();
+await new Promise(r => setTimeout(r, 1200));
 await supabase
   .from('profiles')
-  .update({
+  .upsert({
+    id:                    authData.user.id,
+    membership_status:     'active',
     membership_type:       mType,
     membership_expires_at: expiresAt,
     updated_at:            new Date().toISOString(),
-  })
-  .eq('id', authData.user.id);
+  }, { onConflict: 'id' });
 
           // ── Generar código de referido único para este usuario ──
           const refCode = Math.random().toString(36).substring(2, 7).toUpperCase();
