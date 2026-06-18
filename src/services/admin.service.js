@@ -145,7 +145,7 @@ export const adminService = {
   },
 
   // ── Access Codes ──
-  generateCodes: async (count, prefix = '') => {
+  generateCodes: async (count, prefix = '', membershipType = 'standard', durationMonths = 1) => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     const codes = [];
     for (let i = 0; i < count; i++) {
@@ -154,7 +154,12 @@ export const adminService = {
       const code = prefix ? `${prefix}-${part.slice(0,4)}-${part.slice(4)}` : `${part.slice(0,4)}-${part.slice(4)}`;
       const { data } = await supabase
         .from('access_codes')
-        .insert({ code, is_used: false })
+        .insert({
+          code,
+          is_used: false,
+          membership_type: membershipType,
+          duration_months: membershipType === 'vip' && !durationMonths ? null : durationMonths,
+        })
         .select()
         .single();
       if (data) codes.push(data);

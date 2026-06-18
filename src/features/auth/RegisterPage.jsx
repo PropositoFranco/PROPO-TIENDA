@@ -175,18 +175,24 @@ export default function RegisterPage() {
 try {
   const { data: paid } = await supabase
     .from('access_codes')
-    .select('id, amount_paid')
+    .select('id, amount_paid, membership_type, duration_months')
     .eq('user_email', email)
     .eq('is_used', false)
     .maybeSingle();
 
   if (paid) {
+    const mType = paid.membership_type || 'base';
+    const months = paid.duration_months || 1;
+    const expires = mType === 'vip' && !paid.duration_months
+      ? null
+      : new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000).toISOString();
+
     await supabase
       .from('profiles')
       .update({
         membership_status:     'active',
-membership_type:       'base',
-        membership_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        membership_type:       mType,
+        membership_expires_at: expires,
         paused_at:             null,
       })
       .eq('id', userId || newUserId);
@@ -326,8 +332,23 @@ navigate('/bienvenido', { replace: true });
           pushToast('Error al guardar perfil');
           navigate('/hub');
         } else {
-          if (email && password) {
-            await supabase.auth.updateUser({ email, password });
+          // ✅ FIX: Si el usuario viene de activar un código (email placeholder @t-store.app),
+          // actualizar email/password via Edge Function (sin disparar "Confirm Email Change").
+          // Si ya tiene email real (flujo Stripe), NO tocar auth en absoluto.
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
+          const isPlaceholder = currentUser?.email?.endsWith('@t-store.app') ?? false;
+
+          if (email && password && isPlaceholder) {
+            const { data: { session: currentSession } } = await supabase.auth.getSession();
+            const { error: edgeFnError } = await supabase.functions.invoke('update-auth-email', {
+              body: { userId, newEmail: email, newPassword: password },
+              headers: { Authorization: `Bearer ${currentSession?.access_token}` },
+            });
+            if (edgeFnError) {
+              console.error('❌ Error actualizando auth:', edgeFnError.message);
+              pushToast('Error al finalizar registro. Intenta de nuevo.');
+              return;
+            }
           }
 
           try {
@@ -371,18 +392,24 @@ navigate('/bienvenido', { replace: true });
 try {
   const { data: paid } = await supabase
     .from('access_codes')
-    .select('id, amount_paid')
+    .select('id, amount_paid, membership_type, duration_months')
     .eq('user_email', email)
     .eq('is_used', false)
     .maybeSingle();
 
   if (paid) {
+    const mType = paid.membership_type || 'base';
+    const months = paid.duration_months || 1;
+    const expires = mType === 'vip' && !paid.duration_months
+      ? null
+      : new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000).toISOString();
+
     await supabase
       .from('profiles')
       .update({
         membership_status:     'active',
-membership_type:       'base',
-        membership_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        membership_type:       mType,
+        membership_expires_at: expires,
         paused_at:             null,
       })
       .eq('id', userId);

@@ -188,15 +188,17 @@ export default function LoginPage() {
             .from('access_codes')
             .update({ is_used: true, used_by: authData.user.id, used_at: new Date().toISOString() })
             .eq('id', codeRow.id);
-            // ── Activar membresía según campaign_id ──
-const meses = codeRow.campaign_id === 'sorteo-ganador' ? 6 : 1;
-const base = new Date();
-base.setMonth(base.getMonth() + meses);
+            // ── Activar membresía según membership_type y duration_months del código ──
+const mType = codeRow.membership_type || 'standard';
+const months = codeRow.duration_months || 1;
+const expiresAt = mType === 'vip' && !codeRow.duration_months
+  ? null
+  : (() => { const d = new Date(); d.setMonth(d.getMonth() + months); return d.toISOString(); })();
 await supabase
   .from('profiles')
   .update({
-    membership_type:       'paid',
-    membership_expires_at: base.toISOString(),
+    membership_type:       mType,
+    membership_expires_at: expiresAt,
     updated_at:            new Date().toISOString(),
   })
   .eq('id', authData.user.id);

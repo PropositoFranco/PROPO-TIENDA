@@ -1175,7 +1175,7 @@ sendToFrame('bonuses', bonuses);
       // GENERAR CÓDIGOS
       // =============================================
       if (event.data?.type === 'generate-codes') {
-        const codes = await adminService.generateCodes(event.data.qty || 5, event.data.prefix || '');
+        const codes = await adminService.generateCodes(event.data.qty || 5, event.data.prefix || '', event.data.membershipType || 'standard', event.data.durationMonths || 1);
         sendToFrame('codes', codes);
         pushToast(`${codes.length} códigos generados`);
       }

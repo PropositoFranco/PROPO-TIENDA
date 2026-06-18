@@ -1,3 +1,5 @@
+import maestroImg from '../../assets/proposito_actualizacion.png';
+
 export default function MaintenancePage({ message }) {
   return (
     <div style={{
