@@ -252,6 +252,12 @@ export default function AdminDashboard() {
   // ── Equipo Admin ──────────────────────────────────────────────────────────
   const [leftOpen,  setLeftOpen]  = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
+  const [isMobile,  setIsMobile]  = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   const [showPrizes,  setShowPrizes]  = useState(false);
   const [showCats,    setShowCats]    = useState(false);
   const [cats,        setCats]        = useState([]);
@@ -3118,10 +3124,16 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
       {/* ── BARRA DE NAVEGACIÓN ══ */}
       {/* estilos móvil en AdminDashboard.mobile.css */}
       {/* ── OVERLAY — cierra al tocar fuera ── */}
-      {(leftOpen || rightOpen) && (
+      {isMobile && (leftOpen || rightOpen) && (
         <div
           className="mob-sidebar-overlay"
           onClick={() => { setLeftOpen(false); setRightOpen(false); }}
+          style={{
+            position: 'fixed', inset: 0,
+            zIndex: 9997,
+            background: 'rgba(0,0,0,0.45)',
+            backdropFilter: 'blur(1px)',
+          }}
         />
       )}
 
@@ -3130,6 +3142,11 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
         className="mob-toggle-left"
         onClick={() => { setLeftOpen(v => !v); setRightOpen(false); }}
         style={{
+          display: isMobile ? 'flex' : 'none',
+          alignItems: 'center', justifyContent: 'center',
+          position: 'fixed', top: 10, left: 8, zIndex: 10001,
+          width: 38, height: 30, padding: 0,
+          fontSize: 14, borderRadius: 8, lineHeight: 1,
           background: leftOpen ? 'rgba(192,132,252,0.35)' : 'rgba(8,3,18,0.95)',
           border: `1.5px solid ${leftOpen ? 'rgba(192,132,252,0.8)' : 'rgba(192,132,252,0.45)'}`,
           color: '#C084FC',
@@ -3143,6 +3160,11 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
         className="mob-toggle-right"
         onClick={() => { setRightOpen(v => !v); setLeftOpen(false); }}
         style={{
+          display: isMobile ? 'flex' : 'none',
+          alignItems: 'center', justifyContent: 'center',
+          position: 'fixed', top: 10, right: 8, zIndex: 10001,
+          width: 38, height: 30, padding: 0,
+          fontSize: 14, borderRadius: 8, lineHeight: 1,
           background: rightOpen ? 'rgba(245,197,24,0.35)' : 'rgba(8,3,18,0.95)',
           border: `1.5px solid ${rightOpen ? 'rgba(245,197,24,0.8)' : 'rgba(245,197,24,0.45)'}`,
           color: '#F5C518',
@@ -3161,16 +3183,16 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
         padding: 'clamp(6px,1.5vw,10px) clamp(6px,2vw,16px) 0',
         gap: 8,
         pointerEvents: 'none',
-        ...(window.innerWidth < 768 ? { height: 0, padding: 0, background: 'transparent', overflow: 'visible' } : {}),
+        ...(isMobile ? { height: 0, padding: 0, background: 'transparent', overflow: 'visible' } : {}),
       }}>
 
         {/* Columna izquierda — Academia */}
-        <div className={`admin-nav-left${leftOpen ? '' : ' collapsed'}`} onClick={() => { if(window.innerWidth < 768) setLeftOpen(false); }} style={{
+        <div className={`admin-nav-left${leftOpen ? '' : ' collapsed'}`} onClick={() => { if(isMobile) setLeftOpen(false); }} style={{
           display: 'flex', flexDirection: 'column',
           gap: 5, alignItems: 'flex-start',
           pointerEvents: 'auto',
           position: 'relative',
-          ...(window.innerWidth < 768 ? {
+          ...(isMobile ? {
             position: 'fixed', top: 52, left: 0, width: 170,
             maxHeight: 'calc(100vh - 52px)',
             overflowY: 'auto', overflowX: 'hidden',
@@ -3674,11 +3696,11 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
         </div>
 
         {/* Columna derecha — Admin */}
-        <div className={`admin-nav-right${rightOpen ? '' : ' collapsed'}`} onClick={() => { if(window.innerWidth < 768) setRightOpen(false); }} style={{
+        <div className={`admin-nav-right${rightOpen ? '' : ' collapsed'}`} onClick={() => { if(isMobile) setRightOpen(false); }} style={{
           display: 'flex', flexDirection: 'column',
           gap: 5, alignItems: 'flex-end',
           pointerEvents: 'auto',
-          ...(window.innerWidth < 768 ? {
+          ...(isMobile ? {
             position: 'fixed', top: 52, right: 0, width: 170,
             maxHeight: 'calc(100vh - 52px)',
             overflowY: 'auto', overflowX: 'hidden',
