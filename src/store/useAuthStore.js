@@ -141,12 +141,12 @@ set({ loading: false });
   const session = get().session;
   const expiresAt = session?.expires_at ?? 0;
   const nowSecs = Math.floor(Date.now() / 1000);
-  if (expiresAt - nowSecs < 60) {
+  const expiresAtSecs = expiresAt > 1e10 ? Math.floor(expiresAt / 1000) : expiresAt;
+  if (expiresAtSecs > 0 && expiresAtSecs - nowSecs < 60) {
     const { data: refreshed } = await supabase.auth.refreshSession().catch(() => ({ data: null }));
     if (refreshed?.session) {
       set({ session: refreshed.session, user: refreshed.session.user });
     } else {
-      // El token expiró y no se pudo refrescar — limpiar estado y salir
       await supabase.auth.signOut().catch(() => {});
       set({ user: null, profile: null, session: null, loading: false });
       return;
