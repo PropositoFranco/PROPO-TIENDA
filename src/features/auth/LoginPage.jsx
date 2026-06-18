@@ -194,29 +194,19 @@ const months = codeRow.duration_months || 1;
 const expiresAt = mType === 'vip' && !codeRow.duration_months
   ? null
   : (() => { const d = new Date(); d.setMonth(d.getMonth() + months); return d.toISOString(); })();
-await new Promise(r => setTimeout(r, 1200));
-await supabase
-  .from('profiles')
-  .upsert({
-    id:                    authData.user.id,
-    membership_status:     'active',
-    membership_type:       mType,
-    membership_expires_at: expiresAt,
-    updated_at:            new Date().toISOString(),
-  }, { onConflict: 'id' });
-
-          // ── Generar código de referido único para este usuario ──
-          const refCode = Math.random().toString(36).substring(2, 7).toUpperCase();
-          await supabase
-            .from('profiles')
-            .update({ referral_code: refCode })
-            .eq('id', authData.user.id);
-
-          // Obtener sesión real aunque signUp no la devuelva directamente
+// Obtener sesión real aunque signUp no la devuelva directamente
           let finalSession = authData.session;
           if (!finalSession) {
-            const { data: sessionData } = await supabase.auth.getSession();
-            finalSession = sessionData?.session ?? null;
+            const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+              email: `user_${codeRow.id}@t-store.app`,
+              password: code.trim().toUpperCase(),
+            });
+            if (!signInErr && signInData?.session) {
+              finalSession = signInData.session;
+            } else {
+              const { data: sessionData } = await supabase.auth.getSession();
+              finalSession = sessionData?.session ?? null;
+            }
           }
 
           if (!finalSession) {
@@ -227,6 +217,14 @@ await supabase
 
           setSession(finalSession);
           await new Promise(r => setTimeout(r, 800));
+
+          // ── Generar código de referido único para este usuario ──
+          const refCode = Math.random().toString(36).substring(2, 7).toUpperCase();
+          await supabase
+            .from('profiles')
+            .update({ referral_code: refCode })
+            .eq('id', authData.user.id);
+
           await loadProfile();
           const { missionsService } = await import('../../services/missions.service');
           await missionsService.checkAndUpdateStreak(authData.user.id);
