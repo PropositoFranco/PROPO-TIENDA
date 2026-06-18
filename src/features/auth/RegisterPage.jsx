@@ -208,7 +208,11 @@ try {
 
 await loadProfile();
 pushToast('¡Bienvenido al Templo!');
-navigate('/bienvenido', { replace: true });
+{
+  const { data: { user: cu } } = await supabase.auth.getUser();
+  const isPlaceholder = cu?.email?.endsWith('@t-store.app') ?? false;
+  navigate(isPlaceholder ? '/tutorial' : '/bienvenido', { replace: true });
+}
           return;
         }
 
@@ -425,7 +429,11 @@ try {
 
 await loadProfile();
 pushToast('¡Bienvenido al Templo!');
-navigate('/bienvenido', { replace: true });
+{
+  const { data: { user: cu } } = await supabase.auth.getUser();
+  const isPlaceholder = cu?.email?.endsWith('@t-store.app') ?? false;
+  navigate(isPlaceholder ? '/tutorial' : '/bienvenido', { replace: true });
+}
         }
       }
     };
