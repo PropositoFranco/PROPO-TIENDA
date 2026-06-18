@@ -103,7 +103,7 @@ export default function App() {
   const isModuleViewer = /^\/academia\/[^/]+/.test(currentPath);
   const mostrarGraduacion = useGraduacionStore(s => s.mostrar);
 
-  if (maintenance.active) return <MaintenancePage message={maintenance.message} />;
+  if (maintenance.active && !currentPath.startsWith('/admin')) return <MaintenancePage message={maintenance.message} />;
 
   const showAnn =
     announcement.active &&
