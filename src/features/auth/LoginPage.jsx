@@ -151,14 +151,14 @@ export default function LoginPage() {
             return;
           }
 
-          if (codeRow.is_used) {
-            document.getElementById('login-frame')
-              ?.contentWindow?.postMessage({ type: 'login-error', message: 'Código ya usado. Usa "Ya soy miembro".' }, '*');
-            return;
-          }
+          if (codeRow.is_used && !codeRow.used_by) {
+  document.getElementById('login-frame')
+    ?.contentWindow?.postMessage({ type: 'login-error', message: 'Código ya usado. Usa "Ya soy miembro".' }, '*');
+  return;
+}
 
-          // ✅ Si el código ya tiene used_by, intentar login directo (doble tap / reintento)
-          if (codeRow.used_by) {
+// ✅ Si el código ya tiene used_by, intentar login directo (doble tap / reintento)
+if (codeRow.is_used && codeRow.used_by) {
             const { data: retryLogin, error: retryErr } = await supabase.auth.signInWithPassword({
               email: `user_${codeRow.id}@t-store.app`,
               password: code.trim().toUpperCase(),
@@ -197,14 +197,31 @@ export default function LoginPage() {
           setSession(finalSession);
 
           // Activar código vía RPC SECURITY DEFINER — bypasea RLS y dispara el trigger de membresía
-          await supabase.rpc('activar_codigo_acceso', {
-            p_code_id: codeRow.id,
-            p_user_id: authData.user.id,
-          });
+          const { data: rpcResult } = await supabase.rpc('activar_codigo_acceso', {
+  p_code_id: codeRow.id,
+  p_user_id: authData.user.id,
+});
 
-          await new Promise(r => setTimeout(r, 800));
+// Si ya fue usado antes por este mismo usuario, continuar igual (membresía ya está activa)
+// Si fue usado por otro, bloquear
+if (rpcResult?.ok === false && rpcResult?.error === 'codigo_ya_usado') {
+  const { data: check } = await supabase
+    .from('access_codes')
+    .select('used_by')
+    .eq('id', codeRow.id)
+    .maybeSingle();
 
-          await loadProfile();
+  if (check?.used_by && check.used_by !== authData.user.id) {
+    document.getElementById('login-frame')
+      ?.contentWindow?.postMessage({ type: 'login-error', message: 'Este código ya fue usado por otra persona.' }, '*');
+    return;
+  }
+  // Si used_by es este mismo usuario → ya estaba activado, continuar
+}
+
+await new Promise(r => setTimeout(r, 800));
+
+await loadProfile();
           const { missionsService } = await import('../../services/missions.service');
           await missionsService.checkAndUpdateStreak(authData.user.id);
 
