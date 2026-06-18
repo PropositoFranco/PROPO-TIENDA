@@ -822,13 +822,16 @@ body {
     setTimeout(() => { box.className = 'message'; }, 3000);
   }
 
+  window._loginInProgress = false;
   function handleLogin() {
+    if (window._loginInProgress) return;
     const btn = document.getElementById('btnConfirm');
     const isNew = currentTab === 'new';
 
     if (isNew) {
       const code = document.getElementById('codeInput').value.trim();
       if (!code) { showMsg('Ingresa tu código de invitación', 'error'); return; }
+      window._loginInProgress = true;
       btn.textContent = 'Verificando...';
       btn.classList.add('loading');
       window.parent.postMessage({ type: 'login-activation', code }, '*');
@@ -836,6 +839,7 @@ body {
       const email = document.getElementById('emailInput').value.trim();
       const password = document.getElementById('passwordInput').value.trim();
       if (!email || !password) { showMsg('Ingresa tu correo y contraseña', 'error'); return; }
+      window._loginInProgress = true;
       btn.textContent = 'Verificando...';
       btn.classList.add('loading');
       window.parent.postMessage({ type: 'login-email', email, password }, '*');

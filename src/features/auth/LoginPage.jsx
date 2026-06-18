@@ -48,6 +48,7 @@ export default function LoginPage() {
           if (e.data?.type === 'login-error') {
             showMsg(e.data.message || 'Error al acceder', 'error');
             if (btn) { btn.textContent = 'Confirmar Acceso'; btn.classList.remove('loading'); }
+            window._loginInProgress = false;
           }
         });
       `;
@@ -129,6 +130,8 @@ export default function LoginPage() {
 
       // ── PRIMERA VEZ: código de activación ───────────────────────────────
       if (event.data?.type === 'login-activation') {
+        if (event.data?._processed) return;
+        event.data._processed = true;
         const code = event.data.code;
         if (!code || code.length < 3) {
           document.getElementById('login-frame')
