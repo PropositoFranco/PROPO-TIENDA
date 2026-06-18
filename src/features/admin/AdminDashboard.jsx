@@ -3161,6 +3161,7 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
         padding: 'clamp(6px,1.5vw,10px) clamp(6px,2vw,16px) 0',
         gap: 8,
         pointerEvents: 'none',
+        ...(window.innerWidth < 768 ? { height: 0, padding: 0, background: 'transparent', overflow: 'visible' } : {}),
       }}>
 
         {/* Columna izquierda — Academia */}
@@ -3169,6 +3170,21 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
           gap: 5, alignItems: 'flex-start',
           pointerEvents: 'auto',
           position: 'relative',
+          ...(window.innerWidth < 768 ? {
+            position: 'fixed', top: 52, left: 0, width: 170,
+            maxHeight: 'calc(100vh - 52px)',
+            overflowY: 'auto', overflowX: 'hidden',
+            flexDirection: 'column', alignItems: 'stretch',
+            gap: 4, padding: '10px 8px 20px',
+            background: 'rgba(8,3,18,0.98)',
+            borderRight: '1px solid rgba(192,132,252,0.25)',
+            borderBottom: '1px solid rgba(192,132,252,0.15)',
+            borderRadius: '0 0 14px 0',
+            zIndex: 9998,
+            boxShadow: '4px 0 24px rgba(0,0,0,0.6)',
+            transform: leftOpen ? 'translateX(0)' : 'translateX(-105%)',
+            transition: 'transform 0.22s cubic-bezier(0.4,0,0.2,1)',
+          } : {}),
         }}>
           {[
             { href:'/academia/comunidad', bg:'linear-gradient(135deg,#C084FC,#7c3aed)', color:'#fff',    shadow:'rgba(192,132,252,0.5)', border:'rgba(192,132,252,0.4)', label:'⚔️ COMUNIDAD' },
@@ -3662,6 +3678,21 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
           display: 'flex', flexDirection: 'column',
           gap: 5, alignItems: 'flex-end',
           pointerEvents: 'auto',
+          ...(window.innerWidth < 768 ? {
+            position: 'fixed', top: 52, right: 0, width: 170,
+            maxHeight: 'calc(100vh - 52px)',
+            overflowY: 'auto', overflowX: 'hidden',
+            flexDirection: 'column', alignItems: 'stretch',
+            gap: 4, padding: '10px 8px 20px',
+            background: 'rgba(8,3,18,0.98)',
+            borderLeft: '1px solid rgba(245,197,24,0.25)',
+            borderBottom: '1px solid rgba(245,197,24,0.15)',
+            borderRadius: '0 0 0 14px',
+            zIndex: 9998,
+            boxShadow: '-4px 0 24px rgba(0,0,0,0.6)',
+            transform: rightOpen ? 'translateX(0)' : 'translateX(105%)',
+            transition: 'transform 0.22s cubic-bezier(0.4,0,0.2,1)',
+          } : {}),
         }}>
           {[
             { href:'/admin/referral-config',   bg:'linear-gradient(135deg,#f5c842,#d97706)', color:'#1a0800', shadow:'rgba(212,175,55,0.5)',  border:'rgba(245,200,70,0.4)', label:'🔗 REFERIDOS' },
