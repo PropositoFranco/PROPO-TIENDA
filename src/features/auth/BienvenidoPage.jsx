@@ -993,27 +993,16 @@ const [manualCodeLoading, setManualCodeLoading] = useState(false);
   if (!trimmed) { setManualCodeError('Ingresa tu código'); return; }
   setManualCodeLoading(true); setManualCodeError('');
   try {
-    const { data, error } = await supabase
-      .from('access_codes')
-      .select('code, is_used, membership_type, duration_months')
-      .eq('code', trimmed)
-      .maybeSingle();
-    if (error || !data) { setManualCodeError('Código no encontrado. Verifica e intenta de nuevo.'); setManualCodeLoading(false); return; }
-    if (data.is_used) { setManualCodeError('Este código ya fue usado.'); setManualCodeLoading(false); return; }
-    // Asociar el código al usuario logueado si hay sesión
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from('access_codes').update({ 
-  user_id: user.id, 
-  user_email: user.email,
-  used_by: user.id,
-  is_used: true,
-  used_at: new Date().toISOString()
-}).eq('code', trimmed);
-      }
-    } catch (_) {}
-    setUserCode(data.code);
+    const { data: rpcData, error: rpcError } = await supabase
+      .rpc('canjear_codigo_beca', { p_code: trimmed });
+    if (rpcError || !rpcData?.ok) {
+      const msg = rpcData?.error === 'not_found'    ? 'Código no encontrado. Verifica e intenta de nuevo.'
+                : rpcData?.error === 'already_used' ? 'Este código ya fue usado.'
+                : rpcData?.error === 'no_session'   ? 'Debes iniciar sesión primero.'
+                : 'Error al verificar el código. Intenta de nuevo.';
+      setManualCodeError(msg); setManualCodeLoading(false); return;
+    }
+    setUserCode(rpcData.code);
     setCodeLoading(false);
     setNeedsCodeEntry(false);
   } catch (_) {
