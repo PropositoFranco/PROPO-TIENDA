@@ -21,7 +21,7 @@ export default function MaintenancePage({ message }) {
         }
       `}</style>
       <img
-        src="/src/assets/proposito_actualizacion.png"
+        src={maestroImg}
         alt="Mantenimiento"
         style={{
           width: 'clamp(140px, 30vw, 280px)',
