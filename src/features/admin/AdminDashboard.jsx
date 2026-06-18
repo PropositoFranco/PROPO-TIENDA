@@ -3116,125 +3116,198 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
 
       {/* ── BARRA DE NAVEGACIÓN ══ */}
       <style>{`
+        /* ═══════════════════════════════════════════
+           MÓVIL ÚNICAMENTE — max-width: 767px
+           PC (768px+) no se toca en absoluto
+        ═══════════════════════════════════════════ */
         @media (max-width: 767px) {
+
+          /* La barra contenedora se vuelve invisible en móvil;
+             los paneles flotan por sí solos */
           .admin-nav-bar {
-            height: auto !important;
+            height: 0 !important;
             padding: 0 !important;
             background: transparent !important;
             pointer-events: none !important;
+            overflow: visible !important;
           }
+
+          /* El centro (stats) se oculta en móvil */
           .admin-nav-center { display: none !important; }
 
+          /* ── PANEL IZQUIERDO ── */
           .admin-nav-left {
             position: fixed !important;
-            top: 60px !important;
+            top: 52px !important;
             left: 0 !important;
-            width: 140px !important;
-            max-height: 70vh !important;
+            width: 170px !important;
+            max-height: calc(100vh - 52px) !important;
             overflow-y: auto !important;
             overflow-x: hidden !important;
             -webkit-overflow-scrolling: touch !important;
             scrollbar-width: none !important;
             flex-direction: column !important;
-            align-items: flex-start !important;
-            gap: 5px !important;
-            padding: 8px 6px !important;
-            background: rgba(10,4,20,0.97) !important;
-            border-right: 1px solid rgba(212,175,55,0.2) !important;
-            border-bottom: 1px solid rgba(212,175,55,0.2) !important;
-            border-radius: 0 0 12px 0 !important;
+            align-items: stretch !important;
+            gap: 4px !important;
+            padding: 10px 8px 20px !important;
+            background: rgba(8,3,18,0.98) !important;
+            border-right: 1px solid rgba(192,132,252,0.25) !important;
+            border-bottom: 1px solid rgba(192,132,252,0.15) !important;
+            border-radius: 0 0 14px 0 !important;
             z-index: 9998 !important;
             pointer-events: auto !important;
-            transition: transform 0.25s ease !important;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.6) !important;
+            /* visible por defecto cuando no tiene .collapsed */
+            transform: translateX(0) !important;
+            transition: transform 0.22s cubic-bezier(0.4,0,0.2,1) !important;
           }
           .admin-nav-left.collapsed {
-            transform: translateX(-100%) !important;
+            transform: translateX(-105%) !important;
           }
           .admin-nav-left::-webkit-scrollbar { display: none !important; }
 
+          /* Botones dentro del panel izquierdo */
+          .admin-nav-left a,
+          .admin-nav-left button {
+            width: 100% !important;
+            box-sizing: border-box !important;
+            font-size: 10px !important;
+            padding: 8px 10px !important;
+            white-space: nowrap !important;
+            justify-content: flex-start !important;
+            border-radius: 8px !important;
+            margin: 0 !important;
+          }
+
+          /* ── PANEL DERECHO ── */
           .admin-nav-right {
             position: fixed !important;
-            top: 60px !important;
+            top: 52px !important;
             right: 0 !important;
-            width: 140px !important;
-            max-height: 70vh !important;
+            width: 170px !important;
+            max-height: calc(100vh - 52px) !important;
             overflow-y: auto !important;
             overflow-x: hidden !important;
             -webkit-overflow-scrolling: touch !important;
             scrollbar-width: none !important;
             flex-direction: column !important;
-            align-items: flex-end !important;
-            gap: 5px !important;
-            padding: 8px 6px !important;
-            background: rgba(10,4,20,0.97) !important;
-            border-left: 1px solid rgba(212,175,55,0.2) !important;
-            border-bottom: 1px solid rgba(212,175,55,0.2) !important;
-            border-radius: 0 0 0 12px !important;
+            align-items: stretch !important;
+            gap: 4px !important;
+            padding: 10px 8px 20px !important;
+            background: rgba(8,3,18,0.98) !important;
+            border-left: 1px solid rgba(245,197,24,0.25) !important;
+            border-bottom: 1px solid rgba(245,197,24,0.15) !important;
+            border-radius: 0 0 0 14px !important;
             z-index: 9998 !important;
             pointer-events: auto !important;
-            transition: transform 0.25s ease !important;
+            box-shadow: -4px 0 24px rgba(0,0,0,0.6) !important;
+            transform: translateX(0) !important;
+            transition: transform 0.22s cubic-bezier(0.4,0,0.2,1) !important;
           }
           .admin-nav-right.collapsed {
-            transform: translateX(100%) !important;
+            transform: translateX(105%) !important;
           }
           .admin-nav-right::-webkit-scrollbar { display: none !important; }
 
-          .admin-nav-left a, .admin-nav-left button,
-          .admin-nav-right a, .admin-nav-right button {
+          /* Botones dentro del panel derecho */
+          .admin-nav-right a,
+          .admin-nav-right button {
             width: 100% !important;
             box-sizing: border-box !important;
             font-size: 10px !important;
-            padding: 7px 10px !important;
+            padding: 8px 10px !important;
             white-space: nowrap !important;
             justify-content: flex-start !important;
+            border-radius: 8px !important;
+            margin: 0 !important;
           }
 
-          .mob-toggle-left, .mob-toggle-right {
+          /* ── BOTONES TOGGLE — pequeños, arriba ── */
+          .mob-toggle-left,
+          .mob-toggle-right {
             display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
           }
+
           .mob-toggle-left {
             position: fixed !important;
-            top: 14px !important;
-            left: 10px !important;
-            z-index: 10000 !important;
+            top: 10px !important;
+            left: 8px !important;
+            z-index: 10001 !important;
+            width: 38px !important;
+            height: 30px !important;
+            padding: 0 !important;
+            font-size: 12px !important;
+            border-radius: 8px !important;
+            line-height: 1 !important;
           }
+
           .mob-toggle-right {
             position: fixed !important;
-            top: 14px !important;
-            right: 10px !important;
-            z-index: 10000 !important;
+            top: 10px !important;
+            right: 8px !important;
+            z-index: 10001 !important;
+            width: 38px !important;
+            height: 30px !important;
+            padding: 0 !important;
+            font-size: 12px !important;
+            border-radius: 8px !important;
+            line-height: 1 !important;
+          }
+
+          /* ── OVERLAY — toca fuera para cerrar ── */
+          .mob-sidebar-overlay {
+            display: block !important;
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 9997 !important;
+            background: rgba(0,0,0,0.45) !important;
+            backdrop-filter: blur(1px) !important;
           }
         }
+
+        /* En PC los toggles nunca se muestran */
         @media (min-width: 768px) {
-          .mob-toggle-left, .mob-toggle-right { display: none !important; }
+          .mob-toggle-left,
+          .mob-toggle-right,
+          .mob-sidebar-overlay { display: none !important; }
         }
       `}</style>
+      {/* ── OVERLAY — cierra al tocar fuera ── */}
+      {(leftOpen || rightOpen) && (
+        <div
+          className="mob-sidebar-overlay"
+          onClick={() => { setLeftOpen(false); setRightOpen(false); }}
+        />
+      )}
+
       {/* ── BOTONES TOGGLE MÓVIL ── */}
       <button
         className="mob-toggle-left"
         onClick={() => { setLeftOpen(v => !v); setRightOpen(false); }}
         style={{
-          background: leftOpen ? 'rgba(192,132,252,0.3)' : 'rgba(10,4,20,0.92)',
-          border: '1px solid rgba(192,132,252,0.5)',
-          borderRadius: 8, color: '#C084FC',
-          fontFamily: 'Cinzel,serif', fontWeight: 900, fontSize: 11,
-          padding: '5px 10px', cursor: 'pointer', letterSpacing: 1,
-          boxShadow: '0 2px 12px rgba(192,132,252,0.3)',
+          background: leftOpen ? 'rgba(192,132,252,0.35)' : 'rgba(8,3,18,0.95)',
+          border: `1.5px solid ${leftOpen ? 'rgba(192,132,252,0.8)' : 'rgba(192,132,252,0.45)'}`,
+          color: '#C084FC',
+          fontFamily: 'Cinzel,serif', fontWeight: 900,
+          cursor: 'pointer',
+          boxShadow: leftOpen ? '0 0 14px rgba(192,132,252,0.5)' : '0 2px 10px rgba(0,0,0,0.5)',
         }}
-      >{leftOpen ? '✕ MENÚ' : '☰ MENÚ'}</button>
+      >{leftOpen ? '✕' : '☰'}</button>
 
       <button
         className="mob-toggle-right"
         onClick={() => { setRightOpen(v => !v); setLeftOpen(false); }}
         style={{
-          background: rightOpen ? 'rgba(245,197,24,0.3)' : 'rgba(10,4,20,0.92)',
-          border: '1px solid rgba(245,197,24,0.5)',
-          borderRadius: 8, color: '#F5C518',
-          fontFamily: 'Cinzel,serif', fontWeight: 900, fontSize: 11,
-          padding: '5px 10px', cursor: 'pointer', letterSpacing: 1,
-          boxShadow: '0 2px 12px rgba(245,197,24,0.3)',
+          background: rightOpen ? 'rgba(245,197,24,0.35)' : 'rgba(8,3,18,0.95)',
+          border: `1.5px solid ${rightOpen ? 'rgba(245,197,24,0.8)' : 'rgba(245,197,24,0.45)'}`,
+          color: '#F5C518',
+          fontFamily: 'Cinzel,serif', fontWeight: 900,
+          cursor: 'pointer',
+          boxShadow: rightOpen ? '0 0 14px rgba(245,197,24,0.5)' : '0 2px 10px rgba(0,0,0,0.5)',
         }}
-      >{rightOpen ? '✕ ADMIN' : '⚙ ADMIN'}</button>
+      >{rightOpen ? '✕' : '⚙'}</button>
 
       <div className="admin-nav-bar" style={{
         position: 'fixed', top: 0, left: 0, right: 0,
@@ -3248,7 +3321,7 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
       }}>
 
         {/* Columna izquierda — Academia */}
-        <div className={`admin-nav-left${leftOpen ? '' : ' collapsed'}`} style={{
+        <div className={`admin-nav-left${leftOpen ? '' : ' collapsed'}`} onClick={() => { if(window.innerWidth < 768) setLeftOpen(false); }} style={{
           display: 'flex', flexDirection: 'column',
           gap: 5, alignItems: 'flex-start',
           pointerEvents: 'auto',
@@ -3742,7 +3815,7 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
         </div>
 
         {/* Columna derecha — Admin */}
-        <div className={`admin-nav-right${rightOpen ? '' : ' collapsed'}`} style={{
+        <div className={`admin-nav-right${rightOpen ? '' : ' collapsed'}`} onClick={() => { if(window.innerWidth < 768) setRightOpen(false); }} style={{
           display: 'flex', flexDirection: 'column',
           gap: 5, alignItems: 'flex-end',
           pointerEvents: 'auto',
