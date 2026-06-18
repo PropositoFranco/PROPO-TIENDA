@@ -1019,6 +1019,13 @@ export default function BienvenidoPage() {
         try {
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
+            // Si el usuario ya tiene perfil completo con membresía activa, ir al hub
+            const { data: profile } = await supabase
+              .from('profiles').select('templario_name, membership_status')
+              .eq('id', user.id).maybeSingle();
+            if (profile?.templario_name && profile?.membership_status === 'active') {
+              window.location.replace('/hub'); return;
+            }
             // Busca primero por user_id
             let { data } = await supabase
               .from('access_codes').select('code')
