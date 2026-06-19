@@ -1076,6 +1076,50 @@ return data || null;
             ⚔️ ACTIVAR MI BECA — 6 MESES GRATIS
           </a>
 
+          {/* ── ALIANZA PRIMER · versión ganador ── */}
+          <div style={{
+            position: 'relative', overflow: 'hidden',
+            background: 'linear-gradient(160deg,rgba(255,215,0,0.06),rgba(10,5,26,0.75),rgba(167,139,250,0.06))',
+            border: '1px solid rgba(212,175,55,0.3)',
+            borderRadius: 18,
+            padding: 'clamp(18px,4vw,26px)',
+            marginTop: 18, marginBottom: 20,
+            textAlign: 'center',
+            animation: 'fadeUp 1.4s ease both',
+          }}>
+            <div style={{ position: 'absolute', top: 0, left: '15%', right: '15%', height: '1px', background: 'linear-gradient(90deg,transparent,rgba(255,215,0,0.5),transparent)' }} />
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 4, color: 'rgba(255,215,0,0.55)', marginBottom: 12 }}>
+              ✦ TU REINADO NO TERMINA AQUÍ ✦
+            </div>
+            <div style={{
+              fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
+              fontSize: 'clamp(13px,3.8vw,16px)',
+              color: 'rgba(255,255,255,0.82)',
+              lineHeight: 1.85, marginBottom: 16,
+            }}>
+              Junto con tu beca, recibes tu{' '}
+              <span style={{ color: '#a78bfa', fontStyle: 'normal', fontWeight: 700 }}>código Alianza</span>.<br />
+              Quien lo use también entra por{' '}
+              <span style={{ color: '#a78bfa', fontWeight: 700 }}>$1</span>.<br />
+              <span style={{ color: C.gold, fontSize: '0.92em' }}>
+                Cada nivel que desbloquees suma +1 mes más, por $1.
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+              {[['⚡','Chispa'],['🔗','Nexo'],['🌊','Resonancia'],['🌐','Expansión'],['✦','Legado']].map(([emoji, label], i) => (
+                <div key={i} title={label} style={{
+                  width: 30, height: 30, borderRadius: '50%',
+                  background: 'rgba(255,215,0,0.05)',
+                  border: '1px solid rgba(212,175,55,0.22)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 13,
+                }}>
+                  {emoji}
+                </div>
+              ))}
+            </div>
+          </div>
+
           {historial.length > 0 && <HistorialRondas historial={historial} onToggle={() => setMostrarHistorial(v => !v)} mostrar={mostrarHistorial} />}
         </div>
       </div>
