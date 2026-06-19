@@ -304,13 +304,14 @@ navigate('/bienvenido', { replace: true });
           .from('profiles')
           .upsert(
             yaRegistrado
-              ? {
-                  id: userId,
-                  email: email,
-                  avatar: avatar || existingProfile.avatar || '⚔️',
-                  referral_code: referralCode,
-                  ...(referredBy ? { referred_by: referredBy } : existingProfile?.referred_by ? { referred_by: existingProfile.referred_by } : {}),
-                }
+  ? {
+      id: userId,
+      email: email,
+      templario_name: templarioName,
+      avatar: avatar || existingProfile.avatar || '⚔️',
+      referral_code: referralCode,
+      ...(referredBy ? { referred_by: referredBy } : existingProfile?.referred_by ? { referred_by: existingProfile.referred_by } : {}),
+    }
               : {
                   id: userId,
                   email: email,
