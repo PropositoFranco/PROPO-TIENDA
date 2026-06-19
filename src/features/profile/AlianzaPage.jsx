@@ -587,8 +587,15 @@ if (eventos) {
 <span style={{ color: "rgba(248,113,113,0.7)", textDecoration: "line-through", textDecorationColor: "rgba(248,113,113,0.9)", textDecorationThickness: "2px", fontWeight: "700" }}>$49</span>{" "}a{" "}
 <strong style={{ fontSize: "1.25em", background: "linear-gradient(135deg,#c4b5fd,#a78bfa,#818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", filter: "drop-shadow(0 0 12px rgba(167,139,250,0.9))", animation: "alianza-glow 2s ease-in-out infinite", display: "inline-block" }}>$1</strong>{" "}el primer mes cuando alguien usa tu código.
           </p>
-          <p style={{ fontFamily: "'Raleway',sans-serif", fontSize: "clamp(13px,2vw,14.5px)", color: "rgba(200,185,240,0.55)", maxWidth: "440px", margin: "0 auto 30px", lineHeight: "1.7" }}>
+          <p style={{ fontFamily: "'Raleway',sans-serif", fontSize: "clamp(13px,2vw,14.5px)", color: "rgba(200,185,240,0.55)", maxWidth: "440px", margin: "0 auto 14px", lineHeight: "1.7" }}>
             Y tú también: por cada nivel del trayecto de la alianza desbloqueado, recibes un bono para extender tu membresía por <strong style={{ color: "#fbbf24" }}>$1 más</strong>.
+          </p>
+
+          {/* ── IMPACTO REAL — conteo global ── */}
+          <p style={{ fontFamily: "'Raleway',sans-serif", fontSize: "clamp(12px,1.8vw,13px)", color: "rgba(212,175,55,0.6)", maxWidth: "440px", margin: "0 auto 30px", lineHeight: "1.7", fontStyle: "italic" }}>
+            Cada aliado que traes suma al movimiento completo: cada{" "}
+            <strong style={{ color: "#fbbf24", fontStyle: "normal" }}>6 Templarios nuevos</strong>{" "}libera una beca de 6 meses, y cada{" "}
+            <strong style={{ color: "#fbbf24", fontStyle: "normal" }}>25</strong>{" "}dona un costal de alimento a un refugio canino.
           </p>
 
           {/* ── CÓDIGO ── */}
@@ -713,6 +720,7 @@ if (eventos) {
                   { text: "Si el cupón vence, se pierde — no se acumula ni se transfiere.", icon: "⚠", accent: "#f87171" },
                   { text: "La membresía extendida entra en vigor inmediatamente al confirmar.", icon: "✓", accent: "#34d399" },
                   { text: "Cada nivel que alcanzas desbloquea un bono. Lleva a las personas correctas — familia, amigos, quien ya busca algo más — y el Templo recompensa cada etapa del camino.", icon: "✦", accent: "#a78bfa" },
+                  { text: "Tus aliados también suman al conteo global del Templo: cada 6 Templarios nuevos libera una beca completa de 6 meses, y cada 25 dona un costal de alimento a un refugio canino.", icon: "🐾", accent: "#34d399" },
                 ].map((rule, i) => (
                   <div key={i} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
                     <div style={{ flexShrink: 0, width: "24px", height: "24px", borderRadius: "8px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", marginTop: "1px" }}>{rule.icon}</div>
