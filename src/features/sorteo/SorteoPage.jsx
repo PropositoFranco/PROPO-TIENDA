@@ -33,6 +33,7 @@ const SCREEN = {
   SORTEO:   'sorteo',
   GANADOR:  'ganador',
   PREMIO:   'premio',
+  CAUSA:    'causa',
   CERRADO:  'cerrado',
 };
 
@@ -404,6 +405,39 @@ function TagParticipante({ nombre, esYo, index }) {
   );
 }
 
+// ── Mapa de Cuadras — tablero visual de cupo (gratis, sin pago) ──────────────
+function MapaCuadras({ participantes, cupoTotal, miEmail }) {
+  const slots = Array.from({ length: cupoTotal }, (_, i) => participantes[i] || null);
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 7 }}>
+      {slots.map((p, i) => {
+        const ocupada = !!p;
+        const esYo = p?.email === miEmail;
+        return (
+          <div key={i} style={{
+            position: 'relative', borderRadius: 9, padding: '8px 4px',
+            textAlign: 'center', minHeight: 48,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            background: ocupada ? (esYo ? 'rgba(212,175,55,0.18)' : 'rgba(212,175,55,0.08)') : 'rgba(255,255,255,0.02)',
+            border: ocupada ? `1.5px solid ${esYo ? C.borderHi : 'rgba(212,175,55,0.35)'}` : '1px dashed rgba(255,255,255,0.12)',
+            boxShadow: esYo ? `0 0 16px ${C.goldGlow}` : 'none',
+            transition: 'all .35s',
+            animation: ocupada ? 'tagPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both' : 'none',
+            animationDelay: `${i * 0.03}s`,
+          }}>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 7, letterSpacing: 1, color: ocupada ? C.goldDim : 'rgba(255,255,255,0.2)', marginBottom: 2 }}>
+              C{i + 1}
+            </div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 9, color: ocupada ? (esYo ? C.gold : C.text) : 'rgba(255,255,255,0.18)', lineHeight: 1.1, wordBreak: 'break-word' }}>
+              {ocupada ? `${esYo ? '⚔️ ' : ''}${p.nombre.split(' ')[0]}` : 'LIBRE'}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Historial de rondas ───────────────────────────────────────────────────────
 function HistorialRondas({ historial, mostrar, onToggle }) {
   return (
@@ -636,6 +670,8 @@ export default function SorteoPage() {
   const [copiado,        setCopiado]        = useState(false);
   const [fraseIdx,       setFraseIdx]       = useState(0);
   const [fraseVisible,   setFraseVisible]   = useState(true);
+  const [causaElegida,   setCausaElegida]   = useState(null);
+  const [screenAnterior, setScreenAnterior] = useState(null);
 
   // refs declarados arriba junto a setScreen
 
@@ -1240,12 +1276,11 @@ return data || null;
             </button>
           </div>
 
-          <a
-            href={`https://buy.stripe.com/7sY9ATfO77JUe8CgSYenS0w?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}`}
-            target="_blank" rel="noopener noreferrer"
+          <button
+            onClick={() => { setScreenAnterior(SCREEN.PREMIO); setScreen(SCREEN.CAUSA); }}
             style={{
-              display: 'block', padding: '17px',
-              borderRadius: 14,
+              display: 'block', width: '100%', padding: '17px',
+              borderRadius: 14, border: 'none', cursor: 'pointer',
               background: `linear-gradient(135deg,${C.purple},#6b0a8a)`,
               color: '#fff', fontFamily: 'Cinzel, serif',
               fontSize: 12, letterSpacing: 3, fontWeight: 900,
@@ -1256,7 +1291,7 @@ return data || null;
             }}
           >
             ⚔️ ENTRAR AL TEMPLO — PRIMER MES $1
-          </a>
+          </button>
           <p style={{
             fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
             fontSize: 12, color: 'rgba(255,255,255,0.28)',
@@ -1317,6 +1352,129 @@ return data || null;
 
 
 
+  // ── PANTALLA: CAUSA ───────────────────────────────────────────────────────
+  if (screen === SCREEN.CAUSA) {
+    const STRIPE_LINKS = {
+      becas:  `https://buy.stripe.com/9B68wP59t2pA1lQeKQenS0x?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}`,
+      perros: `https://buy.stripe.com/7sY9ATfO77JUe8CgSYenS0w?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}`,
+    };
+
+    return (
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'clamp(20px,5vw,60px) clamp(16px,4vw,40px)', position: 'relative', overflow: 'hidden', textAlign: 'center' }}>
+        <Particles />
+        <Header totalBecas={totalBecas} totalGanadores={totalGanadores} rondaNum={rondaNum} eventoNombre={evento?.nombre} />
+        <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 520, marginTop: 72, animation: 'fadeUp .7s ease both' }}>
+
+          <div style={{ fontSize: 36, marginBottom: 10 }}>⚜️</div>
+
+          <h1 style={{
+            fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
+            fontSize: 'clamp(18px,5vw,26px)', marginBottom: 10, letterSpacing: 2,
+            background: `linear-gradient(135deg,${C.purple},#fff)`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+          }}>¿A QUÉ CAUSA QUIERES DESTINAR TU DÓLAR?</h1>
+
+          <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 14, color: C.muted, fontStyle: 'italic', lineHeight: 1.7, marginBottom: 28 }}>
+            Tu decisión genera impacto real dentro y fuera del Templo.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+
+            {/* Opción: Becas */}
+            <button
+              onClick={() => setCausaElegida('becas')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
+                padding: '16px 18px', borderRadius: 16, cursor: 'pointer',
+                background: causaElegida === 'becas' ? 'rgba(212,175,55,0.12)' : 'rgba(255,255,255,0.03)',
+                border: causaElegida === 'becas' ? `1.5px solid ${C.gold}` : '1.5px solid rgba(255,255,255,0.08)',
+                transition: 'all .25s',
+              }}
+            >
+              <div style={{ fontSize: 28 }}>🎓</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 13, letterSpacing: 1, color: C.gold, marginBottom: 4 }}>
+                  BECAS TEMPLO DEL PROPÓSITO
+                </div>
+                <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+                  Tu dólar se convierte en acceso gratuito al Templo para alguien comprometido con crecer.
+                </div>
+              </div>
+              <div style={{
+                width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                border: causaElegida === 'becas' ? `6px solid ${C.gold}` : '1.5px solid rgba(255,255,255,0.25)',
+                transition: 'all .2s',
+              }} />
+            </button>
+
+            {/* Opción: Perros */}
+            <button
+              onClick={() => setCausaElegida('perros')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
+                padding: '16px 18px', borderRadius: 16, cursor: 'pointer',
+                background: causaElegida === 'perros' ? 'rgba(204,68,255,0.12)' : 'rgba(255,255,255,0.03)',
+                border: causaElegida === 'perros' ? `1.5px solid ${C.purple}` : '1.5px solid rgba(255,255,255,0.08)',
+                transition: 'all .25s',
+              }}
+            >
+              <div style={{ fontSize: 28 }}>🐾</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 13, letterSpacing: 1, color: C.purple, marginBottom: 4 }}>
+                  ALIMENTO PARA PERROS
+                </div>
+                <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+                  Cada dólar ayuda directamente a brindar alimento a perros en situación vulnerable.
+                </div>
+              </div>
+              <div style={{
+                width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                border: causaElegida === 'perros' ? `6px solid ${C.purple}` : '1.5px solid rgba(255,255,255,0.25)',
+                transition: 'all .2s',
+              }} />
+            </button>
+
+          </div>
+
+          <a
+            href={causaElegida ? STRIPE_LINKS[causaElegida] : undefined}
+            target="_blank" rel="noopener noreferrer"
+            onClick={(e) => { if (!causaElegida) e.preventDefault(); }}
+            style={{
+              display: 'block', padding: '16px',
+              borderRadius: 14,
+              background: causaElegida
+                ? `linear-gradient(135deg,${C.purple},#6b0a8a)`
+                : 'rgba(255,255,255,0.06)',
+              color: causaElegida ? '#fff' : 'rgba(255,255,255,0.3)',
+              fontFamily: 'Cinzel, serif',
+              fontSize: 12, letterSpacing: 3, fontWeight: 900,
+              textDecoration: 'none', textAlign: 'center',
+              cursor: causaElegida ? 'pointer' : 'not-allowed',
+              transition: 'all .25s',
+              animation: causaElegida ? 'btnPulse 2.5s ease-in-out infinite' : 'none',
+            }}
+          >
+            {causaElegida ? '⚔️ CONTINUAR CON MI DONACIÓN →' : 'SELECCIONA UNA CAUSA PARA CONTINUAR'}
+          </a>
+
+          <button
+            onClick={() => setScreen(SCREEN.PREMIO)}
+            style={{
+              display: 'block', margin: '18px auto 0', padding: '8px 16px',
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              fontFamily: 'Crimson Text, serif', fontStyle: 'italic', fontSize: 12,
+              color: 'rgba(255,255,255,0.35)', letterSpacing: 0.5,
+            }}
+          >
+            ← Volver
+          </button>
+
+        </div>
+      </div>
+    );
+  }
+
   // ── PANTALLA: ESPERA ──────────────────────────────────────────────────────
   if (screen === SCREEN.ESPERA) {
     return (
@@ -1360,10 +1518,11 @@ return data || null;
               DE {cupoTotal} GUERREROS
             </div>
             <BarraProgreso actual={cupoActual} total={cupoTotal} />
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, justifyContent: 'center', marginTop: 20, minHeight: 36 }}>
-              {participantes.map((p, i) => (
-                <TagParticipante key={p.id} nombre={p.nombre} esYo={p.email === miEmailRef.current} index={i} />
-              ))}
+            <div style={{ marginTop: 20 }}>
+              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 3, color: C.goldDim, textAlign: 'center', marginBottom: 10, textTransform: 'uppercase' }}>
+                ✦ Mapa de Cuadras ✦
+              </div>
+              <MapaCuadras participantes={participantes} cupoTotal={cupoTotal} miEmail={miEmailRef.current} />
             </div>
           </div>
 
@@ -1603,9 +1762,12 @@ return data || null;
           }}>
             ENTRA AL SORTEO
           </h2>
-          <p style={{ textAlign: 'center', fontFamily: 'Crimson Text, serif', fontSize: 15, color: C.muted, fontStyle: 'italic', lineHeight: 1.75, marginBottom: 26 }}>
+          <p style={{ textAlign: 'center', fontFamily: 'Crimson Text, serif', fontSize: 15, color: C.muted, fontStyle: 'italic', lineHeight: 1.75, marginBottom: 14 }}>
             Un guerrero gana <span style={{ color: C.gold }}>6 meses</span> gratis.<br />
             Todos los demás reciben un cupón especial.
+          </p>
+          <p style={{ textAlign: 'center', fontFamily: 'Crimson Text, serif', fontSize: 12.5, color: 'rgba(212,175,55,0.55)', fontStyle: 'italic', lineHeight: 1.75, marginBottom: 26 }}>
+            Y tu registro ya suma a algo más grande: cada <span style={{ color: C.gold, fontStyle: 'normal' }}>6 Templarios nuevos</span>, alguien con potencial cruza la puerta sin pagar nada. Cada <span style={{ color: C.gold, fontStyle: 'normal' }}>25</span>, un costal de 20kg llega directo al plato de un perrito que hoy tiene hambre.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginBottom: 22 }}>
