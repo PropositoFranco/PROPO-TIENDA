@@ -503,7 +503,7 @@ const [cuponesCanjeados, setCuponesCanjeados] = useState([]);
       const { count } = await supabase.from("profiles")
         .select("*", { count: "exact", head: true })
         .eq("referred_by", user.id)
-        .eq("membership_type", "base");
+        .neq("membership_type", "free");
       setReferidosActivos(count || 0);
       if (count && count > 0) {
         missionsService.trackProgress(user.id, 'referrals_count', count);

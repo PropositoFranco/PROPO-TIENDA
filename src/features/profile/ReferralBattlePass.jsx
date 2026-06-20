@@ -42,7 +42,7 @@ export default function ReferralBattlePass() {
       const { count } = await supabase
         .from("profiles").select("*", { count: "exact", head: true })
         .eq("referred_by", user.id)
-        .eq("membership_type", "base");
+        .neq("membership_type", "free");
       setReferidos(count || 0);
       const { count: c2 } = await supabase
         .from("referral_events").select("*", { count: "exact", head: true })
