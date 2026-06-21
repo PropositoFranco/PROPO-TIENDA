@@ -444,10 +444,9 @@ const GLOBAL_CSS = `
     border-radius: 50%;
     border: 1px solid rgba(212,175,55,0.25);
   }
-  /* Placa medallón: fondo neutro tipo pergamino/metal pulido detrás del logo.
-     Así CUALQUIER logo (blanco, negro, rojo, full color, transparente) se ve
-     con contraste real y con autoridad — sin depender de blend-modes que
-     rompen logos oscuros. */
+  /* ── Modos de presentación del logo ── */
+
+  /* BASE — compartida por los 3 modos */
   .mda-logo-plate {
     width: 76px; height: 76px;
     border-radius: 50%;
@@ -456,13 +455,46 @@ const GLOBAL_CSS = `
     display: flex;
     align-items: center;
     justify-content: center;
-    background:
-      radial-gradient(circle at 32% 28%, rgba(255,252,240,0.98) 0%, rgba(238,228,200,0.95) 38%, rgba(196,180,140,0.92) 100%);
-    box-shadow:
-      0 2px 10px rgba(0,0,0,0.45),
-      inset 0 1px 2px rgba(255,255,255,0.8),
-      inset 0 -3px 6px rgba(120,95,40,0.35);
     overflow: hidden;
+    transition: box-shadow 0.3s ease;
+  }
+
+  /* MODO 1: plate_light — pergamino/metal claro (logos oscuros) */
+  .mda-logo-plate.mode-plate-light {
+    background: radial-gradient(circle at 32% 28%,
+      rgba(255,252,240,0.98) 0%,
+      rgba(238,228,200,0.95) 38%,
+      rgba(196,180,140,0.92) 100%);
+    box-shadow:
+      0 2px 12px rgba(0,0,0,0.5),
+      inset 0 1px 3px rgba(255,255,255,0.85),
+      inset 0 -3px 8px rgba(120,95,40,0.4);
+  }
+
+  /* MODO 2: plate_dark — carbón/ónice (logos blancos, dorados, neón) */
+  .mda-logo-plate.mode-plate-dark {
+    background: radial-gradient(circle at 32% 28%,
+      rgba(28,18,48,0.98) 0%,
+      rgba(14,8,30,0.97) 45%,
+      rgba(8,4,20,0.98) 100%);
+    box-shadow:
+      0 2px 12px rgba(0,0,0,0.7),
+      inset 0 1px 2px rgba(212,175,55,0.15),
+      inset 0 -2px 6px rgba(0,0,0,0.6),
+      0 0 0 1px rgba(212,175,55,0.18);
+  }
+
+  /* MODO 3: transparent — sin fondo, directo sobre la card (PNGs con alpha) */
+  .mda-logo-plate.mode-transparent {
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+  .mda-logo-plate.mode-transparent .mda-logo-img {
+    filter: drop-shadow(0 2px 12px rgba(212,175,55,0.35))
+            drop-shadow(0 0 24px rgba(212,175,55,0.15));
+    width: 92%;
+    height: 92%;
   }
   .mda-logo-img {
     width: 78%; height: 78%;
@@ -921,6 +953,78 @@ const GLOBAL_CSS = `
     border: 1.5px dashed rgba(212,175,55,0.2);
   }
   .mda-logo-preview img { width:78%; height:78%; object-fit:contain; }
+
+  /* Selector de modo de logo */
+  .mda-logo-mode-selector {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .mda-logo-mode-btn {
+    flex: 1;
+    min-width: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 8px 10px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(212,175,55,0.15);
+    background: rgba(255,255,255,0.02);
+    cursor: pointer;
+    transition: all 0.22s ease;
+    position: relative;
+  }
+  .mda-logo-mode-btn:hover {
+    border-color: rgba(212,175,55,0.35);
+    background: rgba(212,175,55,0.04);
+  }
+  .mda-logo-mode-btn.active {
+    border-color: rgba(212,175,55,0.7);
+    background: rgba(212,175,55,0.08);
+    box-shadow: 0 0 16px rgba(212,175,55,0.12);
+  }
+  .mda-logo-mode-btn.active::after {
+    content: '✓';
+    position: absolute;
+    top: 5px; right: 7px;
+    font-size: 9px;
+    color: var(--gold);
+    font-family: var(--font-ui);
+  }
+  .mda-logo-mode-swatch {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid rgba(212,175,55,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .mda-logo-mode-swatch.sw-light {
+    background: radial-gradient(circle at 32% 28%, rgba(255,252,240,0.98) 0%, rgba(238,228,200,0.95) 38%, rgba(196,180,140,0.92) 100%);
+  }
+  .mda-logo-mode-swatch.sw-dark {
+    background: radial-gradient(circle at 32% 28%, rgba(28,18,48,0.98) 0%, rgba(14,8,30,0.97) 45%, rgba(8,4,20,0.98) 100%);
+    border-color: rgba(212,175,55,0.25);
+  }
+  .mda-logo-mode-swatch.sw-transparent {
+    background: repeating-conic-gradient(rgba(255,255,255,0.07) 0% 25%, transparent 0% 50%) 0 0 / 8px 8px;
+    border-color: rgba(255,255,255,0.12);
+  }
+  .mda-logo-mode-label {
+    font-family: var(--font-title);
+    font-size: 7.5px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.45);
+    text-align: center;
+    line-height: 1.3;
+  }
+  .mda-logo-mode-btn.active .mda-logo-mode-label {
+    color: rgba(212,175,55,0.8);
+  }
 
   /* Toggle */
   .mda-toggle-row {
@@ -1543,7 +1647,7 @@ function AliadoCard({ aliado, adminMode, onEdit, onDelete, revealDelay = 0 }) {
           <div className="mda-logo-glow" />
           <div className="mda-logo-ring" />
           {aliado.logo ? (
-            <div className="mda-logo-plate">
+            <div className={`mda-logo-plate mode-${(aliado.logoMode || 'plate_light').replace('_','-')}`}>
               <img
                 className={`mda-logo-img${aliado.invertirLogo ? " invert" : ""}`}
                 src={aliado.logo}
@@ -1594,7 +1698,7 @@ function ModalAliado({ aliado, onSave, onClose, saving }) {
   const [form, setForm] = useState(
     aliado
       ? { ...aliado, logoFile: null }
-      : { id: null, nombre: "", frase: "", ciudad: "", tipo: "", logo: null, logoFile: null, invertirLogo: false, orden: 9999 }
+      : { id: null, nombre: "", frase: "", ciudad: "", tipo: "", logo: null, logoFile: null, invertirLogo: false, logoMode: 'plate_light', orden: 9999 }
   );
   const fileRef = useRef();
 
@@ -1630,18 +1734,25 @@ function ModalAliado({ aliado, onSave, onClose, saving }) {
                 <span style={{ fontSize: 22, color: "rgba(212,175,55,0.3)" }}>◈</span>
               )}
             </div>
-            <div>
+            <div style={{ flex: 1 }}>
               <button className="mda-btn mda-btn-gold" onClick={() => fileRef.current.click()}>
                 ↑ Subir imagen
               </button>
-              <div className="mda-toggle-row">
-                <div
-                  className={`mda-toggle${form.invertirLogo ? " on" : ""}`}
-                  onClick={() => set("invertirLogo", !form.invertirLogo)}
-                >
-                  <div className="mda-toggle-knob" />
-                </div>
-                <span className="mda-toggle-label">Invertir colores del logo</span>
+              <div className="mda-logo-mode-selector">
+                {[
+                  { mode: 'plate_light', swClass: 'sw-light', label: 'Fondo\nclaro',     icon: '☀' },
+                  { mode: 'plate_dark',  swClass: 'sw-dark',  label: 'Fondo\noscuro',    icon: '◆' },
+                  { mode: 'transparent', swClass: 'sw-transparent', label: 'Sin\nfondo', icon: '◈' },
+                ].map(({ mode, swClass, label, icon }) => (
+                  <button
+                    key={mode}
+                    className={`mda-logo-mode-btn${form.logoMode === mode ? ' active' : ''}`}
+                    onClick={() => set('logoMode', mode)}
+                  >
+                    <div className={`mda-logo-mode-swatch ${swClass}`}>{icon}</div>
+                    <span className="mda-logo-mode-label">{label}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>

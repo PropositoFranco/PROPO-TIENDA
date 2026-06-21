@@ -27,8 +27,9 @@ function mapRow(row) {
     tipo: row.tipo || "",
     logo: row.logo_url,
     invertirLogo: !!row.invertir_logo,
+    logoMode: row.logo_mode || 'plate_light',
     orden: row.orden,
-    isActive: row.is_active !== false, // por defecto true si la columna no viene
+    isActive: row.is_active !== false,
   };
 }
 
@@ -88,6 +89,7 @@ export async function crearAliado(form) {
       tipo: form.tipo?.trim() || null,
       logo_url,
       invertir_logo: !!form.invertirLogo,
+      logo_mode: form.logoMode || 'plate_light',
       orden: siguienteOrden,
     })
     .select()
@@ -104,6 +106,7 @@ export async function actualizarAliado(form) {
     ciudad: form.ciudad?.trim() || null,
     tipo: form.tipo?.trim() || null,
     invertir_logo: !!form.invertirLogo,
+    logo_mode: form.logoMode || 'plate_light',
     updated_at: new Date().toISOString(),
   };
 
