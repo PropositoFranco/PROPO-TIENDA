@@ -418,37 +418,46 @@ const GLOBAL_CSS = `
 
   /* Logo */
   .mda-logo-wrap {
-    width: 88px;
-    height: 88px;
+    width: 120px;
+    height: 120px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    margin-bottom: 18px;
+    margin-bottom: 20px;
   }
   .mda-logo-glow {
     position: absolute;
-    inset: -12px;
+    inset: -18px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(212,175,55,0.2) 0%, rgba(212,175,55,0.04) 55%, transparent 75%);
+    background: radial-gradient(circle, rgba(212,175,55,0.22) 0%, rgba(212,175,55,0.06) 50%, transparent 72%);
     animation: logoGlow 3.5s ease-in-out infinite;
   }
   @keyframes logoGlow {
-    0%,100% { opacity:.65; transform:scale(1); }
-    50% { opacity:1; transform:scale(1.08); }
+    0%,100% { opacity:.6; transform:scale(1); }
+    50% { opacity:1; transform:scale(1.1); }
   }
   .mda-logo-ring {
     position: absolute;
-    inset: -2px;
+    inset: -4px;
     border-radius: 50%;
-    border: 1px solid rgba(212,175,55,0.25);
+    border: 1px solid rgba(212,175,55,0.3);
+    box-shadow: 0 0 12px rgba(212,175,55,0.1);
+  }
+  .mda-logo-ring-outer {
+    position: absolute;
+    inset: -10px;
+    border-radius: 50%;
+    border: 1px solid rgba(212,175,55,0.1);
+    border-style: dashed;
+    animation: mdaOrbitSpin 20s linear infinite;
   }
   /* ── Modos de presentación del logo ── */
 
   /* BASE — compartida por los 3 modos */
   .mda-logo-plate {
-    width: 76px; height: 76px;
+    width: 104px; height: 104px;
     border-radius: 50%;
     position: relative;
     z-index: 2;
@@ -497,18 +506,18 @@ const GLOBAL_CSS = `
     height: 92%;
   }
   .mda-logo-img {
-    width: 78%; height: 78%;
-    object-fit: contain;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
+    width: 88%; height: 88%;
+    object-fit: cover;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));
     position: relative;
-    transition: transform 0.3s;
+    transition: transform 0.35s cubic-bezier(0.22,1,0.36,1);
   }
-  .mda-card:hover .mda-logo-img { transform: scale(1.06); }
+  .mda-card:hover .mda-logo-img { transform: scale(1.08); }
   .mda-logo-img.invert {
-    filter: invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.25));
+    filter: invert(1) drop-shadow(0 1px 3px rgba(0,0,0,0.3));
   }
   .mda-logo-placeholder {
-    width: 76px; height: 76px;
+    width: 104px; height: 104px;
     border-radius: 50%;
     background: rgba(212,175,55,0.06);
     border: 1.5px dashed rgba(212,175,55,0.25);
@@ -543,7 +552,7 @@ const GLOBAL_CSS = `
     font-family: var(--font-ui);
     font-size: 9px;
     letter-spacing: 2px;
-    color: rgba(204,68,255,0.55);
+    color: rgba(212,175,55,0.55);
     text-transform: uppercase;
     text-align: center;
     margin-bottom: 16px;
@@ -938,21 +947,33 @@ const GLOBAL_CSS = `
     gap: 16px;
   }
   .mda-logo-preview {
-    width: 64px; height: 64px;
+    width: 84px; height: 84px;
     border-radius: 50%;
-    background: radial-gradient(circle at 32% 28%, rgba(255,252,240,0.98) 0%, rgba(238,228,200,0.95) 38%, rgba(196,180,140,0.92) 100%);
     border: 1.5px solid rgba(212,175,55,0.3);
     display: flex; align-items: center; justify-content: center;
     color: rgba(212,175,55,0.3);
-    font-size: 20px;
+    font-size: 24px;
     overflow: hidden;
     flex-shrink: 0;
+    transition: background 0.25s, box-shadow 0.25s;
   }
   .mda-logo-preview.empty {
     background: rgba(212,175,55,0.05);
     border: 1.5px dashed rgba(212,175,55,0.2);
   }
-  .mda-logo-preview img { width:78%; height:78%; object-fit:contain; }
+  .mda-logo-preview.mode-plate-light {
+    background: radial-gradient(circle at 32% 28%, rgba(255,252,240,0.98) 0%, rgba(238,228,200,0.95) 38%, rgba(196,180,140,0.92) 100%);
+    box-shadow: inset 0 1px 3px rgba(255,255,255,0.8), inset 0 -2px 6px rgba(120,95,40,0.35);
+  }
+  .mda-logo-preview.mode-plate-dark {
+    background: radial-gradient(circle at 32% 28%, rgba(28,18,48,0.98) 0%, rgba(14,8,30,0.97) 45%, rgba(8,4,20,0.98) 100%);
+    box-shadow: 0 0 0 1px rgba(212,175,55,0.2);
+  }
+  .mda-logo-preview.mode-transparent {
+    background: repeating-conic-gradient(rgba(255,255,255,0.05) 0% 25%, transparent 0% 50%) 0 0 / 10px 10px;
+    border-color: rgba(255,255,255,0.1);
+  }
+  .mda-logo-preview img { width:88%; height:88%; object-fit:cover; }
 
   /* Selector de modo de logo */
   .mda-logo-mode-selector {
@@ -1646,6 +1667,7 @@ function AliadoCard({ aliado, adminMode, onEdit, onDelete, revealDelay = 0 }) {
         <div className="mda-logo-wrap">
           <div className="mda-logo-glow" />
           <div className="mda-logo-ring" />
+          <div className="mda-logo-ring-outer" />
           {aliado.logo ? (
             <div className={`mda-logo-plate mode-${(aliado.logoMode || 'plate_light').replace('_','-')}`}>
               <img
@@ -1727,7 +1749,7 @@ function ModalAliado({ aliado, onSave, onClose, saving }) {
         <div className="mda-field">
           <label className="mda-label">Logo del negocio</label>
           <div className="mda-logo-upload">
-            <div className={`mda-logo-preview${form.logo ? "" : " empty"}`}>
+            <div className={`mda-logo-preview${form.logo ? ` mode-${(form.logoMode||'plate_light').replace('_','-')}` : " empty"}`}>
               {form.logo ? (
                 <img src={form.logo} alt="" style={{ filter: form.invertirLogo ? "invert(1)" : "none" }} />
               ) : (
