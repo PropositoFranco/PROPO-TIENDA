@@ -41,6 +41,7 @@ const RankingBannersAdmin  = lazy(() => import('../features/admin/RankingBanners
 const VipLevelRewardsAdmin = lazy(() => import('../features/admin/VipLevelRewardsAdmin'));
 const SorteoAdminPage = lazy(() => import('../features/sorteo/SorteoAdminPage'));
 const SorteoPage = lazy(() => import('../features/sorteo/SorteoPage'));
+const MuroDeAliados = lazy(() => import('../features/aliados/MuroDeAliados'));
 
 function CatchAll() {
   const { loading } = useAuthStore();
@@ -104,6 +105,7 @@ export default function AppRouter() {
           <Route path="/terminos" element={<TerminosPage />} />
           <Route path="/arsenal-rpg" element={<ArsenalRPGPage />} />
           <Route path="/sorteo/:eventoId" element={<SorteoPage />} />
+          <Route path="/aliados" element={<MuroDeAliados />} />
 
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminDashboard />} />
@@ -115,6 +117,7 @@ export default function AppRouter() {
             <Route path="/admin/competencia-premios" element={<CompetenciaPremios />} />
             <Route path="/admin/ranking-banners" element={<RankingBannersAdmin />} />
             <Route path="/admin/vip-level-rewards" element={<VipLevelRewardsAdmin />} />
+            <Route path="/admin/aliados" element={<MuroDeAliados adminMode />} />
           </Route>
 
           <Route path="/" element={<ProtectedRoute />}>
