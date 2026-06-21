@@ -11,7 +11,7 @@
  * Corre wall_allies_setup.sql antes de montar este componente.
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import {
   getAliados,
   getAliadosAdmin,
@@ -171,67 +171,119 @@ const GLOBAL_CSS = `
   /* ── Contador ── */
   .mda-counter {
     text-align: center;
-    padding: 40px 20px 0;
+    padding: 56px 20px 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 0;
+    position: relative;
+  }
+  .mda-counter::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 200px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212,175,55,0.25), transparent);
   }
   .mda-counter-num {
     font-family: var(--font-display);
-    font-size: clamp(52px, 10vw, 96px);
+    font-size: clamp(72px, 14vw, 130px);
     font-weight: 900;
-    line-height: 1;
-    background: linear-gradient(135deg, var(--gold-dark), var(--gold-bright), var(--gold));
+    line-height: 0.9;
+    background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold-bright) 40%, #fffbe0 55%, var(--gold) 75%, var(--gold-dark) 100%);
+    background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    animation: shimmer 4s linear infinite;
     transition: all 0.6s ease;
+    filter: drop-shadow(0 0 30px rgba(212,175,55,0.2));
   }
   .mda-counter-label {
     font-family: var(--font-title);
     font-size: 10px;
-    letter-spacing: 5px;
-    color: rgba(212,175,55,0.45);
+    letter-spacing: 6px;
+    color: rgba(212,175,55,0.4);
     text-transform: uppercase;
+    margin-top: 10px;
+    margin-bottom: 6px;
+  }
+  .mda-counter-sub {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: rgba(255,255,255,0.28);
+    font-style: italic;
   }
 
   /* ── Manifesto ── */
   .mda-manifesto {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
-    padding: 52px 0 56px;
-    max-width: 960px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px;
+    padding: 56px 0 64px;
+    max-width: 1040px;
     margin: 0 auto;
   }
   .mda-manifesto-item {
     text-align: center;
-    padding: 28px 20px;
-    background: rgba(255,255,255,0.015);
-    border: 1px solid rgba(212,175,55,0.1);
-    border-radius: 4px;
-    transition: border-color 0.3s, background 0.3s;
+    padding: 38px 28px 32px;
+    background: linear-gradient(155deg, rgba(18,8,44,0.92) 0%, rgba(8,3,22,0.96) 60%, rgba(14,5,34,0.92) 100%);
+    border: 1px solid rgba(212,175,55,0.13);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+  }
+  .mda-manifesto-item::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 15%; right: 15%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212,175,55,0.5), transparent);
+    transition: left 0.35s, right 0.35s;
+  }
+  .mda-manifesto-item::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(212,175,55,0.04) 0%, transparent 70%);
+    pointer-events: none;
   }
   .mda-manifesto-item:hover {
-    border-color: rgba(212,175,55,0.22);
-    background: rgba(212,175,55,0.025);
+    transform: translateY(-8px);
+    border-color: rgba(212,175,55,0.32);
+    box-shadow: 0 24px 64px rgba(212,175,55,0.1), 0 0 0 1px rgba(212,175,55,0.06);
   }
-  .mda-manifesto-icon { font-size: 24px; margin-bottom: 12px; display: block; }
+  .mda-manifesto-item:hover::before {
+    left: 5%;
+    right: 5%;
+  }
+  .mda-manifesto-icon {
+    font-size: 32px;
+    margin-bottom: 18px;
+    display: block;
+    filter: drop-shadow(0 0 10px rgba(212,175,55,0.5));
+    position: relative;
+    z-index: 1;
+  }
   .mda-manifesto-title {
     font-family: var(--font-title);
     font-size: 11px;
-    letter-spacing: 3px;
+    letter-spacing: 3.5px;
     color: var(--gold);
     text-transform: uppercase;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 1;
   }
   .mda-manifesto-text {
     font-family: var(--font-body);
-    font-size: 13.5px;
-    color: var(--text-dim);
+    font-size: 14.5px;
+    color: rgba(255,255,255,0.52);
     font-style: italic;
-    line-height: 1.6;
+    line-height: 1.7;
+    position: relative;
+    z-index: 1;
   }
 
   /* ── Sección título ── */
@@ -259,20 +311,40 @@ const GLOBAL_CSS = `
   .mda-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 24px;
+    gap: 28px;
+  }
+
+  /* Reveal escalonado al hacer scroll */
+  .mda-card-reveal {
+    opacity: 0;
+    transform: translateY(32px) scale(0.97);
+    transition:
+      opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .mda-card-reveal.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 
   /* ── Tarjeta de aliado ── */
   .mda-card {
     position: relative;
-    background: linear-gradient(155deg, #0c0822 0%, #070318 55%, #0a0420 100%);
-    border-radius: 4px;
+    background: linear-gradient(155deg, #0d0924 0%, #070318 50%, #0b0420 100%);
+    border-radius: 6px;
     overflow: visible;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
     cursor: default;
   }
-  .mda-card:hover { transform: translateY(-5px); }
+  .mda-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 28px 70px rgba(0,0,0,0.5), 0 0 40px rgba(212,175,55,0.08);
+  }
   .mda-card:hover .mda-card-border { opacity: 1; }
+  .mda-card:hover .mda-card-glow {
+    opacity: 1;
+    background: linear-gradient(90deg, transparent, rgba(255,215,0,0.7), transparent);
+  }
 
   /* Borde dorado animado */
   .mda-card-border {
@@ -478,73 +550,107 @@ const GLOBAL_CSS = `
   /* ── CTA footer ── */
   .mda-cta {
     text-align: center;
-    padding: 72px 20px 20px;
+    padding: 88px 20px 40px;
     position: relative;
+    margin-top: 32px;
   }
-  .mda-cta::before {
-    content: '';
+  .mda-cta-bg {
     position: absolute;
-    top: 40px;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 55% at 50% 100%, rgba(30,8,90,0.6) 0%, transparent 65%),
+      radial-gradient(ellipse 60% 40% at 50% 50%, rgba(212,175,55,0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .mda-cta-connector {
+    position: absolute;
+    top: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 1px; height: 40px;
-    background: linear-gradient(180deg, transparent, rgba(212,175,55,0.3));
+    width: 1px; height: 56px;
+    background: linear-gradient(180deg, transparent, rgba(212,175,55,0.4));
+  }
+  .mda-cta-connector::after {
+    content: '◆';
+    position: absolute;
+    bottom: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 7px;
+    color: rgba(212,175,55,0.5);
   }
   .mda-cta-label {
     font-family: var(--font-title);
     font-size: 9px;
-    letter-spacing: 5px;
+    letter-spacing: 6px;
     color: rgba(212,175,55,0.4);
     text-transform: uppercase;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
     display: block;
+    position: relative;
   }
   .mda-cta-title {
     font-family: var(--font-display);
-    font-size: clamp(22px, 4vw, 36px);
+    font-size: clamp(26px, 5vw, 44px);
     font-weight: 900;
-    background: linear-gradient(135deg, var(--gold-dark), var(--gold), #fff4a0, var(--gold), var(--gold-dark));
+    background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 30%, #fff8c0 50%, var(--gold) 70%, var(--gold-dark) 100%);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    animation: shimmer 5s linear infinite;
-    margin-bottom: 12px;
+    animation: shimmer 4s linear infinite;
+    margin-bottom: 16px;
+    position: relative;
   }
   .mda-cta-sub {
     font-family: var(--font-body);
-    font-size: 15px;
-    color: var(--text-dim);
+    font-size: 16px;
+    color: rgba(255,255,255,0.48);
     font-style: italic;
-    line-height: 1.6;
-    max-width: 400px;
-    margin: 0 auto 28px;
+    line-height: 1.7;
+    max-width: 460px;
+    margin: 0 auto 36px;
+    position: relative;
   }
   .mda-btn-cta {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-dark));
+    gap: 12px;
+    background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-dark) 100%);
     background-size: 200% auto;
     border: none;
-    border-radius: 32px;
-    padding: 14px 40px;
+    border-radius: 40px;
+    padding: 16px 52px;
     font-family: var(--font-title);
     font-size: 11px;
-    letter-spacing: 3px;
+    letter-spacing: 4px;
     color: #04020e;
     font-weight: 900;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.35s;
     text-decoration: none;
     text-transform: uppercase;
+    position: relative;
     animation: btnPulse 3s ease-in-out infinite;
   }
-  @keyframes btnPulse {
-    0%,100% { box-shadow: 0 0 20px rgba(212,175,55,0.3), 0 4px 20px rgba(0,0,0,0.4); }
-    50% { box-shadow: 0 0 40px rgba(212,175,55,0.6), 0 4px 30px rgba(0,0,0,0.4); }
+  .mda-btn-cta::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 43px;
+    background: linear-gradient(135deg, rgba(212,175,55,0.5), rgba(204,68,255,0.3), rgba(212,175,55,0.5));
+    background-size: 200% auto;
+    animation: borderFlow 4s ease infinite;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.35s;
   }
-  .mda-btn-cta:hover { background-position: right center; transform: translateY(-2px); }
+  .mda-btn-cta:hover::before { opacity: 1; }
+  @keyframes btnPulse {
+    0%,100% { box-shadow: 0 0 24px rgba(212,175,55,0.35), 0 6px 24px rgba(0,0,0,0.5); }
+    50% { box-shadow: 0 0 52px rgba(212,175,55,0.65), 0 6px 36px rgba(0,0,0,0.5); }
+  }
+  .mda-btn-cta:hover { background-position: right center; transform: translateY(-3px) scale(1.02); }
 
   /* ─────────────────────────────────────────────
      PANEL ADMIN
@@ -1076,56 +1182,100 @@ const GLOBAL_CSS = `
      BLOQUE 4 — BANDEJA DE IMPACTO EN VIVO
   ═══════════════════════════════════════════════════════════════ */
   .mda-impacto {
-    padding: clamp(36px, 5vw, 52px) 0 clamp(8px, 2vw, 16px);
+    padding: clamp(48px, 7vw, 80px) 0 clamp(8px, 2vw, 16px);
+    position: relative;
+  }
+  .mda-impacto::before {
+    content: 'IMPACTO EN VIVO';
+    position: absolute;
+    top: clamp(12px, 2vw, 20px);
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-title);
+    font-size: 8px;
+    letter-spacing: 6px;
+    color: rgba(212,175,55,0.28);
+    text-transform: uppercase;
+    white-space: nowrap;
   }
   .mda-impacto-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: clamp(14px, 2.4vw, 22px);
-    max-width: 920px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: clamp(16px, 2.8vw, 28px);
+    max-width: 980px;
     margin: 0 auto;
   }
   .mda-impacto-card {
     position: relative;
     text-align: center;
-    padding: clamp(22px, 3vw, 30px) clamp(14px, 2vw, 20px);
-    background: linear-gradient(160deg, rgba(212,175,55,0.05), rgba(204,68,255,0.025));
-    border: 1px solid rgba(212,175,55,0.16);
-    border-radius: 6px;
+    padding: clamp(28px, 4vw, 44px) clamp(16px, 2.5vw, 28px) clamp(22px, 3vw, 32px);
+    background: linear-gradient(160deg, rgba(20,10,50,0.9) 0%, rgba(8,3,24,0.95) 60%, rgba(16,6,40,0.9) 100%);
+    border: 1px solid rgba(212,175,55,0.2);
+    border-radius: 8px;
     overflow: hidden;
+    transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+  }
+  .mda-impacto-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(212,175,55,0.45);
+    box-shadow: 0 20px 60px rgba(212,175,55,0.12), 0 0 0 1px rgba(212,175,55,0.08);
   }
   .mda-impacto-card::before {
     content: '';
     position: absolute;
-    top: 0; left: 10%; right: 10%; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,215,0,0.45), transparent);
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255,215,0,0.7), rgba(204,68,255,0.4), rgba(255,215,0,0.7), transparent);
+    background-size: 200% auto;
+    animation: impactoBorderShimmer 3s linear infinite;
   }
-  .mda-impacto-icon { font-size: clamp(20px, 3vw, 26px); display: block; margin-bottom: 10px; }
+  .mda-impacto-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212,175,55,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  @keyframes impactoBorderShimmer {
+    0% { background-position: 0% center; }
+    100% { background-position: 200% center; }
+  }
+  .mda-impacto-icon {
+    font-size: clamp(26px, 4vw, 36px);
+    display: block;
+    margin-bottom: 14px;
+    filter: drop-shadow(0 0 8px rgba(212,175,55,0.4));
+  }
   .mda-impacto-num {
     font-family: var(--font-display);
-    font-size: clamp(30px, 5.5vw, 44px);
+    font-size: clamp(42px, 7.5vw, 68px);
     font-weight: 900;
     line-height: 1;
-    background: linear-gradient(135deg, var(--gold-dark), var(--gold-bright), var(--gold));
+    background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold-bright) 45%, #fffbe0 60%, var(--gold) 80%, var(--gold-dark) 100%);
+    background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    margin-bottom: 6px;
+    animation: shimmer 4s linear infinite;
+    margin-bottom: 10px;
+    text-shadow: none;
   }
   .mda-impacto-label {
     font-family: var(--font-title);
-    font-size: 9.5px;
-    letter-spacing: 2.5px;
-    color: rgba(255,255,255,0.55);
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.7);
     text-transform: uppercase;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
   }
   .mda-impacto-formula {
     font-family: var(--font-body);
-    font-size: 11.5px;
-    color: rgba(255,255,255,0.32);
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.38);
     font-style: italic;
-    line-height: 1.45;
+    line-height: 1.5;
+    border-top: 1px solid rgba(212,175,55,0.08);
+    padding-top: 10px;
+    margin-top: 4px;
   }
   .mda-impacto-edit {
     width: clamp(110px, 24vw, 140px);
@@ -1170,6 +1320,137 @@ const GLOBAL_CSS = `
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+
+  /* ── Estado vacío ── */
+  .mda-empty-state {
+    text-align: center;
+    padding: 80px 20px 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  .mda-empty-rings {
+    position: relative;
+    width: 140px; height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+  .mda-empty-ring {
+    position: absolute;
+    top: 50%; left: 50%;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    border: 1px solid rgba(212,175,55,0.12);
+  }
+  .mda-empty-ring.r1 {
+    width: 70px; height: 70px;
+    animation: mdaOrbitSpin 20s linear infinite;
+    border-style: dashed;
+    border-color: rgba(212,175,55,0.18);
+  }
+  .mda-empty-ring.r2 {
+    width: 105px; height: 105px;
+    animation: mdaOrbitSpin 34s linear infinite reverse;
+  }
+  .mda-empty-ring.r3 {
+    width: 140px; height: 140px;
+    animation: mdaOrbitSpin 52s linear infinite;
+    border-color: rgba(204,68,255,0.08);
+  }
+  .mda-empty-sigil {
+    position: relative;
+    z-index: 2;
+    width: 44px; height: 44px;
+    color: rgba(212,175,55,0.3);
+    animation: sigiloPulse 3s ease-in-out infinite;
+  }
+  .mda-empty-sigil svg { width: 100%; height: 100%; }
+  .mda-empty-title {
+    font-family: var(--font-display);
+    font-size: clamp(18px, 3vw, 24px);
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-dark));
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 5s linear infinite;
+  }
+  .mda-empty-sub {
+    font-family: var(--font-body);
+    font-size: clamp(14px, 2vw, 16px);
+    font-style: italic;
+    color: rgba(255,255,255,0.32);
+    line-height: 1.75;
+    max-width: 420px;
+  }
+  .mda-empty-orn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 4px;
+  }
+
+  /* ── Header del muro de aliados ── */
+  .mda-muro-header {
+    text-align: center;
+    padding: 64px 20px 44px;
+    position: relative;
+  }
+  .mda-muro-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 1px; height: 48px;
+    background: linear-gradient(180deg, transparent, rgba(212,175,55,0.35));
+  }
+  .mda-muro-header-orn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .mda-muro-header-line {
+    width: 80px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212,175,55,0.4));
+  }
+  .mda-muro-header-line.r {
+    background: linear-gradient(90deg, rgba(212,175,55,0.4), transparent);
+  }
+  .mda-muro-header-diamond {
+    width: 4px; height: 4px;
+    background: rgba(212,175,55,0.5);
+    transform: rotate(45deg);
+  }
+  .mda-muro-header-diamond.lg {
+    width: 7px; height: 7px;
+    background: var(--gold);
+    opacity: 0.85;
+    box-shadow: 0 0 8px rgba(212,175,55,0.5);
+  }
+  .mda-muro-header-label {
+    font-family: var(--font-title);
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: rgba(212,175,55,0.6);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .mda-muro-header-sub {
+    font-family: var(--font-body);
+    font-size: clamp(15px, 2.2vw, 18px);
+    font-style: italic;
+    color: rgba(255,255,255,0.35);
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.7;
   }
 `;
 
@@ -1223,9 +1504,29 @@ const SigiloTemplo = () => (
 );
 
 // ─── COMPONENTE TARJETA ───────────────────────────────────────────────────────
-function AliadoCard({ aliado, adminMode, onEdit, onDelete }) {
+function AliadoCard({ aliado, adminMode, onEdit, onDelete, revealDelay = 0 }) {
+  const cardRef = useRef();
+  const wrapRef = useRef();
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => el.classList.add("visible"), revealDelay);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.12 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [revealDelay]);
+
   return (
-    <div className="mda-card">
+    <div ref={wrapRef} className="mda-card-reveal">
+    <div ref={cardRef} className="mda-card">
       <div className="mda-card-border" />
       <div className="mda-corner mda-c-tl"><CornerSVG /></div>
       <div className="mda-corner mda-c-tr"><CornerSVG /></div>
@@ -1283,6 +1584,7 @@ function AliadoCard({ aliado, adminMode, onEdit, onDelete }) {
           </button>
         </div>
       )}
+    </div>
     </div>
   );
 }
@@ -1672,8 +1974,8 @@ export default function MuroDeAliados({ adminMode = false }) {
           <div className="mda-hero-eyebrow">Templo del Propósito · Alianza</div>
           <h1 className="mda-hero-title">El Muro de los Aliados</h1>
           <p className="mda-hero-sub">
-            Estos negocios abrieron su puerta al Templo.<br />
-            <strong>No porque les convenga — porque les importa.</strong>
+            Negocios que decidieron que su espacio sirve para algo más que vender.<br />
+            <strong>Aquí están los que abrieron su puerta — y cambiaron vidas haciéndolo.</strong>
           </p>
           <Ornament />
         </div>
@@ -1719,6 +2021,7 @@ export default function MuroDeAliados({ adminMode = false }) {
           <div className="mda-counter-label">
             {aliados.length === 1 ? "Negocio ya abrió su puerta" : "Negocios ya abrieron su puerta"}
           </div>
+          <div className="mda-counter-sub">Cada uno con su QR, su logo y su frase — aquí, para siempre.</div>
         </div>
 
         {/* BLOQUE 4: BANDEJA DE IMPACTO EN VIVO — dato real desde Supabase, ya no editable a mano */}
@@ -1818,10 +2121,18 @@ export default function MuroDeAliados({ adminMode = false }) {
         )}
 
         {/* GRID DEL MURO */}
-        <div className="mda-section-header">
-          <div className="mda-section-line" />
-          <div className="mda-section-title">⚜ Los Aliados del Templo</div>
-          <div className="mda-section-line r" />
+        <div className="mda-muro-header">
+          <div className="mda-muro-header-orn">
+            <div className="mda-muro-header-line" />
+            <div className="mda-muro-header-diamond" />
+            <div className="mda-muro-header-diamond lg" />
+            <div className="mda-muro-header-diamond" />
+            <div className="mda-muro-header-line r" />
+          </div>
+          <div className="mda-muro-header-label">⚜ Los Aliados del Templo</div>
+          <div className="mda-muro-header-sub">
+            Cada logo en este muro representa un negocio que decidió ser parte de algo más grande.
+          </div>
         </div>
 
         {cargando ? (
@@ -1833,18 +2144,38 @@ export default function MuroDeAliados({ adminMode = false }) {
             {errorCarga}
           </div>
         ) : aliados.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-body)", fontStyle: "italic", fontSize: 16 }}>
-            El primer aliado está por llegar. El movimiento empieza con uno.
+          <div className="mda-empty-state">
+            <div className="mda-empty-rings">
+              <div className="mda-empty-ring r1" />
+              <div className="mda-empty-ring r2" />
+              <div className="mda-empty-ring r3" />
+              <div className="mda-empty-sigil">
+                <SigiloTemplo />
+              </div>
+            </div>
+            <div className="mda-empty-title">El primer aliado está por llegar.</div>
+            <div className="mda-empty-sub">
+              El muro empieza con un negocio que decide que su puerta<br />
+              vale para algo más que vender. ¿Cuál será el primero?
+            </div>
+            <div className="mda-empty-orn">
+              <div className="mda-orn-line" style={{ width: 40 }} />
+              <div className="mda-orn-diamond sm" />
+              <div className="mda-orn-diamond" />
+              <div className="mda-orn-diamond sm" />
+              <div className="mda-orn-line r" style={{ width: 40 }} />
+            </div>
           </div>
         ) : (
           <div className="mda-grid">
-            {aliados.map((a) => (
+            {aliados.map((a, i) => (
               <AliadoCard
                 key={a.id}
                 aliado={a}
                 adminMode={adminVisible}
                 onEdit={(al) => { setEditando(al); setModalOpen(true); }}
                 onDelete={(id) => setConfirmarBorrar(id)}
+                revealDelay={i * 80}
               />
             ))}
           </div>
@@ -1852,6 +2183,8 @@ export default function MuroDeAliados({ adminMode = false }) {
 
         {/* CTA */}
         <div className="mda-cta">
+          <div className="mda-cta-bg" />
+          <div className="mda-cta-connector" />
           <span className="mda-cta-label">¿Tu negocio quiere estar aquí?</span>
           <div className="mda-cta-title">Únete al movimiento</div>
           <p className="mda-cta-sub">
