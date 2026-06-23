@@ -1435,7 +1435,7 @@ window.addEventListener('message', (event) => {
     const elNombre = document.querySelector('.user-name');
     if (elNombre) elNombre.textContent = data?.templario_name || data?.nombre || data?.name || '';
     _userNombre = data?.templario_name || data?.nombre || data?.name || '';
-    _userEmail = data?.email || '';
+    _userEmail = data?.email || data?.user_email || '';
   }
 
   if (type === 'player') {
