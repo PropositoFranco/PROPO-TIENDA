@@ -1575,7 +1575,10 @@ function handleContinueBar() {
   if (_protocoloVigente()) {
     window.parent.postMessage({ type: 'navigate', data: 'academia' }, '*');
   } else {
-    var url = 'https://templopropo-mg6l5byy.manus.space/?nombre=' + encodeURIComponent(_userNombre ) + '&email=' + encodeURIComponent(_userEmail);
+    var nombre = _userNombre || document.getElementById('user-name')?.textContent?.trim() || '';
+var email = _userEmail || '';
+var url = 'https://templopropo-mg6l5byy.manus.space/?nombre=' + encodeURIComponent(nombre ) + '&email=' + encodeURIComponent(email);
+
 window.open(url, '_blank');
 
   }

@@ -98,7 +98,7 @@ useEffect(() => {
   };
 
   useEffect(() => {
-    if (profile) sendToFrame('profile', { ...profile, user_email: user?.email || '' });
+    if (profile) sendToFrame('profile', { ...profile, user_email: user?.email || user?.user_email || '' });
   }, [profile]);
 
   useEffect(() => {
