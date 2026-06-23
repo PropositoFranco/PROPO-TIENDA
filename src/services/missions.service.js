@@ -177,24 +177,12 @@ claimReward: async (userMissionId) => {
    * Devuelve { coins, xp } ganados.
    */
   claimBonus: async (userId, bonusConfig, lastClaimedAt) => {
-    const cooldownMs = { daily: 86400000, weekly: 604800000, monthly: 2592000000, one_time: Infinity }[bonusConfig.type] ?? 86400000;
-    if (lastClaimedAt) {
-      if (cooldownMs === Infinity) throw new Error('Este bonus ya fue reclamado');
-      const msSince = Date.now() - new Date(lastClaimedAt).getTime();
-      if (msSince < cooldownMs) {
-        const h = Math.ceil((cooldownMs - msSince) / 3600000);
-        throw new Error(`Disponible en ${h >= 24 ? Math.ceil(h/24)+' día(s)' : h+' hora(s)'}`);
-      }
-    }
-    const { data: profile } = await supabase.from('profiles').select('cristales,xp').eq('id', userId).single();
-    const coins = bonusConfig.coins ?? 0;
-    const xp = bonusConfig.xp ?? 0;
-    const upd = {};
-    if (coins > 0) upd.cristales = (profile.cristales || 0) + coins;
-    if (xp > 0) upd.xp = (profile.xp || 0) + xp;
-    if (Object.keys(upd).length) await supabase.from('profiles').update(upd).eq('id', userId);
-    await supabase.from('bonus_claims').insert({ user_id: userId, bonus_config_id: bonusConfig.id });
-    return { coins, xp };
+    const { data, error } = await supabase.rpc('claim_bonus_safe', {
+      p_user_id:  userId,
+      p_bonus_id: bonusConfig.id,
+    });
+    if (error) throw new Error(error.message);
+    return { coins: data.coins, xp: data.xp };
   },
 
   // ─────────────────────────────────────────────

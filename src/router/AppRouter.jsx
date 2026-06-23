@@ -40,7 +40,8 @@ const CompetenciaPremios   = lazy(() => import('../features/admin/CompetenciaPre
 const RankingBannersAdmin  = lazy(() => import('../features/admin/RankingBannersAdmin'));
 const VipLevelRewardsAdmin = lazy(() => import('../features/admin/VipLevelRewardsAdmin'));
 const SorteoAdminPage = lazy(() => import('../features/sorteo/SorteoAdminPage'));
-const SorteoPage = lazy(() => import('../features/sorteo/SorteoPage'));
+const SorteoPage        = lazy(() => import('../features/sorteo/SorteoPage'));
+const AliadoDisplayPage = lazy(() => import('../features/sorteo/aliado-display-page'));
 const MuroDeAliados = lazy(() => import('../features/aliados/MuroDeAliados'));
 
 function CatchAll() {
@@ -105,6 +106,7 @@ export default function AppRouter() {
           <Route path="/terminos" element={<TerminosPage />} />
           <Route path="/arsenal-rpg" element={<ArsenalRPGPage />} />
           <Route path="/sorteo/:eventoId" element={<SorteoPage />} />
+          <Route path="/aliado/:slug/display" element={<AliadoDisplayPage />} />
           <Route path="/aliados" element={<MuroDeAliados />} />
 
           <Route element={<AdminRoute />}>

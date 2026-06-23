@@ -1355,11 +1355,11 @@ const filtered = [...baseMissions].sort((a, b) => {
                       {/* Los 3 botones */}
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 'clamp(6px,2vw,12px)', minWidth: 0, padding: '4px 0' }}>
                         {VIP_BONUSES.map(b => {
-                          const lastKey = `vip_bonus_${b.id}`;
-                          const lastClaim = bonusClaims[lastKey];
-                          const elapsed = lastClaim ? Date.now() - new Date(lastClaim).getTime() : Infinity;
-                          const ready = elapsed >= b.cooldown;
-                          const remaining = ready ? 0 : b.cooldown - elapsed;
+                          // Usar la misma clave y lógica que los bonos gratis para persistencia real
+                          const ms = countdowns[b.id];
+                          const claimed = bonusClaims[b.id];
+                          const ready = !claimed || ms === 0;
+                          const remaining = (ms > 0) ? ms : 0;
 
                           if (!isVip) return (
                             <div key={b.id} className="vip-locked-btn" style={{cursor:'pointer'}} onClick={() => window.dispatchEvent(new CustomEvent('open-propopass-modal'))}>
@@ -1401,26 +1401,14 @@ const filtered = [...baseMissions].sort((a, b) => {
                             </div>
                           );
 
+                          // Recuperar el config original de bonusConfigs para usar handleClaimBonus
+                          const originalConfig = bonusConfigs.find(c => c.id === b.id);
                           return (
                             <button
                               key={b.id}
-                              ref={el => btnRefs.current[lastKey] = el}
+                              ref={el => btnRefs.current[b.id] = el}
                               disabled={!!claimingId || !ready}
-                              onClick={async () => {
-                                if (!ready || claimingId || !user?.id) return;
-                                setClaimingId(lastKey);
-                                try {
-                                  if (b.xp    > 0) await addXP(b.xp);
-                                  if (b.coins > 0) { await addCristales(b.coins); burstCoins(btnRefs.current[lastKey], b.coins); }
-                                  setBonusClaims(prev => ({ ...prev, [lastKey]: new Date().toISOString() }));
-                                  setBonusMsg(prev => ({ ...prev, [lastKey]: `+${b.xp} XP${b.coins > 0 ? `  +${b.coins} 🪙` : ''}` }));
-                                  playDoneSound('EPICA');
-                                  setTimeout(() => setBonusMsg(prev => { const n={...prev}; delete n[lastKey]; return n; }), 3000);
-                                } catch(e) {
-                                  setBonusMsg(prev => ({ ...prev, [lastKey]: e.message }));
-                                  setTimeout(() => setBonusMsg(prev => { const n={...prev}; delete n[lastKey]; return n; }), 3000);
-                                } finally { setClaimingId(null); }
-                              }}
+                              onClick={() => ready && !claimingId && originalConfig && handleClaimBonus(originalConfig)}
                               style={{
                                 position:'relative', border:'none', outline:'none', cursor: ready ? 'pointer' : 'not-allowed',
                                 borderRadius:14, padding:'14px 8px 12px',
@@ -1481,7 +1469,7 @@ const filtered = [...baseMissions].sort((a, b) => {
                                   }}>{fmt(remaining)}</span>
                                 </div>
                               )}
-                              {bonusMsg[lastKey] && <span style={{position:'absolute',top:4,right:6,fontSize:8,color:'#4ade80',fontFamily:'Georgia,serif'}}>{bonusMsg[lastKey]}</span>}
+                              {bonusMsg[b.id] && <span style={{position:'absolute',top:4,right:6,fontSize:8,color:'#4ade80',fontFamily:'Georgia,serif'}}>{bonusMsg[b.id]}</span>}
                             </button>
                           );
                         })}
