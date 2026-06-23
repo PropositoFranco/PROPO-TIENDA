@@ -73,13 +73,13 @@ useEffect(() => {
       h: frameRef.current?.offsetHeight || window.innerHeight,
     });
     // Mandar protocolo cacheado inmediato
-    const { userProtocolo: proto } = useMembershipStore.getState();
-    sendToFrame('protocolo', proto ?? null);
+    const { userProtocolo: proto, protocoLoFecha: protoFecha } = useMembershipStore.getState();
+    sendToFrame('protocolo', proto ? { protocolo: proto, fecha: protoFecha ?? null } : null);
     // Refrescar desde Supabase y remandar
     if (user?.id) {
       useMembershipStore.getState().loadMembership(supabase, user.id).then(() => {
-        const { userProtocolo: p2 } = useMembershipStore.getState();
-        sendToFrame('protocolo', p2 ?? null);
+        const { userProtocolo: p2, protocoLoFecha: p2Fecha } = useMembershipStore.getState();
+        sendToFrame('protocolo', p2 ? { protocolo: p2, fecha: p2Fecha ?? null } : null);
       });
     }
 
@@ -119,7 +119,8 @@ useEffect(() => {
   
 
   useEffect(() => {
-    sendToFrame('protocolo', userProtocolo ?? null);
+    const protocoLoFecha = useMembershipStore.getState().protocoLoFecha;
+    sendToFrame('protocolo', userProtocolo ? { protocolo: userProtocolo, fecha: protocoLoFecha ?? null } : null);
   }, [userProtocolo]);
 
   // ── BADGES — lógica real desde Supabase ──────────────────────
