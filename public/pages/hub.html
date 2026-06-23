@@ -1455,13 +1455,14 @@ window.addEventListener('message', (event) => {
 
   if (type === 'protocolo') {
     _userProtocolo = data || null;
+
     var bar = document.getElementById('continue-bar');
     if (bar) {
       var title = bar.querySelector('.continue-title');
       var sub   = bar.querySelector('.continue-sub');
       var badge = document.getElementById('continue-badge');
 
-      if (_userProtocolo) {
+      if (_protocoloVigente()) {
         // ── ESTADO: TIENE PROTOCOLO — púrpura épico ──
         bar.style.background = 'linear-gradient(90deg, rgba(4,2,14,0.97) 0%, rgba(60,20,100,0.99) 30%, rgba(80,20,120,1) 50%, rgba(60,20,100,0.99) 70%, rgba(4,2,14,0.97) 100%)';
         bar.style.borderTop = '1.5px solid rgba(192,132,252,0.6)';
@@ -1557,8 +1558,17 @@ function goTo(dest) {
 
 var _userProtocolo = null;
 
+function _protocoloVigente() {
+  if (!_userProtocolo) return false;
+  var fechaAsignado = _userProtocolo.fecha || _userProtocolo.created_at || _userProtocolo.start_date || null;
+  if (!fechaAsignado) return true; // sin fecha → no bloqueamos
+  var fechaVence = new Date(fechaAsignado);
+  fechaVence.setDate(fechaVence.getDate() + 7);
+  return new Date() < fechaVence;
+}
+
 function handleContinueBar() {
-  if (_userProtocolo) {
+  if (_protocoloVigente()) {
     window.parent.postMessage({ type: 'navigate', data: 'academia' }, '*');
   } else {
     window.top.open('https://templopropo-mg6l5byy.manus.space/', '_blank');
