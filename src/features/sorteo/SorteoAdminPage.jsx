@@ -65,6 +65,14 @@ export default function SorteoAdminPage() {
   const [errForm,       setErrForm]       = useState('');
   const [copiado,       setCopiado]       = useState('');
   const [masterStats,   setMasterStats]   = useState(null);
+  const [tabActiva,     setTabActiva]     = useState('sorteos'); // 'sorteos' | 'aliados'
+  const [aliados,       setAliados]       = useState([]);
+  const [loadingAliados, setLoadingAliados] = useState(false);
+  const [formAliado,    setFormAliado]    = useState({ nombre: '', slug: '', sorteo_activo_id: '' });
+  const [errAliado,     setErrAliado]     = useState('');
+  const [creandoAliado, setCreandoAliado] = useState(false);
+  const [copiadoAliado, setCopiadoAliado] = useState('');
+  const [eventosActivos, setEventosActivos] = useState([]);
 
   // ── CSS ──────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -156,6 +164,80 @@ export default function SorteoAdminPage() {
   
   
 
+  // ── Aliados ───────────────────────────────────────────────────────────────────
+  const SUPABASE_URL = 'https://hdwzhwuhlrtrmhnecypm.supabase.co';
+
+  const cargarAliados = useCallback(async () => {
+    setLoadingAliados(true);
+    const { data } = await supabase
+      .from('aliados')
+      .select('*, sorteo_eventos(nombre)')
+      .order('scan_count', { ascending: false });
+    setAliados(data || []);
+    setLoadingAliados(false);
+  }, []);
+
+  const cargarEventosActivos = useCallback(async () => {
+    const { data } = await supabase
+      .from('sorteo_eventos')
+      .select('id, nombre')
+      .eq('activo', true)
+      .order('created_at', { ascending: false });
+    setEventosActivos(data || []);
+  }, []);
+
+  useEffect(() => {
+    if (tabActiva === 'aliados') {
+      cargarAliados();
+      cargarEventosActivos();
+    }
+  }, [tabActiva, cargarAliados, cargarEventosActivos]);
+
+  const slugify = (texto) =>
+    texto.toLowerCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '')
+      .slice(0, 30);
+
+  const crearAliado = async () => {
+    const slug = slugify(formAliado.slug || formAliado.nombre);
+    if (!formAliado.nombre.trim()) { setErrAliado('El nombre es obligatorio.'); return; }
+    if (!slug) { setErrAliado('El slug no puede estar vacío.'); return; }
+    if (!formAliado.sorteo_activo_id) { setErrAliado('Selecciona un evento activo.'); return; }
+    setErrAliado('');
+    setCreandoAliado(true);
+    const { error } = await supabase.from('aliados').insert({
+      nombre: formAliado.nombre.trim(),
+      slug,
+      sorteo_activo_id: formAliado.sorteo_activo_id,
+      activo: true,
+    });
+    setCreandoAliado(false);
+    if (error) {
+      setErrAliado(error.code === '23505' ? 'Ese slug ya existe. Elige otro nombre.' : 'Error al crear. Intenta de nuevo.');
+      return;
+    }
+    setFormAliado({ nombre: '', slug: '', sorteo_activo_id: '' });
+    cargarAliados();
+  };
+
+  const toggleAliado = async (id, activo) => {
+    await supabase.from('aliados').update({ activo: !activo }).eq('id', id);
+    setAliados(prev => prev.map(a => a.id === id ? { ...a, activo: !activo } : a));
+  };
+
+  const cambiarSorteoAliado = async (id, sorteoEventoId) => {
+    await supabase.from('aliados').update({ sorteo_activo_id: sorteoEventoId }).eq('id', id);
+    setAliados(prev => prev.map(a => a.id === id ? { ...a, sorteo_activo_id: sorteoEventoId } : a));
+  };
+
+  const copiarQRAliado = (slug) => {
+    const url = `${SUPABASE_URL}/functions/v1/r/${slug}`;
+    copiarAlPortapapeles(url);
+    setCopiadoAliado(slug);
+    setTimeout(() => setCopiadoAliado(''), 2000);
+  };
+
   const cargarMasterStats = useCallback(async () => {
     const [
       { count: totalEventos },
@@ -211,7 +293,33 @@ export default function SorteoAdminPage() {
         <p style={{ color: C.muted, fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>
           Crea eventos de rifa continua — cada QR abre rondas automáticas sin parar.
         </p>
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+          {[
+            { id: 'sorteos', label: '🎲 SORTEOS' },
+            { id: 'aliados', label: '🤝 ALIADOS' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setTabActiva(tab.id)}
+              style={{
+                padding: '9px 20px',
+                background: tabActiva === tab.id ? `linear-gradient(135deg,${C.gold},#9a7a00)` : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${tabActiva === tab.id ? C.gold : C.border}`,
+                borderRadius: 8, cursor: 'pointer',
+                color: tabActiva === tab.id ? '#0a0614' : C.muted,
+                fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, fontWeight: 900,
+                transition: 'all .2s',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* ══ TAB: SORTEOS ══ */}
+      {tabActiva === 'sorteos' && (<>
 
       {/* Master Stats */}
       {masterStats && (
@@ -476,6 +584,138 @@ export default function SorteoAdminPage() {
           })}
         </div>
       )}
+    </>)}
+
+      {/* ══ TAB: ALIADOS ══ */}
+      {tabActiva === 'aliados' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+          {/* Formulario nuevo aliado */}
+          <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: 'clamp(20px,4vw,28px)', animation: 'fadeIn .4s ease both' }}>
+            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.gold, margin: '0 0 20px' }}>
+              + NUEVO ALIADO
+            </h2>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div style={{ flex: 2, minWidth: 180 }}>
+                <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>NOMBRE DEL NEGOCIO</label>
+                <input
+                  type="text"
+                  value={formAliado.nombre}
+                  onChange={e => setFormAliado(f => ({ ...f, nombre: e.target.value, slug: slugify(e.target.value) }))}
+                  placeholder="Ej: FuerZa Box Gym"
+                  style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 12 }}
+                />
+              </div>
+              <div style={{ minWidth: 140 }}>
+                <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>SLUG (URL del QR)</label>
+                <input
+                  type="text"
+                  value={formAliado.slug}
+                  onChange={e => setFormAliado(f => ({ ...f, slug: slugify(e.target.value) }))}
+                  placeholder="fuerzabox"
+                  style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'monospace', fontSize: 12 }}
+                />
+              </div>
+              <div style={{ minWidth: 180 }}>
+                <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>EVENTO ACTIVO</label>
+                <select
+                  value={formAliado.sorteo_activo_id}
+                  onChange={e => setFormAliado(f => ({ ...f, sorteo_activo_id: e.target.value }))}
+                  style={{ width: '100%', padding: '11px 14px', background: '#0e0818', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 11 }}
+                >
+                  <option value="">— Selecciona evento —</option>
+                  {eventosActivos.map(ev => (
+                    <option key={ev.id} value={ev.id}>{ev.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={crearAliado}
+                disabled={creandoAliado}
+                style={{ padding: '11px 24px', background: `linear-gradient(135deg,${C.gold},#9a7a00)`, border: 'none', borderRadius: 8, color: '#0a0614', fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 2, fontWeight: 900, cursor: creandoAliado ? 'not-allowed' : 'pointer', opacity: creandoAliado ? 0.6 : 1, whiteSpace: 'nowrap' }}
+              >
+                {creandoAliado ? 'CREANDO...' : '⚔️ CREAR'}
+              </button>
+            </div>
+            {errAliado && <p style={{ color: C.red, fontFamily: 'Cinzel, serif', fontSize: 10, marginTop: 10, letterSpacing: 1 }}>⚠ {errAliado}</p>}
+            {formAliado.slug && (
+              <p style={{ fontFamily: 'monospace', fontSize: 10, color: C.goldDim, marginTop: 10 }}>
+                🔗 QR apuntará a: <span style={{ color: C.gold }}>{SUPABASE_URL}/functions/v1/r/{formAliado.slug}</span>
+              </p>
+            )}
+          </div>
+
+          {/* Lista de aliados */}
+          {loadingAliados ? (
+            <p style={{ color: C.goldDim, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, textAlign: 'center', animation: 'pulse 1.5s ease-in-out infinite' }}>
+              CARGANDO ALIADOS...
+            </p>
+          ) : aliados.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 60, color: C.muted }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>🤝</div>
+              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 2 }}>SIN ALIADOS AÚN</p>
+              <p style={{ fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>Crea el primero arriba para generar su QR permanente.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {aliados.map(aliado => {
+                const qrUrl = `${SUPABASE_URL}/functions/v1/r/${aliado.slug}`;
+                const eventoNombre = aliado.sorteo_eventos?.nombre || 'Sin evento';
+                return (
+                  <div key={aliado.id} style={{ background: C.card, border: `1px solid ${aliado.activo ? C.borderHi : C.border}`, borderRadius: 14, padding: '18px 22px', animation: 'fadeIn .3s ease both', display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+
+                    {/* QR miniatura */}
+                    <div style={{ flexShrink: 0 }}>
+                      <QRCode url={qrUrl} size={80} />
+                    </div>
+
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 180 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                        <span style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 14, color: C.gold }}>{aliado.nombre}</span>
+                        <Badge activo={aliado.activo} />
+                      </div>
+                      <p style={{ fontFamily: 'monospace', fontSize: 10, color: C.goldDim, margin: '0 0 4px' }}>/{aliado.slug}</p>
+                      <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, margin: 0 }}>📊 {aliado.scan_count || 0} scans · 🎲 {eventoNombre}</p>
+                    </div>
+
+                    {/* Cambiar evento */}
+                    <div style={{ minWidth: 160 }}>
+                      <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 7, letterSpacing: 2, color: C.muted, marginBottom: 4 }}>CAMBIAR EVENTO</label>
+                      <select
+                        value={aliado.sorteo_activo_id || ''}
+                        onChange={e => cambiarSorteoAliado(aliado.id, e.target.value)}
+                        style={{ width: '100%', padding: '7px 10px', background: '#07040f', border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 10 }}
+                      >
+                        {eventosActivos.map(ev => (
+                          <option key={ev.id} value={ev.id}>{ev.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Botones */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <button
+                        onClick={() => copiarQRAliado(aliado.slug)}
+                        style={{ padding: '7px 14px', background: copiadoAliado === aliado.slug ? 'rgba(68,255,136,0.12)' : 'rgba(212,175,55,0.08)', border: `1px solid ${copiadoAliado === aliado.slug ? 'rgba(68,255,136,0.4)' : C.border}`, borderRadius: 7, color: copiadoAliado === aliado.slug ? C.green : C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer', transition: 'all .2s' }}
+                      >
+                        {copiadoAliado === aliado.slug ? '✓ COPIADO' : '🔗 COPIAR QR'}
+                      </button>
+                      <button
+                        onClick={() => toggleAliado(aliado.id, aliado.activo)}
+                        style={{ padding: '7px 14px', background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 7, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
+                      >
+                        {aliado.activo ? 'PAUSAR' : 'ACTIVAR'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 }

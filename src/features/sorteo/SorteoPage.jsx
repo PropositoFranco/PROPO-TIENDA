@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
 
 // ── Paleta ────────────────────────────────────────────────────────────────────
@@ -650,6 +650,8 @@ function SorteoAnimacion({ nombres, ganadorNombre }) {
 // ══════════════════════════════════════════════════════════════════════════════
 export default function SorteoPage() {
   const { eventoId } = useParams();
+  const [searchParams] = useSearchParams();
+  const aliadoSlug = searchParams.get('ref') || null;
 
   const [screen, setScreenRaw] = useState(SCREEN.LOADING);
   const screenRef    = useRef(SCREEN.LOADING);
@@ -814,9 +816,10 @@ return data || null;
     miEmailRef.current = form.email.trim().toLowerCase();
 
     const { data, error } = await supabase.rpc('registrar_y_sortear', {
-      p_evento_id: eventoId,
-      p_nombre:    form.nombre.trim(),
-      p_email:     form.email.trim().toLowerCase(),
+      p_evento_id:  eventoId,
+      p_nombre:     form.nombre.trim(),
+      p_email:      form.email.trim().toLowerCase(),
+      p_aliado_slug: aliadoSlug,
     });
 
     setGuardando(false);
