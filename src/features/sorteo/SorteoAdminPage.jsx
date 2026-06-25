@@ -65,7 +65,9 @@ export default function SorteoAdminPage() {
   const [errForm,       setErrForm]       = useState('');
   const [copiado,       setCopiado]       = useState('');
   const [masterStats,   setMasterStats]   = useState(null);
-  const [tabActiva,     setTabActiva]     = useState('sorteos'); // 'sorteos' | 'aliados'
+  const [tabActiva,     setTabActiva]     = useState('sorteos'); // 'sorteos' | 'aliados' | 'metricas'
+  const [metricas,      setMetricas]      = useState(null);
+  const [loadingMetricas, setLoadingMetricas] = useState(false);
   const [aliados,       setAliados]       = useState([]);
   const [loadingAliados, setLoadingAliados] = useState(false);
   const [formAliado,    setFormAliado]    = useState({ nombre: '', slug: '' });
@@ -189,6 +191,20 @@ export default function SorteoAdminPage() {
   }, []);
 
   useEffect(() => {
+    if (tabActiva === 'metricas') {
+      setLoadingMetricas(true);
+      const [{ data: porAliado }, { data: porDia }, { data: scans }] = await Promise.all([
+        supabase.rpc('metricas_por_aliado'),
+        supabase.from('sorteo_participantes')
+          .select('aliado_origen_slug, registered_at')
+          .order('registered_at', { ascending: false }),
+        supabase.from('aliado_scans')
+          .select('aliado_id, device_type, scanned_at')
+          .order('scanned_at', { ascending: false }),
+      ]);
+      setMetricas({ porAliado: porAliado || [], registros: porDia || [], scans: scans || [] });
+      setLoadingMetricas(false);
+    }
     if (tabActiva === 'aliados') {
       cargarAliados();
       cargarEventosActivos();
@@ -305,6 +321,7 @@ export default function SorteoAdminPage() {
           {[
             { id: 'sorteos', label: '🎲 SORTEOS' },
             { id: 'aliados', label: '🤝 ALIADOS' },
+            { id: 'metricas', label: '📊 MÉTRICAS' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -592,6 +609,154 @@ export default function SorteoAdminPage() {
         </div>
       )}
     </>)}
+
+      {/* ══ TAB: MÉTRICAS ══ */}
+      {tabActiva === 'metricas' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {loadingMetricas ? (
+            <div style={{ color: C.muted, fontFamily: 'Cinzel,serif', fontSize: 11, letterSpacing: 3, textAlign: 'center', padding: 60 }}>CARGANDO MÉTRICAS...</div>
+          ) : metricas ? (<>
+
+            {/* ── KPIs globales ── */}
+            {(() => {
+              const total = metricas.porAliado.reduce((acc, a) => ({
+                scans: acc.scans + (a.scan_count || 0),
+                registros: acc.registros + Number(a.registros || 0),
+                ganadores: acc.ganadores + Number(a.ganadores || 0),
+                aceptados: acc.aceptados + Number(a.cupones_aceptados || 0),
+                entregados: acc.entregados + Number(a.premios_entregados || 0),
+              }), { scans: 0, registros: 0, ganadores: 0, aceptados: 0, entregados: 0 });
+              const kpis = [
+                { label: 'SCANS TOTALES', value: total.scans, color: '#CC44FF' },
+                { label: 'REGISTROS', value: total.registros, color: C.gold },
+                { label: 'CONVERSIÓN GLOBAL', value: total.scans ? `${Math.round(total.registros / total.scans * 100)}%` : '—', color: '#4ade80' },
+                { label: 'GANADORES', value: total.ganadores, color: '#f0c040' },
+                { label: 'CUPONES ACEPTADOS', value: total.aceptados, color: '#60a5fa' },
+                { label: 'PREMIOS ENTREGADOS', value: total.entregados, color: '#4ade80' },
+              ];
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+                  {kpis.map((k, i) => (
+                    <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '18px 16px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 28, fontWeight: 800, color: k.color, fontFamily: 'Cinzel,serif' }}>{k.value}</div>
+                      <div style={{ fontSize: 8, letterSpacing: 2, color: C.muted, fontFamily: 'Cinzel,serif', marginTop: 6 }}>{k.label}</div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* ── Barras por aliado ── */}
+            {metricas.porAliado.length > 0 && (
+              <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '20px 24px' }}>
+                <div style={{ fontFamily: 'Cinzel,serif', fontSize: 10, letterSpacing: 3, color: C.gold, marginBottom: 20 }}>📊 REGISTROS POR ALIADO</div>
+                {(() => {
+                  const max = Math.max(...metricas.porAliado.map(a => Number(a.registros || 0)), 1);
+                  return metricas.porAliado.map((a, i) => (
+                    <div key={i} style={{ marginBottom: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                        <span style={{ fontSize: 11, color: C.text, fontWeight: 600 }}>{a.nombre}</span>
+                        <span style={{ fontSize: 11, color: C.gold, fontWeight: 700 }}>{a.registros || 0} reg · {a.scan_count || 0} scans · <span style={{ color: (a.conversion_pct || 0) >= 30 ? '#4ade80' : (a.conversion_pct || 0) >= 10 ? C.gold : '#f87171' }}>{a.conversion_pct || 0}%</span></span>
+                      </div>
+                      <div style={{ height: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 6, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${(Number(a.registros || 0) / max) * 100}%`, background: `linear-gradient(90deg, #CC44FF, ${C.gold})`, borderRadius: 6, transition: 'width 0.6s ease' }} />
+                      </div>
+                      {/* Mini embudo */}
+                      <div style={{ display: 'flex', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
+                        {[
+                          { label: 'ganadores', val: a.ganadores || 0, color: '#f0c040' },
+                          { label: 'vieron premio', val: a.cupones_vistos || 0, color: '#60a5fa' },
+                          { label: 'aceptaron', val: a.cupones_aceptados || 0, color: '#4ade80' },
+                          { label: 'entregados', val: a.premios_entregados || 0, color: '#86efac' },
+                        ].map((e, j) => (
+                          <span key={j} style={{ fontSize: 9, fontFamily: 'Cinzel,serif', letterSpacing: 1, color: e.color }}>
+                            {e.val} {e.label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            )}
+
+            {/* ── Embudo global ── */}
+            {(() => {
+              const total = metricas.porAliado.reduce((acc, a) => ({
+                scans: acc.scans + (a.scan_count || 0),
+                registros: acc.registros + Number(a.registros || 0),
+                ganadores: acc.ganadores + Number(a.ganadores || 0),
+                vistos: acc.vistos + Number(a.cupones_vistos || 0),
+                aceptados: acc.aceptados + Number(a.cupones_aceptados || 0),
+                entregados: acc.entregados + Number(a.premios_entregados || 0),
+              }), { scans: 0, registros: 0, ganadores: 0, vistos: 0, aceptados: 0, entregados: 0 });
+              const pasos = [
+                { label: 'SCANS QR', val: total.scans, color: '#CC44FF' },
+                { label: 'REGISTROS', val: total.registros, color: C.gold },
+                { label: 'GANADORES', val: total.ganadores, color: '#f0c040' },
+                { label: 'VIERON PREMIO', val: total.vistos, color: '#60a5fa' },
+                { label: 'ACEPTARON CUPÓN', val: total.aceptados, color: '#4ade80' },
+                { label: 'PREMIO ENTREGADO', val: total.entregados, color: '#86efac' },
+              ];
+              const maxVal = Math.max(...pasos.map(p => p.val), 1);
+              return (
+                <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '20px 24px' }}>
+                  <div style={{ fontFamily: 'Cinzel,serif', fontSize: 10, letterSpacing: 3, color: C.gold, marginBottom: 20 }}>⚔️ EMBUDO COMPLETO</div>
+                  {pasos.map((p, i) => (
+                    <div key={i} style={{ marginBottom: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: 9, fontFamily: 'Cinzel,serif', letterSpacing: 2, color: C.muted }}>{p.label}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: p.color }}>{p.val}</span>
+                      </div>
+                      <div style={{ height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${(p.val / maxVal) * 100}%`, background: p.color, borderRadius: 4, opacity: 0.85, transition: 'width 0.6s ease' }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* ── Últimos registros ── */}
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
+              <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}`, fontFamily: 'Cinzel,serif', fontSize: 10, letterSpacing: 3, color: C.gold }}>
+                🧾 ÚLTIMOS 50 REGISTROS
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                      {['FECHA','NOMBRE','EMAIL','ORIGEN','ESTADO'].map(h => (
+                        <th key={h} style={{ padding: '10px 16px', fontFamily: 'Cinzel,serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, textAlign: 'left', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metricas.registros.slice(0, 50).map((r, i) => (
+                      <tr key={i} style={{ borderBottom: `1px solid rgba(255,255,255,0.04)` }}>
+                        <td style={{ padding: '10px 16px', color: C.muted, fontSize: 11, whiteSpace: 'nowrap' }}>{new Date(r.registered_at).toLocaleDateString('es-MX', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</td>
+                        <td style={{ padding: '10px 16px', color: C.text, fontSize: 12 }}>{r.nombre}</td>
+                        <td style={{ padding: '10px 16px', color: C.muted, fontSize: 11 }}>{r.email}</td>
+                        <td style={{ padding: '10px 16px' }}>
+                          <span style={{ fontSize: 9, fontFamily: 'Cinzel,serif', letterSpacing: 1, padding: '3px 8px', borderRadius: 4, background: r.aliado_origen_slug ? 'rgba(212,175,55,0.1)' : 'rgba(255,255,255,0.05)', color: r.aliado_origen_slug ? C.gold : C.muted, whiteSpace: 'nowrap' }}>
+                            {r.aliado_origen_slug || 'DIRECTO'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 16px' }}>
+                          <span style={{ fontSize: 9, fontFamily: 'Cinzel,serif', letterSpacing: 1, color: r.es_ganador ? '#f0c040' : C.muted }}>
+                            {r.es_ganador ? '👑 GANADOR' : '· participante'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </>) : null}
+        </div>
+      )}
 
       {/* ══ TAB: ALIADOS ══ */}
       {tabActiva === 'aliados' && (
