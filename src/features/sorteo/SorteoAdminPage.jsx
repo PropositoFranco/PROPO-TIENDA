@@ -193,17 +193,19 @@ export default function SorteoAdminPage() {
   useEffect(() => {
     if (tabActiva === 'metricas') {
       setLoadingMetricas(true);
-      const [{ data: porAliado }, { data: porDia }, { data: scans }] = await Promise.all([
-        supabase.rpc('metricas_por_aliado'),
-        supabase.from('sorteo_participantes')
-          .select('aliado_origen_slug, registered_at')
-          .order('registered_at', { ascending: false }),
-        supabase.from('aliado_scans')
-          .select('aliado_id, device_type, scanned_at')
-          .order('scanned_at', { ascending: false }),
-      ]);
-      setMetricas({ porAliado: porAliado || [], registros: porDia || [], scans: scans || [] });
-      setLoadingMetricas(false);
+      (async () => {
+        const [{ data: porAliado }, { data: porDia }, { data: scans }] = await Promise.all([
+          supabase.rpc('metricas_por_aliado'),
+          supabase.from('sorteo_participantes')
+            .select('nombre, email, aliado_origen_slug, registered_at, es_ganador')
+            .order('registered_at', { ascending: false }),
+          supabase.from('aliado_scans')
+            .select('aliado_id, device_type, scanned_at')
+            .order('scanned_at', { ascending: false }),
+        ]);
+        setMetricas({ porAliado: porAliado || [], registros: porDia || [], scans: scans || [] });
+        setLoadingMetricas(false);
+      })();
     }
     if (tabActiva === 'aliados') {
       cargarAliados();
