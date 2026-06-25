@@ -11,6 +11,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import useMembershipStore, { ACADEMY_MODULES } from '../../store/useMembershipStore';
 import { useUIStore } from '../../store/useUIStore';
 import ReactDOM from 'react-dom';
+import { XP_TABLE, XP_PER_LEVEL, RANK_BY_LEVEL, getXPProgress } from '../../config/constants';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const CONTENT_TYPES = [
@@ -28,12 +29,26 @@ const LEVEL_CONFIG = {
 };
 
 const DEFAULT_REWARDS = [
-  { level:1, id:'r1', name:'Despertar',     description:'El comienzo del camino templario.',  icon:'🟢' },
-  { level:2, id:'r2', name:'Recluta',       description:'Primer juramento al Templo.',        icon:'🔵' },
-  { level:3, id:'r3', name:'Forjador',      description:'Tu voluntad empieza a forjarse.',    icon:'🟣' },
-  { level:4, id:'r4', name:'Conquistador',  description:'Conquistas lo que otros no ven.',    icon:'🟨' },
-  { level:5, id:'r5', name:'Dominante',     description:'Dominas el campo de batalla.',       icon:'🟥' },
-  { level:6, id:'r6', name:'Propomaster',   description:'La cima del Templo del Propósito.',  icon:'👑' },
+  { level:1,  id:'r1',  name:'Despertar',        description:'El comienzo del camino templario.',         icon:'🔵' },
+  { level:2,  id:'r2',  name:'Recluta',           description:'Primer juramento al Templo.',               icon:'🟣' },
+  { level:3,  id:'r3',  name:'Forjador',          description:'Tu voluntad empieza a forjarse.',           icon:'🔥' },
+  { level:4,  id:'r4',  name:'Guardián',          description:'Proteges lo que construyes.',               icon:'🛡️' },
+  { level:5,  id:'r5',  name:'Conquistador',      description:'Conquistas lo que otros no ven.',           icon:'⚔️' },
+  { level:6,  id:'r6',  name:'Templarión',        description:'El Templo te reconoce como pilar.',         icon:'🏛️' },
+  { level:7,  id:'r7',  name:'Vigía',             description:'Vigilas el horizonte con claridad.',        icon:'👁️' },
+  { level:8,  id:'r8',  name:'Centinela',         description:'Guardas la puerta del conocimiento.',       icon:'⚡' },
+  { level:9,  id:'r9',  name:'Heraldo',           description:'Anuncias la llegada de una nueva era.',     icon:'📯' },
+  { level:10, id:'r10', name:'Dominante',         description:'Dominas el campo en todos los frentes.',    icon:'👑' },
+  { level:11, id:'r11', name:'Arcano',            description:'El conocimiento oculto se revela ante ti.', icon:'🔮' },
+  { level:12, id:'r12', name:'Señor de Arena',    description:'La arena te pertenece.',                    icon:'🏟️' },
+  { level:13, id:'r13', name:'Élite',             description:'Pocos llegan aquí. Tú sí.',                 icon:'💠' },
+  { level:14, id:'r14', name:'Maestro',           description:'Enseñas con el ejemplo.',                   icon:'🎯' },
+  { level:15, id:'r15', name:'Gran Maestro',      description:'Tu legado empieza a escribirse.',           icon:'🌟' },
+  { level:16, id:'r16', name:'Forjado en Fuego',  description:'El fuego te moldea, no te destruye.',       icon:'🔱' },
+  { level:17, id:'r17', name:'Eterno',            description:'Tu impacto trasciende el tiempo.',          icon:'♾️' },
+  { level:18, id:'r18', name:'Ascendido',         description:'Has trascendido el límite ordinario.',      icon:'🌠' },
+  { level:19, id:'r19', name:'Mítico',            description:'Tu nombre es leyenda en el Templo.',        icon:'🐉' },
+  { level:20, id:'r20', name:'Propo-Leyenda',     description:'La cima absoluta. El Templo es tuyo.',      icon:'🏆' },
 ];
 
 const DEFAULT_ACHIEVEMENTS = [
@@ -999,29 +1014,53 @@ function GoldenCircleBar({ userXP = 0, userLevel = 1, isVip = false, onBuyVip })
   const [clickedVip, setClickedVip] = useState(null);
 
   const VIP_LEVELS = [
-    { n:1, xp:0,    icon:'⭐', name:'INICIADO',       reward:'+40 PropoCoins · Distintivo dorado',         color:'#a78bfa', glow:'rgba(167,139,250,0.9)' },
-    { n:2, xp:250,  icon:'🔵', name:'RECLUTA',        reward:'+20 XP · +20 Coins · Nombre brillante',      color:'#38bdf8', glow:'rgba(56,189,248,0.9)'  },
-    { n:3, xp:500,  icon:'🔮', name:'FORJADOR',       reward:'+40 XP · +40 Coins · Marco especial',        color:'#c084fc', glow:'rgba(192,132,252,0.9)'  },
-    { n:4, xp:800,  icon:'🟠', name:'CONQUISTADOR',   reward:'+60 XP · +60 Coins · Aura dorada',           color:'#fb923c', glow:'rgba(251,146,60,0.9)'   },
-    { n:5, xp:1100, icon:'🔴', name:'DOMINANTE',      reward:'+80 XP · +80 Coins · Nombre animado',        color:'#f87171', glow:'rgba(248,113,113,0.9)'  },
-    { n:6, xp:1400, icon:'👑', name:'PROPO-TEMPLARIO',reward:'+180 XP · +250 Coins · Herramienta Premium', color:'#fbbf24', glow:'rgba(251,191,36,1)'     },
-  ];
+  { n:1,  icon:'⭐', name:'DESPERTAR',        reward:'+40 PropoCoins · Distintivo dorado',              color:'#60a5fa', glow:'rgba(96,165,250,0.9)'   },
+  { n:2,  icon:'🔵', name:'RECLUTA',          reward:'+20 XP · +20 Coins · Nombre brillante',           color:'#a78bfa', glow:'rgba(167,139,250,0.9)'  },
+  { n:3,  icon:'🔥', name:'FORJADOR',         reward:'+40 XP · +40 Coins · Marco especial',             color:'#fb923c', glow:'rgba(251,146,60,0.9)'   },
+  { n:4,  icon:'🛡️', name:'GUARDIÁN',         reward:'+60 XP · +60 Coins · Aura dorada',               color:'#34d399', glow:'rgba(52,211,153,0.9)'   },
+  { n:5,  icon:'⚔️', name:'CONQUISTADOR',     reward:'+80 XP · +80 Coins · Nombre animado',            color:'#d4af37', glow:'rgba(212,175,55,0.9)'   },
+  { n:6,  icon:'🏛️', name:'TEMPLARIÓN',       reward:'+100 XP · +100 Coins · Acceso Beta Store',       color:'#f59e0b', glow:'rgba(245,158,11,0.9)'   },
+  { n:7,  icon:'👁️', name:'VIGÍA',            reward:'+120 XP · Herramienta nueva desbloqueada',       color:'#38bdf8', glow:'rgba(56,189,248,0.9)'   },
+  { n:8,  icon:'⚡', name:'CENTINELA',        reward:'+150 XP · +500 PropoCoins',                      color:'#818cf8', glow:'rgba(129,140,248,0.9)'  },
+  { n:9,  icon:'📯', name:'HERALDO',          reward:'+200 XP · Sheets a App tool desbloqueado',       color:'#e879f9', glow:'rgba(232,121,249,0.9)'  },
+  { n:10, icon:'👑', name:'DOMINANTE',        reward:'+300 XP · +1,000 Coins · Hito mayor',            color:'#f5d06e', glow:'rgba(245,208,110,1)'    },
+  { n:11, icon:'🔮', name:'ARCANO',           reward:'+350 XP · Herramienta élite',                    color:'#c084fc', glow:'rgba(192,132,252,0.9)'  },
+  { n:12, icon:'🏟️', name:'SEÑOR DE ARENA',  reward:'+400 XP · +1,000 PropoCoins',                    color:'#fb7185', glow:'rgba(251,113,133,0.9)'  },
+  { n:13, icon:'💠', name:'ÉLITE',            reward:'+450 XP · Contenido exclusivo élite',            color:'#67e8f9', glow:'rgba(103,232,249,0.9)'  },
+  { n:14, icon:'🎯', name:'MAESTRO',          reward:'+500 XP · +1,500 PropoCoins',                    color:'#4ade80', glow:'rgba(74,222,128,0.9)'   },
+  { n:15, icon:'🌟', name:'GRAN MAESTRO',     reward:'+600 XP · Acceso anticipado',                    color:'#fde68a', glow:'rgba(253,230,138,0.9)'  },
+  { n:16, icon:'🔱', name:'FORJADO EN FUEGO', reward:'+700 XP · +2,000 PropoCoins',                    color:'#ff6b35', glow:'rgba(255,107,53,0.9)'   },
+  { n:17, icon:'♾️', name:'ETERNO',           reward:'+800 XP · Acceso vitalicio beta',                color:'#a5f3fc', glow:'rgba(165,243,252,0.9)'  },
+  { n:18, icon:'🌠', name:'ASCENDIDO',        reward:'+900 XP · +3,000 PropoCoins',                    color:'#ddd6fe', glow:'rgba(221,214,254,0.9)'  },
+  { n:19, icon:'🐉', name:'MÍTICO',           reward:'+1,000 XP · Pack legendario',                    color:'#fca5a5', glow:'rgba(252,165,165,0.9)'  },
+  { n:20, icon:'🏆', name:'PROPO-LEYENDA',    reward:'+180 XP · +5,000 Coins · Herramienta Premium',  color:'#fbbf24', glow:'rgba(251,191,36,1)'     },
+];
 
-  const FREE_LEVELS = [
-    { n:1, xp:0,    icon:'🪙', reward:'+5 PropoCoins' },
-    { n:2, xp:250,  icon:'🎁', reward:'Caja sorpresa' },
-    { n:3, xp:500,  icon:'🪙', reward:'+15 PropoCoins' },
-    { n:4, xp:800,  icon:'⚔️', reward:'Emblema Templo' },
-    { n:5, xp:1100, icon:'🪙', reward:'+25 PropoCoins' },
-    { n:6, xp:1400, icon:'👑', reward:'Corona Legendaria' },
-  ];
+const FREE_LEVELS = [
+  { n:1,  icon:'🪙', reward:'+5 PropoCoins'           },
+  { n:2,  icon:'🎁', reward:'Caja sorpresa'            },
+  { n:3,  icon:'🪙', reward:'+15 PropoCoins'          },
+  { n:4,  icon:'⚔️', reward:'Emblema Templo'          },
+  { n:5,  icon:'🪙', reward:'+25 PropoCoins'          },
+  { n:6,  icon:'📜', reward:'Prompts básicos'         },
+  { n:7,  icon:'🪙', reward:'+40 PropoCoins'          },
+  { n:8,  icon:'🎁', reward:'Caja especial'           },
+  { n:9,  icon:'🪙', reward:'+60 PropoCoins'          },
+  { n:10, icon:'👑', reward:'Corona del Dominante'    },
+  { n:11, icon:'🪙', reward:'+80 PropoCoins'          },
+  { n:12, icon:'🎁', reward:'Caja arcana'             },
+  { n:13, icon:'🪙', reward:'+100 PropoCoins'         },
+  { n:14, icon:'⚔️', reward:'Emblema Maestro'        },
+  { n:15, icon:'🪙', reward:'+150 PropoCoins'         },
+  { n:16, icon:'🎁', reward:'Caja legendaria'         },
+  { n:17, icon:'🪙', reward:'+200 PropoCoins'         },
+  { n:18, icon:'🎁', reward:'Caja ascendida'          },
+  { n:19, icon:'🪙', reward:'+300 PropoCoins'         },
+  { n:20, icon:'🏆', reward:'Corona Leyenda'          },
+];
 
-  const currentVipLevel = userLevel;
-  const prevLevel       = VIP_LEVELS[currentVipLevel - 1] || VIP_LEVELS[0];
-  const nextLevel       = VIP_LEVELS[currentVipLevel]     || null;
-  const progressPct     = nextLevel
-    ? Math.min(((userXP - prevLevel.xp) / (nextLevel.xp - prevLevel.xp)) * 100, 100)
-    : 100;
+  const currentVipLevel = Math.min(Math.max(userLevel || 1, 1), 20);
+const { percent: progressPct } = getXPProgress(userXP, currentVipLevel);
 
   /* cerrar tooltip al hacer click fuera */
   useEffect(() => {
@@ -1269,12 +1308,19 @@ function GoldenCircleBar({ userXP = 0, userLevel = 1, isVip = false, onBuyVip })
 
 // ─── RARITY ENGINE ────────────────────────────────────────────────────────────
 function getRarity(level) {
-  if (level >= 6) return { label: 'PROPOMASTER', color: '#ffd700', glow: 'rgba(255,215,0,0.95)',  bg: 'linear-gradient(135deg,rgba(255,215,0,0.22),rgba(180,120,0,0.18))',  border: 'rgba(255,215,0,0.9)',   particle: '#fff176' };
-  if (level >= 5) return { label: 'DOMINANTE',   color: '#ff4444', glow: 'rgba(255,68,68,0.9)',   bg: 'linear-gradient(135deg,rgba(255,68,68,0.22),rgba(160,0,0,0.18))',   border: 'rgba(255,68,68,0.85)',  particle: '#ff8a80' };
-  if (level >= 4) return { label: 'CONQUISTADOR',color: '#ff9800', glow: 'rgba(255,152,0,0.9)',   bg: 'linear-gradient(135deg,rgba(255,152,0,0.22),rgba(160,80,0,0.18))',  border: 'rgba(255,152,0,0.85)',  particle: '#ffcc80' };
-  if (level >= 3) return { label: 'FORJADOR',    color: '#8b5cf6', glow: 'rgba(139,92,246,0.9)',  bg: 'linear-gradient(135deg,rgba(139,92,246,0.22),rgba(60,0,180,0.18))', border: 'rgba(139,92,246,0.85)', particle: '#c4b5fd' };
-  if (level >= 2) return { label: 'RECLUTA',     color: '#38bdf8', glow: 'rgba(56,189,248,0.9)',  bg: 'linear-gradient(135deg,rgba(56,189,248,0.22),rgba(0,80,160,0.18))', border: 'rgba(56,189,248,0.85)', particle: '#7dd3fc' };
-  return               { label: 'DESPERTAR',    color: '#4ade80', glow: 'rgba(74,222,128,0.85)', bg: 'linear-gradient(135deg,rgba(74,222,128,0.18),rgba(0,100,40,0.18))', border: 'rgba(74,222,128,0.7)',  particle: '#86efac' };
+  if (level >= 20) return { label: 'PROPO-LEYENDA',    color: '#d4af37', glow: 'rgba(212,175,55,1)',    bg: 'linear-gradient(135deg,rgba(212,175,55,0.28),rgba(140,90,0,0.22))',   border: 'rgba(212,175,55,1)',    particle: '#ffe87a' };
+  if (level >= 18) return { label: 'ASCENDIDO',         color: '#ddd6fe', glow: 'rgba(221,214,254,0.9)', bg: 'linear-gradient(135deg,rgba(221,214,254,0.18),rgba(80,60,160,0.18))', border: 'rgba(221,214,254,0.8)', particle: '#ede9fe' };
+  if (level >= 16) return { label: 'FORJADO EN FUEGO',  color: '#ff6b35', glow: 'rgba(255,107,53,0.9)',  bg: 'linear-gradient(135deg,rgba(255,107,53,0.22),rgba(160,40,0,0.18))',   border: 'rgba(255,107,53,0.85)', particle: '#fed7aa' };
+  if (level >= 14) return { label: 'MAESTRO',           color: '#4ade80', glow: 'rgba(74,222,128,0.9)',  bg: 'linear-gradient(135deg,rgba(74,222,128,0.18),rgba(0,100,40,0.18))',   border: 'rgba(74,222,128,0.8)',  particle: '#86efac' };
+  if (level >= 12) return { label: 'SEÑOR DE ARENA',    color: '#fb7185', glow: 'rgba(251,113,133,0.9)', bg: 'linear-gradient(135deg,rgba(251,113,133,0.18),rgba(160,0,60,0.18))',  border: 'rgba(251,113,133,0.8)', particle: '#fda4af' };
+  if (level >= 10) return { label: 'DOMINANTE',         color: '#f5d06e', glow: 'rgba(245,208,110,0.9)', bg: 'linear-gradient(135deg,rgba(245,208,110,0.22),rgba(140,90,0,0.18))',  border: 'rgba(245,208,110,0.8)', particle: '#fef08a' };
+  if (level >= 8)  return { label: 'CENTINELA',         color: '#818cf8', glow: 'rgba(129,140,248,0.9)', bg: 'linear-gradient(135deg,rgba(129,140,248,0.18),rgba(50,0,180,0.18))',  border: 'rgba(129,140,248,0.8)', particle: '#c7d2fe' };
+  if (level >= 6)  return { label: 'TEMPLARIO',         color: '#fbbf24', glow: 'rgba(251,191,36,0.95)', bg: 'linear-gradient(135deg,rgba(251,191,36,0.22),rgba(160,100,0,0.18))',  border: 'rgba(251,191,36,0.9)',  particle: '#fde68a' };
+  if (level >= 5)  return { label: 'CONQUISTADOR',      color: '#ff4444', glow: 'rgba(255,68,68,0.9)',   bg: 'linear-gradient(135deg,rgba(255,68,68,0.22),rgba(160,0,0,0.18))',    border: 'rgba(255,68,68,0.85)',  particle: '#ff8a80' };
+  if (level >= 4)  return { label: 'GUARDIÁN',          color: '#34d399', glow: 'rgba(52,211,153,0.9)',  bg: 'linear-gradient(135deg,rgba(52,211,153,0.18),rgba(0,100,60,0.18))',   border: 'rgba(52,211,153,0.8)',  particle: '#6ee7b7' };
+  if (level >= 3)  return { label: 'FORJADOR',          color: '#fb923c', glow: 'rgba(251,146,60,0.9)',  bg: 'linear-gradient(135deg,rgba(251,146,60,0.22),rgba(160,60,0,0.18))',   border: 'rgba(251,146,60,0.85)', particle: '#fdba74' };
+  if (level >= 2)  return { label: 'RECLUTA',           color: '#a78bfa', glow: 'rgba(167,139,250,0.9)', bg: 'linear-gradient(135deg,rgba(167,139,250,0.18),rgba(80,0,180,0.18))',  border: 'rgba(167,139,250,0.8)', particle: '#c4b5fd' };
+  return                  { label: 'DESPERTAR',         color: '#60a5fa', glow: 'rgba(96,165,250,0.85)', bg: 'linear-gradient(135deg,rgba(96,165,250,0.18),rgba(0,60,160,0.18))',   border: 'rgba(96,165,250,0.7)',  particle: '#bfdbfe' };
 }
 
 // ─── PARTICLE BURST ───────────────────────────────────────────────────────────
@@ -1849,11 +1895,33 @@ if (claimed && !reward.url) {
             )}
           </div>
         ) : (
-          <div style={{ display:'inline-flex', alignItems:'center', gap:'7px', padding:'8px 22px', borderRadius:'100px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)' }}>
-            <span style={{ fontSize:'12px' }}>🔒</span>
-            <span style={{ fontFamily:"'Cinzel',serif", fontSize:'9px', letterSpacing:'2px', color:'rgba(200,185,240,0.4)' }}>
-              NIVEL {reward.level} REQUERIDO · TE FALTAN {reward.level - userLevel} NVL
-            </span>
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'12px' }}>
+
+            {/* Coins y XP visibles aunque esté bloqueado */}
+            {(reward.bonus_propocoins > 0 || reward.bonus_exp > 0) && (
+              <div style={{ display:'flex', gap:'10px', justifyContent:'center', flexWrap:'wrap' }}>
+                {reward.bonus_propocoins > 0 && (
+                  <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'6px 16px', borderRadius:'100px', background:'rgba(212,175,55,0.08)', border:'1px solid rgba(212,175,55,0.25)' }}>
+                    <span style={{ fontSize:'14px' }}>🪙</span>
+                    <span style={{ fontFamily:"'Cinzel',serif", fontSize:'11px', fontWeight:900, color:'rgba(212,175,55,0.7)' }}>+{reward.bonus_propocoins} PropoCoins</span>
+                  </div>
+                )}
+                {reward.bonus_exp > 0 && (
+                  <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'6px 16px', borderRadius:'100px', background:'rgba(139,92,246,0.08)', border:'1px solid rgba(139,92,246,0.25)' }}>
+                    <span style={{ fontSize:'14px' }}>⭐</span>
+                    <span style={{ fontFamily:"'Cinzel',serif", fontSize:'11px', fontWeight:900, color:'rgba(167,139,250,0.7)' }}>+{reward.bonus_exp} XP</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Candado con nivel requerido */}
+            <div style={{ display:'inline-flex', alignItems:'center', gap:'7px', padding:'8px 22px', borderRadius:'100px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)' }}>
+              <span style={{ fontSize:'12px' }}>🔒</span>
+              <span style={{ fontFamily:"'Cinzel',serif", fontSize:'9px', letterSpacing:'2px', color:'rgba(200,185,240,0.4)' }}>
+                NIVEL {reward.level} REQUERIDO · TE FALTAN {reward.level - userLevel} NVL
+              </span>
+            </div>
           </div>
         )}
 
@@ -1879,8 +1947,8 @@ if (claimed && !reward.url) {
 }
 
 // ─── REWARDS SECTION ──────────────────────────────────────────────────────────
-const VIP_COLORS = ['#a78bfa','#38bdf8','#c084fc','#fb923c','#f87171','#fbbf24'];
-const VIP_GLOWS  = ['rgba(167,139,250,0.9)','rgba(56,189,248,0.9)','rgba(192,132,252,0.9)','rgba(251,146,60,0.9)','rgba(248,113,113,0.9)','rgba(251,191,36,1)'];
+const VIP_COLORS = ['#a78bfa','#38bdf8','#c084fc','#fb923c','#f87171','#fbbf24','#60a5fa','#818cf8','#e879f9','#f5d06e','#c084fc','#fb7185','#67e8f9','#4ade80','#fde68a','#ff6b35','#a5f3fc','#ddd6fe','#fca5a5','#d4af37'];
+const VIP_GLOWS  = ['rgba(167,139,250,0.9)','rgba(56,189,248,0.9)','rgba(192,132,252,0.9)','rgba(251,146,60,0.9)','rgba(248,113,113,0.9)','rgba(251,191,36,1)','rgba(96,165,250,0.9)','rgba(129,140,248,0.9)','rgba(232,121,249,0.9)','rgba(245,208,110,0.9)','rgba(192,132,252,0.9)','rgba(251,113,133,0.9)','rgba(103,232,249,0.9)','rgba(74,222,128,0.9)','rgba(253,230,138,0.9)','rgba(255,107,53,0.9)','rgba(165,243,252,0.9)','rgba(221,214,254,0.9)','rgba(252,165,165,0.9)','rgba(212,175,55,1)'];
 
 function RewardsSection({ rewards, vipLevels = [], userLevel, userId, userXP = 0, isVip = false, onBuyVip }) {
   const [activeReward, setActiveReward] = useState(null);
@@ -1998,6 +2066,17 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
 
         {/* ── FILAS DEL PASE ── */}
         <div style={{ position:'relative', zIndex:1, padding:'0 clamp(16px,3vw,32px) clamp(20px,3vw,32px)' }}>
+          <style>{`
+            .bp-scroll::-webkit-scrollbar { height: 8px; }
+            .bp-scroll::-webkit-scrollbar-track { background: rgba(212,175,55,0.08); border-radius: 8px; margin: 0 8px; }
+            .bp-scroll::-webkit-scrollbar-thumb { background: linear-gradient(90deg,#7c3aed,#d4af37); border-radius: 8px; box-shadow: 0 0 8px rgba(212,175,55,0.6); }
+            .bp-scroll::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg,#d4af37,#ffe87a); }
+            .bp-scroll { scrollbar-width: thin; scrollbar-color: #d4af37 rgba(212,175,55,0.08); }
+          `}</style>
+
+          {/* ── SCROLL COMPARTIDO — VIP arriba, GRATIS abajo, alineados por columna ── */}
+          <div className="bp-scroll" style={{ overflowX:'auto', overflowY:'visible', paddingBottom:'16px', marginBottom:'4px' }}>
+            <div style={{ minWidth:'1760px', position:'relative' }}>
 
           {/* ── FILA VIP ── */}
           <div style={{
@@ -2023,13 +2102,13 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
               <div style={{ flex:1, position:'relative', height:'clamp(80px,12vw,100px)', display:'flex', alignItems:'center' }}>
                 {/* Línea dorada */}
                 <div style={{ position:'absolute', top:'38%', left:0, right:0, height:'3px', borderRadius:'3px', zIndex:0, background: isVip ? 'linear-gradient(90deg,rgba(212,175,55,0.2),#d4af37 20%,#ffe87a 50%,#d4af37 80%,rgba(212,175,55,0.2))' : 'linear-gradient(90deg,rgba(212,175,55,0.05),rgba(212,175,55,0.2) 50%,rgba(212,175,55,0.05))', boxShadow: isVip ? '0 0 12px rgba(212,175,55,0.8)' : 'none' }}/>
-                <div style={{ position:'relative', zIndex:1, width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div style={{ position:'relative', zIndex:1, width:'100%', display:'grid', gridTemplateColumns:'repeat(20, 88px)', alignItems:'center' }}>
                   {VIP_LEVELS.map(lvl => {
                     const unlocked  = isVip && userLevel >= lvl.n;
                     const isCurr    = isVip && currentVipLevel === lvl.n;
                     const isHov     = hovVip === lvl.n;
                     const isClicked = clickedVip === lvl.n;
-                    const sz = lvl.n === 6 ? 'clamp(48px,7vw,66px)' : 'clamp(40px,6vw,56px)';
+                    const sz = isCurr ? '66px' : '56px';
                     return (
                       <div key={lvl.n}
                         onClick={e => {
@@ -2040,13 +2119,13 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
 }}
                         onMouseEnter={() => setHovVip(lvl.n)}
                         onMouseLeave={() => setHovVip(null)}
-                        style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', cursor: isVip && unlocked ? 'pointer' : !isVip ? 'pointer' : 'default', position:'relative', zIndex:2, minWidth:'clamp(60px,9vw,88px)', overflow:'visible' }}
+                        style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', cursor: isVip && unlocked ? 'pointer' : !isVip ? 'pointer' : 'default', position:'relative', zIndex:2, width:'88px', overflow:'visible' }}
                       >
                         <div style={{
-                          width:'clamp(60px,9vw,88px)', height:'clamp(60px,9vw,88px)',
+                          width:'88px', height:'88px',
                           display:'flex', alignItems:'center', justifyContent:'center',
                           cursor: isVip && unlocked ? 'pointer' : !isVip ? 'pointer' : 'default',
-                          fontSize: lvl.n === 6 ? 'clamp(20px,3.5vw,28px)' : 'clamp(17px,2.8vw,24px)',
+                          fontSize: isCurr ? '28px' : '22px',
                           transition:'all 0.3s cubic-bezier(0.34,1.3,0.64,1)',
                           transform: isCurr ? 'scale(1.22) translateY(-6px)' : isHov ? 'scale(1.15) translateY(-4px)' : 'scale(1)',
                           background: 'transparent',
@@ -2173,6 +2252,7 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
             background:'linear-gradient(90deg,rgba(212,175,55,0.06),rgba(139,92,246,0.1) 50%,rgba(212,175,55,0.06))',
             border:'1px solid rgba(212,175,55,0.18)',
             borderTop:'none', borderBottom:'none',
+            position:'sticky', left:0,
           }}>
             <div style={{ flex:1, height:'1px', background:'linear-gradient(to right,transparent,rgba(212,175,55,0.5))' }}/>
             <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
@@ -2200,17 +2280,17 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
             <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
               <div style={{ flex:1, position:'relative', height:'clamp(80px,12vw,100px)', display:'flex', alignItems:'center' }}>
                 <div style={{ position:'absolute', top:'38%', left:0, right:0, height:'2px', borderRadius:'2px', zIndex:0, background:'linear-gradient(90deg,rgba(180,165,220,0.05),rgba(180,165,220,0.25) 50%,rgba(180,165,220,0.05))', boxShadow:'0 0 6px rgba(180,165,220,0.2)' }}/>
-                <div style={{ position:'relative', zIndex:1, width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div style={{ position:'relative', zIndex:1, width:'100%', display:'grid', gridTemplateColumns:'repeat(20, 88px)', alignItems:'center' }}>
                   {activeRewards.map((r, idx) => {
                     const unlocked  = userLevel >= r.level;
                     const isCurrent = userLevel === r.level;
                     const rarity    = getRarity(r.level);
                     return (
                       <div key={r.id} onClick={() => setActiveReward(r)}
-                        style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', cursor:'pointer', position:'relative' }}
+                        style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', cursor:'pointer', position:'relative', width:'88px' }}
                       >
                         <div style={{
-                          width:'clamp(40px,6vw,56px)', height:'clamp(40px,6vw,56px)', borderRadius:'50%',
+                          width:'56px', height:'56px', borderRadius:'50%',
                           background: unlocked ? `radial-gradient(ellipse at 30% 25%, ${rarity.color}66 0%, ${rarity.color}28 50%, transparent 100%)` : 'rgba(255,255,255,0.03)',
                           border:`2.5px solid ${isCurrent ? '#fff' : unlocked ? rarity.border : 'rgba(139,92,246,0.25)'}`,
                           display:'flex', alignItems:'center', justifyContent:'center',
@@ -2240,6 +2320,9 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
             </div>
           </div>
 
+            </div>{/* fin minWidth wrapper */}
+          </div>{/* fin bp-scroll */}
+
         </div>
 
       {celebratingVip && (
@@ -2260,12 +2343,26 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
   const unlocked = isVip && userLevel >= lvl.n;
 
   const VIP_MESSAGES = [
-    'Tu fortuna comienza a tomar forma, Templario.',
-    'Las monedas fluyen hacia los que persisten.',
-    'Cada nivel forja una versión más poderosa de ti.',
-    'Tu arsenal crece. El Templo lo reconoce.',
-    'Los dominantes no piden permiso para prosperar.',
-    '⚔ Has alcanzado la cima. El Templo se inclina ante ti.',
+    'El despertar ha comenzado. El Templo te recibe.',
+    'Tu juramento está hecho. No hay vuelta atrás.',
+    'Tu voluntad se forja con cada paso.',
+    'Proteges lo que construyes. El Templo lo ve.',
+    'Conquistas lo que otros no se atreven a ver.',
+    'El Templo te reconoce como pilar de su estructura.',
+    'Tu vigilancia protege el horizonte del Templo.',
+    'Guardas la puerta del conocimiento con honor.',
+    'Anuncias una nueva era. El Templo escucha.',
+    'Dominas el campo. Pocos llegan hasta aquí.',
+    'El conocimiento oculto se revela ante los perseverantes.',
+    'La arena te pertenece. Nadie te la puede quitar.',
+    'Pocos llegan aquí. Tú sí. El Templo lo sabe.',
+    'Enseñas con el ejemplo. Tu legado ya empezó.',
+    'Tu nombre empieza a escribirse en los muros del Templo.',
+    'El fuego no te destruyó. Te hizo eterno.',
+    'Tu impacto trasciende el tiempo y el espacio.',
+    'Has trascendido el límite de lo ordinario.',
+    'Tu nombre es leyenda. El Templo lo susurra.',
+    '⚔ La cima absoluta. El Templo se inclina ante ti.',
   ];
   const msg = VIP_MESSAGES[(lvl.n - 1)] || VIP_MESSAGES[0];
   const alreadyClaimed = claimedVipIds.has(String(lvl.id));
