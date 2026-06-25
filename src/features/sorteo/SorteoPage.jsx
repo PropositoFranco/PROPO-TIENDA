@@ -652,7 +652,9 @@ function SorteoAnimacion({ nombres, ganadorNombre }) {
 export default function SorteoPage() {
   const { eventoId } = useParams();
   const [searchParams] = useSearchParams();
-  const aliadoSlug = searchParams.get('ref') || null;
+  const aliadoSlug  = searchParams.get('ref') || null;
+  const utmSource   = searchParams.get('utm_source') || null;
+  const utmMedium   = searchParams.get('utm_medium') || (utmSource ? 'social' : null);
 
   const [screen, setScreenRaw] = useState(SCREEN.LOADING);
   const screenRef    = useRef(SCREEN.LOADING);
@@ -837,6 +839,8 @@ return data || null;
       p_email:       form.email.trim().toLowerCase(),
       p_aliado_slug: aliadoSlug,
       p_device_id:   deviceId,
+      p_utm_source:  utmSource,
+      p_utm_medium:  utmMedium,
     });
 
     setGuardando(false);
