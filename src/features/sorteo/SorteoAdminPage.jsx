@@ -683,23 +683,55 @@ export default function SorteoAdminPage() {
                     startAngle += angle;
                     return slice;
                   });
+                  const CANAL_ICON = {
+                    'QR Aliado': '📡', 'Instagram': '📸', 'TikTok': '🎵',
+                    'Facebook': '👥', 'YouTube': '▶️', 'Google': '🔍',
+                    'Directo': '🔗',
+                  };
                   return (
                     <div>
                       <svg viewBox="0 0 160 160" style={{ width: '100%', maxWidth: 160, display: 'block', margin: '0 auto 14px' }}>
-                        {slices.map((s, i) => (
-                          <path key={i} d={s.path} fill={s.color} stroke="rgba(4,2,14,0.9)" strokeWidth="1.5" opacity="0.9" />
-                        ))}
-                        <circle cx={cx} cy={cy} r={rInner - 1} fill="#04020e" />
+                        {slices.length === 1 ? (
+                          // Un solo canal → círculo completo en lugar de path (evita bug SVG arc 360°)
+                          <>
+                            <circle cx={cx} cy={cy} r={r} fill={slices[0].color} opacity="0.9" />
+                            <circle cx={cx} cy={cy} r={rInner} fill={C.card} />
+                          </>
+                        ) : (
+                          slices.map((s, i) => (
+                            <path key={i} d={s.path} fill={s.color} stroke="rgba(4,2,14,0.9)" strokeWidth="1.5" opacity="0.9" />
+                          ))
+                        )}
+                        <circle cx={cx} cy={cy} r={rInner - 1} fill={C.card} />
                         <text x={cx} y={cy - 6} textAnchor="middle" fill={C.gold} fontSize="18" fontWeight="900" fontFamily="Cinzel,serif">{total}</text>
                         <text x={cx} y={cy + 10} textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="6.5" fontFamily="Cinzel,serif" letterSpacing="1">REGISTROS</text>
                       </svg>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                         {slices.map((s, i) => (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flexShrink: 0 }} />
-                            <span style={{ fontSize: 11, color: C.text, flex: 1, fontFamily: 'Cinzel,serif', fontSize: 9, letterSpacing: 0.5 }}>{s.label}</span>
+                            <span style={{ fontSize: 13, marginRight: 2 }}>{CANAL_ICON[s.label] || '🌐'}</span>
+                            <span style={{ flex: 1, fontFamily: 'Cinzel,serif', fontSize: 9, letterSpacing: 0.5, color: C.text }}>{s.label}</span>
                             <span style={{ fontSize: 11, color: s.color, fontWeight: 700, fontFamily: 'Cinzel,serif' }}>{s.registros}</span>
                             <span style={{ fontSize: 9, color: C.muted, minWidth: 32, textAlign: 'right' }}>{s.pct}%</span>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Guía de UTMs para redes */}
+                      <div style={{ marginTop: 14, padding: '10px 12px', background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.15)', borderRadius: 8 }}>
+                        <div style={{ fontFamily: 'Cinzel,serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>LINKS PARA REDES SOCIALES</div>
+                        {[
+                          { label: 'Instagram', utm: 'instagram', icon: '📸' },
+                          { label: 'TikTok',    utm: 'tiktok',    icon: '🎵' },
+                          { label: 'Facebook',  utm: 'facebook',  icon: '👥' },
+                          { label: 'YouTube',   utm: 'youtube',   icon: '▶️' },
+                          { label: 'Google',    utm: 'google',    icon: '🔍' },
+                        ].map((red) => (
+                          <div key={red.utm} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                            <span style={{ fontSize: 11 }}>{red.icon}</span>
+                            <span style={{ fontFamily: 'monospace', fontSize: 8, color: 'rgba(255,255,255,0.3)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              ?utm_source={red.utm}
+                            </span>
                           </div>
                         ))}
                       </div>
