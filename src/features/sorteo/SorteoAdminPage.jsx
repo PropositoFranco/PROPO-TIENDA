@@ -664,48 +664,34 @@ export default function SorteoAdminPage() {
                   if (total === 0) return <div style={{ color: C.muted, fontSize: 11, textAlign: 'center', padding: '20px 0' }}>Sin datos aún</div>;
                   const COLORS = ['#D4AF37','#CC44FF','#E1306C','#69C9D0','#4285F4','#FF0000','#4ade80','#f87171'];
                   // SVG pastel
-                  const cx = 80, cy = 80, r = 64, rInner = 36;
-                  let startAngle = -Math.PI / 2;
-                  const slices = data.map((d, i) => {
-                    const pct = Number(d.registros) / total;
-                    const angle = pct * 2 * Math.PI;
-                    const x1 = cx + r * Math.cos(startAngle);
-                    const y1 = cy + r * Math.sin(startAngle);
-                    const x2 = cx + r * Math.cos(startAngle + angle);
-                    const y2 = cy + r * Math.sin(startAngle + angle);
-                    const xi1 = cx + rInner * Math.cos(startAngle);
-                    const yi1 = cy + rInner * Math.sin(startAngle);
-                    const xi2 = cx + rInner * Math.cos(startAngle + angle);
-                    const yi2 = cy + rInner * Math.sin(startAngle + angle);
-                    const large = angle > Math.PI ? 1 : 0;
-                    const path = `M ${xi1} ${yi1} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${xi2} ${yi2} A ${rInner} ${rInner} 0 ${large} 0 ${xi1} ${yi1} Z`;
-                    const slice = { path, color: COLORS[i % COLORS.length], label: d.canal, pct: d.pct, registros: d.registros };
-                    startAngle += angle;
-                    return slice;
-                  });
                   const CANAL_ICON = {
                     'QR Aliado': '📡', 'Instagram': '📸', 'TikTok': '🎵',
                     'Facebook': '👥', 'YouTube': '▶️', 'Google': '🔍',
                     'Directo': '🔗',
                   };
+                  // Construir conic-gradient para el donut
+                  const slices = [];
+                  let acc = 0;
+                  data.forEach((d, i) => {
+                    const pct = Number(d.pct);
+                    slices.push({ color: COLORS[i % COLORS.length], from: acc, to: acc + pct, label: d.canal, pct: d.pct, registros: d.registros });
+                    acc += pct;
+                  });
+                  const conicParts = slices.map(s => `${s.color} ${s.from}% ${s.to}%`).join(', ');
                   return (
                     <div>
-                      <svg viewBox="0 0 160 160" style={{ width: '100%', maxWidth: 160, display: 'block', margin: '0 auto 14px' }}>
-                        {slices.length === 1 ? (
-                          // Un solo canal → círculo completo en lugar de path (evita bug SVG arc 360°)
-                          <>
-                            <circle cx={cx} cy={cy} r={r} fill={slices[0].color} opacity="0.9" />
-                            <circle cx={cx} cy={cy} r={rInner} fill={C.card} />
-                          </>
-                        ) : (
-                          slices.map((s, i) => (
-                            <path key={i} d={s.path} fill={s.color} stroke="rgba(4,2,14,0.9)" strokeWidth="1.5" opacity="0.9" />
-                          ))
-                        )}
-                        <circle cx={cx} cy={cy} r={rInner - 1} fill={C.card} />
-                        <text x={cx} y={cy - 6} textAnchor="middle" fill={C.gold} fontSize="18" fontWeight="900" fontFamily="Cinzel,serif">{total}</text>
-                        <text x={cx} y={cy + 10} textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="6.5" fontFamily="Cinzel,serif" letterSpacing="1">REGISTROS</text>
-                      </svg>
+                      <div style={{ position: 'relative', width: 140, height: 140, margin: '0 auto 14px', borderRadius: '50%', background: `conic-gradient(${conicParts})` }}>
+                        <div style={{
+                          position: 'absolute', top: '50%', left: '50%',
+                          transform: 'translate(-50%,-50%)',
+                          width: 76, height: 76, borderRadius: '50%',
+                          background: C.card,
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <span style={{ fontFamily: 'Cinzel,serif', fontWeight: 900, fontSize: 22, color: C.gold, lineHeight: 1 }}>{total}</span>
+                          <span style={{ fontFamily: 'Cinzel,serif', fontSize: 6, letterSpacing: 1.5, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>REGISTROS</span>
+                        </div>
+                      </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                         {slices.map((s, i) => (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
