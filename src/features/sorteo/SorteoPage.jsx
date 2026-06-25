@@ -41,7 +41,8 @@ const SCREEN = {
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #04020e; overflow-x: hidden; }
+  body { background: #04020e; }
+  html, body { overflow-x: hidden; overflow-y: auto; }
   input, button { font-family: inherit; }
   input::placeholder { color: rgba(212,175,55,0.28); }
   input:focus { border-color: rgba(212,175,55,0.55) !important; outline: none !important; box-shadow: 0 0 0 3px rgba(212,175,55,0.08) !important; }
@@ -816,7 +817,7 @@ return data || null;
     const deviceKey = `sorteo_registered_${eventoId}`;
     const yaRegistradoDevice = localStorage.getItem(deviceKey);
     if (yaRegistradoDevice && yaRegistradoDevice !== form.email.trim().toLowerCase()) {
-      setErrores({ general: 'Este dispositivo ya tiene un registro en este sorteo.' });
+      setErrores({ general: 'Este dispositivo ya tiene un registro activo en este sorteo.' });
       return;
     }
 
@@ -824,11 +825,18 @@ return data || null;
     setGuardando(true);
     miEmailRef.current = form.email.trim().toLowerCase();
 
+    const deviceId = localStorage.getItem('sorteo_device_id') || (() => {
+      const id = crypto.randomUUID();
+      localStorage.setItem('sorteo_device_id', id);
+      return id;
+    })();
+
     const { data, error } = await supabase.rpc('registrar_y_sortear', {
-      p_evento_id:  eventoId,
-      p_nombre:     form.nombre.trim(),
-      p_email:      form.email.trim().toLowerCase(),
+      p_evento_id:   eventoId,
+      p_nombre:      form.nombre.trim(),
+      p_email:       form.email.trim().toLowerCase(),
       p_aliado_slug: aliadoSlug,
+      p_device_id:   deviceId,
     });
 
     setGuardando(false);
@@ -1603,11 +1611,11 @@ return data || null;
 
   // ── PANTALLA: REGISTRO ────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: 'clamp(20px,5vw,60px) clamp(16px,4vw,40px)', paddingTop: 0, position: 'relative', overflowX: 'hidden', overflowY: 'auto' }}>
+    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '0 clamp(16px,4vw,40px) clamp(40px,8vw,80px)', position: 'relative' }}>
       <Particles />
       <Header totalBecas={totalBecas} totalGanadores={totalGanadores} rondaNum={rondaNum} eventoNombre={evento?.nombre} />
 
-      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 500, marginTop: 88, animation: 'fadeUp .6s ease both' }}>
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 500, marginTop: 'clamp(72px,18vw,100px)', animation: 'fadeUp .6s ease both' }}>
 
         {/* Arco decorativo superior */}
         <div style={{ position: 'absolute', top: -40, left: '50%', transform: 'translateX(-50%)', width: 320, height: 160, borderRadius: '160px 160px 0 0', border: `2px solid rgba(255,215,0,0.15)`, borderBottom: 'none', pointerEvents: 'none', animation: 'arcGlow 3s ease-in-out infinite' }} />
