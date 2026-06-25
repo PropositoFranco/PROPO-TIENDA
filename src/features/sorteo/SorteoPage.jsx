@@ -658,7 +658,7 @@ export default function SorteoPage() {
   const screenRef    = useRef(SCREEN.LOADING);
   const miEmailRef   = useRef('');
   const miRegistroRef = useRef(null);
-  const setScreen = useCallback((s) => { screenRef.current = s; setScreenRaw(s); }, []);
+  const setScreen = useCallback((s) => { screenRef.current = s; setScreenRaw(s); window.scrollTo({ top: 0, behavior: 'instant' }); }, []);
   const [evento,         setEvento]         = useState(null);
   const [rondaActual,    setRondaActual]    = useState(null);
   const [participantes,  setParticipantes]  = useState([]);

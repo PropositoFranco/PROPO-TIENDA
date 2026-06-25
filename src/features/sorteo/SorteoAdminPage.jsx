@@ -68,11 +68,13 @@ export default function SorteoAdminPage() {
   const [tabActiva,     setTabActiva]     = useState('sorteos'); // 'sorteos' | 'aliados'
   const [aliados,       setAliados]       = useState([]);
   const [loadingAliados, setLoadingAliados] = useState(false);
-  const [formAliado,    setFormAliado]    = useState({ nombre: '', slug: '', sorteo_activo_id: '' });
+  const [formAliado,    setFormAliado]    = useState({ nombre: '', slug: '' });
   const [errAliado,     setErrAliado]     = useState('');
   const [creandoAliado, setCreandoAliado] = useState(false);
   const [copiadoAliado, setCopiadoAliado] = useState('');
   const [eventosActivos, setEventosActivos] = useState([]);
+  const [eventoGlobal,  setEventoGlobal]  = useState('');
+  const [guardandoGlobal, setGuardandoGlobal] = useState(false);
 
   // ── CSS ──────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -178,12 +180,12 @@ export default function SorteoAdminPage() {
   }, []);
 
   const cargarEventosActivos = useCallback(async () => {
-    const { data } = await supabase
-      .from('sorteo_eventos')
-      .select('id, nombre')
-      .eq('activo', true)
-      .order('created_at', { ascending: false });
-    setEventosActivos(data || []);
+    const [{ data: evs }, { data: cfg }] = await Promise.all([
+      supabase.from('sorteo_eventos').select('id, nombre').eq('activo', true).order('created_at', { ascending: false }),
+      supabase.from('config').select('value').eq('key', 'sorteo_activo_global').single(),
+    ]);
+    setEventosActivos(evs || []);
+    if (cfg?.value) setEventoGlobal(cfg.value);
   }, []);
 
   useEffect(() => {
@@ -203,13 +205,11 @@ export default function SorteoAdminPage() {
     const slug = slugify(formAliado.slug || formAliado.nombre);
     if (!formAliado.nombre.trim()) { setErrAliado('El nombre es obligatorio.'); return; }
     if (!slug) { setErrAliado('El slug no puede estar vacío.'); return; }
-    if (!formAliado.sorteo_activo_id) { setErrAliado('Selecciona un evento activo.'); return; }
     setErrAliado('');
     setCreandoAliado(true);
     const { error } = await supabase.from('aliados').insert({
       nombre: formAliado.nombre.trim(),
       slug,
-      sorteo_activo_id: formAliado.sorteo_activo_id,
       activo: true,
     });
     setCreandoAliado(false);
@@ -217,8 +217,15 @@ export default function SorteoAdminPage() {
       setErrAliado(error.code === '23505' ? 'Ese slug ya existe. Elige otro nombre.' : 'Error al crear. Intenta de nuevo.');
       return;
     }
-    setFormAliado({ nombre: '', slug: '', sorteo_activo_id: '' });
+    setFormAliado({ nombre: '', slug: '' });
     cargarAliados();
+  };
+
+  const guardarEventoGlobal = async (nuevoId) => {
+    setGuardandoGlobal(true);
+    await supabase.from('config').update({ value: nuevoId, updated_at: new Date().toISOString() }).eq('key', 'sorteo_activo_global');
+    setEventoGlobal(nuevoId);
+    setGuardandoGlobal(false);
   };
 
   const toggleAliado = async (id, activo) => {
@@ -616,19 +623,7 @@ export default function SorteoAdminPage() {
                   style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'monospace', fontSize: 12 }}
                 />
               </div>
-              <div style={{ minWidth: 180 }}>
-                <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>EVENTO ACTIVO</label>
-                <select
-                  value={formAliado.sorteo_activo_id}
-                  onChange={e => setFormAliado(f => ({ ...f, sorteo_activo_id: e.target.value }))}
-                  style={{ width: '100%', padding: '11px 14px', background: '#0e0818', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 11 }}
-                >
-                  <option value="">— Selecciona evento —</option>
-                  {eventosActivos.map(ev => (
-                    <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-                  ))}
-                </select>
-              </div>
+              
               <button
                 onClick={crearAliado}
                 disabled={creandoAliado}
@@ -643,6 +638,28 @@ export default function SorteoAdminPage() {
                 🔗 QR apuntará a: <span style={{ color: C.gold }}>{SUPABASE_URL}/functions/v1/r/{formAliado.slug}</span>
               </p>
             )}
+          </div>
+
+          {/* Selector de evento global */}
+          <div style={{ background: C.card, border: `1px solid ${C.borderHi}`, borderRadius: 14, padding: '18px 24px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 3, color: C.goldDim, marginBottom: 6 }}>
+                🌐 SORTEO ACTIVO GLOBAL — todos los QR apuntan aquí
+              </div>
+              <select
+                value={eventoGlobal}
+                onChange={e => guardarEventoGlobal(e.target.value)}
+                style={{ width: '100%', padding: '10px 14px', background: '#07040f', border: `1px solid ${C.borderHi}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700 }}
+              >
+                <option value="">— Sin evento activo —</option>
+                {eventosActivos.map(ev => (
+                  <option key={ev.id} value={ev.id}>{ev.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: guardandoGlobal ? C.goldDim : C.green, letterSpacing: 2, minWidth: 80, textAlign: 'right' }}>
+              {guardandoGlobal ? '⏳ GUARDANDO...' : eventoGlobal ? '✓ ACTIVO' : '⚠ SIN EVENTO'}
+            </div>
           </div>
 
           {/* Lista de aliados */}
@@ -660,7 +677,7 @@ export default function SorteoAdminPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {aliados.map(aliado => {
                 const qrUrl = `${SUPABASE_URL}/functions/v1/r/${aliado.slug}`;
-                const eventoNombre = aliado.sorteo_eventos?.nombre || 'Sin evento';
+                
                 return (
                   <div key={aliado.id} style={{ background: C.card, border: `1px solid ${aliado.activo ? C.borderHi : C.border}`, borderRadius: 14, padding: '18px 22px', animation: 'fadeIn .3s ease both', display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
 
@@ -676,22 +693,10 @@ export default function SorteoAdminPage() {
                         <Badge activo={aliado.activo} />
                       </div>
                       <p style={{ fontFamily: 'monospace', fontSize: 10, color: C.goldDim, margin: '0 0 4px' }}>/{aliado.slug}</p>
-                      <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, margin: 0 }}>📊 {aliado.scan_count || 0} scans · 🎲 {eventoNombre}</p>
+                      <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, margin: 0 }}>📊 {aliado.scan_count || 0} scans</p>
                     </div>
 
-                    {/* Cambiar evento */}
-                    <div style={{ minWidth: 160 }}>
-                      <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 7, letterSpacing: 2, color: C.muted, marginBottom: 4 }}>CAMBIAR EVENTO</label>
-                      <select
-                        value={aliado.sorteo_activo_id || ''}
-                        onChange={e => cambiarSorteoAliado(aliado.id, e.target.value)}
-                        style={{ width: '100%', padding: '7px 10px', background: '#07040f', border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 10 }}
-                      >
-                        {eventosActivos.map(ev => (
-                          <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-                        ))}
-                      </select>
-                    </div>
+                    
 
                     {/* Botones */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
