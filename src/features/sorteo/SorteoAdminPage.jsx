@@ -77,6 +77,15 @@ export default function SorteoAdminPage() {
   const [eventosActivos, setEventosActivos] = useState([]);
   const [eventoGlobal,  setEventoGlobal]  = useState('');
   const [guardandoGlobal, setGuardandoGlobal] = useState(false);
+  const [qrModal, setQrModal] = useState(null); // { url, label, icon }
+
+  useEffect(() => {
+    const handler = () => {
+      setQrModal({ url: window.__qrModalUrl, label: window.__qrModalLabel, icon: window.__qrModalIcon });
+    };
+    window.addEventListener('abrir-qr-modal', handler);
+    return () => window.removeEventListener('abrir-qr-modal', handler);
+  }, []);
 
   // ── CSS ──────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -703,24 +712,45 @@ export default function SorteoAdminPage() {
                           </div>
                         ))}
                       </div>
-                      {/* Guía de UTMs para redes */}
-                      <div style={{ marginTop: 14, padding: '10px 12px', background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.15)', borderRadius: 8 }}>
-                        <div style={{ fontFamily: 'Cinzel,serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>LINKS PARA REDES SOCIALES</div>
-                        {[
+                      {/* Links + QR para redes */}
+                      {(() => {
+                        const REDES = [
                           { label: 'Instagram', utm: 'instagram', icon: '📸' },
                           { label: 'TikTok',    utm: 'tiktok',    icon: '🎵' },
                           { label: 'Facebook',  utm: 'facebook',  icon: '👥' },
                           { label: 'YouTube',   utm: 'youtube',   icon: '▶️' },
                           { label: 'Google',    utm: 'google',    icon: '🔍' },
-                        ].map((red) => (
-                          <div key={red.utm} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                            <span style={{ fontSize: 11 }}>{red.icon}</span>
-                            <span style={{ fontFamily: 'monospace', fontSize: 8, color: 'rgba(255,255,255,0.3)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              ?utm_source={red.utm}
-                            </span>
+                        ];
+                        const [qrAbierto, setQrAbierto] = [window.__qrAbierto, window.__setQrAbierto];
+                        return (
+                          <div style={{ marginTop: 14, padding: '10px 12px', background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.15)', borderRadius: 8 }}>
+                            <div style={{ fontFamily: 'Cinzel,serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 8 }}>LINKS PARA REDES SOCIALES</div>
+                            {REDES.map((red) => {
+                              const fullUrl = `${BASE_URL}/sorteo?utm_source=${red.utm}`;
+                              return (
+                                <div key={red.utm} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
+                                  <span style={{ fontSize: 13 }}>{red.icon}</span>
+                                  <span style={{ fontFamily: 'monospace', fontSize: 8, color: 'rgba(255,255,255,0.45)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {fullUrl}
+                                  </span>
+                                  <button
+                                    onClick={() => { copiarAlPortapapeles(fullUrl); }}
+                                    style={{ flexShrink: 0, padding: '3px 8px', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: 5, color: C.gold, fontFamily: 'Cinzel,serif', fontSize: 7, letterSpacing: 1, cursor: 'pointer' }}
+                                  >
+                                    COPIAR
+                                  </button>
+                                  <button
+                                    onClick={() => { window.__qrModalUrl = fullUrl; window.__qrModalLabel = red.label; window.__qrModalIcon = red.icon; window.dispatchEvent(new Event('abrir-qr-modal')); }}
+                                    style={{ flexShrink: 0, padding: '3px 8px', background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 5, color: C.purple, fontFamily: 'Cinzel,serif', fontSize: 7, letterSpacing: 1, cursor: 'pointer' }}
+                                  >
+                                    QR
+                                  </button>
+                                </div>
+                              );
+                            })}
                           </div>
-                        ))}
-                      </div>
+                        );
+                      })()}
                     </div>
                   );
                 })()}
@@ -981,6 +1011,43 @@ export default function SorteoAdminPage() {
         </div>
       )}
 
+    {/* Modal QR redes */}
+      {qrModal && (
+        <div
+          onClick={() => setQrModal(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(4,2,14,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 20, padding: '32px 28px', textAlign: 'center', maxWidth: 300, width: '90%', animation: 'fadeIn .25s ease both' }}
+          >
+            <div style={{ fontSize: 28, marginBottom: 4 }}>{qrModal.icon}</div>
+            <div style={{ fontFamily: 'Cinzel,serif', fontWeight: 900, fontSize: 14, color: C.gold, letterSpacing: 2, marginBottom: 16 }}>{qrModal.label.toUpperCase()}</div>
+            <QRCode url={qrModal.url} size={180} />
+            <p style={{ fontFamily: 'monospace', fontSize: 9, color: C.muted, marginTop: 12, wordBreak: 'break-all' }}>{qrModal.url}</p>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
+              <button
+                onClick={() => copiarAlPortapapeles(qrModal.url)}
+                style={{ padding: '8px 16px', background: 'rgba(212,175,55,0.1)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel,serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
+              >
+                COPIAR LINK
+              </button>
+              <button
+                onClick={() => { const a = document.createElement('a'); a.href = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qrModal.url)}&bgcolor=07040f&color=D4AF37&margin=10`; a.download = `qr-${qrModal.label.toLowerCase()}.png`; a.click(); }}
+                style={{ padding: '8px 16px', background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 8, color: C.purple, fontFamily: 'Cinzel,serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
+              >
+                DESCARGAR QR
+              </button>
+            </div>
+            <button
+              onClick={() => setQrModal(null)}
+              style={{ marginTop: 12, background: 'none', border: 'none', color: C.muted, fontFamily: 'Cinzel,serif', fontSize: 9, cursor: 'pointer', letterSpacing: 1 }}
+            >
+              CERRAR
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
