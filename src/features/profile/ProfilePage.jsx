@@ -301,8 +301,8 @@ function XPBar({ xp, xpMax, level, userId }) {
             <span style={{fontFamily:"'Cinzel',serif",fontSize:'8px',letterSpacing:'2px',color:'rgba(212,175,55,0.95)'}}>NIVEL ACTUAL</span>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-            <span style={{fontFamily:"'Cinzel',serif",fontSize:'8px',letterSpacing:'2px',color:'rgba(200,185,240,0.85)'}}>{level>=6?'RANGO':'SIGUIENTE'}</span>
-            <div style={{width:'30px',height:'30px',borderRadius:'50%',background:'rgba(124,58,237,0.15)',border:'1px solid rgba(212,175,55,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Cinzel',serif",fontSize:'11px',fontWeight:'900',color:'rgba(212,175,55,0.45)'}}>{level>=6?'👑':level+1}</div>
+            <span style={{fontFamily:"'Cinzel',serif",fontSize:'8px',letterSpacing:'2px',color:'rgba(200,185,240,0.85)'}}>{level>=20?'RANGO':'SIGUIENTE'}</span>
+            <div style={{width:'30px',height:'30px',borderRadius:'50%',background:'rgba(124,58,237,0.15)',border:'1px solid rgba(212,175,55,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Cinzel',serif",fontSize:'11px',fontWeight:'900',color:'rgba(212,175,55,0.45)'}}>{level>=20?'👑':level+1}</div>
           </div>
         </div>
 
@@ -338,11 +338,11 @@ function XPBar({ xp, xpMax, level, userId }) {
 
           {/* texto XP con contador */}
           <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Cinzel',serif",fontSize:'7.5px',letterSpacing:'1.5px',color:'rgba(255,255,255,0.85)',textShadow:'0 1px 4px rgba(0,0,0,0.9)',zIndex:2}}>
-            {level>=6 ? '⚔ NIVEL MÁXIMO ⚔' : `${displayXP.toLocaleString()} / ${xpMax.toLocaleString()} XP`}
+            {level>=20 ? '⚔ NIVEL MÁXIMO ⚔' : `${displayXP.toLocaleString()} / ${xpMax.toLocaleString()} XP`}
           </div>
         </div>
 
-        {level>=6 && (
+        {level>=20 && (
           <>
             <button
             onClick={()=>setShowLevel6Modal(true)}
