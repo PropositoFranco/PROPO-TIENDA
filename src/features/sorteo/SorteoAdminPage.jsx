@@ -57,15 +57,15 @@ function Badge({ activo }) {
 // ══════════════════════════════════════════════════════════════════════════════
 export default function SorteoAdminPage() {
   const [eventos,       setEventos]       = useState([]);
-  const [eventoAbierto, setEventoAbierto] = useState(null); // id del evento expandido
-  const [rondas,        setRondas]        = useState({});   // { eventoId: [...rondas] }
+  const [eventoAbierto, setEventoAbierto] = useState(null);
+  const [rondas,        setRondas]        = useState({});
   const [loading,       setLoading]       = useState(true);
   const [creando,       setCreando]       = useState(false);
   const [form,          setForm]          = useState({ nombre: '', cupo: 10 });
   const [errForm,       setErrForm]       = useState('');
   const [copiado,       setCopiado]       = useState('');
   const [masterStats,   setMasterStats]   = useState(null);
-  const [tabActiva,     setTabActiva]     = useState('sorteos'); // 'sorteos' | 'aliados' | 'metricas'
+  const [tabActiva,     setTabActiva]     = useState('sorteos');
   const [metricas,      setMetricas]      = useState(null);
   const [loadingMetricas, setLoadingMetricas] = useState(false);
   const [aliados,       setAliados]       = useState([]);
@@ -77,7 +77,10 @@ export default function SorteoAdminPage() {
   const [eventosActivos, setEventosActivos] = useState([]);
   const [eventoGlobal,  setEventoGlobal]  = useState('');
   const [guardandoGlobal, setGuardandoGlobal] = useState(false);
-  const [qrModal, setQrModal] = useState(null); // { url, label, icon }
+  const [qrModal, setQrModal] = useState(null);
+  const [qrFisicos,     setQrFisicos]     = useState([]);
+  const [loadingQrF,    setLoadingQrF]    = useState(false);
+  const [qrFModal,      setQrFModal]      = useState(null); // { id } para descargar QR
 
   useEffect(() => {
     const handler = () => {
@@ -331,13 +334,27 @@ export default function SorteoAdminPage() {
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
           {[
-            { id: 'sorteos', label: '🎲 SORTEOS' },
-            { id: 'aliados', label: '🤝 ALIADOS' },
-            { id: 'metricas', label: '📊 MÉTRICAS' },
+            { id: 'sorteos',   label: '🎲 SORTEOS' },
+            { id: 'aliados',   label: '🤝 ALIADOS' },
+            { id: 'qrfisicos', label: '📦 QR FÍSICOS' },
+            { id: 'metricas',  label: '📊 MÉTRICAS' },
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setTabActiva(tab.id)}
+              onClick={() => {
+                setTabActiva(tab.id);
+                if (tab.id === 'qrfisicos') {
+                  setLoadingQrF(true);
+                  Promise.all([
+                    supabase.from('qr_fisicos').select('id, activo, aliado_id, aliados(nombre, slug)').order('id'),
+                    aliados.length === 0 ? supabase.from('aliados').select('id, nombre, slug').eq('activo', true).order('nombre') : Promise.resolve({ data: null }),
+                  ]).then(([{ data: qrs }, { data: als }]) => {
+                    setQrFisicos(qrs || []);
+                    if (als) setAliados(als);
+                    setLoadingQrF(false);
+                  });
+                }
+              }}
               style={{
                 padding: '9px 20px',
                 background: tabActiva === tab.id ? `linear-gradient(135deg,${C.gold},#9a7a00)` : 'rgba(255,255,255,0.04)',
@@ -1008,6 +1025,111 @@ export default function SorteoAdminPage() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+    {/* ══ TAB: QR FÍSICOS ══ */}
+      {tabActiva === 'qrfisicos' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* Header info */}
+          <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: '20px 24px' }}>
+            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.gold, margin: '0 0 8px' }}>
+              📦 QR FÍSICOS — TMP-001 a TMP-100
+            </h2>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.muted, letterSpacing: 1, margin: 0 }}>
+              Asigna cada código físico a un aliado. El QR impreso redirige automáticamente a su página.
+            </p>
+          </div>
+
+          {/* Lista */}
+          {loadingQrF ? (
+            <p style={{ color: C.goldDim, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, textAlign: 'center' }}>CARGANDO...</p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+              {qrFisicos.map(qr => {
+                const asignado = !!qr.aliado_id;
+                const qrUrlReal = `${SUPABASE_URL}/functions/v1/r/${qr.id}`;
+                return (
+                  <div key={qr.id} style={{
+                    background: C.card,
+                    border: `1px solid ${asignado ? C.borderHi : C.border}`,
+                    borderRadius: 12, padding: '16px 18px',
+                    display: 'flex', flexDirection: 'column', gap: 10,
+                  }}>
+                    {/* ID + estado */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 14, color: C.gold }}>{qr.id}</span>
+                      <span style={{
+                        fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2,
+                        color: asignado ? C.green : C.muted,
+                        border: `1px solid ${asignado ? 'rgba(68,255,136,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                        borderRadius: 20, padding: '3px 10px',
+                      }}>
+                        {asignado ? '● ASIGNADO' : '○ LIBRE'}
+                      </span>
+                    </div>
+
+                    {/* Aliado asignado o selector */}
+                    <select
+                      value={qr.aliado_id || ''}
+                      onChange={async (e) => {
+                        const aliadoId = e.target.value;
+                        const { error } = await supabase.from('qr_fisicos').update({ aliado_id: aliadoId || null }).eq('id', qr.id);
+                        if (error) { alert('Error al guardar. Intenta de nuevo.'); return; }
+                        const aliadoData = aliados.find(a => a.id === aliadoId) || null;
+                        setQrFisicos(prev => prev.map(q => q.id === qr.id ? { ...q, aliado_id: aliadoId || null, aliados: aliadoData } : q));
+                      }}
+                      style={{ width: '100%', padding: '8px 12px', background: '#07040f', border: `1px solid ${asignado ? C.borderHi : C.border}`, borderRadius: 8, color: asignado ? C.text : C.muted, fontFamily: 'Cinzel, serif', fontSize: 10 }}
+                    >
+                      <option value="">— Sin asignar —</option>
+                      {aliados.map(a => (
+                        <option key={a.id} value={a.id}>{a.nombre} (/{a.slug})</option>
+                      ))} 
+                    </select>
+
+                    {/* Botones QR */}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => setQrFModal({ id: qr.id, url: qrUrlReal })}
+                        style={{ flex: 1, padding: '7px 0', background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 7, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
+                      >
+                        VER QR
+                      </button>
+                      <button
+                        onClick={() => { const a = document.createElement('a'); a.href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrUrlReal)}&bgcolor=07040f&color=D4AF37&margin=10`; a.download = `qr-${qr.id}.png`; a.click(); }}
+                        style={{ flex: 1, padding: '7px 0', background: 'rgba(155,89,255,0.1)', border: '1px solid rgba(155,89,255,0.25)', borderRadius: 7, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
+                      >
+                        DESCARGAR
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modal QR físico */}
+      {qrFModal && (
+        <div onClick={() => setQrFModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(4,2,14,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 20, padding: '32px 28px', textAlign: 'center', maxWidth: 320, width: '90%' }}>
+            <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 18, color: C.gold, letterSpacing: 3, marginBottom: 16 }}>{qrFModal.id}</div>
+            <QRCode url={qrFModal.url} size={200} />
+            <p style={{ fontFamily: 'monospace', fontSize: 8, color: C.muted, marginTop: 10, wordBreak: 'break-all' }}>{qrFModal.url}</p>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
+              <button
+                onClick={() => copiarAlPortapapeles(qrFModal.url)}
+                style={{ padding: '8px 16px', background: 'rgba(212,175,55,0.1)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
+              >COPIAR LINK</button>
+              <button
+                onClick={() => { const a = document.createElement('a'); a.href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrFModal.url)}&bgcolor=07040f&color=D4AF37&margin=10`; a.download = `qr-${qrFModal.id}.png`; a.click(); }}
+                style={{ padding: '8px 16px', background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 8, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
+              >DESCARGAR</button>
+            </div>
+            <button onClick={() => setQrFModal(null)} style={{ marginTop: 12, background: 'none', border: 'none', color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, cursor: 'pointer', letterSpacing: 1 }}>CERRAR</button>
+          </div>
         </div>
       )}
 
