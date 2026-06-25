@@ -46,7 +46,8 @@ export default function ReferralBattlePass() {
       setReferidos(count || 0);
       const { count: c2 } = await supabase
         .from("referral_events").select("*", { count: "exact", head: true })
-        .eq("user_id", user.id).eq("event_type", "bonus_earned").eq("claimed", false);
+        .eq("user_id", user.id).eq("event_type", "bonus_earned").eq("claimed", false)
+        .gt("expires_at", new Date().toISOString());
       setCupones(c2 || 0);
       setLoading(false);
     };
