@@ -4,7 +4,7 @@ import { supabase } from '../services/supabase';
 import { useAuthStore } from './useAuthStore';
 import { XP_TABLE, RANK_BY_LEVEL } from '../config/constants';
 
-const MAX_LEVEL = 6;
+const MAX_LEVEL = 20;
 
 // ── Helper: calcula rank correcto desde el nivel ──
 const getRankName = (level) => RANK_BY_LEVEL[Math.min(level, MAX_LEVEL)]?.name ?? 'DESPERTAR';
