@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { ProtectedRoute, AdminRoute } from './ProtectedRoute';
 import { useAuthStore } from '../store/useAuthStore';
 import AppLayout from '../components/layout/AppLayout';
@@ -43,6 +43,33 @@ const SorteoAdminPage = lazy(() => import('../features/sorteo/SorteoAdminPage'))
 const SorteoPage        = lazy(() => import('../features/sorteo/SorteoPage'));
 const AliadoDisplayPage = lazy(() => import('../features/sorteo/aliado-display-page'));
 const MuroDeAliados = lazy(() => import('../features/aliados/MuroDeAliados'));
+
+function SorteoRedirect() {
+  const [destino, setDestino] = useState(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const utm = params.toString();
+
+    import('../services/supabase').then(({ supabase }) => {
+      supabase
+        .from('config')
+        .select('value')
+        .eq('key', 'sorteo_activo_global')
+        .single()
+        .then(({ data }) => {
+          if (data?.value) {
+            setDestino(`/sorteo/${data.value}${utm ? '?' + utm : ''}`);
+          } else {
+            setDestino('/');
+          }
+        });
+    });
+  }, []);
+
+  if (!destino) return null;
+  return <Navigate to={destino} replace />;
+}
 
 function CatchAll() {
   const { loading } = useAuthStore();
@@ -106,6 +133,7 @@ export default function AppRouter() {
           <Route path="/terminos" element={<TerminosPage />} />
           <Route path="/arsenal-rpg" element={<ArsenalRPGPage />} />
           <Route path="/sorteo/:eventoId" element={<SorteoPage />} />
+          <Route path="/sorteo" element={<SorteoRedirect />} />
           <Route path="/aliado/:slug/display" element={<AliadoDisplayPage />} />
           <Route path="/aliados" element={<MuroDeAliados />} />
 
