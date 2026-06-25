@@ -4,6 +4,7 @@ import { missionsService } from '../../services/missions.service';
 import { useAuthStore } from '../../store/useAuthStore';
 import { usePlayerStore } from '../../store/usePlayerStore';
 import { useUIStore } from '../../store/useUIStore';
+import { supabase } from '../../services/supabase';
 
 // ── CONSTANTES ──────────────────────────────────────────────────────────────
 const CFG = {
@@ -825,7 +826,7 @@ const btnRefs    = useRef({});   // ← AÑADE ESTA
     if (!user?.id) return;
     missionsService.checkAndUpdateStreak(user.id).then(async days => {
   setStreakDays(days);
-  if (days >= 7) missionsService.trackEvent(user.id, 'week_played');
+  if (days >= 7) supabase.rpc('track_week_played_safe', { p_user_id: user.id });
 
   // AHORA cargar misiones — streak ya está guardado en BD
   setLoading(true);

@@ -811,6 +811,15 @@ return data || null;
     if (!form.nombre.trim()) errs.nombre = true;
     if (!form.email.trim() || !form.email.includes('@')) errs.email = true;
     if (Object.keys(errs).length) { setErrores(errs); return; }
+
+    // Guard de dispositivo — bloquea segundo registro desde mismo navegador
+    const deviceKey = `sorteo_registered_${eventoId}`;
+    const yaRegistradoDevice = localStorage.getItem(deviceKey);
+    if (yaRegistradoDevice && yaRegistradoDevice !== form.email.trim().toLowerCase()) {
+      setErrores({ general: 'Este dispositivo ya tiene un registro en este sorteo.' });
+      return;
+    }
+
     setErrores({});
     setGuardando(true);
     miEmailRef.current = form.email.trim().toLowerCase();
@@ -884,6 +893,7 @@ return data || null;
     }
 
     if (data?.status === 'registrado') {
+      localStorage.setItem(deviceKey, form.email.trim().toLowerCase());
       const ronda = await cargarRonda();
       const sorteoId = ronda?.id;
       const reg = {
@@ -1593,11 +1603,11 @@ return data || null;
 
   // ── PANTALLA: REGISTRO ────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'clamp(20px,5vw,60px) clamp(16px,4vw,40px)', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: 'clamp(20px,5vw,60px) clamp(16px,4vw,40px)', paddingTop: 0, position: 'relative', overflowX: 'hidden', overflowY: 'auto' }}>
       <Particles />
       <Header totalBecas={totalBecas} totalGanadores={totalGanadores} rondaNum={rondaNum} eventoNombre={evento?.nombre} />
 
-      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 500, marginTop: 72, animation: 'fadeUp .6s ease both' }}>
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 500, marginTop: 88, animation: 'fadeUp .6s ease both' }}>
 
         {/* Arco decorativo superior */}
         <div style={{ position: 'absolute', top: -40, left: '50%', transform: 'translateX(-50%)', width: 320, height: 160, borderRadius: '160px 160px 0 0', border: `2px solid rgba(255,215,0,0.15)`, borderBottom: 'none', pointerEvents: 'none', animation: 'arcGlow 3s ease-in-out infinite' }} />

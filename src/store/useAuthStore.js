@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { supabase } from '../services/supabase';
 import { XP_TABLE, RANK_BY_LEVEL } from '../config/constants';
 
-const MAX_LEVEL = 6;
+const MAX_LEVEL = 20;
 
 // ── Recalcula nivel y XP si el usuario ya rebasó el umbral ──
 // Se llama al cargar el perfil desde Supabase, antes de setPlayerData
