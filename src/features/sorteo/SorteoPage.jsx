@@ -696,6 +696,32 @@ export default function SorteoPage() {
       .eq('id', eventoId).eq('activo', true).single();
     if (error || !data) { setScreen(SCREEN.CERRADO); return; }
     setEvento(data);
+
+    // ── Recuperar estado si el usuario ya participó y recargó la página ──────
+    const emailGuardado = localStorage.getItem(`sorteo_registered_${eventoId}`);
+    if (emailGuardado) {
+      const { data: histData } = await supabase
+        .from('sorteos')
+        .select(`id, sorteo_participantes(id, nombre, email, es_ganador, cupon_code, tipo_premio)`)
+        .eq('evento_id', eventoId)
+        .eq('estado', 'completado')
+        .order('numero_ronda', { ascending: false })
+        .limit(3);
+      if (histData) {
+        for (const ronda of histData) {
+          const yo = ronda.sorteo_participantes?.find(p => p.email === emailGuardado);
+          if (yo) {
+            const reg = { nombre: yo.nombre, email: yo.email, cuponCode: yo.cupon_code, esGanador: yo.es_ganador, tipoPremio: yo.tipo_premio, sorteoId: ronda.id };
+            miRegistroRef.current = reg;
+            miEmailRef.current = emailGuardado;
+            setMiRegistro(reg);
+            setScreen(yo.es_ganador ? SCREEN.GANADOR : SCREEN.PREMIO);
+            return;
+          }
+        }
+      }
+    }
+
     setScreen(SCREEN.REGISTRO);
   }, [eventoId]);
 
