@@ -1148,7 +1148,7 @@ return data || null;
           </div>
 
           <a
-            href={`https://buy.stripe.com/9B68wP59t2pA1lQeKQenS0x?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}`}
+            href={`https://buy.stripe.com/cNifZh6dxfcmfcGgSYenS0H?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}`}
             target="_blank" rel="noopener noreferrer"
             style={{
               display: 'block', padding: '16px',
