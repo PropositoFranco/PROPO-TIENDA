@@ -677,6 +677,11 @@ export default function SorteoPage() {
   const [fraseVisible,   setFraseVisible]   = useState(true);
   const [causaElegida,   setCausaElegida]   = useState(null);
   const [screenAnterior, setScreenAnterior] = useState(null);
+  const [mostrarConsulta,   setMostrarConsulta]   = useState(false);
+  const [consultaEmail,     setConsultaEmail]     = useState('');
+  const [consultaToken,     setConsultaToken]     = useState('');
+  const [consultando,       setConsultando]       = useState(false);
+  const [consultaResultado, setConsultaResultado] = useState(null);
 
   // refs declarados arriba junto a setScreen
 
@@ -711,7 +716,8 @@ export default function SorteoPage() {
         for (const ronda of histData) {
           const yo = ronda.sorteo_participantes?.find(p => p.email === emailGuardado);
           if (yo) {
-            const reg = { nombre: yo.nombre, email: yo.email, cuponCode: yo.cupon_code, esGanador: yo.es_ganador, tipoPremio: yo.tipo_premio, sorteoId: ronda.id };
+            const tokenGuardado = localStorage.getItem(`sorteo_token_${eventoId}`);
+            const reg = { nombre: yo.nombre, email: yo.email, cuponCode: yo.cupon_code, esGanador: yo.es_ganador, tipoPremio: yo.tipo_premio, sorteoId: ronda.id, token: tokenGuardado || undefined };
             miRegistroRef.current = reg;
             miEmailRef.current = emailGuardado;
             setMiRegistro(reg);
@@ -881,12 +887,14 @@ return data || null;
         const partes = await cargarParticipantes(sorteoId);
         const yo = partes.find(p => p.email === miEmailRef.current);
         if (yo) {
+          const tokenGuardado = localStorage.getItem(`sorteo_token_${eventoId}`);
           const reg = {
             nombre: yo.nombre,
             email: yo.email,
             cuponCode: yo.cupon_code,
             esGanador: yo.es_ganador,
             sorteoId,
+            token: tokenGuardado || undefined,
           };
           miRegistroRef.current = reg;
           setMiRegistro(reg);
@@ -938,8 +946,10 @@ return data || null;
         nombre: form.nombre.trim(),
         email: form.email.trim().toLowerCase(),
         posicion: data.posicion,
+        token: data.token,
         sorteoId,
       };
+      if (data.token) localStorage.setItem(`sorteo_token_${eventoId}`, data.token);
       miRegistroRef.current = reg;
       setMiRegistro(reg);
       if (sorteoId) await cargarParticipantes(sorteoId);
@@ -949,7 +959,8 @@ return data || null;
 
     if (data?.status === 'sorteado') {
       const ronda = await cargarRonda();
-      setMiRegistro({ nombre: form.nombre.trim(), email: form.email.trim().toLowerCase(), cuponCode: data.codigo, esGanador: data.es_ganador, tipoPremio: data.tipo_premio, sorteoId: ronda?.id });
+      if (data.token) localStorage.setItem(`sorteo_token_${eventoId}`, data.token);
+      setMiRegistro({ nombre: form.nombre.trim(), email: form.email.trim().toLowerCase(), cuponCode: data.codigo, esGanador: data.es_ganador, tipoPremio: data.tipo_premio, token: data.token, sorteoId: ronda?.id });
       if (ronda) await cargarParticipantes(ronda.id);
       setScreen(SCREEN.SORTEO);
       // Llamar Edge Function para crear Promotion Codes en Stripe (fire & forget)
@@ -957,6 +968,66 @@ return data || null;
         .catch(e => console.warn('[sorteo] cupones edge fn:', e));
       setTimeout(() => { setScreen(data.es_ganador ? SCREEN.GANADOR : SCREEN.PREMIO); cargarHistorial(); cargarRonda().then(r => r && cargarParticipantes(r.id)); }, 7500);
     }
+  };
+
+  // ── Consultar resultado pasado por email ─────────────────────────────────
+  const consultarResultadoPorEmail = async () => {
+    const emailLimpio = consultaEmail.trim().toLowerCase();
+    const tokenLimpio = consultaToken.trim().toUpperCase();
+    if (!emailLimpio || !emailLimpio.includes('@')) {
+      setConsultaResultado({ tipo: 'error', mensaje: 'Escribe un email válido.' });
+      return;
+    }
+    if (!tokenLimpio) {
+      setConsultaResultado({ tipo: 'error', mensaje: 'Escribe tu código personal de 6 caracteres.' });
+      return;
+    }
+    setConsultando(true);
+    setConsultaResultado(null);
+
+    const { data, error } = await supabase
+      .from('sorteo_participantes')
+      .select(`id, nombre, email, es_ganador, cupon_code, tipo_premio, token_consulta, registered_at, sorteo_id, sorteos!inner(id, estado, numero_ronda, evento_id)`)
+      .eq('email', emailLimpio)
+      .eq('token_consulta', tokenLimpio)
+      .eq('sorteos.evento_id', eventoId)
+      .order('registered_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    setConsultando(false);
+
+    if (error || !data) {
+      setConsultaResultado({ tipo: 'no_encontrado' });
+      return;
+    }
+
+    if (data.sorteos?.estado !== 'completado') {
+      setConsultaResultado({ tipo: 'pendiente', nombre: data.nombre });
+      return;
+    }
+
+    // Encontrado y ya sorteado — nada se revela aquí, lo llevamos por la animación completa
+    miEmailRef.current = emailLimpio;
+    const reg = {
+      nombre: data.nombre,
+      email: data.email,
+      cuponCode: data.cupon_code,
+      esGanador: data.es_ganador,
+      tipoPremio: data.tipo_premio,
+      token: data.token_consulta,
+      sorteoId: data.sorteo_id,
+    };
+    miRegistroRef.current = reg;
+    setMiRegistro(reg);
+    await cargarParticipantes(data.sorteo_id);
+    setMostrarConsulta(false);
+    setConsultaEmail('');
+    setConsultaToken('');
+    setScreen(SCREEN.SORTEO);
+    setTimeout(() => {
+      setScreen(data.es_ganador ? SCREEN.GANADOR : SCREEN.PREMIO);
+    }, 7500);
   };
 
   const cupoActual = participantes.length;
@@ -1094,6 +1165,13 @@ return data || null;
             </button>
           </div>
 
+          {miRegistro?.token && (
+            <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 12, color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', marginTop: -10, marginBottom: 24, textAlign: 'center' }}>
+              Tu código personal de consulta: <span style={{ color: C.purple, fontWeight: 700, letterSpacing: 2 }}>{miRegistro.token}</span><br />
+              Guárdalo — lo necesitarás para volver a ver este cupón.
+            </p>
+          )}
+
           {/* Carta del Maestro — ritual de cierre */}
           <div style={{
             position: 'relative',
@@ -1148,7 +1226,7 @@ return data || null;
           </div>
 
           <a
-            href={`https://buy.stripe.com/cNifZh6dxfcmfcGgSYenS0H?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}`}
+            href={`https://buy.stripe.com/cNifZh6dxfcmfcGgSYenS0H?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}&prefilled_email=${encodeURIComponent(miRegistro?.email || '')}`}
             target="_blank" rel="noopener noreferrer"
             style={{
               display: 'block', padding: '16px',
@@ -1326,6 +1404,13 @@ return data || null;
               {copiado ? '✓ COPIADO' : '📋 COPIAR CUPÓN'}
             </button>
           </div>
+
+          {miRegistro?.token && (
+            <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 12, color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', marginTop: -10, marginBottom: 24, textAlign: 'center' }}>
+              Tu código personal de consulta: <span style={{ color: C.purple, fontWeight: 700, letterSpacing: 2 }}>{miRegistro.token}</span><br />
+              Guárdalo — lo necesitarás para volver a ver este cupón.
+            </p>
+          )}
 
           <button
             onClick={() => { setScreenAnterior(SCREEN.PREMIO); setScreen(SCREEN.CAUSA); }}
@@ -1887,6 +1972,93 @@ return data || null;
           >
             {guardando ? 'REGISTRANDO...' : '⚔️ ENTRAR AL SORTEO'}
           </button>
+
+          <button
+            onClick={() => { setMostrarConsulta(v => !v); setConsultaResultado(null); }}
+            style={{
+              width: '100%', padding: '13px', borderRadius: 13,
+              border: `1.5px solid ${C.purpleDim}`,
+              cursor: 'pointer', marginTop: 12,
+              background: 'rgba(204,68,255,0.08)',
+              color: C.goldLight,
+              fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 1.5, fontWeight: 700,
+              transition: 'all .2s',
+            }}
+          >
+            🔍 ¿YA PARTICIPASTE? CONSULTA TU RESULTADO
+          </button>
+
+          {mostrarConsulta && (
+            <div style={{ marginTop: 16, animation: 'slideDown 0.3s ease both' }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="email"
+                  value={consultaEmail}
+                  onChange={e => setConsultaEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && consultarResultadoPorEmail()}
+                  placeholder="tu@email.com"
+                  autoComplete="email"
+                  style={{
+                    width: '100%', background: 'rgba(255,255,255,0.04)',
+                    border: `1.5px solid ${C.purpleDim}`,
+                    borderRadius: 11, padding: '12px 15px', marginBottom: 8,
+                    color: C.text, fontFamily: 'Cinzel, serif', fontSize: 12,
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="text"
+                  value={consultaToken}
+                  onChange={e => setConsultaToken(e.target.value.toUpperCase())}
+                  onKeyDown={e => e.key === 'Enter' && consultarResultadoPorEmail()}
+                  placeholder="TU CÓDIGO PERSONAL"
+                  maxLength={6}
+                  style={{
+                    flex: 1, background: 'rgba(255,255,255,0.04)',
+                    border: `1.5px solid ${C.purpleDim}`,
+                    borderRadius: 11, padding: '12px 15px',
+                    color: C.text, fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 2,
+                  }}
+                />
+                <button
+                  onClick={consultarResultadoPorEmail}
+                  disabled={consultando}
+                  style={{
+                    padding: '12px 18px', borderRadius: 11, border: 'none',
+                    cursor: consultando ? 'not-allowed' : 'pointer',
+                    background: consultando ? 'rgba(204,68,255,0.15)' : `linear-gradient(135deg,${C.purple},#7a1ab8)`,
+                    color: '#fff',
+                    fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 1, fontWeight: 900,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {consultando ? '...' : 'BUSCAR'}
+                </button>
+              </div>
+              <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 11, color: 'rgba(255,255,255,0.35)', fontStyle: 'italic', marginTop: 8, textAlign: 'center' }}>
+                Tu código personal te lo mostramos cuando te registraste. Sin él, nadie puede ver tu resultado.
+              </p>
+
+              {consultaResultado?.tipo === 'error' && (
+                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.red, marginTop: 10, textAlign: 'center' }}>
+                  ⚠ {consultaResultado.mensaje}
+                </p>
+              )}
+
+              {consultaResultado?.tipo === 'no_encontrado' && (
+                <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 13, color: C.muted, marginTop: 12, textAlign: 'center', fontStyle: 'italic' }}>
+                  No encontramos participación con ese correo en este sorteo.
+                </p>
+              )}
+
+              {consultaResultado?.tipo === 'pendiente' && (
+                <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 13, color: C.goldDim, marginTop: 12, textAlign: 'center', fontStyle: 'italic' }}>
+                  {consultaResultado.nombre}, tu ronda aún está en espera. El sorteo todavía no se ha realizado.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 22 }}>

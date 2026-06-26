@@ -209,6 +209,20 @@ serve(async (req: Request) => {
 
   console.log(`[webhook] checkout.session.completed | session=${sessionId} | user=${userId} | referral=${referralCode}`);
 
+// ── Idempotencia: si ya procesamos esta sesión, salir ─────────────────────
+const { data: sessionExistente } = await supabase
+  .from('access_codes')
+  .select('id, code')
+  .eq('stripe_session_id', sessionId)
+  .maybeSingle();
+
+if (sessionExistente) {
+  console.log(`[webhook] Sesión ya procesada, ignorando: ${sessionId}`);
+  return new Response(JSON.stringify({ received: true, code: sessionExistente.code }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
   // ── 1. Generar y guardar el código de Propotienda ─────────────────────────
   let propoCode = generatePropoCode();
 
