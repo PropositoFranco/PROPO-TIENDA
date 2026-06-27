@@ -3417,7 +3417,7 @@ function TempleReportes({ userId }) {
                   <div style={{ fontFamily: "'Cinzel',serif", fontSize: "9px", fontWeight: "700", letterSpacing: "0.18em", color: "rgba(167,139,250,0.6)", textTransform: "uppercase" }}>Tu QR de Alianza</div>
                   <div style={{ padding: "12px", background: "#fff", borderRadius: "14px", boxShadow: "0 0 32px rgba(124,58,237,0.4)" }}>
                     <QRCodeSVG
-                      value={`https://propotienda.com/?ref=${profile.referral_code}`}
+                      value={`https://templodelpropositooficial.netlify.app/?ref=${profile.referral_code}`}
                       size={160}
                       bgColor="#ffffff"
                       fgColor="#1a0a2e"
@@ -3428,7 +3428,7 @@ function TempleReportes({ userId }) {
                     Escanea · primer mes $1 · código <span style={{ color: "#a78bfa", fontWeight: "900" }}>{profile.referral_code}</span>
                   </div>
                   <button
-                    onClick={() => { if (navigator.share) navigator.share({ text: `Entra al Templo del Propósito — primer mes $1. Código: ${profile.referral_code}`, url: `https://propotienda.com/?ref=${profile.referral_code}` }); else navigator.clipboard?.writeText(`https://propotienda.com/?ref=${profile.referral_code}`); }}
+                    onClick={() => { if (navigator.share) navigator.share({ text: `Entra al Templo del Propósito — primer mes $1. Código: ${profile.referral_code}`, url: `https://templodelpropositooficial.netlify.app/?ref=${profile.referral_code}` }); else navigator.clipboard?.writeText(`https://templodelpropositooficial.netlify.app/?ref=${profile.referral_code}`); }}
                     style={{ background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.25)", borderRadius: "10px", padding: "10px 22px", fontFamily: "'Cinzel',serif", fontSize: "9px", fontWeight: "700", color: "#60a5fa", cursor: "pointer", letterSpacing: "0.12em", textTransform: "uppercase" }}>
                     Compartir link
                   </button>
