@@ -3,6 +3,7 @@
 // Ruta: /alianza
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "../../services/supabase";
 import { useAuthStore } from "../../store/useAuthStore";
 import { usePlayerStore } from "../../store/usePlayerStore";
@@ -598,23 +599,24 @@ if (eventos) {
             <strong style={{ color: "#fbbf24", fontStyle: "normal" }}>25</strong>{" "}dona un costal de alimento a un refugio canino.
           </p>
 
-          {/* ── CÓDIGO ── */}
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "14px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(167,139,250,0.22)", borderRadius: "16px", padding: "14px 22px", marginBottom: "20px", animation: "alianza-code-pulse 4s ease-in-out infinite", flexWrap: "wrap", justifyContent: "center", position: "relative", overflow: "hidden" }}>
+          {/* ── CÓDIGO + QR ── */}
+          <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "20px", background: "rgba(124,58,237,0.06)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "20px", padding: "28px 22px", marginBottom: "20px", animation: "alianza-code-pulse 3s ease-in-out infinite", width: "100%", maxWidth: "320px", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: "1px", background: "linear-gradient(90deg,transparent,rgba(167,139,250,0.7),rgba(212,175,55,0.5),transparent)" }} />
-            <div>
-              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "8.5px", color: "rgba(167,139,250,0.55)", letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: "4px" }}>Tu código Alianza</div>
-              <div style={{ fontFamily: "monospace", fontSize: "clamp(24px,4vw,32px)", fontWeight: "900", letterSpacing: "0.2em", background: "linear-gradient(90deg,#c4b5fd,#93c5fd,#a78bfa,#c4b5fd)", backgroundSize: "200% auto", animation: "goldShimmer 4s linear infinite", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{codigoReferido}</div>
+            <div style={{ padding: "14px", background: "#fff", borderRadius: "16px", boxShadow: "0 0 40px rgba(124,58,237,0.35)" }}>
+              <QRCodeSVG value={shareLink} size={180} bgColor="#ffffff" fgColor="#1a0a2e" level="M" />
             </div>
-            <div style={{ display: "flex", gap: "9px" }}>
-              <button onClick={copyCode}
-                onMouseEnter={e => e.currentTarget.style.borderColor = copied ? "rgba(52,211,153,0.6)" : "rgba(167,139,250,0.6)"}
-                onMouseLeave={e => e.currentTarget.style.borderColor = copied ? "rgba(52,211,153,0.35)" : "rgba(167,139,250,0.28)"}
-                style={{ background: copied ? "rgba(52,211,153,0.1)" : "rgba(167,139,250,0.1)", border: `1px solid ${copied ? "rgba(52,211,153,0.35)" : "rgba(167,139,250,0.28)"}`, borderRadius: "10px", padding: "10px 16px", cursor: "pointer", color: copied ? "#34d399" : "#a78bfa", fontFamily: "'Cinzel',serif", fontSize: "9.5px", fontWeight: "700", letterSpacing: "0.12em", textTransform: "uppercase", transition: "all 0.3s" }}>{copied ? "✓ Copiado" : "Copiar"}</button>
-              <button
-                onClick={() => { if (navigator.share) navigator.share({ text: shareText, url: shareLink }); else navigator.clipboard?.writeText(shareLink); }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(96,165,250,0.6)"}
-                onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(96,165,250,0.25)"}
-                style={{ background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.25)", borderRadius: "10px", padding: "10px 16px", cursor: "pointer", color: "#60a5fa", fontFamily: "'Cinzel',serif", fontSize: "9.5px", fontWeight: "700", letterSpacing: "0.12em", textTransform: "uppercase", transition: "all 0.3s" }}>Compartir</button>
+            <div style={{ fontFamily: "'Cinzel',serif", fontSize: "10px", fontWeight: "700", letterSpacing: "0.18em", color: "rgba(167,139,250,0.7)", textTransform: "uppercase", textAlign: "center" }}>
+              Escanea para entrar al Templo · primer mes $1
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(167,139,250,0.18)", borderRadius: "12px", padding: "12px 18px", width: "100%", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "8px", color: "rgba(167,139,250,0.4)", letterSpacing: "0.15em", marginBottom: "4px" }}>TU CÓDIGO</div>
+                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "18px", fontWeight: "900", color: "#a78bfa", letterSpacing: "0.08em" }}>{codigoReferido}</div>
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={copyCode} style={{ background: copied ? "rgba(52,211,153,0.15)" : "rgba(167,139,250,0.1)", border: `1px solid ${copied ? "rgba(52,211,153,0.4)" : "rgba(167,139,250,0.25)"}`, borderRadius: "10px", padding: "10px 16px", fontFamily: "'Cinzel',serif", fontSize: "9px", fontWeight: "700", color: copied ? "#34d399" : "#a78bfa", cursor: "pointer", letterSpacing: "0.12em", textTransform: "uppercase", transition: "all .3s" }}>{copied ? "✓ Copiado" : "Copiar"}</button>
+                <button onClick={() => { if (navigator.share) navigator.share({ text: shareText, url: shareLink }); else navigator.clipboard?.writeText(shareLink); }} style={{ background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.25)", borderRadius: "10px", padding: "10px 16px", fontFamily: "'Cinzel',serif", fontSize: "9px", fontWeight: "700", color: "#60a5fa", cursor: "pointer", letterSpacing: "0.12em", textTransform: "uppercase", transition: "all .3s" }}>Compartir</button>
+              </div>
             </div>
           </div>
 
