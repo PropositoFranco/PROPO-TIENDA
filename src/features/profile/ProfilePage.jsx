@@ -2969,6 +2969,11 @@ function PropoPassModal({ onClose }) {
  */
 export default function ProfilePage() {
   const [showPropoPassModal, setShowPropoPassModal] = useState(false);
+  const [pack1Active, setPack1Active] = useState(false);
+  const [pack2Active, setPack2Active] = useState(false);
+  const [packIframeSrc, setPackIframeSrc] = useState('');
+  const [packIframeLoading, setPackIframeLoading] = useState(false);
+  const [packViewOpen, setPackViewOpen] = useState(false);
   const { templarioName, level, xp, xpToNextLevel, cristales, avatar, addXP, addCristales } = usePlayerStore();
   const { profile } = useAuthStore();
   const sidebarOpen = useUIStore(s => s.sidebarOpen);
@@ -2984,6 +2989,17 @@ export default function ProfilePage() {
       if (uid) {
         const store = useMembershipStore.getState();
         store.syncProgress(uid);
+        supabase
+          .from('profiles')
+          .select('pack1_active, pack2_active')
+          .eq('id', uid)
+          .single()
+          .then(({ data: p }) => {
+            if (p) {
+              setPack1Active(!!p.pack1_active);
+              setPack2Active(!!p.pack2_active);
+            }
+          });
       }
     });
     const t = setTimeout(() => SFX.reveal(), 400);
@@ -3538,6 +3554,122 @@ function TempleReportes({ userId }) {
             )}
           </div>
         )}
+
+        {/* ══ MIS PACKS ══ */}
+        {(pack1Active || pack2Active) && (() => {
+          const abrirPack = async (fileName) => {
+            setPackIframeLoading(true);
+            setPackIframeSrc('');
+            setPackViewOpen(true);
+            const { data, error } = await supabase.storage
+              .from('paquetes')
+              .createSignedUrl(fileName, 3600);
+            if (error || !data?.signedUrl) {
+              setPackIframeLoading(false);
+              setPackViewOpen(false);
+              return;
+            }
+            const res = await fetch(data.signedUrl);
+            const html = await res.text();
+            setPackIframeSrc(html);
+            setPackIframeLoading(false);
+          };
+
+          return (
+            <>
+              <Divider icon="⚡" label="MIS PACKS"/>
+              <div style={{
+                borderRadius: '20px',
+                background: 'linear-gradient(145deg,rgba(212,175,55,0.08) 0%,rgba(8,3,26,0.97) 100%)',
+                border: '1px solid rgba(212,175,55,0.35)',
+                padding: 'clamp(20px,4vw,36px)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px',
+              }}>
+                <div style={{ fontFamily:"'Cinzel',serif", fontSize:'8px', letterSpacing:'4px', color:'rgba(212,175,55,0.5)', marginBottom:'4px' }}>
+                  ✦ CONTENIDO DESBLOQUEADO · ACCESO ILIMITADO
+                </div>
+
+                {pack1Active && (
+                  <button
+                    onClick={() => abrirPack('paquete1.html')}
+                    disabled={packIframeLoading}
+                    style={{
+                      display:'flex', alignItems:'center', gap:'14px',
+                      padding:'clamp(16px,2.5vw,20px) clamp(18px,3vw,28px)',
+                      borderRadius:'14px', cursor:'pointer',
+                      background:'linear-gradient(135deg,rgba(212,175,55,0.12),rgba(212,175,55,0.05))',
+                      border:'1px solid rgba(212,175,55,0.45)',
+                      boxShadow:'0 0 24px rgba(212,175,55,0.1)',
+                      transition:'all .25s ease',
+                      textAlign:'left',
+                    }}
+                    onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(212,175,55,0.8)';e.currentTarget.style.boxShadow='0 0 36px rgba(212,175,55,0.25)';}}
+                    onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(212,175,55,0.45)';e.currentTarget.style.boxShadow='0 0 24px rgba(212,175,55,0.1)';}}
+                  >
+                    <div style={{width:'48px',height:'48px',borderRadius:'12px',flexShrink:0,background:'linear-gradient(135deg,rgba(212,175,55,0.25),rgba(212,175,55,0.1))',border:'1px solid rgba(212,175,55,0.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'22px',boxShadow:'0 0 16px rgba(212,175,55,0.3)'}}>⚡</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontFamily:"'Cinzel',serif",fontSize:'clamp(11px,2vw,14px)',fontWeight:900,color:'#fde68a',marginBottom:'4px',letterSpacing:'1px'}}>Paquete 1 — Crea con IA</div>
+                      <div style={{fontFamily:"'Raleway',sans-serif",fontSize:'11px',color:'rgba(200,185,240,0.45)'}}>Convierte Ideas en Herramientas · Acceso completo</div>
+                    </div>
+                    <div style={{color:'rgba(212,175,55,0.6)',fontSize:'22px',flexShrink:0}}>›</div>
+                  </button>
+                )}
+
+                {pack2Active && (
+                  <button
+                    onClick={() => abrirPack('paquete2.html')}
+                    disabled={packIframeLoading}
+                    style={{
+                      display:'flex', alignItems:'center', gap:'14px',
+                      padding:'clamp(16px,2.5vw,20px) clamp(18px,3vw,28px)',
+                      borderRadius:'14px', cursor:'pointer',
+                      background:'linear-gradient(135deg,rgba(124,58,237,0.12),rgba(124,58,237,0.05))',
+                      border:'1px solid rgba(124,58,237,0.45)',
+                      boxShadow:'0 0 24px rgba(124,58,237,0.1)',
+                      transition:'all .25s ease',
+                      textAlign:'left',
+                    }}
+                    onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(124,58,237,0.8)';e.currentTarget.style.boxShadow='0 0 36px rgba(124,58,237,0.25)';}}
+                    onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(124,58,237,0.45)';e.currentTarget.style.boxShadow='0 0 24px rgba(124,58,237,0.1)';}}
+                  >
+                    <div style={{width:'48px',height:'48px',borderRadius:'12px',flexShrink:0,background:'linear-gradient(135deg,rgba(124,58,237,0.25),rgba(124,58,237,0.1))',border:'1px solid rgba(124,58,237,0.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'22px',boxShadow:'0 0 16px rgba(124,58,237,0.3)'}}>⚜️</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontFamily:"'Cinzel',serif",fontSize:'clamp(11px,2vw,14px)',fontWeight:900,color:'#a78bfa',marginBottom:'4px',letterSpacing:'1px'}}>Paquete 2 — Domina y Edita</div>
+                      <div style={{fontFamily:"'Raleway',sans-serif",fontSize:'11px',color:'rgba(200,185,240,0.45)'}}>Construye Sin Límites · Acceso completo</div>
+                    </div>
+                    <div style={{color:'rgba(124,58,237,0.6)',fontSize:'22px',flexShrink:0}}>›</div>
+                  </button>
+                )}
+              </div>
+
+              {packViewOpen && (
+                <div style={{position:'fixed',inset:0,zIndex:9999,background:'rgba(2,0,12,0.97)',display:'flex',flexDirection:'column'}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 20px',borderBottom:'1px solid rgba(212,175,55,0.15)',flexShrink:0}}>
+                    <button
+                      onClick={()=>{setPackViewOpen(false);setPackIframeSrc('');}}
+                      style={{background:'rgba(212,175,55,0.07)',border:'1px solid rgba(212,175,55,0.2)',color:'rgba(212,175,55,0.7)',fontFamily:"'Cinzel',serif",fontSize:'9px',letterSpacing:'2px',padding:'8px 18px',borderRadius:'8px',cursor:'pointer',textTransform:'uppercase'}}
+                    >← Volver</button>
+                    <div style={{fontFamily:"'Cinzel',serif",fontSize:'8px',letterSpacing:'3px',color:'rgba(212,175,55,0.3)'}}>◈ CONTENIDO EXCLUSIVO · TEMPLO DEL PROPÓSITO</div>
+                  </div>
+                  <div style={{flex:1,position:'relative'}}>
+                    {packIframeLoading && (
+                      <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(2,0,12,0.95)',fontFamily:"'Cinzel',serif",fontSize:'11px',letterSpacing:'3px',color:'rgba(212,175,55,0.45)'}}>
+                        Cargando contenido...
+                      </div>
+                    )}
+                    <iframe
+                      srcDoc={packIframeSrc}
+                      style={{width:'100%',height:'100%',border:'none',display:'block'}}
+                      title="Contenido Exclusivo"
+                    />
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {/* ══ BUZÓN DEL TEMPLO ══ */}
         <Divider icon="💬" label="BUZÓN DEL TEMPLO"/>

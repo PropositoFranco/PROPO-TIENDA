@@ -175,7 +175,7 @@ export default function RegisterPage() {
 try {
   const { data: paid } = await supabase
     .from('access_codes')
-    .select('id, amount_paid, membership_type, duration_months')
+    .select('id, amount_paid, membership_type, duration_months, includes_pack1, includes_pack2')
     .eq('user_email', email)
     .eq('is_used', false)
     .maybeSingle();
@@ -194,6 +194,8 @@ try {
         membership_type:       mType,
         membership_expires_at: expires,
         paused_at:             null,
+        ...(paid.includes_pack1 ? { pack1_active: true } : {}),
+        ...(paid.includes_pack2 ? { pack2_active: true } : {}),
       })
       .eq('id', userId || newUserId);
 
