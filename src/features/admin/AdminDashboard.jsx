@@ -458,7 +458,7 @@ const loadKpis = async () => {
     const topBuyersIds = Object.entries(ordersByUser).sort((a,b) => b[1]-a[1]).slice(0,5).map(([id,cnt]) => ({ id, cnt }));
     let topBuyersEnriched = topBuyersIds;
     if (topBuyersIds.length) {
-      const { data: mProfiles } = await supabase.from('profiles').select('id, templario_name').in('id', topMissionIds.map(m => m.id).filter(Boolean));
+      const { data: buyerProfiles } = await supabase.from('profiles').select('id, templario_name').in('id', topBuyersIds.map(b => b.id).filter(Boolean));
       const bmap = {}; (buyerProfiles || []).forEach(p => { bmap[p.id] = p.templario_name; });
       topBuyersEnriched = topBuyersIds.map(b => ({ ...b, name: bmap[b.id] || b.id.slice(0,8) }));
     }
