@@ -43,7 +43,7 @@ const SorteoAdminPage = lazy(() => import('../features/sorteo/SorteoAdminPage'))
 const SorteoPage        = lazy(() => import('../features/sorteo/SorteoPage'));
 const AliadoDisplayPage = lazy(() => import('../features/sorteo/aliado-display-page'));
 const MuroDeAliados = lazy(() => import('../features/aliados/MuroDeAliados'));
-const AdminMapaPage = lazy(() => import('../pages/admin/AdminMapaPage'));
+const AdminMapaPage = lazy(() => import('../features/admin/AdminMapaPage'));
 
 function SorteoRedirect() {
   const [destino, setDestino] = useState(null);
