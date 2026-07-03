@@ -13,6 +13,7 @@ import { useUIStore } from '../../store/useUIStore';
 import ReactDOM from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { XP_TABLE, XP_PER_LEVEL, RANK_BY_LEVEL, getXPProgress } from '../../config/constants';
+import LocationCorrector from '../../components/LocationCorrector';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const CONTENT_TYPES = [
@@ -3396,7 +3397,13 @@ function TempleReportes({ userId }) {
                 INICIADO EN {user.joinDate||'EL TEMPLO'}
               </div>
               <h1 style={{fontFamily:"'Cinzel',serif",fontSize:'clamp(22px,5vw,42px)',fontWeight:'900',lineHeight:1.05,letterSpacing:'.05em',background:'linear-gradient(135deg,#f0c040 0%,#d4af37 35%,#fff8dc 55%,#d4af37 100%)',backgroundSize:'200% auto',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',animation:'goldShimmer 4s linear infinite',marginBottom:'4px'}}>{user.name}</h1>
-              <div style={{fontFamily:"'Raleway',sans-serif",fontSize:'11px',color:'rgba(200,185,240,0.35)',letterSpacing:'2px',marginBottom:'20px'}}>{user.username}</div>
+              <div style={{fontFamily:"'Raleway',sans-serif",fontSize:'11px',color:'rgba(200,185,240,0.35)',letterSpacing:'2px',marginBottom:'12px'}}>{user.username}</div>
+
+              {userId && (
+                <div style={{marginBottom:'14px'}}>
+                  <LocationCorrector userId={userId} />
+                </div>
+              )}
 
               <div style={{display:'flex',gap:'clamp(16px,3vw,32px)',flexWrap:'wrap',marginBottom:'22px'}}>
                 <div style={{display:'flex',alignItems:'center',gap:'9px',marginLeft:'-8px'}}>

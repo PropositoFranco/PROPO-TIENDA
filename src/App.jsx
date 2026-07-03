@@ -72,6 +72,31 @@ export default function App() {
     return () => clearInterval(activityInterval);
   }, [user]);
 
+useEffect(() => {
+    if (!user) return;
+    const flagKey = 'tdp_loc_captured_' + user.id;
+    if (sessionStorage.getItem(flagKey)) return;
+    import('./services/supabase').then(async ({ supabase }) => {
+      try {
+        const { data: existing } = await supabase
+          .from('user_locations').select('locked_manual').eq('user_id', user.id).maybeSingle();
+        if (existing?.locked_manual) { sessionStorage.setItem(flagKey, '1'); return; }
+        const res = await fetch('https://get.geojs.io/v1/ip/geo.json');
+        if (!res.ok) return;
+        const geo = await res.json();
+        const lat = parseFloat(geo?.latitude);
+        const lng = parseFloat(geo?.longitude);
+        if (!isFinite(lat) || !isFinite(lng)) return;
+        await supabase.from('user_locations').upsert({
+          user_id: user.id, lat, lng,
+          city: geo.city || null, country: geo.country || null, country_code: geo.country_code || null,
+          source: 'ip', updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' });
+        sessionStorage.setItem(flagKey, '1');
+      } catch (_) { /* silencioso: nunca debe romper la app */ }
+    });
+  }, [user]);
+
   useEffect(() => {
     const updatePath = () => setCurrentPath(window.location.pathname);
     window.addEventListener('popstate', updatePath);
