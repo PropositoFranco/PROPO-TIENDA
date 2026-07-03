@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>T-STORE · Admin Panel</title>
   <style>
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Nunito:wght@400;700;900&display=swap');
 
   *{margin:0;padding:0;box-sizing:border-box;}
 
@@ -119,6 +119,68 @@
   .section-usuarios   { box-shadow: 0 4px 40px rgba(0,0,0,.4), inset 0 0 60px rgba(74,222,128,.03); }
   .section-codigos    { box-shadow: 0 4px 40px rgba(0,0,0,.4), inset 0 0 60px rgba(34,211,238,.03); }
   .section-bonuses    { box-shadow: 0 4px 40px rgba(0,0,0,.4), inset 0 0 60px rgba(232,121,249,.03); }
+
+  /* ═══════════════════════════════════
+    INTELIGENCIA DE PRODUCTO — analítica de ventas
+    Paleta oficial del brief: fondo #04020E, dorado #D4AF37,
+    dorado-brillante #FFE566, violeta #CC44FF, verde-logro #44FF88
+  ═══════════════════════════════════ */
+  .analytics-toggle-wrap{display:flex;justify-content:center;margin-bottom:26px;}
+  .analytics-toggle-btn{
+    font-family:'Cinzel',serif;font-size:11px;font-weight:700;letter-spacing:3px;
+    color:#FFE566;background:linear-gradient(135deg,rgba(212,175,55,.14),rgba(204,68,255,.10));
+    border:1.5px solid rgba(212,175,55,.5);border-radius:30px;
+    padding:13px 30px;cursor:pointer;transition:all .25s;
+    box-shadow:0 0 24px rgba(212,175,55,.12);
+    display:inline-flex;align-items:center;gap:10px;
+  }
+  .analytics-toggle-btn:hover{border-color:#FFE566;box-shadow:0 0 34px rgba(212,175,55,.28);transform:translateY(-1px);}
+  .analytics-toggle-btn .atb-arrow{font-size:9px;transition:transform .25s;opacity:.7;}
+  .analytics-toggle-btn.open .atb-arrow{transform:rotate(180deg);}
+  @media(max-width:480px){
+    .analytics-toggle-btn{font-size:9px;letter-spacing:2px;padding:12px 20px;width:100%;justify-content:center;}
+  }
+
+  .section-analytics{border-color:rgba(204,68,255,.4);
+    box-shadow:0 4px 40px rgba(0,0,0,.4), inset 0 0 60px rgba(204,68,255,.04);}
+  .section-analytics .sec-title{color:#FFE566;text-shadow:0 0 12px rgba(255,229,102,.4);}
+
+  .an-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
+  @media(max-width:768px){.an-grid{grid-template-columns:1fr;}}
+
+  .an-panel{
+    background:linear-gradient(145deg,rgba(10,5,24,.97),rgba(6,3,16,.99));
+    border:1.5px solid rgba(160,100,255,.25);border-radius:12px;padding:18px;
+  }
+  .an-panel-title{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;
+    color:var(--text-faint);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+
+  .an-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(160,100,255,.08);}
+  .an-row:last-child{border-bottom:none;}
+  .an-rank{font-family:'Nunito',sans-serif;font-weight:900;font-size:13px;color:rgba(212,175,55,.5);width:18px;flex-shrink:0;}
+  .an-name{flex:1;font-size:12px;color:var(--text-dim);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .an-num{font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;color:#FFE566;flex-shrink:0;}
+  .an-num.up{color:#44FF88;}
+  .an-num.down{color:#fca5a5;}
+  .an-tag{font-family:'Nunito',sans-serif;font-size:9px;font-weight:700;letter-spacing:.5px;
+    padding:2px 8px;border-radius:20px;flex-shrink:0;}
+  .an-tag.claves{background:rgba(212,175,55,.15);color:#FFE566;}
+  .an-tag.victorias{background:rgba(204,68,255,.15);color:#e9b8ff;}
+
+  .an-empty{font-size:12px;color:var(--text-faint);text-align:center;padding:20px 0;font-style:italic;}
+
+  .an-reco{
+    display:flex;gap:12px;padding:13px 14px;border-radius:10px;margin-bottom:10px;
+    background:rgba(204,68,255,.05);border-left:3px solid #CC44FF;
+  }
+  .an-reco:last-child{margin-bottom:0;}
+  .an-reco-icon{font-size:16px;flex-shrink:0;}
+  .an-reco-text{font-size:12.5px;line-height:1.5;color:var(--text-dim);font-family:'Crimson Text',serif;}
+  .an-reco-text b{color:#FFE566;font-weight:600;}
+
+  .an-loading{text-align:center;padding:30px 0;font-family:'Cinzel',serif;font-size:11px;
+    letter-spacing:2px;color:var(--text-faint);}
+
   .sec-title{font-family:'Cinzel',serif;font-size:13px;font-weight:700;letter-spacing:3px;
     color:var(--gold2);margin-bottom:20px;display:flex;align-items:center;gap:8px;
     text-shadow:0 0 10px rgba(212,175,55,.4);}
@@ -497,6 +559,45 @@
         <div class="stat-card">
           <div class="stat-val" id="totalMisiones">0</div>
           <div class="stat-label">📋 Misiones</div>
+        </div>
+      </div>
+
+      <!-- 🧠 INTELIGENCIA DE PRODUCTO — acceso centrado -->
+      <div class="analytics-toggle-wrap">
+        <button class="analytics-toggle-btn" id="analyticsToggleBtn" onclick="toggleAnalytics()">
+          🧠 INTELIGENCIA DEL TEMPLO <span class="atb-arrow">▼</span>
+        </button>
+      </div>
+      <div class="section section-analytics" id="analyticsSection" style="display:none;">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:linear-gradient(90deg,rgba(204,68,255,.14) 0%,transparent 100%);border-left:3px solid #CC44FF;border-radius:10px;margin-bottom:20px;"><div style="width:38px;height:38px;background:rgba(204,68,255,.14);border:1px solid rgba(204,68,255,.4);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🧠</div><div><div style="font-family:'Cinzel Decorative',serif;font-size:12px;letter-spacing:3px;color:#FFE566;">INTELIGENCIA DE PRODUCTO</div><div style="font-size:11px;color:rgba(204,68,255,.85);margin-top:3px;font-family:'Cinzel',serif;letter-spacing:1px;">VENTAS · TENDENCIA · RECOMENDACIONES · SOLO ADMIN</div></div><svg style="margin-left:auto;opacity:.14;" width="44" height="44" viewBox="0 0 44 44"><polygon points="22,3 41,12 41,32 22,41 3,32 3,12" fill="none" stroke="#CC44FF" stroke-width="1.5"/><polygon points="22,11 33,17 33,27 22,33 11,27 11,17" fill="rgba(204,68,255,.3)"/></svg></div>
+
+        <div id="analyticsLoading" class="an-loading">⚔️ Consultando los registros del Templo...</div>
+
+        <div id="analyticsBody" style="display:none;">
+          <div class="an-grid">
+            <div class="an-panel">
+              <div class="an-panel-title">🏆 Más vendidos (histórico)</div>
+              <div id="anTopVendidos"></div>
+            </div>
+            <div class="an-panel">
+              <div class="an-panel-title">📈 Últimos 7 días</div>
+              <div id="anUltimos7"></div>
+            </div>
+          </div>
+          <div class="an-grid">
+            <div class="an-panel">
+              <div class="an-panel-title">😴 Estancados (14+ días sin venta)</div>
+              <div id="anEstancados"></div>
+            </div>
+            <div class="an-panel">
+              <div class="an-panel-title">🎯 Por territorio</div>
+              <div id="anTerritorios"></div>
+            </div>
+          </div>
+          <div class="an-panel" style="margin-top:4px;">
+            <div class="an-panel-title">🔮 Recomendaciones del Oráculo</div>
+            <div id="anRecomendaciones"></div>
+          </div>
         </div>
       </div>
 
@@ -2043,6 +2144,149 @@
       showToast('✅ Imagen lista');
     };
     reader.readAsDataURL(file);
+  }
+
+  /* ═══════════════════════════════════
+    🧠 INTELIGENCIA DE PRODUCTO
+  ═══════════════════════════════════ */
+  let _analyticsOpen = false;
+
+  function toggleAnalytics() {
+    const sec = document.getElementById('analyticsSection');
+    const btn = document.getElementById('analyticsToggleBtn');
+    _analyticsOpen = !_analyticsOpen;
+    sec.style.display = _analyticsOpen ? 'block' : 'none';
+    btn.classList.toggle('open', _analyticsOpen);
+    if (_analyticsOpen) {
+      sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      loadProductAnalytics();
+    }
+  }
+
+  async function loadProductAnalytics() {
+    document.getElementById('analyticsLoading').style.display = 'block';
+    document.getElementById('analyticsBody').style.display = 'none';
+
+    const { data, error } = await supabaseClient.rpc('admin_get_product_analytics');
+
+    if (error) {
+      document.getElementById('analyticsLoading').textContent = '⚠ No se pudo consultar: ' + error.message;
+      return;
+    }
+
+    const products = (data && data.products) || [];
+    document.getElementById('analyticsLoading').style.display = 'none';
+    document.getElementById('analyticsBody').style.display = 'block';
+    renderAnalytics(products);
+  }
+
+  function _anEsc(s) { return (s || '').toString().replace(/</g, '&lt;'); }
+  function _anCatTag(cat) {
+    const isClave = (cat || '').toLowerCase().includes('clave');
+    return `<span class="an-tag ${isClave ? 'claves' : 'victorias'}">${isClave ? 'CLAVE' : 'VICTORIA'}</span>`;
+  }
+  function _anDaysSince(dateStr) {
+    if (!dateStr) return null;
+    return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  }
+
+  function renderAnalytics(products) {
+    // ── Top vendidos histórico ──
+    const topVendidos = [...products].filter(p => p.total_sold > 0)
+      .sort((a, b) => b.total_sold - a.total_sold).slice(0, 6);
+    document.getElementById('anTopVendidos').innerHTML = topVendidos.length ? topVendidos.map((p, i) => `
+      <div class="an-row">
+        <span class="an-rank">${i + 1}</span>
+        ${_anCatTag(p.category)}
+        <span class="an-name">${_anEsc(p.name)}</span>
+        <span class="an-num">${p.total_sold}</span>
+      </div>`).join('') : '<div class="an-empty">Aún no hay ventas registradas. En cuanto tus templarios compren, aquí verás quién manda.</div>';
+
+    // ── Últimos 7 días con tendencia ──
+    const ultimos7 = [...products].filter(p => p.sold_7d > 0)
+      .sort((a, b) => b.sold_7d - a.sold_7d).slice(0, 6);
+    document.getElementById('anUltimos7').innerHTML = ultimos7.length ? ultimos7.map(p => {
+      let trendHtml = '';
+      if (p.sold_prev_7d > 0) {
+        const pct = Math.round(((p.sold_7d - p.sold_prev_7d) / p.sold_prev_7d) * 100);
+        trendHtml = `<span class="an-num ${pct >= 0 ? 'up' : 'down'}" style="font-size:10px;">${pct >= 0 ? '↑' : '↓'}${Math.abs(pct)}%</span>`;
+      } else {
+        trendHtml = `<span class="an-num up" style="font-size:10px;">NUEVO</span>`;
+      }
+      return `
+      <div class="an-row">
+        ${_anCatTag(p.category)}
+        <span class="an-name">${_anEsc(p.name)}</span>
+        <span class="an-num">${p.sold_7d}</span>
+        ${trendHtml}
+      </div>`;
+    }).join('') : '<div class="an-empty">Semana tranquila en el Templo — cero ventas en los últimos 7 días.</div>';
+
+    // ── Estancados ──
+    const estancados = products.filter(p => p.is_active).map(p => {
+      const days = p.last_sale_at ? _anDaysSince(p.last_sale_at) : _anDaysSince(p.created_at);
+      return { ...p, _days: days, _neverSold: !p.last_sale_at };
+    }).filter(p => p._days !== null && p._days >= 14)
+      .sort((a, b) => b._days - a._days).slice(0, 6);
+    document.getElementById('anEstancados').innerHTML = estancados.length ? estancados.map(p => `
+      <div class="an-row">
+        ${_anCatTag(p.category)}
+        <span class="an-name">${_anEsc(p.name)}</span>
+        <span class="an-num down" style="font-size:11px;">${p._neverSold ? 'sin ventas' : p._days + 'd'}</span>
+      </div>`).join('') : '<div class="an-empty">🔥 Ningún producto activo lleva 14+ días dormido. Buen ritmo.</div>';
+
+    // ── Por territorio ──
+    const terrMap = {};
+    products.forEach(p => {
+      const t = p.territory || 'sin territorio';
+      terrMap[t] = (terrMap[t] || 0) + p.total_sold;
+    });
+    const terrArr = Object.entries(terrMap).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+    const terrTotal = terrArr.reduce((s, [, v]) => s + v, 0);
+    document.getElementById('anTerritorios').innerHTML = terrArr.length ? terrArr.map(([t, v]) => `
+      <div class="an-row">
+        <span class="an-name" style="text-transform:capitalize;">${_anEsc(t)}</span>
+        <span class="an-num">${v}</span>
+        <span class="an-num" style="font-size:10px;color:var(--text-faint);">${Math.round(v / terrTotal * 100)}%</span>
+      </div>`).join('') : '<div class="an-empty">Sin datos suficientes de territorio todavía.</div>';
+
+    // ── Recomendaciones del Oráculo ──
+    const recos = [];
+    const totalSalesAll = products.reduce((s, p) => s + p.total_sold, 0);
+
+    if (totalSalesAll === 0) {
+      recos.push({ icon: '🌱', text: 'Todavía no hay suficientes ventas para leer patrones reales. Vuelve cuando tengas más movimiento en <b>/store</b> — el Oráculo necesita datos, no adivina.' });
+    } else {
+      const best = topVendidos[0];
+      if (best) {
+        recos.push({ icon: '🔥', text: `<b>${_anEsc(best.name)}</b> es tu herramienta más vendida (${best.total_sold} ventas), territorio <b>${_anEsc(best.territory || '—')}</b>. Considera crear 1–2 herramientas más en esa misma línea mientras el interés está caliente.` });
+      }
+      if (terrArr.length && terrTotal > 0) {
+        const [topTerr, topTerrVal] = terrArr[0];
+        const pct = Math.round(topTerrVal / terrTotal * 100);
+        if (pct >= 40) {
+          recos.push({ icon: '🎯', text: `El territorio <b>${_anEsc(topTerr)}</b> concentra el <b>${pct}%</b> de todas tus ventas. Ahí está el apetito real de tus templarios — prioriza nuevo contenido ahí antes que en territorios fríos.` });
+        }
+      }
+      if (estancados.length > 0) {
+        const names = estancados.slice(0, 3).map(p => _anEsc(p.name.split(' - ')[0] || p.name)).join(', ');
+        recos.push({ icon: '😴', text: `Tienes <b>${estancados.length}</b> producto(s) activo(s) sin ventas recientes (${names}${estancados.length > 3 ? '…' : ''}). Vale la pena revisar precio, portada o descripción, o moverlos a una oferta temporal.` });
+      }
+      const claveTotal = products.filter(p => (p.category || '').includes('clave')).reduce((s, p) => s + p.sold_30d, 0);
+      const victoriaTotal = products.filter(p => (p.category || '').includes('victoria')).reduce((s, p) => s + p.sold_30d, 0);
+      if (claveTotal + victoriaTotal >= 5) {
+        if (claveTotal > victoriaTotal * 1.4) {
+          recos.push({ icon: '📊', text: `En los últimos 30 días, <b>Claves</b> se vende bastante más que <b>Victorias Rápidas</b> (${claveTotal} vs ${victoriaTotal}). Tus templarios están priorizando protocolos profundos sobre wins rápidos — ajusta tu mezcla de lanzamientos en consecuencia.` });
+        } else if (victoriaTotal > claveTotal * 1.4) {
+          recos.push({ icon: '📊', text: `En los últimos 30 días, <b>Victorias Rápidas</b> se vende bastante más que <b>Claves</b> (${victoriaTotal} vs ${claveTotal}). El público quiere resultados rápidos — considera precios de entrada más bajos en Claves para bajar la fricción.` });
+        }
+      }
+    }
+    document.getElementById('anRecomendaciones').innerHTML = recos.map(r => `
+      <div class="an-reco">
+        <span class="an-reco-icon">${r.icon}</span>
+        <span class="an-reco-text">${r.text}</span>
+      </div>`).join('');
   }
 
   window._allProducts = [];

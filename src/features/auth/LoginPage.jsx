@@ -32,6 +32,12 @@ export default function LoginPage() {
   const [recoveryResult, setRecoveryResult] = useState('');
   const [recoveryLoading, setRecoveryLoading] = useState(false);
 
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [newPasswordLoading, setNewPasswordLoading] = useState(false);
+  const [newPasswordResult, setNewPasswordResult] = useState('');
+
   const handleLoad = (e) => {
     try {
       const doc = e.target.contentDocument;
@@ -57,14 +63,29 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data?.session) {
+    // Detectar si venimos de un link de restablecimiento de contraseña
+    // (Supabase Auth manda type=recovery en el hash de la URL de redirect).
+    const urlHasRecoveryToken =
+      window.location.hash.includes('type=recovery') ||
+      new URLSearchParams(window.location.search).get('type') === 'recovery';
+
+    let recoveryHandled = urlHasRecoveryToken;
+    if (urlHasRecoveryToken) setShowNewPassword(true);
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        recoveryHandled = true;
+        setShowNewPassword(true);
+        return;
+      }
+
+      if (event === 'INITIAL_SESSION' && session && !recoveryHandled) {
         loadProfile().then(async () => {
-  const { missionsService } = await import('../../services/missions.service');
-  await missionsService.checkAndUpdateStreak(data.session.user.id);
-  const profile = useAuthStore.getState().profile;
+          const { missionsService } = await import('../../services/missions.service');
+          await missionsService.checkAndUpdateStreak(session.user.id);
+          const profile = useAuthStore.getState().profile;
           smartNavigate(profile);
-});
+        });
       }
     });
 
@@ -238,7 +259,10 @@ await loadProfile();
     };
 
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      authListener.subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const handleRecovery = async () => {
@@ -255,7 +279,9 @@ await loadProfile();
         }
       );
       const json = await res.json();
-      if (json.sent) {
+      if (json.sent && json.mode === 'password_reset') {
+        setRecoveryResult('✅ Revisa tu correo — te mandamos un link para poner tu nueva contraseña.');
+      } else if (json.sent) {
         setRecoveryResult('✅ Revisa tu correo — ahí está tu código de acceso.');
       } else {
         setRecoveryResult('❌ No encontramos ese email. ¿Usaste otro al pagar?');
@@ -264,6 +290,39 @@ await loadProfile();
       setRecoveryResult('❌ Error de conexión. Intenta de nuevo.');
     }
     setRecoveryLoading(false);
+  };
+
+  const handleSetNewPassword = async () => {
+    if (!newPassword || !newPasswordConfirm) {
+      setNewPasswordResult('❌ Completa los dos campos.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setNewPasswordResult('❌ Tu contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+    if (newPassword !== newPasswordConfirm) {
+      setNewPasswordResult('❌ Las contraseñas no coinciden.');
+      return;
+    }
+    setNewPasswordLoading(true);
+    setNewPasswordResult('');
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setNewPasswordResult('✅ ¡Contraseña actualizada! Entrando...');
+      await loadProfile();
+      setTimeout(() => {
+        pushToast('¡Bienvenido de nuevo, Templario!');
+        const profile = useAuthStore.getState().profile;
+        window.history.replaceState(null, '', window.location.pathname);
+        smartNavigate(profile);
+      }, 1000);
+    } catch (err) {
+      console.error('Set new password error:', err);
+      setNewPasswordResult('❌ No se pudo actualizar. El link puede haber expirado — pide uno nuevo.');
+    }
+    setNewPasswordLoading(false);
   };
 
   return (
@@ -352,6 +411,77 @@ await loadProfile();
               VOLVER
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Panel: poner nueva contraseña (llega desde el link del correo) */}
+      {showNewPassword && (
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'radial-gradient(ellipse at 50% 50%,rgba(10,4,30,0.97),rgba(4,1,18,0.99))',
+          fontFamily: "'Cinzel',serif", padding: 24,
+        }}>
+          <div style={{ fontSize: 36, marginBottom: 16 }}>🔐</div>
+          <div style={{
+            fontSize: 'clamp(14px,3vw,18px)', fontWeight: 700, letterSpacing: '.05em',
+            background: 'linear-gradient(135deg,#f0c040,#d4af37)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text', marginBottom: 8, textAlign: 'center',
+          }}>Elige tu Nueva Contraseña</div>
+          <div style={{
+            fontFamily: "'Raleway',sans-serif", fontSize: 13,
+            color: 'rgba(200,185,240,.6)', marginBottom: 24, textAlign: 'center', lineHeight: 1.8,
+          }}>
+            Escríbela dos veces para confirmar.
+          </div>
+          <input
+            type="password"
+            placeholder="Nueva contraseña"
+            value={newPassword}
+            onChange={e => setNewPassword(e.target.value)}
+            style={{
+              width: '100%', maxWidth: 320, padding: '12px 16px', borderRadius: 10,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(212,175,55,0.4)',
+              color: '#f5d06e', fontFamily: "'Raleway',sans-serif", fontSize: 15,
+              outline: 'none', marginBottom: 12, textAlign: 'center',
+            }}
+          />
+          <input
+            type="password"
+            placeholder="Confirma tu nueva contraseña"
+            value={newPasswordConfirm}
+            onChange={e => setNewPasswordConfirm(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSetNewPassword()}
+            style={{
+              width: '100%', maxWidth: 320, padding: '12px 16px', borderRadius: 10,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(212,175,55,0.4)',
+              color: '#f5d06e', fontFamily: "'Raleway',sans-serif", fontSize: 15,
+              outline: 'none', marginBottom: 12, textAlign: 'center',
+            }}
+          />
+          {newPasswordResult && (
+            <div style={{
+              fontFamily: "'Raleway',sans-serif",
+              color: newPasswordResult.startsWith('✅') ? '#86efac' : '#ff6b6b',
+              fontSize: 13, marginBottom: 16, textAlign: 'center', maxWidth: 300, lineHeight: 1.6,
+            }}>
+              {newPasswordResult}
+            </div>
+          )}
+          <button
+            onClick={handleSetNewPassword}
+            disabled={newPasswordLoading}
+            style={{
+              padding: '11px 28px', borderRadius: 10, cursor: 'pointer',
+              background: 'linear-gradient(135deg,rgba(212,175,55,.2),rgba(124,58,237,.3))',
+              border: '1px solid rgba(212,175,55,.5)', color: '#d4af37',
+              fontFamily: "'Cinzel',serif", fontSize: 10, letterSpacing: 3,
+              opacity: newPasswordLoading ? 0.6 : 1,
+            }}
+          >
+            {newPasswordLoading ? 'Guardando...' : '🔑 GUARDAR CONTRASEÑA'}
+          </button>
         </div>
       )}
     </div>
