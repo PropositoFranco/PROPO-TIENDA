@@ -3293,7 +3293,7 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
               display:'flex', alignItems:'flex-start', justifyContent:'center',
               paddingTop:24, overflowY:'auto',
             }} onClick={() => setShowKpis(false)}>
-              <div style={{
+              <div data-kpi-panel style={{
                 background:'linear-gradient(135deg,#0d0a1a,#0a0614)',
                 border:'1.5px solid rgba(212,175,55,0.4)',
                 borderRadius:18, padding:'1.5rem',
