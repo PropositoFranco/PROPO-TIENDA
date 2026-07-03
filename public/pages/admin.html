@@ -167,7 +167,23 @@
   .an-tag.claves{background:rgba(212,175,55,.15);color:#FFE566;}
   .an-tag.victorias{background:rgba(204,68,255,.15);color:#e9b8ff;}
 
-  .an-empty{font-size:12px;color:var(--text-faint);text-align:center;padding:20px 0;font-style:italic;}
+ .an-empty{font-size:12px;color:var(--text-faint);text-align:center;padding:20px 0;font-style:italic;}
+
+  .an-scroll{max-height:300px;overflow-y:auto;padding-right:6px;}
+  .an-scroll::-webkit-scrollbar{width:5px;}
+  .an-scroll::-webkit-scrollbar-thumb{background:rgba(204,68,255,.3);border-radius:10px;}
+  .an-buyer-row{padding:10px 0;border-bottom:1px solid rgba(160,100,255,.08);}
+  .an-buyer-row:last-child{border-bottom:none;}
+  .an-buyer-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+  .an-buyer-name{font-size:12.5px;color:#FFE566;font-weight:700;font-family:'Nunito',sans-serif;}
+  .an-buyer-badges{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;}
+  .an-buyer-badge{font-family:'Nunito',sans-serif;font-size:9px;font-weight:700;color:var(--text-faint);
+    background:rgba(160,100,255,.1);padding:2px 7px;border-radius:20px;white-space:nowrap;}
+  .an-buyer-badge.streak{color:#44FF88;background:rgba(68,255,136,.1);}
+  .an-buyer-badge.member{color:#FFE566;background:rgba(255,229,102,.1);}
+  .an-buyer-sub{font-size:11px;color:var(--text-dim);margin-top:4px;font-family:'Crimson Text',serif;}
+  .an-buyer-sub .prod{color:var(--purple2);}
+  .an-name.multi{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.4;}
 
   .an-reco{
     display:flex;gap:12px;padding:13px 14px;border-radius:10px;margin-bottom:10px;
@@ -592,6 +608,16 @@
             <div class="an-panel">
               <div class="an-panel-title">🎯 Por territorio</div>
               <div id="anTerritorios"></div>
+            </div>
+          </div>
+          <div class="an-grid">
+            <div class="an-panel">
+              <div class="an-panel-title">🧑‍🤝‍🧑 Top compradores</div>
+              <div id="anTopCompradores" class="an-scroll"></div>
+            </div>
+            <div class="an-panel">
+              <div class="an-panel-title">🕐 Actividad reciente</div>
+              <div id="anActividadReciente" class="an-scroll"></div>
             </div>
           </div>
           <div class="an-panel" style="margin-top:4px;">
@@ -2175,9 +2201,12 @@
     }
 
     const products = (data && data.products) || [];
+    const topBuyers = (data && data.top_buyers) || [];
+    const recentPurchases = (data && data.recent_purchases) || [];
     document.getElementById('analyticsLoading').style.display = 'none';
     document.getElementById('analyticsBody').style.display = 'block';
     renderAnalytics(products);
+    renderAnalyticsBuyers(topBuyers, recentPurchases);
   }
 
   function _anEsc(s) { return (s || '').toString().replace(/</g, '&lt;'); }
@@ -2287,6 +2316,47 @@
         <span class="an-reco-icon">${r.icon}</span>
         <span class="an-reco-text">${r.text}</span>
       </div>`).join('');
+  }
+
+  function _anTimeAgo(dateStr) {
+    const days = _anDaysSince(dateStr);
+    if (days === null) return '—';
+    if (days === 0) return 'hoy';
+    if (days === 1) return 'ayer';
+    return `hace ${days}d`;
+  }
+  function _anMembBadge(m) {
+    if (m === 'vip') return '<span class="an-buyer-badge member">👑 VIP</span>';
+    if (m === 'propopass') return '<span class="an-buyer-badge member">👑 PROPO-PASS</span>';
+    if (m === 'paid') return '<span class="an-buyer-badge">🎫 Activo</span>';
+    return '';
+  }
+
+  function renderAnalyticsBuyers(topBuyers, recentPurchases) {
+    document.getElementById('anTopCompradores').innerHTML = topBuyers.length ? topBuyers.map(b => `
+      <div class="an-buyer-row">
+        <div class="an-buyer-top">
+          <span class="an-buyer-name">${_anEsc(b.buyer_name)}</span>
+          <div class="an-buyer-badges">
+            <span class="an-buyer-badge">Nv.${b.buyer_level ?? '—'}</span>
+            ${b.buyer_streak ? `<span class="an-buyer-badge streak">🔥${b.buyer_streak}d</span>` : ''}
+            ${_anMembBadge(b.buyer_membership)}
+          </div>
+        </div>
+        <div class="an-buyer-sub">${b.purchases_count} compra${b.purchases_count === 1 ? '' : 's'} · <span class="prod">${b.total_spent} 🪙</span> · última ${_anTimeAgo(b.last_purchase_at)}</div>
+      </div>`).join('') : '<div class="an-empty">Aún no hay compradores recurrentes.</div>';
+
+    document.getElementById('anActividadReciente').innerHTML = recentPurchases.length ? recentPurchases.slice(0, 12).map(r => `
+      <div class="an-buyer-row">
+        <div class="an-buyer-top">
+          <span class="an-buyer-name">${_anEsc(r.buyer_name)}</span>
+          <div class="an-buyer-badges">
+            <span class="an-buyer-badge">Nv.${r.buyer_level ?? '—'}</span>
+            ${_anMembBadge(r.buyer_membership)}
+          </div>
+        </div>
+        <div class="an-buyer-sub">compró <span class="prod">${_anEsc(r.product_name || '—')}</span> · ${_anTimeAgo(r.created_at)}</div>
+      </div>`).join('') : '<div class="an-empty">Sin actividad reciente registrada.</div>';
   }
 
   window._allProducts = [];
