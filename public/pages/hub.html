@@ -1436,6 +1436,7 @@ window.addEventListener('message', (event) => {
     if (elNombre) elNombre.textContent = data?.templario_name || data?.nombre || data?.name || '';
     _userNombre = data?.templario_name || data?.nombre || data?.name || '';
     _userEmail = data?.email || data?.user_email || '';
+    _userId = data?.user_id || data?.id || '';
   }
 
   if (type === 'player') {
@@ -1561,6 +1562,7 @@ function goTo(dest) {
 var _userProtocolo = null;
 var _userNombre = '';
 var _userEmail = '';
+var _userId = '';
 
 function _protocoloVigente() {
   if (!_userProtocolo) return false;
@@ -1576,11 +1578,11 @@ function handleContinueBar() {
     window.parent.postMessage({ type: 'navigate', data: 'academia' }, '*');
   } else {
     var nombre = _userNombre || document.getElementById('user-name')?.textContent?.trim() || '';
-var email = _userEmail || '';
-var url = 'https://templopropo-mg6l5byy.manus.space/?nombre=' + encodeURIComponent(nombre ) + '&email=' + encodeURIComponent(email);
+    var email = _userEmail || '';
+    var uid = _userId || '';
+    var url = 'https://templopropo-mg6l5byy.manus.space/?nombre=' + encodeURIComponent(nombre) + '&email=' + encodeURIComponent(email) + '&uid=' + encodeURIComponent(uid);
 
-window.open(url, '_blank');
-
+    window.open(url, '_blank');
   }
 }
 

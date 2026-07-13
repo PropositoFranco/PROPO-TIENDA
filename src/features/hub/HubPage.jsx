@@ -13,6 +13,7 @@ export default function HubPage() {
   const { profile, user } = useAuthStore();
   const { cristales, xp, level, xpToNextLevel, rank, playerClass, templarioName } = usePlayerStore();
   const frameRef = useRef(null);
+  const frameLoadedRef = useRef(false);
 
   const [showTutorial, setShowTutorial] = useState(
     localStorage.getItem('show_tstore_tutorial') === '1'
@@ -68,9 +69,16 @@ useEffect(() => {
   };
 
   const handleFrameLoad = () => {
+    frameLoadedRef.current = true;
     sendToFrame('viewport', {
       w: frameRef.current?.offsetWidth  || window.innerWidth,
       h: frameRef.current?.offsetHeight || window.innerHeight,
+    });
+    // Mandar perfil real ya que el iframe está garantizado listo (sella nombre/email/uid)
+    if (profile) sendToFrame('profile', {
+      ...profile,
+      user_id: user?.id || profile?.id || '',
+      user_email: user?.email || profile?.email || user?.user_email || '',
     });
     // Mandar protocolo cacheado inmediato
     const { userProtocolo: proto, protocoLoFecha: protoFecha } = useMembershipStore.getState();
@@ -98,8 +106,12 @@ useEffect(() => {
   };
 
   useEffect(() => {
-    if (profile) sendToFrame('profile', { ...profile, user_email: user?.email || user?.user_email || '' });
-  }, [profile]);
+    if (profile && frameLoadedRef.current) sendToFrame('profile', {
+      ...profile,
+      user_id: user?.id || profile?.id || '',
+      user_email: user?.email || profile?.email || user?.user_email || '',
+    });
+  }, [profile, user]);
 
   useEffect(() => {
     if (cristales !== undefined) sendToFrame('cristales', cristales);
