@@ -619,11 +619,9 @@ const onRitualCompleto = useCallback(async () => {
         ? 'active'
         : openedSet.has(m.slug)
           ? 'opened'
-          : m.week <= currentWeek
-            ? 'opened'
-            : 'locked',
+          : 'locked',
     }));
-  }, [openedSlugs, currentModule, currentWeek]);
+  }, [openedSlugs, currentModule]);
 
   const openedCount = categorized.filter(m => m.state !== 'locked').length;
   const totalWeeks = Math.max(...ACADEMY_MODULES.map(m => m.week));
