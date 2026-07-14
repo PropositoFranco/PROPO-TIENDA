@@ -627,7 +627,7 @@ const onRitualCompleto = useCallback(async () => {
 
   const openedCount = categorized.filter(m => m.state !== 'locked').length;
   const totalWeeks = Math.max(...ACADEMY_MODULES.map(m => m.week));
-  const weeksLeft = totalWeeks - (currentModule?.week ?? currentWeek);
+  const weeksLeft = Math.max(0, totalWeeks - Math.floor(memberDays / 7));
 
   return (
     <>
