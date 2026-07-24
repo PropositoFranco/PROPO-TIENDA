@@ -1102,6 +1102,12 @@ export default function SorteoAdminPage() {
                       >
                         DESCARGAR
                       </button>
+                      <button
+                        onClick={() => { const a = document.createElement('a'); a.href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrUrlReal)}&bgcolor=07040f&color=FFFFFF&margin=10`; a.download = `qr-${qr.id}-blanco.png`; a.click(); }}
+                        style={{ flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 7, color: '#FFFFFF', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
+                      >
+                        BLANCO
+                      </button>
                     </div>
                   </div>
                 );
@@ -1127,6 +1133,19 @@ export default function SorteoAdminPage() {
                 onClick={() => { const a = document.createElement('a'); a.href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrFModal.url)}&bgcolor=07040f&color=D4AF37&margin=10`; a.download = `qr-${qrFModal.id}.png`; a.click(); }}
                 style={{ padding: '8px 16px', background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 8, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
               >DESCARGAR</button>
+            </div>
+
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.muted, marginTop: 20, marginBottom: 8 }}>VERSIÓN BLANCA</div>
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrFModal.url)}&bgcolor=07040f&color=FFFFFF&margin=10`}
+              alt="QR blanco"
+              style={{ width: 200, height: 200, borderRadius: 8 }}
+            />
+            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
+              <button
+                onClick={() => { const a = document.createElement('a'); a.href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrFModal.url)}&bgcolor=07040f&color=FFFFFF&margin=10`; a.download = `qr-${qrFModal.id}-blanco.png`; a.click(); }}
+                style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, color: '#FFFFFF', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
+              >DESCARGAR BLANCO</button>
             </div>
             <button onClick={() => setQrFModal(null)} style={{ marginTop: 12, background: 'none', border: 'none', color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, cursor: 'pointer', letterSpacing: 1 }}>CERRAR</button>
           </div>
