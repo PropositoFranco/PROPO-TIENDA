@@ -37,7 +37,7 @@ const C = {
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; overflow: hidden; background: #04020e; }
+  html, body { min-height: 100%; overflow-y: auto; overflow-x: hidden; background: #04020e; }
 
   @keyframes nebulaAnim   { 0%,100%{transform:scale(1);opacity:0.75}      50%{transform:scale(1.06);opacity:1} }
   @keyframes twinkle      { 0%,100%{opacity:var(--min,0.12);transform:scale(1)} 50%{opacity:1;transform:scale(1.6)} }
@@ -344,12 +344,12 @@ export default function AliadoDisplayPage() {
   // ── PANTALLA: OK — Display principal ─────────────────────────────────────
   return (
     <div style={{
-      minHeight: '100vh', height: '100vh',
+      minHeight: '100vh',
       background: C.bg,
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       padding: 'clamp(16px,3vw,40px)',
-      position: 'relative', overflow: 'hidden',
+      position: 'relative', overflow: 'visible',
       gap: 'clamp(12px,2.5vh,28px)',
     }}>
       <Particles />

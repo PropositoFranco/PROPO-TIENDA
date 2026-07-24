@@ -1029,6 +1029,12 @@ export default function SorteoAdminPage() {
                         {copiadoAliado === aliado.slug ? '✓ COPIADO' : '🔗 COPIAR QR'}
                       </button>
                       <button
+                        onClick={() => descargarQR(`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrUrl)}&bgcolor=FFFFFF&color=000000&margin=10`, `qr-${aliado.slug}-blanco.png`)}
+                        style={{ padding: '7px 14px', background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 7, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
+                      >
+                        ⬇ QR BLANCO
+                      </button>
+                      <button
                         onClick={() => toggleAliado(aliado.id, aliado.activo)}
                         style={{ padding: '7px 14px', background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 7, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
                       >
