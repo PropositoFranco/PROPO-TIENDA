@@ -28,6 +28,21 @@ function copiarAlPortapapeles(texto) {
   navigator.clipboard?.writeText(texto).catch(() => {});
 }
 
+async function descargarQR(qrUrl, filename) {
+  try {
+    const res = await fetch(qrUrl);
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(blobUrl);
+  } catch (e) {
+    window.open(qrUrl, '_blank');
+  }
+}
+
 // ── Componente QR via API pública ─────────────────────────────────────────────
 function QRCode({ url, size = 160 }) {
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&bgcolor=07040f&color=D4AF37&margin=10`;
@@ -1097,13 +1112,13 @@ export default function SorteoAdminPage() {
                         VER QR
                       </button>
                       <button
-                        onClick={() => { const a = document.createElement('a'); a.href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrUrlReal)}&bgcolor=07040f&color=D4AF37&margin=10`; a.download = `qr-${qr.id}.png`; a.click(); }}
+                        onClick={() => descargarQR(`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrUrlReal)}&bgcolor=07040f&color=D4AF37&margin=10`, `qr-${qr.id}.png`)}
                         style={{ flex: 1, padding: '7px 0', background: 'rgba(155,89,255,0.1)', border: '1px solid rgba(155,89,255,0.25)', borderRadius: 7, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
                       >
                         DESCARGAR
                       </button>
                       <button
-                        onClick={() => { const a = document.createElement('a'); a.href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrUrlReal)}&bgcolor=07040f&color=FFFFFF&margin=10`; a.download = `qr-${qr.id}-blanco.png`; a.click(); }}
+                        onClick={() => descargarQR(`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrUrlReal)}&bgcolor=07040f&color=FFFFFF&margin=10`, `qr-${qr.id}-blanco.png`)}
                         style={{ flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 7, color: '#FFFFFF', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
                       >
                         BLANCO
@@ -1143,7 +1158,7 @@ export default function SorteoAdminPage() {
             />
             <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
               <button
-                onClick={() => { const a = document.createElement('a'); a.href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrFModal.url)}&bgcolor=07040f&color=FFFFFF&margin=10`; a.download = `qr-${qrFModal.id}-blanco.png`; a.click(); }}
+                onClick={() => descargarQR(`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrFModal.url)}&bgcolor=07040f&color=FFFFFF&margin=10`, `qr-${qrFModal.id}-blanco.png`)}
                 style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, color: '#FFFFFF', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
               >DESCARGAR BLANCO</button>
             </div>
