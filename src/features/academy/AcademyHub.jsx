@@ -567,6 +567,15 @@ const [mostrarRitual, setMostrarRitual] = useState(
 const nombreParam = searchParams.get('nombre') || user?.user_metadata?.full_name || '';
 const emailParam  = searchParams.get('email')  || user?.email || '';
 const loadMembership = useMembershipStore(s => s.loadMembership);
+
+// Adelanta la consulta a Supabase en paralelo con el "teatro" de RitualAnalysis,
+// para que el protocolo ya esté listo cuando llegue la fase de revelación.
+useEffect(() => {
+  if (mostrarRitual && user?.id) {
+    loadMembership(supabase, user.id);
+  }
+}, [mostrarRitual, user?.id, loadMembership]);
+
 const onRitualCompleto = useCallback(async () => {
   setMostrarRitual(false);
   setSearchParams({}, { replace: true });

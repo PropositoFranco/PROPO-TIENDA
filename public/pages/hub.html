@@ -1040,9 +1040,92 @@ body.perf-low .portal-badge {
   96% { transform: rotate(4deg); }
   98% { transform: rotate(-2deg); }
 }
+
+/* ══ MODO ENFOQUE: evaluación pendiente — solo #continue-bar es picable ══ */
+body.hub-locked #header,
+body.hub-locked .portals-grid,
+body.hub-locked #bottom-nav {
+  pointer-events: none;
+  filter: grayscale(0.55) brightness(0.5);
+  opacity: 0.45;
+  transition: opacity 0.6s ease, filter 0.6s ease;
+}
+body.hub-locked .special-offer {
+  pointer-events: none;
+  filter: grayscale(0.55) brightness(0.5);
+  opacity: 0.45;
+  transition: opacity 0.6s ease, filter 0.6s ease;
+  z-index: 40;
+}
+
+/* ══ GLOBO DE DIÁLOGO DEL MAESTRO ══ */
+.maestro-bubble {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 18px);
+  left: -4px;
+  width: clamp(250px, 38vw, 380px);
+  background: linear-gradient(135deg, rgba(24,10,42,0.98), rgba(48,18,70,0.98));
+  border: 2px solid rgba(212,175,55,0.85);
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: 0 0 40px rgba(212,175,55,0.5), 0 0 14px rgba(212,175,55,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
+  z-index: 70;
+  pointer-events: none;
+  flex-direction: column;
+  gap: 6px;
+  animation: bubbleFloat 3.2s ease-in-out infinite;
+}
+body.hub-locked .maestro-bubble { display: flex; }
+.maestro-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 30px;
+  width: 16px;
+  height: 16px;
+  background: rgba(36,14,58,0.97);
+  border-right: 1.5px solid rgba(212,175,55,0.7);
+  border-bottom: 1.5px solid rgba(212,175,55,0.7);
+  transform: rotate(45deg);
+}
+.maestro-bubble-label {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #D4AF37;
+  text-shadow: 0 0 8px rgba(212,175,55,0.8);
+}
+.maestro-bubble-text {
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(15px, 1.7vw, 19px);
+  font-weight: 700;
+  line-height: 1.5;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(0,0,0,0.55);
+}
+@keyframes bubbleFloat {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-5px); }
+}
+
+/* ══ EMPUJONCITO: feedback cuando picas algo bloqueado (no invasivo) ══ */
+.maestro-bubble-nudge { animation: bubbleNudge 0.45s ease-in-out !important; }
+@keyframes bubbleNudge {
+  0%,100% { transform: translateY(0) rotate(0deg); }
+  20%     { transform: translateY(-3px) rotate(-1.5deg); }
+  45%     { transform: translateY(0) rotate(1.5deg); }
+  70%     { transform: translateY(-2px) rotate(-1deg); }
+}
+.continue-bar-nudge { animation: barNudgeFlash 0.5s ease-in-out !important; }
+@keyframes barNudgeFlash {
+  0%,100% { filter: brightness(1); }
+  40%     { filter: brightness(1.55) saturate(1.35); }
+}
 </style>
 </head>
-<body>
+<body class="hub-locked">
 
 <!-- ════════════ SCENE ════════════ -->
 <div id="scene">
@@ -1110,6 +1193,10 @@ body.perf-low .portal-badge {
       <div class="maestro-char">
         <img src="https://i.imgur.com/7ofsCSm.png" alt="Maestro" style="width:100%;height:100%;object-fit:contain;">
         <div class="maestro-glow"></div>
+        <div class="maestro-bubble" id="maestro-bubble">
+          <div class="maestro-bubble-label">⚔ Maestro Templario</div>
+          <div class="maestro-bubble-text" id="maestro-bubble-text">Cada semana vengo a acompañarte, Templario. Tu Evaluación te espera — pícale ahí abajo y sigamos avanzando 👇</div>
+        </div>
       </div>
 
       <!-- Grid -->
@@ -1503,6 +1590,7 @@ window.addEventListener('message', (event) => {
           ic.style.background = 'linear-gradient(135deg, rgba(192,132,252,0.2), rgba(124,58,237,0.1))';
           ic.style.boxShadow = '0 0 12px rgba(192,132,252,0.3)';
         });
+        setHubLocked(false);
       } else {
         // ── ESTADO: SIN PROTOCOLO — naranja urgente ──
         bar.style.background = 'linear-gradient(90deg, rgba(4,2,14,0.97) 0%, rgba(80,30,5,0.99) 30%, rgba(100,40,5,1) 50%, rgba(80,30,5,0.99) 70%, rgba(4,2,14,0.97) 100%)';
@@ -1541,6 +1629,7 @@ window.addEventListener('message', (event) => {
           ic.style.background = 'linear-gradient(135deg, rgba(251,146,60,0.2), rgba(146,64,14,0.1))';
           ic.style.boxShadow = '0 0 12px rgba(251,146,60,0.3)';
         });
+        setHubLocked(true);
       }
     }
   }
@@ -1572,6 +1661,55 @@ function _protocoloVigente() {
   fechaVence.setDate(fechaVence.getDate() + 7);
   return new Date() < fechaVence;
 }
+
+function setHubLocked(locked) {
+  document.body.classList.toggle('hub-locked', !!locked);
+}
+
+// ══ EMPUJONCITO: si el hub está bloqueado y pican fuera de #continue-bar ══
+var _audioCtx = null;
+function playSoftChime() {
+  try {
+    _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    var ctx = _audioCtx;
+    var now = ctx.currentTime;
+    [660, 880].forEach(function(freq, i) {
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + i * 0.09);
+      gain.gain.linearRampToValueAtTime(0.05, now + i * 0.09 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.09 + 0.28);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + i * 0.09);
+      osc.stop(now + i * 0.09 + 0.3);
+    });
+  } catch (e) { /* si el navegador bloquea audio, seguimos sin sonido */ }
+}
+
+function nudgeMaestro() {
+  var bubble = document.getElementById('maestro-bubble');
+  var bar = document.getElementById('continue-bar');
+  if (bubble) {
+    bubble.classList.remove('maestro-bubble-nudge');
+    void bubble.offsetWidth;
+    bubble.classList.add('maestro-bubble-nudge');
+  }
+  if (bar) {
+    bar.classList.remove('continue-bar-nudge');
+    void bar.offsetWidth;
+    bar.classList.add('continue-bar-nudge');
+  }
+  if (navigator.vibrate) navigator.vibrate(15);
+  playSoftChime();
+}
+
+document.addEventListener('click', function(e) {
+  if (!document.body.classList.contains('hub-locked')) return;
+  if (e.target.closest && e.target.closest('#continue-bar')) return; // clic válido, no interceptar
+  nudgeMaestro();
+});
 
 function handleContinueBar() {
   if (_protocoloVigente()) {

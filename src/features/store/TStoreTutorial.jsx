@@ -177,7 +177,7 @@ const PORTALS=[
   {color:C.blue,  gem:"#88BBFF",icon:"🗝",title:"CLAVES",           desc:"Técnicas de alto impacto",      btn:"ENTRAR",          id:"claves"},
   {color:C.green, gem:"#88FFAA",icon:"⚡",title:"VICTORIAS RÁPIDAS",desc:"Acciones rápidas con IA",       btn:"ENTRAR",          id:"victorias"},
   {color:C.purple,gem:"#DD88FF",icon:"🗺",title:"MAPAS DEL TEMPLO", desc:"Sistemas y rutas estratégicas", btn:"EXPLORAR",        id:"mapas"},
-  {color:C.gold,  gem:"#FFE566",icon:"🧘",title:"TEMPLO",           desc:"Tu Camino · Tu Templo · Tu Legado",btn:"ENTRAR AL TEMPLO",id:"templo"},
+  {color:C.gold,  gem:"#FFE566",icon:"🏆",title:"100 TEMPLARIOS DIJERON",desc:"Siempre hay un podio que liderar",btn:"ENTRAR AL JUEGO",id:"templo"},
   {color:C.red,   gem:"#FF8888",icon:"🎯",title:"MISIONES",         desc:"Retos, progreso y recompensas", btn:"VER MISIONES",    id:"misiones"},
   {color:C.cyan,  gem:"#88EEFF",icon:"🎒",title:"TU ARSENAL",       desc:"Tu contenido desbloqueado",     btn:"VER TODO",        id:"arsenal"},
   {color:C.amber, gem:"#FFCC88",icon:"✨",title:"MI PERFIL",        desc:"Tu progreso y estadísticas",    btn:"VER PERFIL",      id:"perfil"},
@@ -212,24 +212,19 @@ const ARSENAL_ITEMS=[
 
 // ─── TUTORIAL STEPS ──────────────────────────────────────
 const STEPS=[
-  {screen:"home",       highlight:null,           master:"Bienvenido, Templario.",              sub:"Has cruzado el umbral del Templo del Propósito. Soy el Maestro Templario. Te guiaré personalmente por cada rincón de la PROPO-TIENDA.",btn:"Continuar"},
-  {screen:"home",       highlight:"coins",         master:"Estos son tus PropoCoins.",           sub:"Los PropoCoins representan tu acceso a herramientas, módulos y recompensas dentro de la Propo-Tienda. Cada acción dentro del templo puede fortalecerte y otorgarte nuevos PropoCoins.",btn:"Continuar"},
-  {screen:"home",       highlight:"claves",        master:"Las Claves.",                         sub:"Contienen herramientas directas diseñadas para ayudarte a resolver conflictos específicos dentro de un territorio. Son instrumentos de alto impacto.",btn:"Continuar"},
-  {screen:"home",       highlight:"victorias",     master:"Victorias Rápidas.",                  sub:"Están diseñadas para generar cambios inmediatos mediante acciones simples y aplicables. Resultados visibles en minutos.",btn:"Continuar"},
-  {screen:"home",       highlight:"mapas",         master:"Los Mapas del Templo.",               sub:"Te permiten comprender territorios completos y avanzar estratégicamente dentro de tu proceso de transformación.",btn:"Continuar"},
-  {screen:"territories",highlight:null,            master:"Los Territorios del Templo.",         sub:"El templo se divide en territorios fundamentales. Cada uno representa un área esencial de tu vida.",btn:"Continuar"},
-  {screen:"territories",highlight:"t_0",           master:"Territorio del Cuerpo.",              sub:"Hábitos, energía, disciplina física y estabilidad. El fundamento sobre el que todo lo demás se construye.",btn:"Continuar"},
-  {screen:"territories",highlight:"t_1",           master:"Territorio de la Mente.",             sub:"Claridad mental, enfoque, creencias limitantes y arquitectura cognitiva. Tu mente es el primer campo de batalla.",btn:"Continuar"},
-  {screen:"territories",highlight:"t_2",           master:"Territorio de las Emociones.",        sub:"Gestión emocional, resiliencia y regulación interna. Quien domina sus emociones, domina su destino.",btn:"Continuar"},
-  {screen:"territories",highlight:"t_3",           master:"Territorio de las Relaciones.",       sub:"Vínculos, comunicación y entorno social. Tu círculo define tu trayectoria.",btn:"Continuar"},
-  {screen:"territories",highlight:"t_connections", master:"Cada herramienta está vinculada a un territorio.",sub:"Los colores y símbolos te permiten identificar rápidamente el territorio relacionado con cada módulo del templo.",btn:"Ver Módulos"},
-  {screen:"modules",    highlight:null,            master:"La Tienda del Templo.",               sub:"Aquí encontrarás todas las herramientas disponibles para desbloquear. Cada una tiene un costo en PropoCoins.",btn:"Continuar"},
-  {screen:"modules",    highlight:"price",         master:"Canjea PropoCoins por herramientas.", sub:"Cada herramienta requiere cierta cantidad de PropoCoins para desbloquearse. Mientras más participes dentro del templo, más herramientas podrás obtener.",btn:"Continuar"},
-  {screen:"modules",    highlight:"module_detail", master:"Antes de desbloquear una herramienta...",sub:"Podrás revisar sus objetivos, beneficios y a qué territorio pertenece. El conocimiento precede a la acción.",btn:"Ver el Arsenal"},
-  {screen:"arsenal",    highlight:null,            master:"Tu Arsenal Personal.",                sub:"Aquí viven todas las herramientas que has desbloqueado. Este es tu poder acumulado, tu legado en construcción.",btn:"Continuar"},
-  {screen:"arsenal",    highlight:"filters_territory",master:"Filtra por Territorio.",           sub:"Tu Arsenal puede filtrarse por territorios para acceder rápidamente a herramientas de un área específica.",btn:"Continuar"},
-  {screen:"arsenal",    highlight:"filters_type",  master:"Filtra por Tipo de Herramienta.",     sub:"También puedes organizar tu Arsenal según el tipo: Claves, Victorias Rápidas o Mapas del Templo.",btn:"Finalizar"},
-  {screen:"final",      highlight:null,            master:"El templo te espera, Templario.",     sub:"Ya conoces los secretos de la Propo-Tienda. Tu camino comienza ahora. Tu propósito te llama.",btn:"Entrar al Templo"},
+  {screen:"home",       highlight:null,           master:"Bienvenido, Templario.",              sub:"Soy el Maestro Templario. Voy a enseñarte una sola cosa importante, y algunas herramientas de apoyo alrededor. No necesitas memorizar nada — solo entender el camino.",btn:"Continuar"},
+  {screen:"home",       highlight:"protocolo",     master:"Esto es el corazón de la Propo-Tienda.",sub:"Cada semana tienes aquí abajo tu Evaluación — te toma menos de 5 minutos. Es lo único que de verdad mueve tu progreso. Todo lo demás en esta pantalla es apoyo alrededor de esto.",btn:"Entendido"},
+  {screen:"home",       highlight:"coins",         master:"Estos son tus PropoCoins.",           sub:"Nacen de completar tu protocolo semanal, y se usan para desbloquear herramientas extra. Entre más constante seas con tu evaluación, más PropoCoins acumulas.",btn:"Continuar"},
+  {screen:"home",       highlight:"apoyo",         master:"Tus herramientas de apoyo.",          sub:"Claves, Victorias Rápidas y Mapas del Templo te dan técnicas extra para profundizar. Úsalas cuando quieras ir más allá de tu evaluación — no las necesitas para avanzar.",btn:"Continuar"},
+  {screen:"home",       highlight:"templo",        master:"100 Templarios Dijeron.",             sub:"Aquí pones a prueba lo que vas aprendiendo y compites por un lugar en el podio. Es el juego del templo — divertido, pero no es tu evaluación.",btn:"Continuar"},
+  {screen:"territories",highlight:null,            master:"Los Territorios del Templo.",         sub:"Tu vida se organiza en 8 áreas: Cuerpo, Mente, Emociones, Relaciones, Riqueza, Vocación, Espiritualidad y Ocio. Tu Evaluación Semanal revisa estas áreas y te dice en cuál enfocarte primero.",btn:"Continuar"},
+  {screen:"territories",highlight:"t_connections", master:"Cada color te ubica.",                sub:"Los colores y símbolos conectan cada herramienta con su territorio, para que sepas de un vistazo en qué área estás trabajando.",btn:"Ver la Tienda"},
+  {screen:"modules",    highlight:null,            master:"La Tienda del Templo.",               sub:"Aquí desbloqueas herramientas extra con los PropoCoins que ganaste en tu evaluación. Revisa el objetivo y el territorio de cada una antes de canjear.",btn:"Ver tu Arsenal"},
+  {screen:"arsenal",    highlight:null,            master:"Tu Arsenal Personal.",                sub:"Aquí vive todo lo que has desbloqueado. Fíltralo por territorio o tipo cuando busques algo específico.",btn:"Ver tus Misiones"},
+  {screen:"missions",   highlight:null,            master:"Operaciones del Templo.",             sub:"Retos activos con recompensa fija en XP y PropoCoins — desde entrar por primera vez a la tienda, hasta pelear el Top 1 en 100 Templarios. Cuando el avance llega a 100%, reclamas.",btn:"Ver la Academia"},
+  {screen:"academia",   highlight:null,            master:"La Academia del Templo.",             sub:"Cada semana se abre un módulo nuevo, y tu Evaluación Semanal vive justo aquí dentro. Tus módulos anteriores quedan guardados como historial de tu crecimiento.",btn:"Ver la Comunidad"},
+  {screen:"comunidad",  highlight:null,            master:"La Comunidad del Templo.",            sub:"Publica tu avance o tus dudas y gana XP y PropoCoins solo por participar. Cada punto te acerca al siguiente rango — de Discípulo a Guardián, y más allá.",btn:"Finalizar"},
+  {screen:"final",      highlight:null,            master:"El templo te espera, Templario.",     sub:"Recuerda: tu Evaluación Semanal es lo único que no puedes saltarte. Menos de 5 minutos, cada semana. Todo lo demás es tuyo para explorar cuando quieras.",btn:"Completar mi Evaluación"},
 ];
 
 // ─── TITLE SHIMMER ───────────────────────────────────────
@@ -272,12 +267,14 @@ function TitleShimmer({mobile}) {
 }
 
 // ─── HOME SCREEN ─────────────────────────────────────────
-function HomeScreen({highlight,highlightPortalIds,coins,timerStr,mobile,size}) {
+function HomeScreen({highlight,highlightPortalIds,coins,timerStr,mobile,size,panelH}) {
   const dim=(id)=>highlightPortalIds.length>0&&!highlightPortalIds.includes(id);
   const portalScrollRef=useRef(null);
 
   const availW = mobile ? size.w - 32 : size.w * 0.58;
-  const pScale = Math.min(1, Math.max(0.58, availW / 958));
+  const chromeH = mobile ? 170 : 230;
+  const availH = Math.max(160, size.h - chromeH - (panelH + 16));
+  const pScale = Math.min(1, Math.max(0.55, Math.min(availW / 958, availH / 350)));
 
   useEffect(()=>{
     if (mobile&&highlightPortalIds.length>0&&portalScrollRef.current) {
@@ -292,7 +289,7 @@ function HomeScreen({highlight,highlightPortalIds,coins,timerStr,mobile,size}) {
   const showSideElements=!mobile&&size.w>=1100;
 
   return (
-    <div style={{display:"flex",flexDirection:"column",height:"100%",position:"relative"}}>
+    <div style={{display:"flex",flexDirection:"column",height:"100%",position:"relative",paddingBottom:panelH+16}}>
       {/* ── HEADER ── */}
       <div style={{
         display:"flex",alignItems:"center",justifyContent:"space-between",
@@ -408,7 +405,7 @@ function HomeScreen({highlight,highlightPortalIds,coins,timerStr,mobile,size}) {
             gap:mobile?8:8,
             padding:mobile?"8px 20px":"0 20px",
             overflowX:mobile?"auto":"visible",
-            overflowY:"visible",
+            overflowY:"hidden",
             width:"100%",
             justifyContent:mobile?"flex-start":"center",
             scrollbarWidth:"none",
@@ -439,18 +436,35 @@ function HomeScreen({highlight,highlightPortalIds,coins,timerStr,mobile,size}) {
         )}
       </div>
 
-      {/* ── EVENTS BAR ── */}
-      <motion.div animate={{opacity:highlight?0.12:1}}
-        style={{display:"flex",alignItems:"center",justifyContent:"center",gap:mobile?8:12,
-          padding:mobile?"4px 0":"5px 0",borderTop:`1px solid rgba(212,175,55,0.1)`,
-          background:"rgba(4,2,14,0.8)",zIndex:2,flexShrink:0}}>
-        <span style={{fontSize:mobile?12:14}}>🏛</span>
-        <div>
-          <div style={{fontFamily:"'Cinzel',serif",fontSize:mobile?9:10,fontWeight:700,
-            letterSpacing:3,color:C.goldBright}}>EVENTOS</div>
-          {!mobile&&<div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>Siempre hay algo nuevo por descubrir.</div>}
+      {/* ── PROTOCOLO BANNER (el corazón de la app) ── */}
+      <motion.div
+        animate={{scale:highlight==="protocolo"?[1,1.015,1]:1}}
+        transition={highlight==="protocolo"?{duration:1.6,repeat:Infinity,ease:"easeInOut"}:{duration:0.3}}
+        style={{display:"flex",alignItems:"center",justifyContent:"center",gap:mobile?8:14,
+          padding:mobile?"9px 14px":"10px 20px",
+          borderTop:`1px solid rgba(212,175,55,0.15)`,borderBottom:`1px solid rgba(212,175,55,0.15)`,
+          background:highlight==="protocolo"
+            ?`linear-gradient(90deg,rgba(204,68,255,0.30),rgba(255,122,34,0.30))`
+            :`linear-gradient(90deg,rgba(204,68,255,0.12),rgba(255,122,34,0.12))`,
+          position:"relative",zIndex:highlight==="protocolo"?53:2,flexShrink:0,
+          boxShadow:highlight==="protocolo"?`0 0 24px rgba(255,122,34,0.55)`:"none",
+        }}>
+        {highlight==="protocolo"&&<GlowRing color={C.orange} size={mobile?260:380}/>}
+        <span style={{fontSize:mobile?9:10,fontFamily:"'Cinzel',serif",fontWeight:700,
+          letterSpacing:1,color:"#fff",background:C.purple,borderRadius:12,
+          padding:"2px 8px",flexShrink:0}}>● ACTIVO</span>
+        <span style={{fontSize:mobile?16:18,
+          filter:highlight==="protocolo"?`drop-shadow(0 0 6px ${C.orange})`:"none"}}>⚔️</span>
+        <div style={{textAlign:mobile?"left":"center"}}>
+          <div style={{fontFamily:"'Cinzel',serif",fontSize:mobile?11:14,fontWeight:700,
+            letterSpacing:1,color:C.goldBright,
+            textShadow:highlight==="protocolo"?`0 0 12px ${C.orangeGlow}`:"none"}}>
+            CONTINÚA TU PROTOCOLO
+          </div>
+          {!mobile&&<div style={{fontSize:9,color:"rgba(255,255,255,0.5)"}}>
+            Tu Evaluación Semanal te espera · menos de 5 minutos
+          </div>}
         </div>
-        <span style={{color:C.goldDim,fontSize:mobile?12:14}}>→</span>
       </motion.div>
 
       {/* ── BOTTOM NAV ── */}
@@ -1002,6 +1016,414 @@ function ArsenalScreen({highlight,filterT,setFilterT,mobile,panelH}) {
   );
 }
 
+// ─── MISSIONS SCREEN ─────────────────────────────────────
+const OPERATIONS=[
+  {tag:"🛒 PropoTienda",tagColor:"#fbbf24",title:"🔥 Llamado del Templo",
+    desc:"Entrar a PropoTienda.",bannerBg:"linear-gradient(135deg,#2b1055,#7303c0)",
+    bannerIcon:"🏛",bannerText:"PROPO-TIENDA",xp:10,coins:5},
+  {tag:"⚔ 100 Templarios",tagColor:"#a78bfa",title:"👑 El Patrón de la Tribu",
+    desc:"Conquista el puesto #1 del grupo de 100 TEMPLARIOS.",bannerBg:"linear-gradient(135deg,#3a2a00,#6b4e00)",
+    bannerIcon:"🥇",bannerText:"NÚMERO 1",xp:90,coins:90},
+  {tag:"👥 Comunidad",tagColor:"#60a5fa",title:"👑 El Dueño del Servidor",
+    desc:"Conquista el Top 1 global de la comunidad.",bannerBg:"linear-gradient(135deg,#3a2a00,#6b4e00)",
+    bannerIcon:"🥇",bannerText:"NÚMERO 1",xp:120,coins:120},
+  {tag:"🛒 PropoTienda",tagColor:"#fbbf24",title:"🚩 Marcando Territorio",
+    desc:"Obtén el Top 10 en 1 ocasión en 100 Templarios.",bannerBg:"linear-gradient(135deg,#3a2a00,#6b4e00)",
+    bannerIcon:"🏆",bannerText:"TOP 10",xp:40,coins:40},
+];
+function MissionsScreen({mobile,panelH}) {
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:"100%",position:"relative",
+      padding:mobile?`12px 12px ${panelH+16}px`:`16px 22px ${panelH+16}px`,overflowY:"auto"}}>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+        {[["✦ TODOS",true],["★ PRUEBAS",false],["⚔ OPERACIONES",false],["⚔ 100 TEMPLARIOS",false],["🛒 PROPOTIENDA",false]].map(([t,active])=>(
+          <div key={t} style={{fontSize:9,fontFamily:"'Cinzel',serif",letterSpacing:1,
+            padding:"6px 12px",borderRadius:20,fontWeight:700,
+            background:active?"rgba(139,92,246,0.35)":"rgba(255,255,255,0.04)",
+            border:`1px solid ${active?"#a78bfa":"rgba(255,255,255,0.1)"}`,
+            color:active?"#e9d5ff":"rgba(255,255,255,0.4)"}}>{t}</div>
+        ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr",gap:14}}>
+        {OPERATIONS.map(op=>(
+          <div key={op.title} style={{border:"1px solid rgba(96,165,250,0.35)",borderRadius:14,
+            padding:14,background:"rgba(10,15,35,0.7)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+              <div>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                  <span style={{fontSize:8,fontFamily:"'Cinzel',serif",letterSpacing:1,
+                    color:"rgba(255,255,255,0.4)",textTransform:"uppercase"}}>OPERACIÓN SEMANAL</span>
+                  <span style={{fontSize:8,fontWeight:800,color:op.tagColor,background:`${op.tagColor}18`,
+                    border:`1px solid ${op.tagColor}55`,borderRadius:10,padding:"1px 6px"}}>{op.tag}</span>
+                </div>
+                <div style={{fontFamily:"'Cinzel',serif",fontSize:13,fontWeight:700,color:"#fff"}}>{op.title}</div>
+              </div>
+              <span style={{fontSize:8,fontWeight:800,color:"#fbbf24",background:"rgba(251,191,36,0.12)",
+                border:"1px solid rgba(251,191,36,0.4)",borderRadius:8,padding:"2px 7px",flexShrink:0}}>▲ PENDIENTE</span>
+            </div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,0.4)",fontStyle:"italic",marginBottom:10}}>{op.desc}</div>
+            <div style={{height:mobile?76:92,borderRadius:10,background:op.bannerBg,
+              display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",
+              marginBottom:10,position:"relative",overflow:"hidden"}}>
+              <span style={{fontSize:mobile?26:32}}>{op.bannerIcon}</span>
+              <span style={{fontFamily:"'Cinzel',serif",fontSize:mobile?11:13,fontWeight:900,
+                letterSpacing:1,color:"#fde68a",textShadow:"0 0 10px rgba(251,191,36,0.6)"}}>{op.bannerText}</span>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:8,
+              color:"rgba(255,255,255,0.35)",marginBottom:3}}>
+              <span>AVANCE DEL INICIADO</span><span>100%</span>
+            </div>
+            <div style={{height:5,background:"rgba(255,255,255,0.08)",borderRadius:3,marginBottom:10,overflow:"hidden"}}>
+              <div style={{height:"100%",width:"100%",background:"#60a5fa",borderRadius:3}}/>
+            </div>
+            <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center"}}>
+              <span style={{fontSize:8,color:"rgba(255,255,255,0.35)"}}>✕ RECOMPENSA</span>
+              <span style={{fontSize:9,fontWeight:800,color:"#4ade80",background:"rgba(74,222,128,0.1)",
+                border:"1px solid rgba(74,222,128,0.4)",borderRadius:8,padding:"2px 8px"}}>★ {op.xp} XP</span>
+              <span style={{fontSize:9,fontWeight:800,color:"#fbbf24",background:"rgba(251,191,36,0.1)",
+                border:"1px solid rgba(251,191,36,0.4)",borderRadius:8,padding:"2px 8px"}}>🪙 {op.coins}</span>
+            </div>
+            <div style={{textAlign:"center",padding:"9px 0",borderRadius:8,
+              border:"1px solid rgba(96,165,250,0.4)",background:"rgba(96,165,250,0.08)",
+              fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:1,color:"#93c5fd",fontWeight:700}}>
+              ✕ ¡RECLAMAR RECOMPENSA!</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── VIP SCREEN (Ruleta + Pase de Batalla) ───────────────
+const ROULETTE_PRIZES=[
+  {icon:"🍌",name:"NanoBanana²",price:"$49 USD",color:"#fbbf24"},
+  {icon:"⚡",name:"Claude Showcase",price:"$39 USD",color:"#60a5fa"},
+  {icon:"🔮",name:"Perplexity Viral",price:"$29 USD",color:"#a78bfa"},
+  {icon:"💎",name:"Supabase + Claude AI",price:"$59 USD",color:"#22d3ee"},
+];
+const PASS_LEVELS=[
+  {n:1,name:"Despertar",icon:"🎁",color:"#60a5fa"},{n:2,name:"Recluta",icon:"🧑",color:"#a78bfa"},
+  {n:3,name:"Forjador",icon:"⛏",color:"#f97316"},{n:4,name:"Guardián",icon:"🛡",color:"#34d399"},
+  {n:5,name:"Conquistador",icon:"⚔",color:"#f87171"},{n:6,name:"Templario",icon:"🏛",color:"#fbbf24"},
+];
+function VipScreen({highlight,mobile,panelH}) {
+  const ruletaActive=highlight==="ruleta", paseActive=highlight==="pase";
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:"100%",position:"relative",
+      padding:mobile?`12px 12px ${panelH+16}px`:`16px 22px ${panelH+16}px`,overflowY:"auto",gap:18}}>
+
+      {/* ── RULETA VIP ── */}
+      <motion.div animate={{opacity:(highlight&&!ruletaActive)?0.08:1,
+          scale:ruletaActive?[1,1.01,1]:1}}
+        transition={ruletaActive?{scale:{duration:1.8,repeat:Infinity,ease:"easeInOut"}}:{duration:0.3}}
+        style={{position:"relative",zIndex:ruletaActive?53:2,
+          border:"1px solid rgba(212,175,55,0.4)",borderRadius:16,
+          padding:mobile?14:20,background:"radial-gradient(ellipse at 20% 0%,rgba(212,175,55,0.1),rgba(6,3,20,0.92))",
+          boxShadow:ruletaActive?"0 0 26px rgba(212,175,55,0.45)":"none"}}>
+        {ruletaActive&&<GlowRing color={C.gold} size={mobile?280:420}/>}
+        <div style={{fontSize:9,letterSpacing:2,color:"rgba(212,175,55,0.7)",
+          fontFamily:"'Cinzel',serif",marginBottom:2}}>✕ RULETA EXCLUSIVA VIP</div>
+        <div style={{fontFamily:"'Cinzel',serif",fontSize:mobile?16:20,fontWeight:900,
+          color:C.goldBright,marginBottom:12,textShadow:`0 0 10px ${C.goldGlow}`}}>GIRA &amp; GANA</div>
+        <div style={{display:"flex",flexDirection:mobile?"column":"row",gap:16,alignItems:"center"}}>
+          <div style={{width:mobile?140:160,height:mobile?140:160,borderRadius:"50%",flexShrink:0,
+            background:"conic-gradient(from 0deg,#0d9488,#a78bfa,#0d9488,#7c3aed,#0d9488,#a78bfa,#0d9488,#7c3aed)",
+            display:"flex",alignItems:"center",justifyContent:"center",
+            border:"3px solid rgba(212,175,55,0.6)",boxShadow:"0 0 20px rgba(212,175,55,0.3)"}}>
+            <div style={{width:"38%",height:"38%",borderRadius:"50%",background:"#0a0520",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>👑</div>
+          </div>
+          <div style={{flex:1,display:"flex",flexDirection:"column",gap:6,width:"100%"}}>
+            {ROULETTE_PRIZES.map(p=>(
+              <div key={p.name} style={{display:"flex",alignItems:"center",gap:8,
+                border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:"6px 10px",
+                background:"rgba(255,255,255,0.02)"}}>
+                <span style={{fontSize:15}}>{p.icon}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:11,fontWeight:800,color:p.color}}>{p.name}</div>
+                  <div style={{fontSize:8,color:"rgba(255,255,255,0.4)"}}>🔒 {p.price}</div>
+                </div>
+              </div>
+            ))}
+            <div style={{textAlign:"center",padding:"10px 0",borderRadius:10,marginTop:4,
+              background:"linear-gradient(90deg,#7c3aed,#fbbf24)",fontFamily:"'Cinzel',serif",
+              fontSize:11,letterSpacing:1,color:"#1a0a2e",fontWeight:900}}>⚡ ¡GIRAR!</div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── PASE DE BATALLA ── */}
+      <motion.div animate={{opacity:(highlight&&!paseActive)?0.08:1}}
+        transition={{duration:0.3}}
+        style={{position:"relative",zIndex:paseActive?53:2,
+          border:"1px solid rgba(212,175,55,0.4)",borderRadius:16,
+          padding:mobile?14:20,background:"radial-gradient(ellipse at 50% 0%,rgba(212,175,55,0.08),rgba(6,3,20,0.92))",
+          boxShadow:paseActive?"0 0 26px rgba(212,175,55,0.45)":"none"}}>
+        {paseActive&&<GlowRing color={C.gold} size={mobile?300:440}/>}
+        <div style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 10px",
+          border:`1px solid ${C.gold}`,borderRadius:16,marginBottom:14}}>
+          <span style={{fontSize:9,fontFamily:"'Cinzel',serif",letterSpacing:1,color:C.goldBright}}>✕ VIP ACTIVO</span>
+        </div>
+        <div style={{display:"flex",gap:mobile?10:16,overflowX:"auto",paddingBottom:10}}>
+          {PASS_LEVELS.map(l=>(
+            <div key={l.n} style={{textAlign:"center",flexShrink:0}}>
+              <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:5}}>
+                <div style={{width:34,height:34,borderRadius:"50%",flexShrink:0,
+                  border:`2px solid ${l.color}`,background:`${l.color}22`,
+                  display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>{l.icon}</div>
+                <span style={{fontSize:8,fontFamily:"'Cinzel',serif",letterSpacing:1,color:l.color}}>NV.{l.n}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:8,marginBottom:8,fontSize:8,fontFamily:"'Cinzel',serif",
+          letterSpacing:1,color:"rgba(255,255,255,0.4)"}}>
+          <span style={{color:C.goldBright}}>👑 PREMIUM</span><span>● GRATIS</span>
+        </div>
+        <div style={{display:"flex",gap:mobile?10:16,overflowX:"auto"}}>
+          {PASS_LEVELS.map(l=>(
+            <div key={l.n} style={{display:"flex",flexDirection:"column",gap:6,alignItems:"center",flexShrink:0}}>
+              <div style={{width:30,height:30,borderRadius:"50%",border:`1.5px solid ${l.color}`,
+                background:`${l.color}18`,display:"flex",alignItems:"center",justifyContent:"center",
+                fontSize:11,color:l.color}}>✓</div>
+              <div style={{width:30,height:30,borderRadius:"50%",border:`1.5px solid ${l.color}88`,
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:l.color}}>✓</div>
+              <span style={{fontSize:7.5,color:"rgba(255,255,255,0.4)",width:60,textAlign:"center"}}>{l.name}</span>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── ACADEMY SCREEN ──────────────────────────────────────
+const EXPLORED_MODULES=[
+  {icon:"👁",tag:"VISIÓN MAESTRA",tagColor:"#f4b942",title:"Micro-Metas Semanales",desc:"Consolida tu momentum y sigue avanzando",time:"30 MIN"},
+  {icon:"⚔",tag:"CONTROL",tagColor:"#e8677a",title:"Bloques de Maestría del Tiempo",desc:"Deja de reaccionar. Empieza a gobernar tus horas.",time:"25 MIN"},
+  {icon:"⚔",tag:"CONTROL",tagColor:"#e8677a",title:"Ritual del Enfoque Matutino",desc:"Gana tu mañana antes de que el mundo intente ganarla por ti.",time:"25 MIN"},
+];
+function AcademyScreen({mobile,panelH}) {
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:"100%",
+      padding:mobile?`14px 12px ${panelH+16}px`:`18px 24px ${panelH+16}px`,overflowY:"auto",
+      fontFamily:"'Nunito',sans-serif"}}>
+
+      {/* ── COUNTDOWN BANNER ── */}
+      <div style={{display:"flex",flexDirection:mobile?"column":"row",alignItems:mobile?"flex-start":"center",
+        justifyContent:"space-between",gap:12,
+        border:`1px solid rgba(167,139,250,0.4)`,borderRadius:14,
+        padding:mobile?"12px 14px":"14px 22px",marginBottom:20,
+        background:"radial-gradient(ellipse at 20% 50%,rgba(139,92,246,0.14),rgba(6,3,20,0.9))",
+        boxShadow:"0 0 20px rgba(139,92,246,0.15)"}}>
+        <div>
+          <div style={{display:"flex",alignItems:"center",gap:7,fontFamily:"'Cinzel',serif",
+            fontSize:mobile?10:11,letterSpacing:2,color:"#c4b5fd",textTransform:"uppercase"}}>
+            ⚔ Próxima Evaluación del Templo</div>
+          <div style={{fontSize:mobile?11:12,color:"rgba(255,255,255,0.5)",marginTop:4}}>
+            Tu siguiente protocolo será forjado cuando el Templo te convoque</div>
+        </div>
+        <div style={{display:"flex",gap:mobile?6:10,flexShrink:0}}>
+          {[["04","DÍAS"],["10","HRS"],["28","MIN"],["40","SEG"]].map(([v,l])=>(
+            <div key={l} style={{textAlign:"center",background:"rgba(139,92,246,0.15)",
+              border:"1px solid rgba(167,139,250,0.35)",borderRadius:8,
+              padding:mobile?"5px 8px":"6px 11px",minWidth:mobile?36:44}}>
+              <div style={{fontFamily:"'Cinzel',serif",fontSize:mobile?14:18,fontWeight:900,
+                color:"#c4b5fd",textShadow:"0 0 8px rgba(167,139,250,0.6)"}}>{v}</div>
+              <div style={{fontSize:6.5,letterSpacing:1,color:"rgba(196,181,253,0.6)"}}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{fontSize:10,letterSpacing:3,color:"rgba(255,255,255,0.35)",
+        textTransform:"uppercase",marginBottom:8,fontFamily:"'Cinzel',serif"}}>Esta Semana</div>
+
+      {/* ── HERO MODULE CARD ── */}
+      <div style={{position:"relative",overflow:"hidden",borderRadius:16,
+        border:"1px solid rgba(255,255,255,0.08)",
+        background:"radial-gradient(ellipse at 80% 30%,rgba(30,58,138,0.35),rgba(6,3,20,0.95))",
+        padding:mobile?18:28,marginBottom:22}}>
+        <div style={{position:"absolute",right:mobile?12:28,top:"50%",transform:"translateY(-50%)",
+          fontSize:mobile?46:72,opacity:0.18}}>🌊</div>
+        <div style={{display:"inline-flex",alignItems:"center",gap:6,padding:"4px 12px",
+          background:"rgba(45,212,191,0.15)",border:"1px solid rgba(45,212,191,0.5)",
+          borderRadius:20,marginBottom:16}}>
+          <span style={{width:6,height:6,borderRadius:"50%",background:"#2dd4bf",
+            boxShadow:"0 0 6px #2dd4bf"}}/>
+          <span style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,
+            color:"#5eead4",textTransform:"uppercase"}}>Módulo Activo · Semana 11</span>
+        </div>
+        <div style={{fontFamily:"'Cinzel',serif",fontSize:mobile?19:28,fontWeight:700,
+          color:"#fff",lineHeight:1.25,marginBottom:10,maxWidth:mobile?"100%":"70%"}}>
+          Protocolo de Negociación Colaborativa</div>
+        <div style={{fontSize:mobile?12:13,color:"rgba(255,255,255,0.5)",fontStyle:"italic",
+          marginBottom:20}}>No entres a vencer. Entra a construir.</div>
+        <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+          <div style={{padding:"9px 18px",borderRadius:9,background:"#14b8a6",
+            fontFamily:"'Cinzel',serif",fontSize:11,letterSpacing:1,color:"#04120f",fontWeight:700,
+            boxShadow:"0 0 16px rgba(20,184,166,0.5)"}}>▶ COMENZAR AHORA</div>
+          <span style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>+50 XP · 25 MIN</span>
+        </div>
+      </div>
+
+      <div style={{fontSize:10,letterSpacing:3,color:"rgba(255,255,255,0.35)",
+        textTransform:"uppercase",marginBottom:10,fontFamily:"'Cinzel',serif"}}>Ya Exploraste</div>
+
+      {/* ── EXPLORED GRID ── */}
+      <div style={{display:"flex",flexDirection:mobile?"column":"row",gap:12,flexWrap:"wrap"}}>
+        {EXPLORED_MODULES.map(m=>(
+          <div key={m.title} style={{flex:mobile?"none":"1 1 220px",
+            border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:16,
+            background:"rgba(255,255,255,0.02)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+              <span style={{fontSize:20}}>{m.icon}</span>
+              <span style={{fontSize:8.5,letterSpacing:1.5,fontFamily:"'Cinzel',serif",
+                fontWeight:700,color:m.tagColor,textTransform:"uppercase"}}>{m.tag}</span>
+            </div>
+            <div style={{fontFamily:"'Cinzel',serif",fontSize:14,fontWeight:700,
+              color:"#fff",marginBottom:6,lineHeight:1.3}}>{m.title}</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.45)",lineHeight:1.5,marginBottom:16}}>{m.desc}</div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,
+              borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:10}}>
+              <span style={{color:"rgba(255,255,255,0.3)"}}>{m.time}</span>
+              <span style={{color:"#4ade80"}}>✓ Visto</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── COMMUNITY SCREEN ────────────────────────────────────
+function CommunityScreen({mobile,panelH}) {
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:"100%",
+      padding:mobile?`12px 12px ${panelH+16}px`:`16px 22px ${panelH+16}px`,
+      overflowY:"auto",fontFamily:"'Nunito',sans-serif"}}>
+
+      {/* ── LEVEL / POINTS CARD ── */}
+      <div style={{display:"flex",flexDirection:mobile?"column":"row",alignItems:mobile?"flex-start":"center",
+        justifyContent:"space-between",gap:10,
+        border:"1px solid rgba(96,165,250,0.35)",borderRadius:12,
+        padding:mobile?"12px 14px":"12px 20px",marginBottom:14,
+        background:"linear-gradient(90deg,rgba(30,58,138,0.25),rgba(6,3,20,0.9))"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:38,height:38,borderRadius:10,background:"rgba(96,165,250,0.25)",
+            border:"1px solid rgba(96,165,250,0.5)",display:"flex",alignItems:"center",
+            justifyContent:"center",fontSize:16}}>🔵</div>
+          <div>
+            <div style={{fontSize:9,fontFamily:"'Cinzel',serif",letterSpacing:1,
+              color:"#93c5fd",marginBottom:2}}>● ⚔ COMUNIDAD · NV.2</div>
+            <div style={{fontFamily:"'Cinzel',serif",fontSize:mobile?15:18,fontWeight:900,color:"#fff"}}>Discípulo</div>
+          </div>
+        </div>
+        <div style={{width:mobile?"100%":260,flexShrink:0}}>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:9,marginBottom:4}}>
+            <span style={{color:"rgba(255,255,255,0.5)"}}>60 PTS</span>
+            <span style={{color:"#93c5fd"}}>+90 → Guardián ➤</span>
+          </div>
+          <div style={{height:6,background:"rgba(255,255,255,0.08)",borderRadius:4,overflow:"hidden"}}>
+            <div style={{height:"100%",width:"10%",background:"linear-gradient(90deg,#1d4ed8,#60a5fa)",borderRadius:4}}/>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:8,marginTop:3,
+            color:"rgba(255,255,255,0.3)"}}>
+            <span>10% Completado</span><span>Meta: 150 pts</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── TABS ── */}
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        {[["🔥 Feed",true],["👥 Miembros",false],["💬 Mensajes",false],["🏆 Ranking",false]].map(([t,active])=>(
+          <div key={t} style={{fontSize:9,fontFamily:"'Cinzel',serif",letterSpacing:1,fontWeight:700,
+            padding:"6px 14px",borderRadius:20,
+            background:active?"rgba(139,92,246,0.35)":"rgba(255,255,255,0.04)",
+            border:`1px solid ${active?"#a78bfa":"rgba(255,255,255,0.1)"}`,
+            color:active?"#e9d5ff":"rgba(255,255,255,0.4)"}}>{t}</div>
+        ))}
+      </div>
+
+      {/* ── COMPOSER ── */}
+      <div style={{border:"1px solid rgba(251,146,60,0.4)",borderRadius:14,padding:14,marginBottom:16,
+        background:"radial-gradient(ellipse at 0% 0%,rgba(251,146,60,0.08),rgba(6,3,20,0.9))"}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 10px",
+          border:"1px solid rgba(251,191,36,0.5)",borderRadius:16,marginBottom:12,
+          fontSize:8.5,fontFamily:"'Cinzel',serif",letterSpacing:1,color:"#fbbf24"}}>⚑ MODO GUÍA ACTIVO</div>
+        <div style={{display:"flex",gap:10}}>
+          <div style={{width:30,height:30,borderRadius:"50%",flexShrink:0,background:"rgba(139,92,246,0.3)",
+            border:"1px solid rgba(167,139,250,0.5)",display:"flex",alignItems:"center",
+            justifyContent:"center",fontSize:10,fontWeight:800,color:"#c4b5fd"}}>MT</div>
+          <div style={{flex:1,minHeight:44,border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,
+            padding:"10px 12px",fontSize:11,color:"rgba(255,255,255,0.35)",
+            background:"rgba(255,255,255,0.02)"}}>Comparte tu avance, reflexión o pregunta esta semana…</div>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,flexWrap:"wrap",gap:8}}>
+          <div style={{fontSize:9,color:"rgba(255,255,255,0.35)",border:"1px solid rgba(255,255,255,0.12)",
+            borderRadius:6,padding:"4px 10px"}}>Sin categoría ▾</div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:9,color:"rgba(255,255,255,0.4)"}}>+15 XP · +5 🪙</span>
+            <div style={{fontSize:9,fontFamily:"'Cinzel',serif",letterSpacing:1,fontWeight:700,
+              color:"#fff",background:"rgba(139,92,246,0.4)",border:"1px solid #a78bfa",
+              borderRadius:8,padding:"6px 14px"}}>Publicar</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── FILTER CHIPS ── */}
+      <div style={{display:"flex",gap:6,marginBottom:6}}>
+        {["◎ Nuevo","🔥 Top"].map((t,i)=>(
+          <div key={t} style={{fontSize:9,fontFamily:"'Cinzel',serif",letterSpacing:0.5,fontWeight:700,
+            padding:"5px 12px",borderRadius:16,
+            background:i===0?"rgba(139,92,246,0.3)":"rgba(255,255,255,0.04)",
+            border:`1px solid ${i===0?"#a78bfa":"rgba(255,255,255,0.1)"}`,
+            color:i===0?"#e9d5ff":"rgba(255,255,255,0.4)"}}>{t}</div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+        {["✦ Todos","General Discussion","Mensajes del Guía","Juramento Templario","Reto del Iniciado","Logros Templarios"].map((t,i)=>(
+          <div key={t} style={{fontSize:8.5,letterSpacing:0.5,fontWeight:600,
+            padding:"5px 11px",borderRadius:16,
+            background:i===0?"rgba(139,92,246,0.25)":"transparent",
+            border:`1px solid ${i===0?"#a78bfa":"rgba(255,255,255,0.12)"}`,
+            color:i===0?"#e9d5ff":"rgba(255,255,255,0.35)"}}>{t}</div>
+        ))}
+      </div>
+
+      {/* ── PINNED GUÍA MESSAGE ── */}
+      <div style={{border:"1px solid rgba(251,191,36,0.4)",borderRadius:14,padding:14,
+        background:"rgba(251,191,36,0.04)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:16}}>📯</span>
+            <div>
+              <div style={{fontFamily:"'Cinzel',serif",fontSize:12,fontWeight:800,color:"#fbbf24"}}>MENSAJES DEL GUÍA</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,0.4)"}}>Comunicados oficiales del Templo</div>
+            </div>
+          </div>
+          <span style={{fontSize:8.5,fontFamily:"'Cinzel',serif",letterSpacing:1,color:"#fbbf24",
+            border:"1px solid rgba(251,191,36,0.4)",borderRadius:8,padding:"3px 10px"}}>1 MENSAJES</span>
+        </div>
+        <div style={{display:"flex",gap:10,paddingTop:10,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
+          <div style={{width:34,height:34,borderRadius:8,flexShrink:0,background:"rgba(251,191,36,0.15)",
+            border:"1px solid rgba(251,191,36,0.4)",display:"flex",alignItems:"center",
+            justifyContent:"center",fontSize:14}}>🧙</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontFamily:"'Cinzel',serif",fontSize:13,fontWeight:800,color:"#fff",marginBottom:6}}>¡Bienvenidos!</div>
+            <div style={{display:"flex",gap:12,flexWrap:"wrap",fontSize:9,color:"rgba(255,255,255,0.4)"}}>
+              <span>⚑ De: Maestro Templario</span><span>55d</span>
+              <span style={{color:"#fb923c"}}>🔥 2 Liked</span><span>💬 0</span>
+              <span>🔗 Link</span>
+              <span style={{color:"#a78bfa"}}>⚙ Admin</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── FINAL SCREEN ────────────────────────────────────────
 function FinalScreen({mobile}) {
   return (
@@ -1244,6 +1666,8 @@ export default function TStoreTutorial({onComplete}) {
     if (cur.highlight==="claves") return ["claves"];
     if (cur.highlight==="victorias") return ["victorias"];
     if (cur.highlight==="mapas") return ["mapas"];
+    if (cur.highlight==="apoyo") return ["claves","victorias","mapas"];
+    if (cur.highlight==="templo") return ["templo"];
     return [];
   })();
 
@@ -1317,6 +1741,27 @@ export default function TStoreTutorial({onComplete}) {
             initial={{opacity:0,scale:1.06}} animate={{opacity:1,scale:1}} exit={{opacity:0,scale:0.96}}
             transition={{duration:0.55}} style={{position:"absolute",inset:0}}>
             <ArsenalScreen highlight={cur.highlight} filterT={filterT} setFilterT={setFilterT} {...commonScreenProps}/>
+          </motion.div>
+        )}
+        {cur.screen==="missions"&&(
+          <motion.div key="missions"
+            initial={{opacity:0,scale:1.06}} animate={{opacity:1,scale:1}} exit={{opacity:0,scale:0.96}}
+            transition={{duration:0.55}} style={{position:"absolute",inset:0}}>
+            <MissionsScreen highlight={cur.highlight} {...commonScreenProps}/>
+          </motion.div>
+        )}
+        {cur.screen==="academia"&&(
+          <motion.div key="academia"
+            initial={{opacity:0,scale:1.06}} animate={{opacity:1,scale:1}} exit={{opacity:0,scale:0.96}}
+            transition={{duration:0.55}} style={{position:"absolute",inset:0}}>
+            <AcademyScreen {...commonScreenProps}/>
+          </motion.div>
+        )}
+        {cur.screen==="comunidad"&&(
+          <motion.div key="comunidad"
+            initial={{opacity:0,scale:1.06}} animate={{opacity:1,scale:1}} exit={{opacity:0,scale:0.96}}
+            transition={{duration:0.55}} style={{position:"absolute",inset:0}}>
+            <CommunityScreen {...commonScreenProps}/>
           </motion.div>
         )}
         {cur.screen==="final"&&(
