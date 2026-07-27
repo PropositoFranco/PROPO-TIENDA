@@ -95,7 +95,10 @@ const EvidenceModal = ({ module, cfg, userId, onSuccess, onClose }) => {
       catch { result = { approved: false, message: String(data) }; }
       setFeedback(result.message);
       if (result.approved) { setPhase('approved'); }
-      else { setAttempts(a => a + 1); setPhase('rejected'); }
+      else {
+        if (!result.technicalError) setAttempts(a => a + 1);
+        setPhase('rejected');
+      }
     } catch (err) {
       setFeedback(`Error: ${err.message}`);
       setPhase('rejected');
