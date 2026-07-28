@@ -52,6 +52,13 @@ html, body {
   backface-visibility: hidden;
 }
 
+/* ── AHORRO DE ENERGÍA: pausa TODAS las animaciones cuando el hub
+   no está visible (pantalla bloqueada, app en segundo plano, cambio
+   de pestaña). Cero impacto visual mientras el usuario está mirando. ── */
+body.tab-hidden * {
+  animation-play-state: paused !important;
+}
+
 /* Contain layout en portales para aislar repaints */
 .portal { contain: layout style; }
 .arch   { contain: layout style; }
@@ -1497,6 +1504,14 @@ body.hub-locked .maestro-bubble { display: flex; }
 </div><!-- /scene -->
 
 <script>
+// ══════════════════════════════════════════
+// AHORRO DE ENERGÍA: pausar animaciones si el hub
+// deja de estar visible (evita que el móvil trabaje al pedo)
+// ══════════════════════════════════════════
+document.addEventListener('visibilitychange', function() {
+  document.body.classList.toggle('tab-hidden', document.hidden);
+});
+
 // ══════════════════════════════════════════
 // DETECCIÓN DE RENDIMIENTO DEL DISPOSITIVO
 // ══════════════════════════════════════════
