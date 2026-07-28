@@ -264,11 +264,19 @@ body.perf-low .portal-badge {
   background: linear-gradient(90deg, #1a8a00, #44FF44, #88FF88);
   border-radius:3px;
   box-shadow: 0 0 6px rgba(68,255,68,0.8);
+  position: relative;
+}
+.xp-fill::after {
+  content:'';
+  position:absolute; inset:-2px;
+  border-radius:inherit;
+  box-shadow: 0 0 12px rgba(68,255,68,1);
+  opacity:0;
   animation: xpPulse 4s ease-in-out infinite;
 }
 @keyframes xpPulse {
-  0%,100% { box-shadow:0 0 6px rgba(68,255,68,0.8); }
-  50% { box-shadow:0 0 12px rgba(68,255,68,1); }
+  0%,100% { opacity:0; }
+  50% { opacity:1; }
 }
 .xp-text { font-family:'Crimson Text',serif; font-size:9px; color:rgba(255,255,255,0.5); white-space:nowrap; }
 
@@ -287,12 +295,21 @@ body.perf-low .portal-badge {
   position:absolute; inset:0;
   background: linear-gradient(135deg, rgba(212,175,55,0.3), rgba(212,175,55,0.1));
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  border:none; animation: logoRotate 8s linear infinite;
+  border:none;
+  filter: drop-shadow(0 0 8px rgba(212,175,55,0.6));
 }
-@keyframes logoRotate {
-  from { filter: drop-shadow(0 0 8px rgba(212,175,55,0.6)); }
-  50% { filter: drop-shadow(0 0 20px rgba(212,175,55,1)); }
-  to { filter: drop-shadow(0 0 8px rgba(212,175,55,0.6)); }
+.logo-hex::after {
+  content:'';
+  position:absolute; inset:0;
+  background: linear-gradient(135deg, rgba(212,175,55,0.3), rgba(212,175,55,0.1));
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  border:none;
+  filter: drop-shadow(0 0 20px rgba(212,175,55,1));
+  animation: logoGlowPulse 8s linear infinite;
+}
+@keyframes logoGlowPulse {
+  from, to { opacity: 0; }
+  50% { opacity: 1; }
 }
 .logo-t {
   font-family:'Cinzel Decorative',serif; font-size:22px; font-weight:900;
@@ -554,12 +571,20 @@ body.perf-low .portal-badge {
   clip-path: polygon(50% 0%, 100% 35%, 80% 100%, 20% 100%, 0% 35%);
   background: radial-gradient(ellipse at 40% 30%, rgba(255,255,255,0.9), var(--arch-color) 50%, rgba(0,0,0,0.5) 100%);
   box-shadow: 0 0 12px var(--arch-color), 0 0 25px rgba(var(--arch-rgb),0.5);
-  animation: gemPulse 4s ease-in-out infinite;
   margin-bottom:2px; flex-shrink:0;
+  position: relative;
 }
-@keyframes gemPulse {
-  0%,100% { filter:brightness(1); }
-  50% { filter:brightness(1.4) drop-shadow(0 0 6px white); }
+.arch-gem::after {
+  content:'';
+  position:absolute; inset:0;
+  clip-path: polygon(50% 0%, 100% 35%, 80% 100%, 20% 100%, 0% 35%);
+  background: radial-gradient(ellipse at 40% 30%, rgba(255,255,255,0.9), var(--arch-color) 50%, rgba(0,0,0,0.5) 100%);
+  filter: brightness(1.4) drop-shadow(0 0 6px white);
+  animation: gemGlowPulse 4s ease-in-out infinite;
+}
+@keyframes gemGlowPulse {
+  0%,100% { opacity:0; }
+  50% { opacity:1; }
 }
 
 /* Icono central del portal */
@@ -958,6 +983,19 @@ body.perf-low .portal-badge {
   animation: badgePop 0.6s cubic-bezier(0.175,0.885,0.32,1.4) both,
              badgePulse 1.8s ease-in-out 0.6s infinite;
 }
+.portal-badge::after {
+  content:'';
+  position:absolute; inset:-2px;
+  border-radius:inherit;
+  box-shadow: 0 0 10px 3px white;
+  opacity:0;
+  pointer-events:none;
+  animation: badgeGlowPulse 1.8s ease-in-out 0.6s infinite;
+}
+@keyframes badgeGlowPulse {
+  0%,100% { opacity:0; }
+  50%      { opacity:0.6; }
+}
 .portal-badge.badge-free  { background:linear-gradient(135deg,#00c853,#69f0ae); color:#002200; border-color:#69f0ae; box-shadow:0 0 16px rgba(0,200,83,0.95),0 0 32px rgba(0,200,83,0.5),0 2px 8px rgba(0,0,0,0.9); }
 .portal-badge.badge-new   { background:linear-gradient(135deg,#2979ff,#82b1ff); color:#fff;    border-color:#82b1ff; box-shadow:0 0 16px rgba(41,121,255,0.95),0 0 32px rgba(41,121,255,0.5),0 2px 8px rgba(0,0,0,0.9); }
 .portal-badge.badge-alert { background:linear-gradient(135deg,#ff1744,#ff6d00); color:#fff;    border-color:#ff6d00; box-shadow:0 0 16px rgba(255,23,68,0.95),0 0 32px rgba(255,23,68,0.5),0 2px 8px rgba(0,0,0,0.9); }
@@ -998,8 +1036,8 @@ body.perf-low .portal-badge {
   100% { transform:scale(1) rotate(0deg);    opacity:1; }
 }
 @keyframes badgePulse {
-  0%,100% { transform:scale(1);    filter:brightness(1); }
-  50%      { transform:scale(1.2); filter:brightness(1.35) drop-shadow(0 0 8px white); }
+  0%,100% { transform:scale(1); }
+  50%      { transform:scale(1.2); }
 }
 
 /* Fix badges en móvil — evita que se corten */
@@ -1283,22 +1321,22 @@ body.hub-locked .maestro-bubble { display: flex; }
                 0%,100% { box-shadow: 0 0 14px rgba(212,175,55,0.6), 0 0 28px rgba(212,175,55,0.3); background: linear-gradient(180deg, rgba(212,175,55,0.3), rgba(212,175,55,0.1)); }
                 50%     { box-shadow: 0 0 24px rgba(212,175,55,1),   0 0 48px rgba(212,175,55,0.5); background: linear-gradient(180deg, rgba(212,175,55,0.5), rgba(212,175,55,0.2)); }
               }
-              @keyframes epicRing1{0%,100%{opacity:.55;box-shadow:0 0 40px rgba(212,175,55,.55),0 0 85px rgba(212,175,55,.25)}50%{opacity:1;box-shadow:0 0 65px rgba(212,175,55,.9),0 0 130px rgba(212,175,55,.45),0 0 200px rgba(255,165,0,.18)}}
+              @keyframes epicRing1{0%,100%{opacity:.55}50%{opacity:1}}
               @keyframes epicRing2{0%,100%{opacity:.18;transform:scale(1)}50%{opacity:.5;transform:scale(1.012)}}
-              @keyframes cornerBlink{0%,100%{opacity:.5;transform:scale(1) rotate(45deg);box-shadow:0 0 8px #FFD700}50%{opacity:1;transform:scale(1.6) rotate(45deg);box-shadow:0 0 20px #FFD700,0 0 35px rgba(212,175,55,.75)}}
-              @keyframes crownBob{0%,100%{transform:translateX(-50%) translateY(0);filter:drop-shadow(0 0 8px rgba(212,175,55,.8))}50%{transform:translateX(-50%) translateY(-7px);filter:drop-shadow(0 0 20px rgba(212,175,55,1)) drop-shadow(0 0 8px #fff)}}
+              @keyframes cornerBlink{0%,100%{opacity:.5;transform:scale(1) rotate(45deg)}50%{opacity:1;transform:scale(1.6) rotate(45deg)}}
+              @keyframes crownBob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-7px)}}
               @keyframes raysRotate{from{transform:translateX(-50%) translateY(-50%) rotate(0deg)}to{transform:translateX(-50%) translateY(-50%) rotate(360deg)}}
               @keyframes epicScan{0%{top:-60%;opacity:0}15%{opacity:.11}85%{opacity:.04}100%{top:160%;opacity:0}}
 
               .portal.center{position:relative!important;overflow:visible!important;z-index:2!important;filter:drop-shadow(0 0 24px rgba(212,175,55,.65)) drop-shadow(0 0 60px rgba(212,175,55,.3))!important}
-              .portal.center::before{content:'';position:absolute;inset:-9px;border-radius:52% 52% 8px 8px/23% 23% 8px 8px;border:2px solid rgba(212,175,55,.6);box-shadow:0 0 40px rgba(212,175,55,.55),0 0 85px rgba(212,175,55,.25),inset 0 0 28px rgba(212,175,55,.07);animation:epicRing1 4s ease-in-out infinite;pointer-events:none;z-index:-1}
+              .portal.center::before{content:'';position:absolute;inset:-9px;border-radius:52% 52% 8px 8px/23% 23% 8px 8px;border:2px solid rgba(212,175,55,.6);box-shadow:0 0 65px rgba(212,175,55,.9),0 0 130px rgba(212,175,55,.45),0 0 200px rgba(255,165,0,.18),inset 0 0 28px rgba(212,175,55,.07);animation:epicRing1 4s ease-in-out infinite;pointer-events:none;z-index:-1}
               .portal.center::after{content:'';position:absolute;inset:-20px;border-radius:52% 52% 10px 10px/23% 23% 10px 10px;border:1px solid rgba(212,175,55,.18);box-shadow:0 0 60px rgba(212,175,55,.12);animation:epicRing2 6s ease-in-out 1.2s infinite;pointer-events:none;z-index:-1}
-              .center-corner-gem{position:absolute;width:10px;height:10px;background:linear-gradient(135deg,#FFE566,#D4AF37);transform:rotate(45deg);box-shadow:0 0 10px #FFD700,0 0 22px rgba(212,175,55,.7);animation:cornerBlink 5s ease-in-out infinite;pointer-events:none;z-index:20}
+              .center-corner-gem{position:absolute;width:10px;height:10px;background:linear-gradient(135deg,#FFE566,#D4AF37);transform:rotate(45deg);box-shadow:0 0 20px #FFD700,0 0 35px rgba(212,175,55,.75);animation:cornerBlink 5s ease-in-out infinite;pointer-events:none;z-index:20}
               .center-corner-gem.tl{top:-5px;left:-5px;animation-delay:0s}
               .center-corner-gem.tr{top:-5px;right:-5px;animation-delay:1.3s}
               .center-corner-gem.bl{bottom:-5px;left:-5px;animation-delay:2.5s}
               .center-corner-gem.br{bottom:-5px;right:-5px;animation-delay:3.8s}
-              .center-crown{position:absolute;top:-42px;left:50%;transform:translateX(-50%);font-size:26px;line-height:1;animation:crownBob 5s ease-in-out infinite;z-index:20;pointer-events:none;text-shadow:0 0 14px #FFD700,0 0 30px rgba(212,175,55,.9)}
+              .center-crown{position:absolute;top:-42px;left:50%;transform:translateX(-50%);font-size:26px;line-height:1;animation:crownBob 5s ease-in-out infinite;z-index:20;pointer-events:none;text-shadow:0 0 14px #FFD700,0 0 30px rgba(212,175,55,.9);filter:drop-shadow(0 0 14px rgba(212,175,55,.9)) drop-shadow(0 0 8px #fff)}
               .center-rays{position:absolute;top:50%;left:50%;width:175%;height:175%;background:repeating-conic-gradient(rgba(212,175,55,.045) 0deg 4deg,transparent 4deg 10deg);animation:raysRotate 60s linear infinite;pointer-events:none;z-index:-1;border-radius:50%}
               .center-scan{position:absolute;left:0;right:0;height:55%;background:linear-gradient(180deg,transparent 0%,rgba(212,175,55,.09) 50%,transparent 100%);animation:epicScan 9s ease-in-out infinite;pointer-events:none;z-index:1}
             </style>
@@ -1873,6 +1911,8 @@ const isMobile = vw < 1024;
       document.head.appendChild(ms);
     }
 
+    if (!ms.dataset.loaded) {
+    ms.dataset.loaded = '1';
     ms.textContent = `
       @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700&display=swap');
 
@@ -2274,6 +2314,7 @@ const isMobile = vw < 1024;
   }
 
     `;
+    }
 
 
   
@@ -2285,7 +2326,7 @@ const isMobile = vw < 1024;
 
     // Remove mobile CSS if it exists (orientation/resize to desktop)
     var ms = document.getElementById('_mobile_css');
-    if (ms) ms.textContent = '';
+    if (ms) { ms.textContent = ''; ms.dataset.loaded = ''; }
 
     const main = document.getElementById('main');
     if (main) { main.style.flex = '1'; main.style.minHeight = '0'; }

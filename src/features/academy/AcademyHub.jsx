@@ -549,6 +549,115 @@ const TemploEvaluacionBlock = ({ mensajes }) => {
   );
 };
 
+// ─── Countdown aislado: solo ESTE componente late cada segundo,
+// no arrastra al resto de la pantalla a re-renderizarse con él ───────────────
+const MENSAJES_EVALUACION_PENDIENTE = [
+  'Tu semana ha dejado huella. Cuando estés listo, cuéntame cómo te fue.',
+  'Estoy aquí. Responde tu evaluación para que pueda forjar tu siguiente paso.',
+  'No hay prisa. Pero tu próximo protocolo te está esperando al otro lado.',
+  'Cada semana que vives merece ser registrada. Compártela conmigo.',
+];
+
+const CountdownEvaluacion = ({ protocoLoFecha, onExpiradoChange }) => {
+  const [ahora, setAhora] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setAhora(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const countdownData = useMemo(() => {
+    if (!protocoLoFecha) return null;
+    const inicio = new Date(protocoLoFecha).getTime();
+    const siguiente = inicio + 7 * 24 * 60 * 60 * 1000;
+    const diff = siguiente - ahora;
+    if (diff <= 0) return { expirado: true };
+    const dias = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const horas = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutos = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const segundos = Math.floor((diff % (1000 * 60)) / 1000);
+    return { expirado: false, dias, horas, minutos, segundos };
+  }, [protocoLoFecha, ahora]);
+
+  useEffect(() => {
+    if (onExpiradoChange) onExpiradoChange(!!countdownData?.expirado);
+  }, [countdownData?.expirado, onExpiradoChange]);
+
+  if (!countdownData) return null;
+
+  if (countdownData.expirado) {
+    return <TemploEvaluacionBlock mensajes={MENSAJES_EVALUACION_PENDIENTE} />;
+  }
+
+  return (
+    <div style={{
+      marginTop: '1rem',
+      padding: 'clamp(1rem, 3vw, 1.5rem)',
+      background: 'linear-gradient(135deg, rgba(124,58,237,0.2) 0%, rgba(10,6,20,0.9) 55%, rgba(192,132,252,0.08) 100%)',
+      border: '1.5px solid rgba(124,58,237,0.55)',
+      borderRadius: '1.25rem',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      flexWrap: 'wrap',
+      gap: '1rem',
+      boxShadow: '0 0 40px rgba(124,58,237,0.2), inset 0 1px 0 rgba(255,255,255,0.08)',
+      animation: 'countdownGlow 3s ease-in-out infinite',
+    }}>
+      <div>
+        <p style={{
+          fontFamily: '"Cinzel", serif',
+          fontSize: 'clamp(0.65rem, 1.3vw, 0.78rem)',
+          letterSpacing: '0.18em',
+          textTransform: 'uppercase',
+          color: '#C084FC',
+          marginBottom: '0.3rem',
+          textShadow: '0 0 12px rgba(192,132,252,0.8)',
+        }}>⚔️ Próxima evaluación del Templo</p>
+        <p style={{
+          fontFamily: '"Crimson Text", serif',
+          fontSize: 'clamp(0.9rem, 2vw, 1.05rem)',
+          color: 'rgba(255,255,255,0.55)',
+          lineHeight: 1.5,
+        }}>Tu siguiente protocolo será forjado cuando el Templo te convoque</p>
+      </div>
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        {[
+          { v: countdownData.dias, l: 'días' },
+          { v: countdownData.horas, l: 'hrs' },
+          { v: countdownData.minutos, l: 'min' },
+          { v: countdownData.segundos, l: 'seg' },
+        ].map(({ v, l }) => (
+          <div key={l} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            padding: '0.6rem 0.875rem',
+            background: 'linear-gradient(135deg, rgba(124,58,237,0.35), rgba(192,132,252,0.1))',
+            border: '1.5px solid rgba(192,132,252,0.5)',
+            borderRadius: '0.75rem',
+            minWidth: '3.25rem',
+            boxShadow: '0 0 16px rgba(192,132,252,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+          }}>
+            <span style={{
+              fontFamily: '"Cinzel", serif',
+              fontWeight: 900,
+              fontSize: 'clamp(1.1rem, 2.8vw, 1.4rem)',
+              color: '#C084FC',
+              lineHeight: 1,
+              textShadow: '0 0 16px rgba(192,132,252,0.9)',
+            }}>{String(v).padStart(2, '0')}</span>
+            <span style={{
+              fontFamily: '"Cinzel", serif',
+              fontSize: '0.58rem',
+              color: 'rgba(192,132,252,0.6)',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}>{l}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // ─── Componente principal ────────────────────────────────────────────────────
 const AcademyHub = () => {
   const user = useAuthStore(s => s.user);
@@ -591,24 +700,7 @@ const onRitualCompleto = useCallback(async () => {
     return Math.floor((Date.now() - new Date(memberSince).getTime()) / (1000 * 60 * 60 * 24));
   }, [memberSince]);
 
-  const [ahora, setAhora] = useState(Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setAhora(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  const countdownData = useMemo(() => {
-    if (!protocoLoFecha) return null;
-    const inicio = new Date(protocoLoFecha).getTime();
-    const siguiente = inicio + 7 * 24 * 60 * 60 * 1000;
-    const diff = siguiente - ahora;
-    if (diff <= 0) return { expirado: true };
-    const dias = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const horas = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutos = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const segundos = Math.floor((diff % (1000 * 60)) / 1000);
-    return { expirado: false, dias, horas, minutos, segundos };
-  }, [protocoLoFecha, ahora]);
+  const [evaluacionExpirada, setEvaluacionExpirada] = useState(false);
 
   const currentModule = useMemo(() => {
     if (userProtocolo) {
@@ -1030,89 +1122,12 @@ const onRitualCompleto = useCallback(async () => {
           ))}
         </div>
 
-        {/* Countdown épico siguiente evaluación */}
-        {countdownData && !countdownData.expirado && (
-          <div style={{
-            marginTop: '1rem',
-            padding: 'clamp(1rem, 3vw, 1.5rem)',
-            background: 'linear-gradient(135deg, rgba(124,58,237,0.2) 0%, rgba(10,6,20,0.9) 55%, rgba(192,132,252,0.08) 100%)',
-            border: '1.5px solid rgba(124,58,237,0.55)',
-            borderRadius: '1.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1rem',
-            boxShadow: '0 0 40px rgba(124,58,237,0.2), inset 0 1px 0 rgba(255,255,255,0.08)',
-            animation: 'countdownGlow 3s ease-in-out infinite',
-          }}>
-            <div>
-              <p style={{
-                fontFamily: '"Cinzel", serif',
-                fontSize: 'clamp(0.65rem, 1.3vw, 0.78rem)',
-                letterSpacing: '0.18em',
-                textTransform: 'uppercase',
-                color: '#C084FC',
-                marginBottom: '0.3rem',
-                textShadow: '0 0 12px rgba(192,132,252,0.8)',
-              }}>⚔️ Próxima evaluación del Templo</p>
-              <p style={{
-                fontFamily: '"Crimson Text", serif',
-                fontSize: 'clamp(0.9rem, 2vw, 1.05rem)',
-                color: 'rgba(255,255,255,0.55)',
-                lineHeight: 1.5,
-              }}>Tu siguiente protocolo será forjado cuando el Templo te convoque</p>
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              {[
-                { v: countdownData.dias, l: 'días' },
-                { v: countdownData.horas, l: 'hrs' },
-                { v: countdownData.minutos, l: 'min' },
-                { v: countdownData.segundos, l: 'seg' },
-              ].map(({ v, l }) => (
-                <div key={l} style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  padding: '0.6rem 0.875rem',
-                  background: 'linear-gradient(135deg, rgba(124,58,237,0.35), rgba(192,132,252,0.1))',
-                  border: '1.5px solid rgba(192,132,252,0.5)',
-                  borderRadius: '0.75rem',
-                  minWidth: '3.25rem',
-                  boxShadow: '0 0 16px rgba(192,132,252,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
-                }}>
-                  <span style={{
-                    fontFamily: '"Cinzel", serif',
-                    fontWeight: 900,
-                    fontSize: 'clamp(1.1rem, 2.8vw, 1.4rem)',
-                    color: '#C084FC',
-                    lineHeight: 1,
-                    textShadow: '0 0 16px rgba(192,132,252,0.9)',
-                  }}>{String(v).padStart(2, '0')}</span>
-                  <span style={{
-                    fontFamily: '"Cinzel", serif',
-                    fontSize: '0.58rem',
-                    color: 'rgba(192,132,252,0.6)',
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase',
-                  }}>{l}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Templo del Propósito — evaluación pendiente */}
-        {countdownData?.expirado && (
-          <TemploEvaluacionBlock mensajes={[
-            'Tu semana ha dejado huella. Cuando estés listo, cuéntame cómo te fue.',
-            'Estoy aquí. Responde tu evaluación para que pueda forjar tu siguiente paso.',
-            'No hay prisa. Pero tu próximo protocolo te está esperando al otro lado.',
-            'Cada semana que vives merece ser registrada. Compártela conmigo.',
-          ]} />
-        )}
+        {/* Countdown épico siguiente evaluación — aislado, ya no repinta toda la pantalla cada segundo */}
+        <CountdownEvaluacion protocoLoFecha={protocoLoFecha} onExpiradoChange={setEvaluacionExpirada} />
       </header>
 
       {/* Módulo activo esta semana — solo si el plan está vigente */}
-      {currentModule && !countdownData?.expirado && (
+      {currentModule && !evaluacionExpirada && (
         <>
           <h2 style={{
             fontFamily: '"Cinzel", serif',
