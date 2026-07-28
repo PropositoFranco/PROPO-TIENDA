@@ -55,7 +55,9 @@ html, body {
 /* ── AHORRO DE ENERGÍA: pausa TODAS las animaciones cuando el hub
    no está visible (pantalla bloqueada, app en segundo plano, cambio
    de pestaña). Cero impacto visual mientras el usuario está mirando. ── */
-body.tab-hidden * {
+body.tab-hidden *,
+body.tab-hidden *::before,
+body.tab-hidden *::after {
   animation-play-state: paused !important;
 }
 
@@ -624,10 +626,11 @@ body.perf-low .portal-badge {
   border-radius:50%; margin:4px 0;
   box-shadow: 0 0 12px var(--arch-color), 0 4px 15px rgba(var(--arch-rgb),0.5);
   animation: platformPulse 2s ease-in-out infinite;
+  transform-origin: center;
 }
 @keyframes platformPulse {
-  0%,100% { opacity:0.7; width:50%; }
-  50% { opacity:1; width:70%; }
+  0%,100% { opacity:0.7; transform: scaleX(0.833); }
+  50% { opacity:1; transform: scaleX(1.167); }
 }
 
 .arch-title {
@@ -773,6 +776,7 @@ body.perf-low .portal-badge {
   0%,100% { box-shadow: 0 0 10px rgba(212,175,55,0.3), inset 0 0 10px rgba(212,175,55,0.05); }
   50%      { box-shadow: 0 0 22px rgba(212,175,55,0.6), inset 0 0 14px rgba(212,175,55,0.1); }
 }
+@keyframes goldGlowFade { 0%,100% { opacity:0; } 50% { opacity:1; } }
 
 .bottom-coins {
   display: flex; align-items: center; gap: 10px;
@@ -780,10 +784,17 @@ body.perf-low .portal-badge {
   border: 1.5px solid rgba(212,175,55,0.5);
   border-radius: 12px; padding: 8px 16px;
   cursor: pointer;
-  animation: goldPulse 3s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(212,175,55,0.3), inset 0 0 10px rgba(212,175,55,0.05);
   transition: transform 0.2s;
   position: relative; overflow: hidden;
 }
+.bottom-coins::after {
+  content:''; position:absolute; inset:0; border-radius:12px; pointer-events:none;
+  opacity:0; z-index:-1;
+  box-shadow: 0 0 22px rgba(212,175,55,0.6), inset 0 0 14px rgba(212,175,55,0.1);
+  animation: goldGlowFade 3s ease-in-out infinite;
+}
+body.perf-low .bottom-coins::after { animation:none !important; opacity:0 !important; }
 .bottom-coins::before {
   content: '';
   position: absolute; inset: 0;
@@ -848,8 +859,15 @@ body.perf-low .portal-badge {
   padding: 6px 16px;
   border: 1px solid rgba(212,175,55,0.5);
   box-shadow: 0 0 12px rgba(212,175,55,0.2), inset 0 1px 0 rgba(255,220,80,0.15);
-  animation: rankingPulse 3s ease-in-out infinite;
+  position: relative;
 }
+.nav-ranking::after {
+  content:''; position:absolute; inset:0; border-radius:14px; pointer-events:none;
+  opacity:0; z-index:-1;
+  box-shadow: 0 0 20px rgba(212,175,55,0.4), inset 0 1px 0 rgba(255,220,80,0.2);
+  animation: goldGlowFade 3s ease-in-out infinite;
+}
+body.perf-low .nav-ranking::after { animation:none !important; opacity:0 !important; }
 .nav-ranking .ni-label {
   color: #f5d06e;
   font-weight: 900;
@@ -1067,6 +1085,35 @@ body.perf-low .portal-badge {
 @keyframes barPendientePulse {
   0%,100% { box-shadow: 0 0 20px rgba(251,146,60,0.2), inset 0 1px 0 rgba(255,255,255,0.05); }
   50%      { box-shadow: 0 0 50px rgba(251,146,60,0.45), inset 0 1px 0 rgba(255,255,255,0.1); }
+}
+
+/* ── FASE 2: el pulso de #continue-bar ya no anima box-shadow directo
+   (carísimo, fuerza repaint) — ahora cross-fadea un overlay con
+   box-shadow FIJO usando opacity (barato, lo compositea el GPU). ── */
+#continue-bar::after {
+  content:'';
+  position:absolute; inset:0;
+  border-radius:inherit;
+  pointer-events:none;
+  opacity:0;
+  z-index:-1;
+}
+#continue-bar.glow-protocolo::after {
+  box-shadow: 0 0 45px rgba(192,132,252,0.35), inset 0 1px 0 rgba(255,255,255,0.1);
+  animation: barGlowFade 5s ease-in-out infinite;
+}
+#continue-bar.glow-pendiente::after {
+  box-shadow: 0 0 50px rgba(251,146,60,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
+  animation: barGlowFade 4s ease-in-out infinite;
+}
+@keyframes barGlowFade {
+  0%,100% { opacity:0; }
+  50%     { opacity:1; }
+}
+/* Respeta el modo perf-low: sin overlay, sin animación */
+body.perf-low #continue-bar::after {
+  animation: none !important;
+  opacity: 0 !important;
 }
 @keyframes titleProtocoloShine {
   0%,100% { opacity: 0.85; } 50% { opacity: 1; }
@@ -1611,7 +1658,8 @@ window.addEventListener('message', (event) => {
         bar.style.borderTop = '1.5px solid rgba(192,132,252,0.6)';
         bar.style.borderBottom = '1.5px solid rgba(192,132,252,0.6)';
         bar.style.boxShadow = '0 0 30px rgba(192,132,252,0.2), inset 0 1px 0 rgba(255,255,255,0.06)';
-        bar.style.animation = 'barProtocoloPulse 5s ease-in-out infinite';
+        bar.classList.remove('glow-pendiente');
+        bar.classList.add('glow-protocolo');
         if (title) {
           title.textContent = '⚔️ CONTINÚA TU PROTOCOLO';
           title.style.color = '#C084FC';
@@ -1650,7 +1698,8 @@ window.addEventListener('message', (event) => {
         bar.style.borderTop = '1.5px solid rgba(251,146,60,0.6)';
         bar.style.borderBottom = '1.5px solid rgba(251,146,60,0.6)';
         bar.style.boxShadow = '0 0 30px rgba(251,146,60,0.2), inset 0 1px 0 rgba(255,255,255,0.06)';
-        bar.style.animation = 'barPendientePulse 4s ease-in-out infinite';
+        bar.classList.remove('glow-protocolo');
+        bar.classList.add('glow-pendiente');
         if (title) {
           title.textContent = '📋 COMPLETA TU EVALUACIÓN';
           title.style.color = '#FB923C';
