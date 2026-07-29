@@ -1315,10 +1315,13 @@ const useMembershipStore = create(
         set({ openedModules: newOpened });
 
         if (userId) {
-          supabase
+          const { error } = await supabase
             .from('module_progress')
-            .upsert({ user_id: userId, module_slug: slug, opened_at: new Date().toISOString() })
-            .then(() => {}).catch(console.error);
+            .upsert(
+              { user_id: userId, module_slug: slug, opened_at: new Date().toISOString() },
+              { onConflict: 'user_id,module_slug' }
+            );
+          if (error) console.error('[Templo] openModule upsert falló:', error);
         }
       },
 
@@ -1335,14 +1338,17 @@ const useMembershipStore = create(
         set({ completedModules: [...completedModules, slug] });
 
         if (userId) {
-          supabase
+          const { error } = await supabase
             .from('module_progress')
-            .upsert({
-              user_id: userId,
-              module_slug: slug,
-              completed_at: new Date().toISOString(),
-            })
-            .catch(console.error);
+            .upsert(
+              {
+                user_id: userId,
+                module_slug: slug,
+                completed_at: new Date().toISOString(),
+              },
+              { onConflict: 'user_id,module_slug' }
+            );
+          if (error) console.error('[Templo] completeModule upsert falló:', error);
         }
 
         return { xp: module.xpReward, gems: module.gemReward };

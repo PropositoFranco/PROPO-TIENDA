@@ -1441,14 +1441,14 @@ const ModuleViewer = () => {
   useEffect(() => {
     if (!markedRef.current && module && user && hasAccess) {
       markedRef.current = true;
-      openModule(supabase, user.id, slug);
+      openModule(user.id, slug);
     }
   }, [slug, module, user, hasAccess, openModule]);
 
   const activarGraduacion = useGraduacionStore(s => s.activar);
 
   const handleEvidenceSuccess = async (rewards) => {
-    await completeModule(supabase, user.id, slug);
+    await completeModule(user.id, slug);
     addXP?.(rewards.xp);
     addCrystals?.(rewards.gems + rewards.coins);
     setShowEvidenceModal(false);

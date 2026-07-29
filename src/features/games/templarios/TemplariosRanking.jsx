@@ -3980,6 +3980,27 @@ if (user) {
     >
       ← Volver al Juego
     </button>
+    <button
+      onClick={() => window.location.reload()}
+      title="Actualizar"
+      style={{
+        position: 'fixed', top: 58, left: 16, zIndex: 9999,
+        display: 'flex', alignItems: 'center', gap: 6,
+        background: 'rgba(3,11,26,0.85)',
+        border: '1px solid rgba(201,168,76,0.4)',
+        borderRadius: 8, padding: '7px 14px',
+        color: 'rgba(201,168,76,0.85)',
+        fontFamily: 'Cinzel, serif', fontSize: 11,
+        letterSpacing: 2, cursor: 'pointer',
+        backdropFilter: 'blur(8px)',
+        transition: 'all 0.2s',
+        textTransform: 'uppercase',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.border = '1px solid rgba(201,168,76,0.9)'; e.currentTarget.style.color = '#c9a84c'; }}
+      onMouseLeave={e => { e.currentTarget.style.border = '1px solid rgba(201,168,76,0.4)'; e.currentTarget.style.color = 'rgba(201,168,76,0.85)'; }}
+    >
+      🔄 Actualizar
+    </button>
     <div
       className="templo-root"
       style={{ height: 'auto', minHeight: '100vh', overflow: 'visible' }}
