@@ -948,9 +948,8 @@ const RewardBadge = ({ icon, value, label }) => (
 
 const ModuleProgressBar = () => {
   const openedModules = useMembershipStore(s => s.openedModules);
-  const { slug } = useParams();
   const total = ACADEMY_MODULES.length;
-  const done = Math.max(0, openedModules.filter(s => s !== slug).length);
+  const done = openedModules.length;
   const pct = Math.round((done / total) * 100);
   return (
     <div style={{ width: '100%' }}>
@@ -1391,6 +1390,74 @@ const QuickNav = () => {
   );
 };
 
+// ─── Tour guiado de 3 pasos: progreso → ejercicio → sellar ────────────────────
+const TOUR_MODULO_STEPS = [
+  {
+    title: '📊 Tu Progreso',
+    text: 'Aquí arriba ves tu progreso general en la Academia. Explora el video y la introducción con calma — cuando llegues a tu ejercicio, te lo señalo.',
+    mode: 'passive',
+  },
+  {
+    title: '📜 El Ejercicio',
+    text: 'Este es tu ejercicio de esta semana. Tócalo para desbloquearlo — no puedes avanzar sin completarlo.',
+    mode: 'action',
+  },
+  {
+    title: '⚔️ Sella tu Módulo',
+    text: 'Cuando termines el ejercicio, vuelve aquí y sella el módulo para reclamar tu recompensa.',
+    mode: 'action',
+  },
+];
+
+const TourGuiaModulo = ({ step, accent }) => {
+  const data = TOUR_MODULO_STEPS[step - 1];
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      marginBottom: 'clamp(1rem, 3vw, 1.5rem)',
+      animation: 'tourModFadeIn 0.5s cubic-bezier(0.16,1,0.3,1)',
+    }}>
+      <div style={{
+        width: '100%', maxWidth: '520px',
+        background: 'linear-gradient(135deg, rgba(30,10,45,0.97), rgba(15,5,25,0.97))',
+        border: `1px solid ${accent}88`,
+        borderRadius: '1rem',
+        padding: 'clamp(1rem, 3.5vw, 1.5rem) clamp(1.1rem, 4vw, 1.75rem)',
+        boxShadow: `0 10px 40px rgba(0,0,0,0.6), 0 0 30px ${accent}30`,
+        textAlign: 'center',
+      }}>
+        <p style={{
+          fontFamily: '"Cinzel", serif', fontSize: 'clamp(0.7rem, 2vw, 0.8rem)',
+          letterSpacing: '0.1em', textTransform: 'uppercase',
+          color: accent, marginBottom: '0.5rem',
+        }}>{data.title}</p>
+        <p style={{
+          fontFamily: '"Crimson Text", serif', fontSize: 'clamp(0.9rem, 2.5vw, 1.05rem)',
+          color: 'rgba(255,255,255,0.85)', lineHeight: 1.45, marginBottom: '0.6rem',
+        }}>{data.text}</p>
+        <p style={{
+          fontFamily: '"Cinzel", serif', fontSize: 'clamp(0.6rem, 1.4vw, 0.68rem)',
+          letterSpacing: '0.15em', color: 'rgba(255,255,255,0.3)', marginBottom: '0.9rem',
+        }}>PASO {step} DE {TOUR_MODULO_STEPS.length}</p>
+        <p style={{
+          fontFamily: '"Cinzel", serif', fontSize: 'clamp(0.62rem, 1.5vw, 0.7rem)',
+          letterSpacing: '0.06em', color: `${accent}cc`, fontStyle: 'italic',
+        }}>{data.mode === 'passive' ? '👀 Sigue explorando el módulo' : '👇 Toca para continuar'}</p>
+      </div>
+      <div style={{
+        fontSize: 'clamp(1.4rem, 4.5vw, 1.8rem)', color: accent, marginTop: '0.15rem',
+        animation: 'tourModArrowBounce 1.2s ease-in-out infinite',
+        filter: `drop-shadow(0 0 12px ${accent}) drop-shadow(0 0 28px ${accent}80)`,
+        lineHeight: 1,
+      }}>⬇</div>
+      <style>{`
+        @keyframes tourModFadeIn { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes tourModArrowBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
+      `}</style>
+    </div>
+  );
+};
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 const ModuleViewer = () => {
   const { slug } = useParams();
@@ -1407,9 +1474,11 @@ const ModuleViewer = () => {
   const [nextEvalDate, setNextEvalDate] = useState(null);
   const [showEvidenceModal, setShowEvidenceModal] = useState(false);
   const [rewardAnimation, setRewardAnimation] = useState(null); // { xp, gems, coins }
+  const [tourStep, setTourStep] = useState(0);
 
   const module = ACADEMY_MODULES.find(m => m.slug === slug);
   const isCompleted = completedModules.includes(slug);
+  const [exerciseUnlocked, setExerciseUnlocked] = useState(isCompleted);
   const markedRef = useRef(false);
 
   useEffect(() => {
@@ -1437,6 +1506,36 @@ const ModuleViewer = () => {
     };
     fetchProtocolo();
   }, [user?.email]);
+
+  // Tour guiado: solo la primera vez que se abre este módulo, mientras no esté sellado
+  useEffect(() => {
+    if (protocoloLoading || isCompleted || !slug) return;
+    const key = `templo_tour_modulo_${slug}`;
+    if (!localStorage.getItem(key)) {
+      const t = setTimeout(() => setTourStep(1), 600);
+      return () => clearTimeout(t);
+    }
+  }, [protocoloLoading, isCompleted, slug]);
+
+  const cerrarTourModulo = useCallback(() => {
+    setTourStep(0);
+    localStorage.setItem(`templo_tour_modulo_${slug}`, '1');
+  }, [slug]);
+
+  // Detecta cuando el usuario llega de verdad, con scroll, a la zona del ejercicio
+  const exerciseGateRef = useRef(null);
+  useEffect(() => {
+    if (tourStep !== 1 || !exerciseGateRef.current) return;
+    const el = exerciseGateRef.current;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setTourStep(2);
+        obs.disconnect();
+      }
+    }, { threshold: 0.4 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [tourStep]);
 
   useEffect(() => {
     if (!markedRef.current && module && user && hasAccess) {
@@ -1567,86 +1666,136 @@ const ModuleViewer = () => {
         <ModuleProgressBar />
       </div>
 
-      {/* Video */}
-      <VideoPlayer cfg={cfg} videoId={module.videoId} />
+      {/* Guía flotante del paso 1 — no bloquea nada, solo acompaña mientras exploran */}
+      {tourStep === 1 && (
+        <div style={{ position: 'sticky', top: '0.75rem', zIndex: 50 }}>
+          <TourGuiaModulo step={1} accent={cfg.color} />
+        </div>
+      )}
 
-      {/* Contexto */}
+      {/* Video + Contexto — libres de explorar, el tour no bloquea nada aquí */}
+      <VideoPlayer cfg={cfg} videoId={module.videoId} />
       {module.context && <ModuleContext context={module.context} cfg={cfg} type={module.type} />}
 
-      {/* ── LLAMADOR DE ATENCIÓN: Ejercicio Semanal ── */}
-      <div style={{
-        marginBottom: '0.75rem',
-        border: `1px solid ${cfg.color}55`,
-        borderLeft: `4px solid ${cfg.color}`,
-        borderRadius: '0.875rem',
-        padding: '1rem 1.25rem',
-        background: `linear-gradient(135deg, ${cfg.color}0f 0%, transparent 100%)`,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.875rem',
-      }}>
-        <style>{`
-          @keyframes mcPulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
-          @keyframes mcBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
-        `}</style>
-        {/* Icono pulsante — solo opacity, muy barato en móvil */}
-        <div style={{
-          flexShrink: 0,
-          width: '2.5rem', height: '2.5rem',
-          borderRadius: '50%',
-          background: `${cfg.color}22`,
-          border: `1px solid ${cfg.color}66`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '1.1rem',
-          animation: 'mcPulse 2.4s ease-in-out infinite',
-          willChange: 'opacity',
-        }}>⚔️</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{
-            margin: '0 0 0.2rem 0',
-            fontFamily: '"Cinzel", serif',
-            fontSize: 'clamp(0.7rem, 1.8vw, 0.8rem)',
-            color: cfg.color,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-          }}>Tu ejercicio de esta semana</p>
-          <p style={{
-            margin: 0,
-            fontFamily: '"Crimson Text", serif',
-            fontSize: 'clamp(1rem, 2.8vw, 1.1rem)',
-            color: 'rgba(255,255,255,0.88)',
-            lineHeight: 1.4,
-          }}>¿Tienes el valor de mirarte a los ojos esta semana?</p>
-          {/* Flecha — solo translateY, GPU-friendly */}
+      {/* ── Ejercicio Semanal: bloqueado hasta que le piquen para revelarlo ── */}
+      {tourStep === 2 && (
+        <TourGuiaModulo step={2} accent={cfg.color} />
+      )}
+
+      {!exerciseUnlocked ? (
+        <button
+          ref={exerciseGateRef}
+          onClick={() => {
+            setExerciseUnlocked(true);
+            if (tourStep === 1 || tourStep === 2) setTourStep(3);
+          }}
+          style={{
+            width: '100%',
+            marginBottom: '2rem',
+            border: `1px solid ${cfg.color}55`,
+            borderLeft: `4px solid ${cfg.color}`,
+            borderRadius: '0.875rem',
+            padding: '1.25rem 1.5rem',
+            background: `linear-gradient(135deg, ${cfg.color}18 0%, transparent 100%)`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.875rem',
+            cursor: 'pointer',
+            textAlign: 'left',
+            boxShadow: tourStep === 2 ? `0 0 0 3px ${cfg.color}, 0 0 40px ${cfg.color}66` : 'none',
+            animation: tourStep === 2 ? 'exerciseGatePulse 1.6s ease-in-out infinite' : 'none',
+            transition: 'box-shadow 0.3s, opacity 0.3s',
+          }}
+        >
+          <style>{`
+            @keyframes mcPulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+            @keyframes mcBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
+            @keyframes exerciseGatePulse {
+              0%,100%{ box-shadow: 0 0 0 3px ${cfg.color}, 0 0 40px ${cfg.color}66; }
+              50%{ box-shadow: 0 0 0 3px ${cfg.color}, 0 0 60px ${cfg.color}aa; }
+            }
+          `}</style>
+          {/* Icono pulsante — solo opacity, muy barato en móvil */}
           <div style={{
-            marginTop: '0.4rem',
-            display: 'flex', alignItems: 'center', gap: '0.35rem',
+            flexShrink: 0,
+            width: '2.75rem', height: '2.75rem',
+            borderRadius: '50%',
+            background: `${cfg.color}22`,
+            border: `1px solid ${cfg.color}66`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.25rem',
+            animation: 'mcPulse 2.4s ease-in-out infinite',
+            willChange: 'opacity',
+          }}>⚔️</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{
+              margin: '0 0 0.2rem 0',
+              fontFamily: '"Cinzel", serif',
+              fontSize: 'clamp(0.7rem, 1.8vw, 0.8rem)',
+              color: cfg.color,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+            }}>Tu ejercicio de esta semana</p>
+            <p style={{
+              margin: 0,
+              fontFamily: '"Crimson Text", serif',
+              fontSize: 'clamp(1rem, 2.8vw, 1.1rem)',
+              color: 'rgba(255,255,255,0.88)',
+              lineHeight: 1.4,
+            }}>¿Tienes el valor de mirarte a los ojos esta semana?</p>
+            {/* Flecha — solo translateY, GPU-friendly */}
+            <div style={{
+              marginTop: '0.5rem',
+              display: 'flex', alignItems: 'center', gap: '0.35rem',
+            }}>
+              <span style={{
+                fontSize: '0.85rem',
+                animation: 'mcBounce 1.2s ease-in-out infinite',
+                willChange: 'transform',
+                display: 'inline-block',
+              }}>👆</span>
+              <span style={{
+                fontFamily: '"Cinzel", serif',
+                fontSize: 'clamp(0.6rem, 1.4vw, 0.7rem)',
+                color: cfg.color,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+              }}>Toca aquí para comenzar el ejercicio</span>
+            </div>
+          </div>
+        </button>
+      ) : (
+        <>
+          <div style={{
+            marginBottom: '0.75rem',
+            display: 'flex', alignItems: 'center', gap: '0.5rem',
           }}>
-            <span style={{
-              fontSize: '0.75rem',
-              animation: 'mcBounce 1.2s ease-in-out infinite',
-              willChange: 'transform',
-              display: 'inline-block',
-            }}>↓</span>
+            <span style={{ fontSize: '0.9rem' }}>⚔️</span>
             <span style={{
               fontFamily: '"Cinzel", serif',
-              fontSize: 'clamp(0.55rem, 1.3vw, 0.65rem)',
-              color: 'rgba(255,255,255,0.4)',
-              letterSpacing: '0.1em',
-            }}>Toca el ejercicio de abajo para comenzar</span>
+              fontSize: 'clamp(0.6rem, 1.4vw, 0.68rem)',
+              color: `${cfg.color}cc`,
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+            }}>Ejercicio en curso</span>
           </div>
-        </div>
-      </div>
 
-      {/* Contenido HTML */}
-      {protocoloLoading ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', padding: '4rem 1rem' }}>
-          <div style={{ width: '2rem', height: '2rem', border: `3px solid ${cfg.color}33`, borderTopColor: cfg.color, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          <span style={{ fontFamily: '"Cinzel", serif', color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', letterSpacing: '0.1em' }}>Cargando tu protocolo...</span>
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        </div>
-      ) : (
-        <ModuleContent protocolo={protocolo} cfg={cfg} />
+          {/* Contenido HTML */}
+          {protocoloLoading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', padding: '4rem 1rem' }}>
+              <div style={{ width: '2rem', height: '2rem', border: `3px solid ${cfg.color}33`, borderTopColor: cfg.color, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              <span style={{ fontFamily: '"Cinzel", serif', color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', letterSpacing: '0.1em' }}>Cargando tu protocolo...</span>
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          ) : (
+            <ModuleContent protocolo={protocolo} cfg={cfg} />
+          )}
+        </>
+      )}
+
+      {tourStep === 3 && (
+        <TourGuiaModulo step={3} accent={cfg.color} />
       )}
 
       {/* ── SEPARADOR: confirma que ya terminó el ejercicio ── */}
@@ -1678,7 +1827,10 @@ const ModuleViewer = () => {
       {/* ── BOTÓN PRINCIPAL ── */}
       {!isCompleted ? (
         <button
-          onClick={() => setShowEvidenceModal(true)}
+          onClick={() => {
+            if (tourStep === 3) cerrarTourModulo();
+            setShowEvidenceModal(true);
+          }}
           style={{
             width: '100%',
             padding: 'clamp(1rem, 3vw, 1.4rem)',
@@ -1690,7 +1842,10 @@ const ModuleViewer = () => {
             cursor: 'pointer', marginBottom: '2rem',
             position: 'relative', overflow: 'hidden',
             transition: 'all 0.3s cubic-bezier(0.16,1,0.3,1)',
-            boxShadow: `0 4px 24px ${cfg.color}44`,
+            opacity: (tourStep === 1 || tourStep === 2) ? 0.4 : 1,
+            pointerEvents: (tourStep === 1 || tourStep === 2) ? 'none' : 'auto',
+            boxShadow: tourStep === 3 ? `0 0 0 3px ${cfg.color}, 0 0 50px ${cfg.color}88` : `0 4px 24px ${cfg.color}44`,
+            animation: tourStep === 3 ? 'exerciseGatePulse 1.6s ease-in-out infinite' : 'none',
           }}
           onMouseEnter={e => {
             e.currentTarget.style.transform = 'translateY(-3px)';
