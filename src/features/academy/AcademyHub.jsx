@@ -132,83 +132,101 @@ const CurrentModuleHero = ({ module, isCompleted }) => {
   );
 };
 
-// ─── Tour guiado: aparece al llegar recién forjado el protocolo semanal ─────
-const TourGuiaSemanal = ({ onDismiss }) => (
-  <div style={{
-    position: 'absolute',
-    top: 'clamp(-6.5rem, -14vw, -5rem)',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    width: 'min(92%, 420px)',
-    zIndex: 5,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    pointerEvents: 'none',
-  }}>
+// ─── Tour guiado de 3 pasos: aparece al llegar recién forjado el protocolo semanal ─
+const TOUR_STEPS = [
+  {
+    title: '⚜️ Tu Progreso Templario',
+    text: 'Esta barra crece cada vez que completas una Activación Templaria. Aquí ves cuánto llevas recorrido de tu programa de 6 meses.',
+  },
+  {
+    title: '🏛 Comunidad y Ranking',
+    text: 'Aquí vive el Feed del Templo y la Tabla de Honor. Se desbloquean cuando completes tu primera Activación — por ahora, sigamos con lo importante.',
+  },
+  {
+    title: '⚔️ Tu Protocolo te espera',
+    text: 'El Templo ya forjó tu misión de esta semana. Tócala para comenzar tu transformación.',
+  },
+];
+
+const TourGuiaSemanal = ({ step, onNext, onFinish }) => {
+  const data = TOUR_STEPS[step - 1];
+  const isLast = step === TOUR_STEPS.length;
+  return (
     <div style={{
-      background: 'linear-gradient(135deg, rgba(30,10,45,0.97), rgba(15,5,25,0.97))',
-      border: '1px solid rgba(212,175,55,0.5)',
-      borderRadius: '1rem',
-      padding: 'clamp(0.9rem, 3vw, 1.25rem) clamp(1rem, 3.5vw, 1.5rem)',
-      boxShadow: '0 10px 40px rgba(0,0,0,0.6), 0 0 30px rgba(212,175,55,0.15)',
-      textAlign: 'center',
-      pointerEvents: 'auto',
-      animation: 'tourFadeIn 0.6s cubic-bezier(0.16,1,0.3,1)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      marginBottom: 'clamp(1rem, 3vw, 1.5rem)',
+      animation: 'tourFadeIn 0.5s cubic-bezier(0.16,1,0.3,1)',
     }}>
-      <p style={{
-        fontFamily: '"Cinzel", serif',
-        fontSize: 'clamp(0.7rem, 2vw, 0.8rem)',
-        letterSpacing: '0.1em',
-        textTransform: 'uppercase',
-        color: '#D4AF37',
-        marginBottom: '0.5rem',
-      }}>⚔️ Tu Protocolo te espera</p>
-      <p style={{
-        fontFamily: '"Crimson Text", serif',
-        fontSize: 'clamp(0.9rem, 2.5vw, 1.05rem)',
-        color: 'rgba(255,255,255,0.85)',
-        lineHeight: 1.4,
-        marginBottom: '0.85rem',
-      }}>El Templo ya forjó tu misión de esta semana. Tócala para comenzar tu transformación.</p>
-      <button
-        onClick={onDismiss}
-        style={{
+      <div style={{
+        width: '100%',
+        maxWidth: '520px',
+        background: 'linear-gradient(135deg, rgba(30,10,45,0.97), rgba(15,5,25,0.97))',
+        border: '1px solid rgba(212,175,55,0.5)',
+        borderRadius: '1rem',
+        padding: 'clamp(1rem, 3.5vw, 1.5rem) clamp(1.1rem, 4vw, 1.75rem)',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.6), 0 0 30px rgba(212,175,55,0.18)',
+        textAlign: 'center',
+      }}>
+        <p style={{
           fontFamily: '"Cinzel", serif',
-          fontSize: 'clamp(0.65rem, 1.6vw, 0.75rem)',
-          letterSpacing: '0.08em',
+          fontSize: 'clamp(0.7rem, 2vw, 0.8rem)',
+          letterSpacing: '0.1em',
           textTransform: 'uppercase',
-          color: '#000',
-          background: 'linear-gradient(135deg, #D4AF37, #F4E4A1)',
-          border: 'none',
-          borderRadius: '0.5rem',
-          padding: '0.5em 1.3em',
-          cursor: 'pointer',
-          fontWeight: 700,
-        }}
-      >Entendido</button>
+          color: '#D4AF37',
+          marginBottom: '0.5rem',
+        }}>{data.title}</p>
+        <p style={{
+          fontFamily: '"Crimson Text", serif',
+          fontSize: 'clamp(0.9rem, 2.5vw, 1.05rem)',
+          color: 'rgba(255,255,255,0.85)',
+          lineHeight: 1.45,
+          marginBottom: '0.6rem',
+        }}>{data.text}</p>
+        <p style={{
+          fontFamily: '"Cinzel", serif',
+          fontSize: 'clamp(0.6rem, 1.4vw, 0.68rem)',
+          letterSpacing: '0.15em',
+          color: 'rgba(255,255,255,0.3)',
+          marginBottom: '0.9rem',
+        }}>PASO {step} DE {TOUR_STEPS.length}</p>
+        <button
+          onClick={isLast ? onFinish : onNext}
+          style={{
+            fontFamily: '"Cinzel", serif',
+            fontSize: 'clamp(0.65rem, 1.6vw, 0.75rem)',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: '#000',
+            background: 'linear-gradient(135deg, #D4AF37, #F4E4A1)',
+            border: 'none',
+            borderRadius: '0.5rem',
+            padding: '0.55em 1.5em',
+            cursor: 'pointer',
+            fontWeight: 700,
+          }}
+        >{isLast ? 'Entendido, ¡vamos! →' : 'Siguiente →'}</button>
+      </div>
+      <div style={{
+        fontSize: 'clamp(1.4rem, 4.5vw, 1.8rem)',
+        color: '#D4AF37',
+        marginTop: '0.15rem',
+        animation: 'tourArrowBounce 1.2s ease-in-out infinite',
+        filter: 'drop-shadow(0 0 12px rgba(212,175,55,0.9)) drop-shadow(0 0 28px rgba(212,175,55,0.5))',
+        lineHeight: 1,
+      }}>⬇</div>
+      <style>{`
+        @keyframes tourFadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes tourArrowBounce {
+          0%,100% { transform: translateY(0); }
+          50% { transform: translateY(8px); }
+        }
+      `}</style>
     </div>
-    <div style={{
-      fontSize: 'clamp(1.5rem, 5vw, 2rem)',
-      color: '#D4AF37',
-      marginTop: '-0.2rem',
-      animation: 'tourArrowBounce 1.2s ease-in-out infinite',
-      filter: 'drop-shadow(0 0 12px rgba(212,175,55,0.9)) drop-shadow(0 0 28px rgba(212,175,55,0.5))',
-      lineHeight: 1,
-      pointerEvents: 'none',
-    }}>⬇</div>
-    <style>{`
-      @keyframes tourFadeIn {
-        from { opacity: 0; transform: translateY(-12px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      @keyframes tourArrowBounce {
-        0%,100% { transform: translateY(0); }
-        50% { transform: translateY(8px); }
-      }
-    `}</style>
-  </div>
-);
+  );
+};
 
 // ─── Tarjeta de módulo en grid ────────────────────────────────────────────────
 const ModuleCard = ({ module, state }) => {
@@ -763,7 +781,7 @@ useEffect(() => {
   }
 }, [mostrarRitual, user?.id, loadMembership]);
 
-const [mostrarTourAcademia, setMostrarTourAcademia] = useState(false);
+const [tourStep, setTourStep] = useState(0);
 
 const onRitualCompleto = useCallback(async () => {
   setMostrarRitual(false);
@@ -771,7 +789,7 @@ const onRitualCompleto = useCallback(async () => {
   if (user?.id) {
     await loadMembership(supabase, user.id);
   }
-  setMostrarTourAcademia(true);
+  setTourStep(1);
 }, [setSearchParams, user?.id, loadMembership]);
 
   const protocoLoFecha = useMembershipStore(s => s.protocoLoFecha);
@@ -982,6 +1000,10 @@ const onRitualCompleto = useCallback(async () => {
           }}>✦ Plan personalizado · 6 meses · 1 actividad por semana ✦</p>
         </div>
 
+        {tourStep === 1 && (
+          <TourGuiaSemanal step={1} onNext={() => setTourStep(2)} onFinish={() => setTourStep(0)} />
+        )}
+
         {/* Barra de progreso épica */}
         <div style={{
           padding: 'clamp(1rem, 3vw, 1.5rem)',
@@ -1069,6 +1091,10 @@ const onRitualCompleto = useCallback(async () => {
           ))}
         </div>
 
+        {tourStep === 2 && (
+          <TourGuiaSemanal step={2} onNext={() => setTourStep(3)} onFinish={() => setTourStep(0)} />
+        )}
+
         {/* ── Navegación Comunidad & Ranking ── */}
         <div style={{
           display: 'flex', gap: '0.75rem',
@@ -1112,6 +1138,7 @@ const onRitualCompleto = useCallback(async () => {
             <Link
               key={to}
               to={to}
+              onClick={e => { if (tourStep > 0) e.preventDefault(); }}
               style={{
                 flex: '1', minWidth: 'clamp(140px, 40vw, 200px)',
                 display: 'flex', alignItems: 'center', gap: '0.875rem',
@@ -1123,6 +1150,10 @@ const onRitualCompleto = useCallback(async () => {
                 boxShadow: `0 0 24px ${color}14, inset 0 1px 0 rgba(255,255,255,0.06)`,
                 transition: 'all 0.3s cubic-bezier(0.16,1,0.3,1)',
                 position: 'relative', overflow: 'hidden',
+                opacity: tourStep > 0 ? 0.4 : 1,
+                filter: tourStep > 0 ? 'grayscale(0.7)' : 'none',
+                cursor: tourStep > 0 ? 'not-allowed' : 'pointer',
+                pointerEvents: tourStep > 0 ? 'none' : 'auto',
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.borderColor = `${color}88`;
@@ -1209,7 +1240,7 @@ const onRitualCompleto = useCallback(async () => {
 
       {/* Módulo activo esta semana — solo si el plan está vigente */}
       {currentModule && !evaluacionExpirada && (
-        <div style={{ position: 'relative' }}>
+        <div>
           <h2 style={{
             fontFamily: '"Cinzel", serif',
             fontSize: 'clamp(0.75rem, 1.8vw, 0.875rem)',
@@ -1217,8 +1248,8 @@ const onRitualCompleto = useCallback(async () => {
             color: 'rgba(255,255,255,0.35)',
             marginBottom: '1rem',
           }}>Esta semana</h2>
-          {mostrarTourAcademia && (
-            <TourGuiaSemanal onDismiss={() => setMostrarTourAcademia(false)} />
+          {tourStep === 3 && (
+            <TourGuiaSemanal step={3} onNext={() => {}} onFinish={() => setTourStep(0)} />
           )}
           <CurrentModuleHero module={currentModule} isCompleted={isCurrentCompleted} />
         </div>
