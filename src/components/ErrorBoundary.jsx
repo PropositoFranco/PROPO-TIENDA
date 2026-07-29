@@ -3,7 +3,9 @@ import { Component } from 'react';
 // Firma del error cuando el navegador queda con referencias a un chunk
 // que un deploy nuevo ya reemplazó/eliminó del servidor.
 const PATRON_CHUNK_VIEJO = /Failed to fetch dynamically imported module|Failed to load module script|error loading dynamically imported module/i;
-const FLAG_RECARGA = 'templo_chunk_reload_attempted';
+const KEY_INTENTOS = 'templo_chunk_reload_attempts';
+const MAX_INTENTOS = 3;
+const VENTANA_MS = 60000; // 1 minuto: pasado esto, se resetea el contador
 
 export default class ErrorBoundary extends Component {
   constructor(props) {
@@ -17,10 +19,10 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidMount() {
-    // Si la app carga bien y se mantiene estable, liberamos el flag
-    // para que un futuro deploy pueda auto-recargar de nuevo si hace falta.
+    // Si la app carga bien y se mantiene estable, limpiamos el contador
+    // para que un futuro deploy empiece de cero.
     this._clearFlagTimer = setTimeout(() => {
-      sessionStorage.removeItem(FLAG_RECARGA);
+      sessionStorage.removeItem(KEY_INTENTOS);
     }, 8000);
   }
 
@@ -28,16 +30,37 @@ export default class ErrorBoundary extends Component {
     clearTimeout(this._clearFlagTimer);
   }
 
+  // Recarga forzando al navegador a descartar cualquier versión cacheada
+  // del documento HTML — la causa real de que un reload normal no sirva.
+  forzarRecargaSinCache() {
+    const url = new URL(window.location.href);
+    url.searchParams.set('_r', Date.now().toString());
+    window.location.replace(url.toString());
+  }
+
   componentDidCatch(error, info) {
     console.error('[Templo] Error capturado por ErrorBoundary:', error, info);
 
     const esChunkViejo = PATRON_CHUNK_VIEJO.test(error?.message || '');
-    const yaIntentoRecarga = sessionStorage.getItem(FLAG_RECARGA);
 
-    if (esChunkViejo && !yaIntentoRecarga) {
-      sessionStorage.setItem(FLAG_RECARGA, '1');
+    let registro;
+    try {
+      registro = JSON.parse(sessionStorage.getItem(KEY_INTENTOS) || 'null');
+    } catch {
+      registro = null;
+    }
+
+    const ahora = Date.now();
+    const dentroDeVentana = registro && (ahora - registro.desde) < VENTANA_MS;
+    const intentos = dentroDeVentana ? registro.n : 0;
+
+    if (esChunkViejo && intentos < MAX_INTENTOS) {
+      sessionStorage.setItem(KEY_INTENTOS, JSON.stringify({
+        n: intentos + 1,
+        desde: dentroDeVentana ? registro.desde : ahora,
+      }));
       this.isReloading = true;
-      window.location.reload();
+      this.forzarRecargaSinCache();
     }
   }
 
@@ -82,7 +105,12 @@ export default class ErrorBoundary extends Component {
         </div>
 
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => {
+            sessionStorage.removeItem(KEY_INTENTOS);
+            const url = new URL(window.location.href);
+            url.searchParams.set('_r', Date.now().toString());
+            window.location.replace(url.toString());
+          }}
           style={{
             padding: '14px 36px',
             background: 'linear-gradient(135deg, rgba(212,175,55,0.18), rgba(212,175,55,0.08))',
