@@ -23,11 +23,12 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { usePlayerStore } from '../../store/usePlayerStore';
 import { supabase } from '../../services/supabase';
 // ─── Tarjeta del módulo semanal (hero) ───────────────────────────────────────
-const CurrentModuleHero = ({ module, isCompleted }) => {
+const CurrentModuleHero = ({ module, isCompleted, onClick }) => {
   const cfg = MODULE_TYPE_CONFIG[module.type];
   return (
     <Link
       to={`/academia/${module.slug}`}
+      onClick={onClick}
       style={{
         display: 'block',
         textDecoration: 'none',
@@ -189,22 +190,32 @@ const TourGuiaSemanal = ({ step, onNext, onFinish }) => {
           color: 'rgba(255,255,255,0.3)',
           marginBottom: '0.9rem',
         }}>PASO {step} DE {TOUR_STEPS.length}</p>
-        <button
-          onClick={isLast ? onFinish : onNext}
-          style={{
+        {isLast ? (
+          <p style={{
             fontFamily: '"Cinzel", serif',
-            fontSize: 'clamp(0.65rem, 1.6vw, 0.75rem)',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: '#000',
-            background: 'linear-gradient(135deg, #D4AF37, #F4E4A1)',
-            border: 'none',
-            borderRadius: '0.5rem',
-            padding: '0.55em 1.5em',
-            cursor: 'pointer',
-            fontWeight: 700,
-          }}
-        >{isLast ? 'Entendido, ¡vamos! →' : 'Siguiente →'}</button>
+            fontSize: 'clamp(0.62rem, 1.5vw, 0.7rem)',
+            letterSpacing: '0.06em',
+            color: 'rgba(212,175,55,0.75)',
+            fontStyle: 'italic',
+          }}>👇 Toca el protocolo para continuar</p>
+        ) : (
+          <button
+            onClick={onNext}
+            style={{
+              fontFamily: '"Cinzel", serif',
+              fontSize: 'clamp(0.65rem, 1.6vw, 0.75rem)',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: '#000',
+              background: 'linear-gradient(135deg, #D4AF37, #F4E4A1)',
+              border: 'none',
+              borderRadius: '0.5rem',
+              padding: '0.55em 1.5em',
+              cursor: 'pointer',
+              fontWeight: 700,
+            }}
+          >Siguiente →</button>
+        )}
       </div>
       <div style={{
         fontSize: 'clamp(1.4rem, 4.5vw, 1.8rem)',
@@ -1251,12 +1262,22 @@ const onRitualCompleto = useCallback(async () => {
           {tourStep === 3 && (
             <TourGuiaSemanal step={3} onNext={() => {}} onFinish={() => setTourStep(0)} />
           )}
-          <CurrentModuleHero module={currentModule} isCompleted={isCurrentCompleted} />
+          <CurrentModuleHero
+            module={currentModule}
+            isCompleted={isCurrentCompleted}
+            onClick={() => setTourStep(0)}
+          />
         </div>
       )}
 
-      {/* Grid de todos los módulos */}
-      <div style={{ marginBottom: '3rem' }}>
+      {/* Grid de todos los módulos — bloqueado mientras dura el tour guiado */}
+      <div style={{
+        marginBottom: '3rem',
+        opacity: tourStep > 0 ? 0.4 : 1,
+        filter: tourStep > 0 ? 'grayscale(0.7)' : 'none',
+        pointerEvents: tourStep > 0 ? 'none' : 'auto',
+        transition: 'opacity 0.3s',
+      }}>
         {/* Sección: ya abiertos */}
         {categorized.filter(m => m.state === 'opened').length > 0 && (
           <>
