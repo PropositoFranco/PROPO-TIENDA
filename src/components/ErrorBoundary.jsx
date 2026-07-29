@@ -1,21 +1,49 @@
 import { Component } from 'react';
 
+// Firma del error cuando el navegador queda con referencias a un chunk
+// que un deploy nuevo ya reemplazó/eliminó del servidor.
+const PATRON_CHUNK_VIEJO = /Failed to fetch dynamically imported module|Failed to load module script|error loading dynamically imported module/i;
+const FLAG_RECARGA = 'templo_chunk_reload_attempted';
+
 export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null };
+    this.isReloading = false;
   }
 
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
   }
 
+  componentDidMount() {
+    // Si la app carga bien y se mantiene estable, liberamos el flag
+    // para que un futuro deploy pueda auto-recargar de nuevo si hace falta.
+    this._clearFlagTimer = setTimeout(() => {
+      sessionStorage.removeItem(FLAG_RECARGA);
+    }, 8000);
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this._clearFlagTimer);
+  }
+
   componentDidCatch(error, info) {
     console.error('[Templo] Error capturado por ErrorBoundary:', error, info);
+
+    const esChunkViejo = PATRON_CHUNK_VIEJO.test(error?.message || '');
+    const yaIntentoRecarga = sessionStorage.getItem(FLAG_RECARGA);
+
+    if (esChunkViejo && !yaIntentoRecarga) {
+      sessionStorage.setItem(FLAG_RECARGA, '1');
+      this.isReloading = true;
+      window.location.reload();
+    }
   }
 
   render() {
     if (!this.state.hasError) return this.props.children;
+    if (this.isReloading) return null; // recarga en curso, invisible para el usuario
 
     return (
       <div style={{
