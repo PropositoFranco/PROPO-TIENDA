@@ -173,7 +173,8 @@ const RitualAnalysis = ({ nombre, email, onComplete }) => {
         animation: 'haLoPulse 4s ease-in-out infinite',
       }} />
 
-      {/* Contenido principal */}
+      {/* Contenido principal — se oculta por completo al pasar a la fase de revelación */}
+      {fase !== 'revelado' && (
       <div style={{
         position: 'relative', zIndex: 10,
         display: 'flex', flexDirection: 'column',
@@ -292,6 +293,7 @@ const RitualAnalysis = ({ nombre, email, onComplete }) => {
           </p>
         </div>
       </div>
+      )}
 
       {fase === 'revelado' && (
         <div style={{
