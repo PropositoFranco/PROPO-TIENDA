@@ -1378,11 +1378,11 @@
             <table>
               <thead>
                 <tr>
-                  <th>Correo</th><th>Membresía</th><th>Monto Pagado</th><th>Días Esperando</th><th>Acción</th>
+                  <th>Correo</th><th>Membresía</th><th>Monto Pagado</th><th>Días Esperando</th><th>Estado</th><th>Acción</th>
                 </tr>
               </thead>
               <tbody id="pendTable">
-                <tr><td colspan="5" style="text-align:center;color:var(--text-faint);font-family:'Cinzel',serif;font-size:.7rem;padding:1.5rem;">Cargando pendientes...</td></tr>
+                <tr><td colspan="6" style="text-align:center;color:var(--text-faint);font-family:'Cinzel',serif;font-size:.7rem;padding:1.5rem;">Cargando pendientes...</td></tr>
               </tbody>
             </table>
           </div>
@@ -4218,20 +4218,32 @@
   ══════════════════════════════════════ */
   window._pendingRegs = [];
 
+  function _pendTimeAgo(iso) {
+    if (!iso) return null;
+    const d  = Date.now() - new Date(iso).getTime();
+    const mn = Math.floor(d / 60000);
+    if (mn < 1)  return 'hace instantes';
+    if (mn < 60) return `hace ${mn}m`;
+    const h = Math.floor(mn / 60);
+    if (h < 24)  return `hace ${h}h`;
+    const dy = Math.floor(h / 24);
+    return `hace ${dy}d`;
+  }
+
   async function loadPendingRegistrations() {
     const tbody = document.getElementById('pendTable');
-    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-faint);font-family:'Cinzel',serif;font-size:.7rem;padding:1.5rem;">Cargando pendientes...</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-faint);font-family:'Cinzel',serif;font-size:.7rem;padding:1.5rem;">Cargando pendientes...</td></tr>`;
 
     const { data, error } = await supabaseClient
       .from('access_codes')
-      .select('code, user_email, membership_type, duration_months, amount_paid, currency, created_at')
+      .select('code, user_email, membership_type, duration_months, amount_paid, currency, created_at, last_resend_at, resend_count')
       .or('is_used.eq.false,is_used.is.null')
       .not('user_email', 'is', null)
       .gt('amount_paid', 0)
       .order('created_at', { ascending: true });
 
     if (error) {
-      if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#ef4444;font-family:'Cinzel',serif;font-size:.7rem;padding:1.5rem;">❌ Error cargando: ${error.message}</td></tr>`;
+      if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#ef4444;font-family:'Cinzel',serif;font-size:.7rem;padding:1.5rem;">❌ Error cargando: ${error.message}</td></tr>`;
       return;
     }
 
@@ -4253,7 +4265,7 @@
     if (!tbody) return;
 
     if (!list.length) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-faint);font-family:'Cinzel',serif;font-size:11px;padding:24px;">✅ Nadie pendiente — todos se registraron</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-faint);font-family:'Cinzel',serif;font-size:11px;padding:24px;">✅ Nadie pendiente — todos se registraron</td></tr>`;
       return;
     }
 
@@ -4265,11 +4277,18 @@
         : '—';
       const diasColor = dias >= 7 ? '#ef4444' : dias >= 3 ? '#f59e0b' : 'rgba(255,255,255,.5)';
       const emailSafe = (r.user_email || '').replace(/'/g, "\\'");
+
+      const reenvioAgo = _pendTimeAgo(r.last_resend_at);
+      const estadoHtml = reenvioAgo
+        ? `<span style="background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.35);border-radius:5px;padding:2px 7px;font-size:8px;color:#38bdf8;font-family:'Cinzel',serif;white-space:nowrap;">✅ Enviado ${reenvioAgo}${r.resend_count > 1 ? ' · x'+r.resend_count : ''}</span>`
+        : `<span style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:2px 7px;font-size:8px;color:rgba(255,255,255,.3);font-family:'Cinzel',serif;">— nunca enviado</span>`;
+
       return `<tr>
         <td style="font-size:11px;color:var(--text-dim);">${r.user_email || '—'}</td>
         <td>${memBadge}</td>
         <td style="font-size:11px;color:rgba(255,255,255,.6);">${monto}</td>
         <td style="font-size:11px;font-weight:700;color:${diasColor};">${dias}d</td>
+        <td>${estadoHtml}</td>
         <td><button class="act-btn" onclick="reenviarUnoPendiente('${emailSafe}', this)">📧 Reenviar</button></td>
       </tr>`;
     }).join('');
@@ -4281,8 +4300,14 @@
       const { data, error } = await supabaseClient.functions.invoke('resend-code', { body: { email } });
       if (error) throw error;
       if (data && data.error) throw new Error(data.error);
+
+      const item = (window._pendingRegs || []).find(r => r.user_email === email);
+      if (item) {
+        item.last_resend_at = data.last_resend_at || new Date().toISOString();
+        item.resend_count   = (item.resend_count || 0) + 1;
+      }
+      _renderPend();
       showToast('📧 Enviado a ' + email);
-      if (btn) { btn.textContent = '✅ Enviado'; }
     } catch (e) {
       showToast('❌ ' + (e.message || 'error al enviar'));
       if (btn) { btn.disabled = false; btn.textContent = '📧 Reenviar'; }
@@ -4305,8 +4330,13 @@
       if (progress) progress.textContent = `Enviando ${i+1}/${list.length}: ${email}`;
       try {
         const { data, error } = await supabaseClient.functions.invoke('resend-code', { body: { email } });
-        if (error || (data && data.error)) { fail++; }
-        else { ok++; }
+        if (error || (data && data.error)) {
+          fail++;
+        } else {
+          list[i].last_resend_at = data.last_resend_at || new Date().toISOString();
+          list[i].resend_count   = (list[i].resend_count || 0) + 1;
+          ok++;
+        }
       } catch (e) {
         fail++;
       }
