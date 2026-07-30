@@ -501,7 +501,8 @@
   @media(max-width:600px){
     #productFilters{flex-direction:column!important;align-items:stretch!important;}
     #pf-search,#user-search,#user-filter-type,#user-filter-date,#user-filter-coins,
-    #mem-search,#mem-filter,#buzon-search,#buzon-sort{width:100%!important;}
+    #mem-search,#mem-filter,#buzon-search,#buzon-sort,
+    #pu-search,#pu-filter-fase,#pu-filter-membresia,#pu-filter-actividad,#pu-filter-tutorial{width:100%!important;}
   }
   @media(max-width:600px){
     .gen-row{flex-direction:column!important;align-items:stretch!important;}
@@ -802,6 +803,57 @@
 
         <div id="puBody" style="display:none;">
           <div class="tz-stats-grid" id="puResumen" style="margin-bottom:18px;"></div>
+
+          <!-- 📊 Distribución por fase -->
+          <div class="an-panel" style="margin-bottom:16px;">
+            <div class="an-panel-title">📊 Distribución por fase</div>
+            <div id="puFaseChart"></div>
+          </div>
+
+          <!-- 🔮 Recomendaciones IA: deficiencias, cuellos de botella, mejoras -->
+          <div class="an-panel" style="margin-bottom:18px;">
+            <div class="an-panel-title">🔮 Recomendaciones · deficiencias y cuellos de botella</div>
+            <div id="puRecomendaciones"></div>
+          </div>
+
+          <!-- 🔍 Filtros / buscador -->
+          <div class="ufilters">
+            <input id="pu-search" type="text" placeholder="🔍 Nombre…" oninput="filterAndRenderPU()" class="ufilter-input">
+            <select id="pu-filter-fase" onchange="filterAndRenderPU()" class="ufilter-select">
+              <option value="">🚦 Todas las fases</option>
+              <option value="registrado">⚪ Registrado</option>
+              <option value="en_tutorial">🎓 En tutorial</option>
+              <option value="tutorial_completado">📘 Tutorial completo (falta evaluación)</option>
+              <option value="evaluacion_completada">📝 Evaluación hecha (falta tutorial)</option>
+              <option value="modo_libre">🕊️ Modo libre</option>
+              <option value="cliente_activo">💳 Cliente activo</option>
+              <option value="alianza_desbloqueada">🎉 Alianza desbloqueada</option>
+              <option value="proceso_completo">👑 Proceso completo</option>
+            </select>
+            <select id="pu-filter-membresia" onchange="filterAndRenderPU()" class="ufilter-select">
+              <option value="">💳 Toda membresía</option>
+              <option value="free">Free</option>
+              <option value="paying">Pagando (cualquier plan)</option>
+              <option value="vip">VIP</option>
+              <option value="paused">Pausada</option>
+            </select>
+            <select id="pu-filter-actividad" onchange="filterAndRenderPU()" class="ufilter-select">
+              <option value="">🕐 Toda actividad</option>
+              <option value="hoy">Activo hoy</option>
+              <option value="reciente">Reciente (1-3d)</option>
+              <option value="tibio">Tibio (4-14d)</option>
+              <option value="frio">Frío (15d+ ⚠)</option>
+              <option value="nunca">Nunca entró</option>
+            </select>
+            <select id="pu-filter-tutorial" onchange="filterAndRenderPU()" class="ufilter-select">
+              <option value="">🎓 Tutorial (todos)</option>
+              <option value="si">Completado</option>
+              <option value="no">Pendiente</option>
+            </select>
+            <button onclick="resetPUFilters()" class="ufilter-btn">✕ Limpiar</button>
+          </div>
+          <div style="font-size:9.5px;color:var(--text-faint);font-family:'Cinzel',serif;letter-spacing:1px;margin-bottom:10px;" id="puFilterCount"></div>
+
           <div style="font-size:10.5px;color:var(--text-faint);font-family:'Cinzel',serif;letter-spacing:.5px;margin-bottom:10px;">
             Fase = la más avanzada que aplique (no siempre secuencial). "Modo libre" = terminó el tutorial inicial y ya explora sin pasos forzados.
           </div>
@@ -2837,7 +2889,131 @@
 
     document.getElementById('puLoading').style.display = 'none';
     document.getElementById('puBody').style.display = 'block';
-    renderUserJourney(data || []);
+    window._puAllRows = data || [];
+    renderPUResumenYReco(window._puAllRows);
+    filterAndRenderPU();
+  }
+
+  function resetPUFilters() {
+    document.getElementById('pu-search').value = '';
+    document.getElementById('pu-filter-fase').value = '';
+    document.getElementById('pu-filter-membresia').value = '';
+    document.getElementById('pu-filter-actividad').value = '';
+    document.getElementById('pu-filter-tutorial').value = '';
+    filterAndRenderPU();
+  }
+
+  function _puDiasSinEntrar(r) {
+    return r.last_login_date ? Math.floor((Date.now() - new Date(r.last_login_date + 'T00:00:00').getTime()) / 86400000) : null;
+  }
+
+  function filterAndRenderPU() {
+    const rows = window._puAllRows || [];
+    const search = (document.getElementById('pu-search')?.value || '').toLowerCase();
+    const fase = document.getElementById('pu-filter-fase')?.value || '';
+    const memb = document.getElementById('pu-filter-membresia')?.value || '';
+    const act = document.getElementById('pu-filter-actividad')?.value || '';
+    const tut = document.getElementById('pu-filter-tutorial')?.value || '';
+
+    const filtered = rows.filter(r => {
+      if (search && !(r.nombre || '').toLowerCase().includes(search)) return false;
+      if (fase && r.fase_actual !== fase) return false;
+      if (memb) {
+        const isFree = !r.membership_type || r.membership_type === 'free';
+        if (memb === 'free' && !isFree) return false;
+        if (memb === 'paying' && isFree) return false;
+        if (memb === 'vip' && r.membership_type !== 'vip') return false;
+        if (memb === 'paused' && r.membership_status !== 'paused') return false;
+      }
+      if (act) {
+        const d = _puDiasSinEntrar(r);
+        if (act === 'nunca' && d !== null) return false;
+        if (act === 'hoy' && d !== 0) return false;
+        if (act === 'reciente' && !(d !== null && d >= 1 && d <= 3)) return false;
+        if (act === 'tibio' && !(d !== null && d >= 4 && d <= 14)) return false;
+        if (act === 'frio' && !(d !== null && d >= 15)) return false;
+      }
+      if (tut === 'si' && !r.tutorial_completed) return false;
+      if (tut === 'no' && r.tutorial_completed) return false;
+      return true;
+    });
+
+    document.getElementById('puFilterCount').textContent =
+      `Mostrando ${filtered.length} de ${rows.length} templarios`;
+
+    renderUserJourney(filtered);
+    renderPUFaseChart(filtered);
+  }
+
+  function renderPUFaseChart(rows) {
+    const orden = ['registrado','en_tutorial','tutorial_completado','evaluacion_completada','modo_libre','cliente_activo','alianza_desbloqueada','proceso_completo'];
+    const cortas = {
+      registrado: '⚪ Registrado', en_tutorial: '🎓 Tutorial', tutorial_completado: '📘 Tut. completo',
+      evaluacion_completada: '📝 Evaluación', modo_libre: '🕊️ Modo libre', cliente_activo: '💳 Cliente',
+      alianza_desbloqueada: '🎉 Alianza', proceso_completo: '👑 Completo',
+    };
+    const counts = {};
+    orden.forEach(f => counts[f] = 0);
+    rows.forEach(r => { if (counts[r.fase_actual] !== undefined) counts[r.fase_actual]++; else counts[r.fase_actual] = (counts[r.fase_actual]||0)+1; });
+    const items = orden.filter(f => counts[f] > 0).map(f => ({ label: cortas[f] || f, value: counts[f], suffix: '' }));
+    document.getElementById('puFaseChart').innerHTML = _tzBars(items);
+  }
+
+  function renderPUResumenYReco(rows) {
+    const total = rows.length || 1;
+    const recos = [];
+
+    // 1. Cuello de botella: completaron tutorial pero no evaluación
+    const tutSinEval = rows.filter(r => r.tutorial_completed && !r.eval_completada);
+    if (tutSinEval.length >= 2) {
+      const pct = Math.round(tutSinEval.length / total * 100);
+      recos.push({ icon: '🧱', text: `<b>${tutSinEval.length}</b> templarios (${pct}%) terminaron el tutorial pero nunca hicieron la evaluación — es el cuello de botella más grande del embudo. Vale la pena mandar un recordatorio automático justo después de terminar el tutorial.` });
+    }
+
+    // 2. Riesgo de fuga: clientes pagando pero fríos (15d+)
+    const pagandoFrios = rows.filter(r => r.membership_type && r.membership_type !== 'free' && _puDiasSinEntrar(r) !== null && _puDiasSinEntrar(r) >= 15);
+    if (pagandoFrios.length > 0) {
+      recos.push({ icon: '⚠️', text: `<b>${pagandoFrios.length}</b> cliente(s) pagando llevan 15+ días sin entrar. Están pagando pero desconectados — riesgo real de cancelación; considera un mensaje de reactivación antes de que se venza su membresía.` });
+    }
+
+    // 3. Registrados que nunca empezaron tutorial
+    const nuncaEmpiezan = rows.filter(r => !r.tutorial_completed && _puDiasSinEntrar(r) !== null && _puDiasSinEntrar(r) >= 15);
+    if (nuncaEmpiezan.length > 0) {
+      const pct = Math.round(nuncaEmpiezan.length / total * 100);
+      recos.push({ icon: '📉', text: `<b>${nuncaEmpiezan.length}</b> templarios (${pct}%) no han completado el tutorial y llevan 15+ días sin entrar — se están enfriando en el primer paso. El onboarding inicial podría necesitar un empujón (notificación, email, o simplificar el primer reto).` });
+    }
+
+    // 4. Comunidad poco usada
+    const sinComunidad = rows.filter(r => (r.actividad_comunidad ?? 0) === 0).length;
+    if (total >= 5 && sinComunidad / total >= 0.7) {
+      recos.push({ icon: '💬', text: `El <b>${Math.round(sinComunidad/total*100)}%</b> de los templarios no ha hecho ni un post ni comentario en la comunidad. La función existe pero casi nadie la usa — podría ser falta de visibilidad dentro de la app, no falta de interés.` });
+    }
+
+    // 5. Misiones/módulos con baja finalización
+    const conMisiones = rows.filter(r => (r.misiones_totales ?? 0) > 0);
+    if (conMisiones.length >= 3) {
+      const promCompletadas = conMisiones.reduce((s,r)=> s + (r.misiones_completadas/r.misiones_totales), 0) / conMisiones.length;
+      if (promCompletadas < 0.4) {
+        recos.push({ icon: '📋', text: `De los templarios con misiones asignadas, en promedio solo completan el <b>${Math.round(promCompletadas*100)}%</b>. Vale revisar si las misiones son muy largas, poco claras, o si falta recordar que existen.` });
+      }
+    }
+
+    // 6. Free acumulados sin convertir (alto volumen de free antiguo)
+    const freeAntiguos = rows.filter(r => (!r.membership_type || r.membership_type==='free') && r.registro && (Date.now() - new Date(r.registro).getTime())/86400000 >= 30);
+    if (freeAntiguos.length >= 3) {
+      const pct = Math.round(freeAntiguos.length/total*100);
+      recos.push({ icon: '💳', text: `<b>${freeAntiguos.length}</b> templarios (${pct}%) llevan 30+ días como Free sin convertir a membresía paga. Es una base grande de leads fríos — podría valer una oferta o recordatorio dirigido solo a ellos.` });
+    }
+
+    if (!recos.length) {
+      recos.push({ icon: '✅', text: 'No se detectan cuellos de botella evidentes en el proceso completo. El embudo tutorial → evaluación → membresía → alianza se ve saludable con los datos actuales.' });
+    }
+
+    document.getElementById('puRecomendaciones').innerHTML = recos.map(r => `
+      <div class="an-reco">
+        <span class="an-reco-icon">${r.icon}</span>
+        <span class="an-reco-text">${r.text}</span>
+      </div>`).join('');
   }
 
   const _puFaseLabels = {
