@@ -19,9 +19,7 @@ export default function RegisterPage() {
     if (!sessionId) return;
     (async () => {
       const { data } = await supabase
-        .from('access_codes')
-        .select('user_email, code, referral_code')
-        .eq('stripe_session_id', sessionId)
+        .rpc('get_access_code_by_session', { p_session_id: sessionId })
         .maybeSingle();
       if (!data?.user_email) return;
 

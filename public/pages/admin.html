@@ -927,6 +927,21 @@
       </div>
 
 
+      <!-- REENVIAR CÓDIGO -->
+      <div class="section">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:linear-gradient(90deg,rgba(56,189,248,.12) 0%,transparent 100%);border-left:3px solid #38bdf8;border-radius:10px;margin-bottom:16px;"><div style="width:38px;height:38px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.35);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">📧</div><div><div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:3px;color:#38bdf8;">REENVIAR CÓDIGO POR CORREO</div><div style="font-size:11px;color:rgba(56,189,248,.82);margin-top:3px;font-family:'Cinzel',serif;letter-spacing:1px;">BUSCA POR CORREO · REENVÍA EL ÚLTIMO CÓDIGO</div></div></div>
+        <div class="gen-row" style="flex-wrap:wrap;gap:14px;align-items:flex-end;">
+          <div class="field-group" style="flex:1;min-width:240px;">
+            <span class="field-label">Correo del templario</span>
+            <input type="email" class="field-input" id="resendEmail"
+                  placeholder="correo@ejemplo.com" style="width:100%;">
+          </div>
+          <button class="btn-gen" id="resendBtn" onclick="reenviarCodigo()">📧 Reenviar Código</button>
+        </div>
+        <div id="resendResult" style="display:none;margin-top:14px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:1px;padding:12px 14px;border-radius:8px;"></div>
+      </div>
+
+
   <!-- PRODUCTOS -->
       <div class="section">
         <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:linear-gradient(90deg,rgba(251,146,60,.15) 0%,transparent 100%);border-left:3px solid #fb923c;border-radius:10px;margin-bottom:16px;"><div style="width:38px;height:38px;background:rgba(251,146,60,.15);border:1px solid rgba(251,146,60,.4);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🛒</div><div><div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:3px;color:#fb923c;">𖦏        GESTIÓN DE PRODUCTOS</div><div style="font-size:11px;color:rgba(251,146,60,.82);margin-top:3px;font-family:'Cinzel',serif;letter-spacing:1px;">CATÁLOGO · RAREZA · CONTENIDO</div></div><svg style="margin-left:auto;opacity:.12;" width="44" height="44" viewBox="0 0 44 44"><polygon points="22,3 41,12 41,32 22,41 3,32 3,12" fill="none" stroke="#fb923c" stroke-width="1.5"/><polygon points="22,11 33,17 33,27 22,33 11,27 11,17" fill="rgba(251,146,60,.35)"/></svg></div>
@@ -1957,7 +1972,7 @@
     const val = document.getElementById('adminPass').value;
     if (val === ADMIN_PASS) {
       await supabaseClient.auth.signInWithPassword({
-        email: 'soyfrancocontupotencial@gmail.com',
+        email: 'daff11@live.com.mx',
         password: 'Fronton1.'
       });
       sessionStorage.setItem('admin_logged', '1');
@@ -1985,7 +2000,7 @@
 
   if (sessionStorage.getItem('admin_logged') === '1') {
     supabaseClient.auth.signInWithPassword({
-      email: 'soyfrancocontupotencial@gmail.com',
+      email: 'daff11@live.com.mx',
       password: 'Fronton1.'
     }).then(() => {
       document.getElementById('loginGate').style.display = 'none';
@@ -4122,6 +4137,56 @@
     list.innerHTML = '';
     list.appendChild(frag);
     output.style.display = 'block';
+  }
+
+  /* ══════════════════════════════════════
+    REENVIAR CÓDIGO — dispara resend-code edge function
+  ══════════════════════════════════════ */
+  async function reenviarCodigo() {
+    const emailInput = document.getElementById('resendEmail');
+    const btn         = document.getElementById('resendBtn');
+    const resultBox   = document.getElementById('resendResult');
+    const email        = (emailInput.value || '').trim();
+
+    if (!email) { showToast('⚠️ Escribe un correo'); return; }
+
+    btn.disabled = true;
+    const originalLabel = btn.textContent;
+    btn.textContent = 'Enviando...';
+    resultBox.style.display = 'none';
+
+    try {
+      const { data, error } = await supabaseClient.functions.invoke('resend-code', {
+        body: { email }
+      });
+
+      if (error) throw error;
+
+      if (data && data.error) {
+        resultBox.style.display = 'block';
+        resultBox.style.background = 'rgba(255,80,80,.1)';
+        resultBox.style.border = '1px solid rgba(255,80,80,.4)';
+        resultBox.style.color = '#ff8a8a';
+        resultBox.textContent = '❌ ' + data.error;
+      } else {
+        resultBox.style.display = 'block';
+        resultBox.style.background = 'rgba(16,185,129,.1)';
+        resultBox.style.border = '1px solid rgba(16,185,129,.4)';
+        resultBox.style.color = '#6ee7b7';
+        resultBox.textContent = `✅ Código ${data.code} reenviado a ${data.email}${data.was_used ? ' (ya estaba canjeado — se reenvió como confirmación)' : ' (pendiente de canje)'}`;
+        showToast('📧 Correo reenviado');
+        emailInput.value = '';
+      }
+    } catch (e) {
+      resultBox.style.display = 'block';
+      resultBox.style.background = 'rgba(255,80,80,.1)';
+      resultBox.style.border = '1px solid rgba(255,80,80,.4)';
+      resultBox.style.color = '#ff8a8a';
+      resultBox.textContent = '❌ Error: ' + (e.message || 'no se pudo reenviar el código');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
   }
 
   function filterUsers(q){
