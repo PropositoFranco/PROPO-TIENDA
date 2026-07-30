@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
   <html lang="es">
   <head>
   <meta charset="UTF-8">
@@ -193,6 +193,72 @@
   .an-reco-icon{font-size:16px;flex-shrink:0;}
   .an-reco-text{font-size:12.5px;line-height:1.5;color:var(--text-dim);font-family:'Crimson Text',serif;}
   .an-reco-text b{color:#FFE566;font-weight:600;}
+
+  /* ═══ TRAZABILIDAD DE ALIANZA ═══ */
+  .section-trazabilidad{border-color:rgba(68,255,136,.4);
+    box-shadow:0 4px 40px rgba(0,0,0,.4), inset 0 0 60px rgba(68,255,136,.04);}
+  .section-trazabilidad .sec-title{color:#44FF88;text-shadow:0 0 12px rgba(68,255,136,.4);}
+  .tz-toggle-btn{
+    font-family:'Cinzel',serif;font-size:11px;font-weight:700;letter-spacing:3px;
+    color:#44FF88;background:linear-gradient(135deg,rgba(68,255,136,.14),rgba(212,175,55,.08));
+    border:1.5px solid rgba(68,255,136,.5);border-radius:30px;
+    padding:13px 30px;cursor:pointer;transition:all .25s;
+    box-shadow:0 0 24px rgba(68,255,136,.12);
+    display:inline-flex;align-items:center;gap:10px;
+  }
+  .tz-toggle-btn:hover{border-color:#44FF88;box-shadow:0 0 34px rgba(68,255,136,.28);transform:translateY(-1px);}
+  .tz-toggle-btn .atb-arrow{font-size:9px;transition:transform .25s;opacity:.7;}
+  .tz-toggle-btn.open .atb-arrow{transform:rotate(180deg);}
+  @media(max-width:480px){.tz-toggle-btn{font-size:9px;letter-spacing:2px;padding:12px 20px;width:100%;justify-content:center;}}
+
+  .tz-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+  @media(max-width:700px){.tz-stats-grid{grid-template-columns:repeat(2,1fr);}}
+  .tz-stat{background:linear-gradient(135deg,rgba(20,10,44,.98),rgba(10,5,24,.99));
+    border:1.5px solid rgba(68,255,136,.3);border-radius:12px;padding:16px 12px;text-align:center;}
+  .tz-stat.warn{border-color:rgba(239,68,68,.4);}
+  .tz-stat-val{font-family:'Cinzel',serif;font-size:22px;font-weight:900;color:#44FF88;line-height:1.1;margin-bottom:4px;}
+  .tz-stat.warn .tz-stat-val{color:#fca5a5;}
+  .tz-stat-label{font-family:'Cinzel',serif;font-size:8px;letter-spacing:1.5px;color:var(--text-faint);text-transform:uppercase;}
+
+  .tz-bar-row{display:flex;align-items:center;gap:10px;padding:8px 0;}
+  .tz-bar-label{width:78px;flex-shrink:0;font-size:10.5px;color:var(--text-dim);font-family:'Cinzel',serif;letter-spacing:.5px;}
+  .tz-bar-track{flex:1;height:14px;background:rgba(255,255,255,.05);border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,.06);}
+  .tz-bar-fill{height:100%;border-radius:8px;transition:width .6s ease;background:linear-gradient(90deg,#44FF88,#a3ffcb);}
+  .tz-bar-value{width:34px;flex-shrink:0;text-align:right;font-family:'Nunito',sans-serif;font-weight:900;font-size:12.5px;color:#FFE566;}
+
+  .tz-status{font-family:'Nunito',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:.5px;
+    padding:3px 9px;border-radius:20px;flex-shrink:0;}
+  .tz-status.ok{background:rgba(68,255,136,.15);color:#44FF88;}
+  .tz-status.pend{background:rgba(212,175,55,.15);color:#FFE566;}
+  .tz-status.venc{background:rgba(239,68,68,.15);color:#fca5a5;}
+
+  /* ═══ PROCESO COMPLETO DEL USUARIO ═══ */
+  .section-proceso{border-color:rgba(56,189,248,.4);
+    box-shadow:0 4px 40px rgba(0,0,0,.4), inset 0 0 60px rgba(56,189,248,.04);}
+  .section-proceso .sec-title{color:#38bdf8;text-shadow:0 0 12px rgba(56,189,248,.4);}
+  .pu-toggle-btn{
+    font-family:'Cinzel',serif;font-size:11px;font-weight:700;letter-spacing:3px;
+    color:#7dd3fc;background:linear-gradient(135deg,rgba(56,189,248,.14),rgba(212,175,55,.08));
+    border:1.5px solid rgba(56,189,248,.5);border-radius:30px;
+    padding:13px 30px;cursor:pointer;transition:all .25s;
+    box-shadow:0 0 24px rgba(56,189,248,.12);
+    display:inline-flex;align-items:center;gap:10px;
+  }
+  .pu-toggle-btn:hover{border-color:#7dd3fc;box-shadow:0 0 34px rgba(56,189,248,.28);transform:translateY(-1px);}
+  .pu-toggle-btn .atb-arrow{font-size:9px;transition:transform .25s;opacity:.7;}
+  .pu-toggle-btn.open .atb-arrow{transform:rotate(180deg);}
+  @media(max-width:480px){.pu-toggle-btn{font-size:9px;letter-spacing:2px;padding:12px 20px;width:100%;justify-content:center;}}
+
+  .pu-badge{font-family:'Nunito',sans-serif;font-size:9px;font-weight:700;letter-spacing:.3px;
+    padding:2px 8px;border-radius:12px;white-space:nowrap;display:inline-block;}
+  .pu-fase-registrado{background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);}
+  .pu-fase-en_tutorial{background:rgba(251,146,60,.15);color:#fdba74;}
+  .pu-fase-tutorial_completado{background:rgba(199,146,255,.15);color:#c792ff;}
+  .pu-fase-modo_libre{background:rgba(56,189,248,.15);color:#7dd3fc;}
+  .pu-fase-evaluacion_completada{background:rgba(255,229,102,.15);color:#FFE566;}
+  .pu-fase-cliente_activo{background:rgba(74,222,128,.15);color:#86efac;}
+  .pu-fase-alianza_desbloqueada{background:rgba(68,255,136,.15);color:#44FF88;}
+  .pu-fase-proceso_completo{background:rgba(212,175,55,.2);color:#f5d06e;}
 
   .an-loading{text-align:center;padding:30px 0;font-family:'Cinzel',serif;font-size:11px;
     letter-spacing:2px;color:var(--text-faint);}
@@ -623,6 +689,143 @@
           <div class="an-panel" style="margin-top:4px;">
             <div class="an-panel-title">🔮 Recomendaciones del Oráculo</div>
             <div id="anRecomendaciones"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 🧭 TRAZABILIDAD DE ALIANZA — acceso centrado -->
+      <div class="analytics-toggle-wrap">
+        <button class="tz-toggle-btn" id="tzToggleBtn" onclick="toggleTrazabilidad()">
+          🧭 TRAZABILIDAD DE ALIANZA <span class="atb-arrow">▼</span>
+        </button>
+      </div>
+      <div class="section section-trazabilidad" id="tzSection" style="display:none;">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:linear-gradient(90deg,rgba(68,255,136,.14) 0%,transparent 100%);border-left:3px solid #44FF88;border-radius:10px;margin-bottom:20px;"><div style="width:38px;height:38px;background:rgba(68,255,136,.14);border:1px solid rgba(68,255,136,.4);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🧭</div><div><div style="font-family:'Cinzel Decorative',serif;font-size:12px;letter-spacing:3px;color:#44FF88;">TRAZABILIDAD DE ALIANZA</div><div style="font-size:11px;color:rgba(68,255,136,.85);margin-top:3px;font-family:'Cinzel',serif;letter-spacing:1px;">EMBUDO · CUPONES · RETENCIÓN · SOLO ADMIN</div></div><svg style="margin-left:auto;opacity:.14;" width="44" height="44" viewBox="0 0 44 44"><polygon points="22,3 41,12 41,32 22,41 3,32 3,12" fill="none" stroke="#44FF88" stroke-width="1.5"/><polygon points="22,11 33,17 33,27 22,33 11,27 11,17" fill="rgba(68,255,136,.3)"/></svg></div>
+
+        <div id="tzLoading" class="an-loading">🧭 Consultando el embudo de Alianza...</div>
+
+        <div id="tzBody" style="display:none;">
+
+          <!-- Resumen general -->
+          <div class="tz-stats-grid" id="tzResumen"></div>
+
+          <div class="an-grid">
+            <!-- Cupones -->
+            <div class="an-panel">
+              <div class="an-panel-title">🎟️ Cupones de Alianza</div>
+              <div class="tz-stats-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:14px;" id="tzCupones"></div>
+              <div id="tzTasaCanje"></div>
+            </div>
+            <!-- Retención -->
+            <div class="an-panel">
+              <div class="an-panel-title">🔒 Retención de aliados pagando</div>
+              <div class="tz-stats-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:14px;" id="tzRetencion"></div>
+              <div id="tzTasaRetencion"></div>
+            </div>
+          </div>
+
+          <div class="an-grid">
+            <!-- Serie semanal -->
+            <div class="an-panel">
+              <div class="an-panel-title">📈 Nuevos aliados por semana</div>
+              <div id="tzSerieSemanal"></div>
+            </div>
+            <!-- Niveles -->
+            <div class="an-panel">
+              <div class="an-panel-title">🏔️ Aliados por nivel alcanzado</div>
+              <div id="tzNiveles"></div>
+            </div>
+          </div>
+
+          <div class="an-grid">
+            <!-- Top referrers -->
+            <div class="an-panel">
+              <div class="an-panel-title">🏆 Top referidores</div>
+              <div id="tzTopReferrers" class="an-scroll"></div>
+            </div>
+            <!-- Actividad reciente (cupones) -->
+            <div class="an-panel">
+              <div class="an-panel-title">🕐 Actividad reciente de cupones</div>
+              <div id="tzActividad" class="an-scroll"></div>
+            </div>
+          </div>
+
+          <!-- Físico (QR / sorteo) -->
+          <div class="an-panel" style="margin-top:4px;">
+            <div class="an-panel-title">📍 Alianza física (QR / sorteo)</div>
+            <div class="tz-stats-grid" id="tzFisico"></div>
+          </div>
+
+          <!-- Jornada individual -->
+          <div class="an-panel" style="margin-top:16px;">
+            <div class="an-panel-title">🗓️ Jornada individual — evaluación → felicitación → proceso completo</div>
+            <div style="font-size:10.5px;color:var(--text-faint);font-family:'Cinzel',serif;letter-spacing:.5px;margin-bottom:10px;">
+              "Felicitación" = evento nivel 1 en referral_events (se dispara con el primer aliado que paga). "Proceso completo" = nivel 5 (15 aliados pagando).
+            </div>
+            <div class="an-scroll" style="max-height:480px;">
+              <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                <thead>
+                  <tr style="border-bottom:1.5px solid rgba(68,255,136,.3);">
+                    <th style="text-align:left;padding:8px 6px;color:#44FF88;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">TEMPLARIO</th>
+                    <th style="text-align:left;padding:8px 6px;color:#44FF88;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">REGISTRO</th>
+                    <th style="text-align:left;padding:8px 6px;color:#44FF88;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">EVALUACIÓN</th>
+                    <th style="text-align:left;padding:8px 6px;color:#44FF88;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">FELICITACIÓN</th>
+                    <th style="text-align:center;padding:8px 6px;color:#44FF88;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">NIVEL</th>
+                    <th style="text-align:center;padding:8px 6px;color:#44FF88;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">% AVANCE</th>
+                    <th style="text-align:left;padding:8px 6px;color:#44FF88;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">PASO ACTUAL</th>
+                  </tr>
+                </thead>
+                <tbody id="tzJornadaBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Recomendaciones del sistema -->
+          <div class="an-panel" style="margin-top:16px;">
+            <div class="an-panel-title">🔮 Mejoras que detecta el sistema</div>
+            <div id="tzRecomendaciones"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 🚦 PROCESO COMPLETO DEL USUARIO — acceso centrado -->
+      <div class="analytics-toggle-wrap">
+        <button class="pu-toggle-btn" id="puToggleBtn" onclick="toggleProcesoUsuario()">
+          🚦 PROCESO COMPLETO DEL USUARIO <span class="atb-arrow">▼</span>
+        </button>
+      </div>
+      <div class="section section-proceso" id="puSection" style="display:none;">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:linear-gradient(90deg,rgba(56,189,248,.14) 0%,transparent 100%);border-left:3px solid #38bdf8;border-radius:10px;margin-bottom:20px;"><div style="width:38px;height:38px;background:rgba(56,189,248,.14);border:1px solid rgba(56,189,248,.4);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🚦</div><div><div style="font-family:'Cinzel Decorative',serif;font-size:12px;letter-spacing:3px;color:#7dd3fc;">EN QUÉ VA CADA TEMPLARIO</div><div style="font-size:11px;color:rgba(56,189,248,.85);margin-top:3px;font-family:'Cinzel',serif;letter-spacing:1px;">TUTORIAL · EVALUACIÓN · MEMBRESÍA · COMUNIDAD · ALIANZA · COMPRAS</div></div><svg style="margin-left:auto;opacity:.14;" width="44" height="44" viewBox="0 0 44 44"><polygon points="22,3 41,12 41,32 22,41 3,32 3,12" fill="none" stroke="#38bdf8" stroke-width="1.5"/><polygon points="22,11 33,17 33,27 22,33 11,27 11,17" fill="rgba(56,189,248,.3)"/></svg></div>
+
+        <div id="puLoading" class="an-loading">🚦 Consultando el proceso de cada templario...</div>
+
+        <div id="puBody" style="display:none;">
+          <div class="tz-stats-grid" id="puResumen" style="margin-bottom:18px;"></div>
+          <div style="font-size:10.5px;color:var(--text-faint);font-family:'Cinzel',serif;letter-spacing:.5px;margin-bottom:10px;">
+            Fase = la más avanzada que aplique (no siempre secuencial). "Modo libre" = terminó el tutorial inicial y ya explora sin pasos forzados.
+          </div>
+          <div class="an-scroll" style="max-height:560px;overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:10.5px;min-width:1100px;">
+              <thead>
+                <tr style="border-bottom:1.5px solid rgba(56,189,248,.3);">
+                  <th style="text-align:left;padding:8px 6px;color:#7dd3fc;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">TEMPLARIO</th>
+                  <th style="text-align:left;padding:8px 6px;color:#7dd3fc;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">REGISTRO</th>
+                  <th style="text-align:center;padding:8px 6px;color:#7dd3fc;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">TUTORIAL</th>
+                  <th style="text-align:left;padding:8px 6px;color:#7dd3fc;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">EVALUACIÓN</th>
+                  <th style="text-align:left;padding:8px 6px;color:#7dd3fc;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">NIVEL/XP/RACHA</th>
+                  <th style="text-align:left;padding:8px 6px;color:#7dd3fc;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">MEMBRESÍA</th>
+                  <th style="text-align:center;padding:8px 6px;color:#7dd3fc;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">COMUNIDAD</th>
+                  <th style="text-align:center;padding:8px 6px;color:#7dd3fc;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">MISIONES/MÓDULOS</th>
+                  <th style="text-align:center;padding:8px 6px;color:#7dd3fc;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">ALIANZA</th>
+                  <th style="text-align:center;padding:8px 6px;color:#7dd3fc;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">COMPRAS</th>
+                  <th style="text-align:left;padding:8px 6px;color:#7dd3fc;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">ÚLTIMA ACTIVIDAD</th>
+                  <th style="text-align:left;padding:8px 6px;color:#7dd3fc;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">FASE ACTUAL</th>
+                  <th style="text-align:center;padding:8px 6px;color:#7dd3fc;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">% GLOBAL</th>
+                </tr>
+              </thead>
+              <tbody id="puBodyTable"></tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -2357,6 +2560,370 @@
         </div>
         <div class="an-buyer-sub">compró <span class="prod">${_anEsc(r.product_name || '—')}</span> · ${_anTimeAgo(r.created_at)}</div>
       </div>`).join('') : '<div class="an-empty">Sin actividad reciente registrada.</div>';
+  }
+
+  /* ═══════════════════════════════════════
+    🧭 TRAZABILIDAD DE ALIANZA
+    Fuente real: RPC admin_get_alliance_funnel()
+    (ya desplegada y probada en Supabase)
+  ═══════════════════════════════════════ */
+  let _tzOpen = false, _tzLoaded = false;
+
+  function toggleTrazabilidad() {
+    const sec = document.getElementById('tzSection');
+    const btn = document.getElementById('tzToggleBtn');
+    _tzOpen = !_tzOpen;
+    sec.style.display = _tzOpen ? 'block' : 'none';
+    btn.classList.toggle('open', _tzOpen);
+    if (_tzOpen && !_tzLoaded) {
+      _tzLoaded = true;
+      loadAllianceAnalytics();
+    }
+  }
+
+  function _tzBars(items) {
+    // items: [{label, value, suffix}]
+    if (!items.length) return '<div class="an-empty">Sin datos todavía.</div>';
+    const max = Math.max(1, ...items.map(i => i.value));
+    return items.map(i => `
+      <div class="tz-bar-row">
+        <div class="tz-bar-label">${_anEsc(i.label)}</div>
+        <div class="tz-bar-track"><div class="tz-bar-fill" style="width:${Math.max(4, Math.round(i.value / max * 100))}%;"></div></div>
+        <div class="tz-bar-value">${i.value}${i.suffix || ''}</div>
+      </div>`).join('');
+  }
+
+  function _tzStat(val, label, warn) {
+    return `<div class="tz-stat${warn ? ' warn' : ''}"><div class="tz-stat-val">${val}</div><div class="tz-stat-label">${label}</div></div>`;
+  }
+
+  function _tzWeekLabel(iso) {
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+  }
+
+  function _tzCuponStatus(c) {
+    if (c.claimed) return { cls: 'ok', txt: '✅ Reclamado' };
+    if (c.expires_at && new Date(c.expires_at) < new Date()) return { cls: 'venc', txt: '❌ Vencido' };
+    return { cls: 'pend', txt: '⏳ Pendiente' };
+  }
+
+  async function loadAllianceAnalytics() {
+    document.getElementById('tzLoading').style.display = 'block';
+    document.getElementById('tzBody').style.display = 'none';
+
+    const { data, error } = await supabaseClient.rpc('admin_get_alliance_funnel');
+    const { data: jornada, error: errJornada } = await supabaseClient.rpc('admin_get_alliance_journey');
+
+    if (error) {
+      document.getElementById('tzLoading').textContent = '⚠ No se pudo consultar: ' + error.message;
+      return;
+    }
+
+    document.getElementById('tzLoading').style.display = 'none';
+    document.getElementById('tzBody').style.display = 'block';
+    renderAllianceAnalytics(data || {});
+    if (!errJornada) renderAllianceJourney(jornada || []);
+  }
+
+  function _tzFmtHoras(h) {
+    if (h === null || h === undefined) return '—';
+    if (h < 1) return Math.round(h * 60) + ' min';
+    if (h < 48) return Math.round(h) + ' h';
+    return Math.round(h / 24) + ' días';
+  }
+  function _tzFmtFecha(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' });
+  }
+  function _tzPasoBadge(paso) {
+    const map = {
+      registrado:            { txt: '⚪ Registrado', color: 'rgba(255,255,255,.5)' },
+      evaluacion_completada: { txt: '📝 Evaluación hecha', color: '#FFE566' },
+      alianza_desbloqueada:  { txt: '🎉 Alianza desbloqueada', color: '#44FF88' },
+      proceso_completo:      { txt: '👑 Proceso completo', color: '#d4af37' },
+    };
+    const m = map[paso] || { txt: paso, color: 'var(--text-faint)' };
+    return `<span style="color:${m.color};font-family:'Nunito',sans-serif;font-weight:700;font-size:10.5px;">${m.txt}</span>`;
+  }
+
+  function renderAllianceJourney(rows) {
+    const tbody = document.getElementById('tzJornadaBody');
+    if (!tbody) return;
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-faint);padding:20px;">Sin datos.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = rows.map(r => {
+      const evalCell = r.eval_completada
+        ? `${_tzFmtFecha(r.eval_completada)}<br><span style="color:var(--text-faint);font-size:9.5px;">tardó ${_tzFmtHoras(r.horas_hasta_eval)}${r.eval_mismo_dia ? ' · mismo día' : ''}</span>`
+        : `<span style="color:var(--text-faint);">pendiente</span>`;
+      const felizCell = r.felicitacion_at
+        ? `${_tzFmtFecha(r.felicitacion_at)}<br><span style="color:var(--text-faint);font-size:9.5px;">tardó ${_tzFmtHoras(r.horas_hasta_felicitacion)}</span>`
+        : `<span style="color:var(--text-faint);">sin llegar</span>`;
+      return `
+      <tr style="border-bottom:1px solid rgba(255,255,255,.05);">
+        <td style="padding:8px 6px;color:var(--text-dim);">${_anEsc(r.nombre)}</td>
+        <td style="padding:8px 6px;color:var(--text-faint);font-size:10px;">${_tzFmtFecha(r.registro)}</td>
+        <td style="padding:8px 6px;">${evalCell}</td>
+        <td style="padding:8px 6px;">${felizCell}</td>
+        <td style="padding:8px 6px;text-align:center;color:#FFE566;font-family:'Nunito',sans-serif;font-weight:900;">${r.nivel_max}/5</td>
+        <td style="padding:8px 6px;text-align:center;">
+          <div style="display:inline-block;width:60px;height:8px;background:rgba(255,255,255,.06);border-radius:6px;overflow:hidden;vertical-align:middle;">
+            <div style="height:100%;width:${r.pct_avance}%;background:linear-gradient(90deg,#44FF88,#a3ffcb);"></div>
+          </div>
+          <span style="font-size:10px;color:#44FF88;margin-left:4px;">${r.pct_avance}%</span>
+        </td>
+        <td style="padding:8px 6px;">${_tzPasoBadge(r.paso_actual)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderAllianceAnalytics(d) {
+    const resumen    = d.resumen    || {};
+    const cupones    = d.cupones    || {};
+    const niveles    = d.niveles    || [];
+    const serie      = d.serie_semanal   || [];
+    const topRef     = d.top_referrers   || [];
+    const retencion  = d.retencion  || {};
+    const actividad  = d.actividad_reciente || [];
+    const fisico     = d.fisico     || {};
+
+    // ── Resumen general ──
+    document.getElementById('tzResumen').innerHTML =
+      _tzStat(resumen.total_aliados ?? 0, '👥 Total aliados') +
+      _tzStat(resumen.total_referrers ?? 0, '🧑‍🤝‍🧑 Referidores activos') +
+      _tzStat(resumen.total_aliados_pagando ?? 0, '💳 Aliados pagando') +
+      _tzStat((resumen.tasa_conversion_pago ?? 0) + '%', '📊 Tasa conversión a pago');
+
+    // ── Cupones ──
+    document.getElementById('tzCupones').innerHTML =
+      _tzStat(cupones.generados ?? 0, 'Generados') +
+      _tzStat(cupones.reclamados ?? 0, 'Reclamados') +
+      _tzStat(cupones.pendientes_activos ?? 0, 'Pendientes') +
+      _tzStat(cupones.vencidos_sin_reclamar ?? 0, 'Vencidos', (cupones.vencidos_sin_reclamar ?? 0) > 0);
+    document.getElementById('tzTasaCanje').innerHTML = `
+      <div class="tz-bar-row">
+        <div class="tz-bar-label">Tasa canje</div>
+        <div class="tz-bar-track"><div class="tz-bar-fill" style="width:${cupones.tasa_canje ?? 0}%;"></div></div>
+        <div class="tz-bar-value">${cupones.tasa_canje ?? 0}%</div>
+      </div>`;
+
+    // ── Retención ──
+    document.getElementById('tzRetencion').innerHTML =
+      _tzStat(retencion.aliados_pagando_activos ?? 0, 'Activos') +
+      _tzStat(retencion.aliados_pagando_pausados ?? 0, 'Pausados', (retencion.aliados_pagando_pausados ?? 0) > 0);
+    document.getElementById('tzTasaRetencion').innerHTML = `
+      <div class="tz-bar-row">
+        <div class="tz-bar-label">Retención</div>
+        <div class="tz-bar-track"><div class="tz-bar-fill" style="width:${retencion.tasa_retencion ?? 0}%;"></div></div>
+        <div class="tz-bar-value">${retencion.tasa_retencion ?? 0}%</div>
+      </div>`;
+
+    // ── Serie semanal (nuevos aliados) ──
+    document.getElementById('tzSerieSemanal').innerHTML = _tzBars(
+      serie.map(s => ({ label: _tzWeekLabel(s.semana), value: s.nuevos_aliados }))
+    );
+
+    // ── Niveles alcanzados ──
+    document.getElementById('tzNiveles').innerHTML = _tzBars(
+      niveles.map(n => ({ label: 'Nivel ' + n.nivel, value: n.alcanzado_por }))
+    );
+
+    // ── Top referidores ──
+    document.getElementById('tzTopReferrers').innerHTML = topRef.length ? topRef.map((r, i) => `
+      <div class="an-row">
+        <span class="an-rank">${i + 1}</span>
+        <span class="an-name">${_anEsc(r.templario_name || r.email || '—')}</span>
+        <span class="an-num">${r.aliados_traidos}</span>
+        <span class="an-tag victorias" style="margin-left:4px;">Nv.${r.nivel_max}</span>
+      </div>`).join('') : '<div class="an-empty">Todavía nadie ha traído aliados.</div>';
+
+    // ── Actividad reciente de cupones ──
+    document.getElementById('tzActividad').innerHTML = actividad.length ? actividad.map(a => {
+      const st = _tzCuponStatus(a);
+      return `
+      <div class="an-buyer-row">
+        <div class="an-buyer-top">
+          <span class="an-buyer-name">${_anEsc(a.templario_name || a.email || '—')}</span>
+          <span class="tz-status ${st.cls}">${st.txt}</span>
+        </div>
+        <div class="an-buyer-sub">Nivel ${a.nivel} · generado ${_anTimeAgo(a.created_at)} · ${a.claimed ? 'reclamado' : (new Date(a.expires_at) < new Date() ? 'venció' : 'vence') + ' ' + _anTimeAgo(a.expires_at)}</div>
+      </div>`;
+    }).join('') : '<div class="an-empty">Sin actividad de cupones registrada.</div>';
+
+    // ── Físico ──
+    document.getElementById('tzFisico').innerHTML =
+      _tzStat(fisico.qr_impresos ?? 0, '🖨️ QR impresos') +
+      _tzStat(fisico.qr_escaneados ?? 0, '📷 QR escaneados') +
+      _tzStat(fisico.total_scans ?? 0, '📲 Total scans') +
+      _tzStat(fisico.sorteo_participantes ?? 0, '🎁 En sorteo');
+
+    // ── Recomendaciones automáticas (motor de detección) ──
+    const recos = [];
+
+    if ((cupones.vencidos_sin_reclamar ?? 0) > 0) {
+      recos.push({ icon: '💸', text: `Tienes <b>${cupones.vencidos_sin_reclamar}</b> cupón(es) vencido(s) sin reclamar — dinero ya perdido. Lo más probable es que nadie avise al templario cuando se genera su bono; considera agregar una notificación (push/email) en el momento en que se crea el cupón.` });
+    }
+    if ((cupones.generados ?? 0) >= 3 && (cupones.tasa_canje ?? 0) < 60) {
+      recos.push({ icon: '📉', text: `La tasa de canje de cupones es de solo <b>${cupones.tasa_canje}%</b>. Menos de 2 de cada 3 aliados reclaman su bono — vale la pena revisar si el proceso de reclamo es claro o si simplemente no se enteran a tiempo.` });
+    }
+    if ((resumen.total_referrers ?? 0) > 0 && topRef.length) {
+      const top = topRef[0];
+      const concentracion = resumen.total_aliados ? Math.round((top.aliados_traidos / resumen.total_aliados) * 100) : 0;
+      if (concentracion >= 50) {
+        recos.push({ icon: '🎯', text: `<b>${_anEsc(top.templario_name || top.email)}</b> concentra el <b>${concentracion}%</b> de todos los aliados traídos. La Alianza depende casi por completo de una sola persona — sería bueno identificar qué está haciendo bien y replicarlo con otros templarios.` });
+      }
+    }
+    if (serie.length >= 2) {
+      const ultima = serie[serie.length - 1];
+      const penultima = serie[serie.length - 2];
+      if (ultima.nuevos_aliados === 0 && penultima.nuevos_aliados > 0) {
+        recos.push({ icon: '🛑', text: `La última semana registrada tuvo <b>0 nuevos aliados</b>, después de una semana con ${penultima.nuevos_aliados}. El embudo se detuvo — coincide con el corte de eventos detectado desde el 15 de junio. Vale revisar si el trigger que genera el bono sigue disparándose.` });
+      }
+    } else if (serie.length === 0) {
+      recos.push({ icon: '🌱', text: `No hay aliados nuevos registrados en las últimas 8 semanas. El embudo de Alianza no está generando movimiento — es el mismo síntoma que ya diagnosticamos: el mecanismo dejó de disparar eventos.` });
+    }
+    if ((retencion.aliados_pagando_activos ?? 0) > 0 && (retencion.tasa_retencion ?? 100) < 70) {
+      recos.push({ icon: '⚠️', text: `Solo el <b>${retencion.tasa_retencion}%</b> de los aliados que pagan siguen activos. Vale la pena entender por qué se pausan — ¿problema de cobro, de valor percibido, o de onboarding?` });
+    }
+    if ((fisico.qr_impresos ?? 0) > 0) {
+      const tasaScan = Math.round(((fisico.qr_escaneados ?? 0) / fisico.qr_impresos) * 100);
+      if (tasaScan < 15) {
+        recos.push({ icon: '📍', text: `De <b>${fisico.qr_impresos}</b> QR físicos impresos, solo <b>${fisico.qr_escaneados}</b> han sido escaneados (${tasaScan}%). Si estos QR están en negocios aliados, considera reforzar la visibilidad o el incentivo para escanearlos.` });
+      }
+    }
+    if (!recos.length) {
+      recos.push({ icon: '✅', text: 'No se detectan focos rojos evidentes en los datos actuales de Alianza. Sigue vigilando la serie semanal — ahí se nota primero si el embudo se vuelve a detener.' });
+    }
+
+    document.getElementById('tzRecomendaciones').innerHTML = recos.map(r => `
+      <div class="an-reco">
+        <span class="an-reco-icon">${r.icon}</span>
+        <span class="an-reco-text">${r.text}</span>
+      </div>`).join('');
+  }
+
+  /* ═══════════════════════════════════════
+    🚦 PROCESO COMPLETO DEL USUARIO
+    Fuente real: RPC admin_get_user_journey()
+    Combina: tutorial, evaluación, nivel/xp, racha,
+    membresía, comunidad, alianza y compras.
+  ═══════════════════════════════════════ */
+  let _puOpen = false, _puLoaded = false;
+
+  function toggleProcesoUsuario() {
+    const sec = document.getElementById('puSection');
+    const btn = document.getElementById('puToggleBtn');
+    _puOpen = !_puOpen;
+    sec.style.display = _puOpen ? 'block' : 'none';
+    btn.classList.toggle('open', _puOpen);
+    if (_puOpen && !_puLoaded) {
+      _puLoaded = true;
+      loadUserJourney();
+    }
+  }
+
+  async function loadUserJourney() {
+    document.getElementById('puLoading').style.display = 'block';
+    document.getElementById('puBody').style.display = 'none';
+
+    const { data, error } = await supabaseClient.rpc('admin_get_user_journey');
+
+    if (error) {
+      document.getElementById('puLoading').textContent = '⚠ No se pudo consultar: ' + error.message;
+      return;
+    }
+
+    document.getElementById('puLoading').style.display = 'none';
+    document.getElementById('puBody').style.display = 'block';
+    renderUserJourney(data || []);
+  }
+
+  const _puFaseLabels = {
+    registrado:            '⚪ Registrado',
+    en_tutorial:           '🎓 En tutorial',
+    tutorial_completado:   '📘 Tutorial completo (falta evaluación)',
+    modo_libre:            '🕊️ Modo libre — terminó todo el proceso base',
+    evaluacion_completada: '📝 Evaluación hecha (falta tutorial)',
+    cliente_activo:        '💳 Cliente activo',
+    alianza_desbloqueada:  '🎉 Alianza desbloqueada',
+    proceso_completo:      '👑 Proceso completo',
+  };
+
+  function _puMembBadge(type, status) {
+    if (!type || type === 'free') return `<span style="color:var(--text-faint);font-size:9.5px;">Free</span>`;
+    const label = type === 'propopass' ? 'PROPO-PASS' : type.toUpperCase();
+    const color = status === 'active' ? '#44FF88' : (status === 'paused' ? '#FFE566' : '#fca5a5');
+    return `<span style="color:${color};font-size:9.5px;font-weight:700;">${label}</span><br><span style="color:var(--text-faint);font-size:8.5px;">${status || '—'}</span>`;
+  }
+
+  function renderUserJourney(rows) {
+    // ── Resumen agregado ──
+    const total = rows.length;
+    const conTutorial = rows.filter(r => r.tutorial_completed).length;
+    const conEval = rows.filter(r => r.eval_completada).length;
+    const conAlianza = rows.filter(r => r.nivel_alianza >= 1).length;
+    const pagando = rows.filter(r => r.membership_type && r.membership_type !== 'free').length;
+    document.getElementById('puResumen').innerHTML =
+      _tzStat(total, '👥 Total templarios') +
+      _tzStat(conTutorial + ' (' + Math.round(conTutorial / (total || 1) * 100) + '%)', '🎓 Tutorial completo') +
+      _tzStat(conEval + ' (' + Math.round(conEval / (total || 1) * 100) + '%)', '📝 Evaluación hecha') +
+      _tzStat(conAlianza, '🎉 Con Alianza desbloqueada') +
+      _tzStat(pagando, '💳 Clientes pagando');
+
+    // ── Tabla individual ──
+    const tbody = document.getElementById('puBodyTable');
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:var(--text-faint);padding:20px;">Sin datos.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = rows.map(r => {
+      const evalCell = r.eval_completada
+        ? `${_tzFmtFecha(r.eval_completada)}<br><span style="color:var(--text-faint);font-size:9px;">tardó ${_tzFmtHoras(r.horas_hasta_eval)}${r.eval_mismo_dia ? ' · mismo día' : ''}</span>`
+        : `<span style="color:var(--text-faint);">pendiente</span>`;
+      const alianzaCell = r.nivel_alianza >= 1
+        ? `Nv.${r.nivel_alianza}/5<br><span style="color:var(--text-faint);font-size:9px;">${r.aliados_pagando} pagando de ${r.aliados_traidos}</span>`
+        : `<span style="color:var(--text-faint);">—</span>`;
+      const comprasCell = r.num_compras > 0
+        ? `${r.num_compras}<br><span style="color:var(--text-faint);font-size:9px;">${r.cristales_gastados}🪙</span>`
+        : `<span style="color:var(--text-faint);">0</span>`;
+      const misionesCell = (r.misiones_totales > 0 || r.modulos_abiertos > 0)
+        ? `📋 ${r.misiones_completadas}/${r.misiones_totales}<br><span style="color:var(--text-faint);font-size:8.5px;">📖 ${r.modulos_completados}/${r.modulos_abiertos} módulos</span>`
+        : `<span style="color:var(--text-faint);">sin actividad</span>`;
+      const diasSinEntrar = r.last_login_date ? Math.floor((Date.now() - new Date(r.last_login_date + 'T00:00:00').getTime()) / 86400000) : null;
+      const actividadCell = diasSinEntrar === null
+        ? `<span style="color:var(--text-faint);">nunca</span>`
+        : diasSinEntrar === 0
+          ? `<span style="color:#44FF88;">hoy</span>`
+          : diasSinEntrar <= 3
+            ? `<span style="color:#44FF88;">hace ${diasSinEntrar}d</span>`
+            : diasSinEntrar <= 14
+              ? `<span style="color:#FFE566;">hace ${diasSinEntrar}d</span>`
+              : `<span style="color:#fca5a5;">hace ${diasSinEntrar}d ⚠</span>`;
+      const faseLabel = _puFaseLabels[r.fase_actual] || r.fase_actual;
+      return `
+      <tr style="border-bottom:1px solid rgba(255,255,255,.05);">
+        <td style="padding:7px 6px;color:var(--text-dim);white-space:nowrap;">${_anEsc(r.nombre)}</td>
+        <td style="padding:7px 6px;color:var(--text-faint);font-size:9.5px;white-space:nowrap;">${_tzFmtFecha(r.registro)}</td>
+        <td style="padding:7px 6px;text-align:center;">${r.tutorial_completed ? '<span style="color:#44FF88;">✅</span>' : '<span style="color:var(--text-faint);">⏳</span>'}</td>
+        <td style="padding:7px 6px;">${evalCell}</td>
+        <td style="padding:7px 6px;white-space:nowrap;color:var(--text-dim);font-size:9.5px;">Nv.${r.nivel_perfil} · ${r.xp}xp<br><span style="color:var(--text-faint);font-size:8.5px;">🔥${r.streak_days}d racha</span></td>
+        <td style="padding:7px 6px;">${_puMembBadge(r.membership_type, r.membership_status)}</td>
+        <td style="padding:7px 6px;text-align:center;color:var(--text-dim);font-size:9.5px;">Nv.${r.community_level}<br><span style="color:var(--text-faint);font-size:8.5px;">${r.actividad_comunidad} posts/coment.</span></td>
+        <td style="padding:7px 6px;text-align:center;font-size:9.5px;">${misionesCell}</td>
+        <td style="padding:7px 6px;text-align:center;">${alianzaCell}</td>
+        <td style="padding:7px 6px;text-align:center;">${comprasCell}</td>
+        <td style="padding:7px 6px;font-size:9.5px;white-space:nowrap;">${actividadCell}</td>
+        <td style="padding:7px 6px;"><span class="pu-badge pu-fase-${r.fase_actual}">${faseLabel}</span></td>
+        <td style="padding:7px 6px;text-align:center;">
+          <div style="display:inline-block;width:50px;height:7px;background:rgba(255,255,255,.06);border-radius:6px;overflow:hidden;vertical-align:middle;">
+            <div style="height:100%;width:${r.pct_avance_global}%;background:linear-gradient(90deg,#38bdf8,#7dd3fc);"></div>
+          </div>
+          <span style="font-size:9.5px;color:#7dd3fc;margin-left:4px;">${r.pct_avance_global}%</span>
+        </td>
+      </tr>`;
+    }).join('');
   }
 
   window._allProducts = [];
