@@ -1258,6 +1258,7 @@
             <div style="font-size:.7rem;color:rgba(59,130,246,.82);margin-top:3px;font-family:'Cinzel',serif;letter-spacing:1px;">USUARIOS · CRISTALES · ACCIONES</div>
           </div>
           <div style="margin-left:auto;display:flex;gap:.5rem;align-items:center;">
+            <span id="pend-count" style="font-family:'Cinzel',serif;font-size:.55rem;color:rgba(56,189,248,.7);letter-spacing:1px;"></span>
             <span id="vip-count" style="font-family:'Cinzel',serif;font-size:.55rem;color:rgba(212,175,55,.5);letter-spacing:1px;"></span>
             <span id="userCount" style="font-family:'Cinzel',serif;font-size:.55rem;color:rgba(255,255,255,.3);letter-spacing:1px;"></span>
           </div>
@@ -1268,6 +1269,7 @@
           <button class="utab utab--active" role="tab" onclick="switchUserTab('todos',this)">👥 Todos</button>
           <button class="utab" role="tab" onclick="switchUserTab('vip',this)">👑 VIP</button>
           <button class="utab" role="tab" onclick="switchUserTab('mem',this)">🏛️ Membresía</button>
+          <button class="utab" role="tab" onclick="switchUserTab('pend',this)">📧 Pendientes</button>
         </div>
 
         <!-- PANEL: TODOS -->
@@ -1359,6 +1361,28 @@
               </thead>
               <tbody id="memTable">
                 <tr><td colspan="6" style="text-align:center;color:var(--text-faint);font-family:'Cinzel',serif;font-size:.7rem;padding:1.5rem;">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- PANEL: PENDIENTES DE REGISTRO -->
+        <div id="upanel-pend" class="upanel">
+          <div class="ufilters">
+            <input id="pend-search" type="text" placeholder="🔍 Buscar por correo…" oninput="_renderPend()" class="ufilter-input">
+            <button onclick="document.getElementById('pend-search').value='';_renderPend()" class="ufilter-btn">✕ Limpiar</button>
+            <button onclick="reenviarATodosPendientes()" id="pendAllBtn" class="ufilter-btn" style="margin-left:auto;background:rgba(56,189,248,.14);border-color:rgba(56,189,248,.45);color:#38bdf8;">📧 Reenviar a todos los pendientes</button>
+          </div>
+          <div id="pend-progress" style="display:none;margin:10px 2px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:rgba(56,189,248,.85);"></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Correo</th><th>Membresía</th><th>Monto Pagado</th><th>Días Esperando</th><th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="pendTable">
+                <tr><td colspan="5" style="text-align:center;color:var(--text-faint);font-family:'Cinzel',serif;font-size:.7rem;padding:1.5rem;">Cargando pendientes...</td></tr>
               </tbody>
             </table>
           </div>
@@ -4189,6 +4213,111 @@
     }
   }
 
+  /* ══════════════════════════════════════
+    PENDIENTES DE REGISTRO — pagaron, nunca se registraron
+  ══════════════════════════════════════ */
+  window._pendingRegs = [];
+
+  async function loadPendingRegistrations() {
+    const tbody = document.getElementById('pendTable');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-faint);font-family:'Cinzel',serif;font-size:.7rem;padding:1.5rem;">Cargando pendientes...</td></tr>`;
+
+    const { data, error } = await supabaseClient
+      .from('access_codes')
+      .select('code, user_email, membership_type, duration_months, amount_paid, currency, created_at')
+      .or('is_used.eq.false,is_used.is.null')
+      .not('user_email', 'is', null)
+      .gt('amount_paid', 0)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#ef4444;font-family:'Cinzel',serif;font-size:.7rem;padding:1.5rem;">❌ Error cargando: ${error.message}</td></tr>`;
+      return;
+    }
+
+    window._pendingRegs = data || [];
+    _renderPend();
+  }
+
+  function _renderPend() {
+    const search = (document.getElementById('pend-search')?.value || '').toLowerCase();
+    const list = (window._pendingRegs || []).filter(r => {
+      if (!search) return true;
+      return (r.user_email || '').toLowerCase().includes(search);
+    });
+
+    const countEl = document.getElementById('pend-count');
+    if (countEl) countEl.textContent = `${(window._pendingRegs||[]).length} PENDIENTES`;
+
+    const tbody = document.getElementById('pendTable');
+    if (!tbody) return;
+
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-faint);font-family:'Cinzel',serif;font-size:11px;padding:24px;">✅ Nadie pendiente — todos se registraron</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = list.map(r => {
+      const dias = Math.floor((Date.now() - new Date(r.created_at).getTime()) / 86400000);
+      const monto = r.amount_paid ? `${(r.amount_paid/100).toFixed(2)} ${(r.currency||'mxn').toUpperCase()}` : '—';
+      const memBadge = r.membership_type
+        ? `<span style="background:rgba(20,184,166,.12);border:1px solid rgba(20,184,166,.3);border-radius:5px;padding:2px 7px;font-size:8px;color:#14b8a6;font-family:'Cinzel',serif;">${r.membership_type.toUpperCase()}${r.duration_months ? ' · '+r.duration_months+'m' : ''}</span>`
+        : '—';
+      const diasColor = dias >= 7 ? '#ef4444' : dias >= 3 ? '#f59e0b' : 'rgba(255,255,255,.5)';
+      const emailSafe = (r.user_email || '').replace(/'/g, "\\'");
+      return `<tr>
+        <td style="font-size:11px;color:var(--text-dim);">${r.user_email || '—'}</td>
+        <td>${memBadge}</td>
+        <td style="font-size:11px;color:rgba(255,255,255,.6);">${monto}</td>
+        <td style="font-size:11px;font-weight:700;color:${diasColor};">${dias}d</td>
+        <td><button class="act-btn" onclick="reenviarUnoPendiente('${emailSafe}', this)">📧 Reenviar</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function reenviarUnoPendiente(email, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+    try {
+      const { data, error } = await supabaseClient.functions.invoke('resend-code', { body: { email } });
+      if (error) throw error;
+      if (data && data.error) throw new Error(data.error);
+      showToast('📧 Enviado a ' + email);
+      if (btn) { btn.textContent = '✅ Enviado'; }
+    } catch (e) {
+      showToast('❌ ' + (e.message || 'error al enviar'));
+      if (btn) { btn.disabled = false; btn.textContent = '📧 Reenviar'; }
+    }
+  }
+
+  async function reenviarATodosPendientes() {
+    const list = window._pendingRegs || [];
+    if (!list.length) { showToast('✅ No hay nadie pendiente'); return; }
+    if (!confirm(`📧 ¿Reenviar código a ${list.length} Templarios pendientes? Se enviará uno por uno.`)) return;
+
+    const allBtn = document.getElementById('pendAllBtn');
+    const progress = document.getElementById('pend-progress');
+    if (allBtn) allBtn.disabled = true;
+    if (progress) progress.style.display = 'block';
+
+    let ok = 0, fail = 0;
+    for (let i = 0; i < list.length; i++) {
+      const email = list[i].user_email;
+      if (progress) progress.textContent = `Enviando ${i+1}/${list.length}: ${email}`;
+      try {
+        const { data, error } = await supabaseClient.functions.invoke('resend-code', { body: { email } });
+        if (error || (data && data.error)) { fail++; }
+        else { ok++; }
+      } catch (e) {
+        fail++;
+      }
+      await new Promise(r => setTimeout(r, 600));
+    }
+
+    if (progress) progress.textContent = `✅ Listo — ${ok} enviados, ${fail} con error`;
+    if (allBtn) allBtn.disabled = false;
+    showToast(`📧 Envío masivo: ${ok} enviados, ${fail} con error`);
+  }
+
   function filterUsers(q){
     const rows = document.querySelectorAll('#usersTable tr');
     const term = q.toLowerCase().trim();
@@ -4539,6 +4668,7 @@
     document.getElementById('upanel-' + tab).classList.add('upanel--active');
     if (tab === 'vip') filterVip();
     if (tab === 'mem') filterMemberships();
+    if (tab === 'pend') loadPendingRegistrations();
   }
   </script>
   </body>
