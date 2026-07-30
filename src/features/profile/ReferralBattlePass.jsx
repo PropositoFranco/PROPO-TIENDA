@@ -24,7 +24,7 @@ function getLevelInfo(count) {
   return { curr, next, progress: Math.min(100, Math.max(0, progress)) };
 }
 
-export default function ReferralBattlePass() {
+export default function ReferralBattlePass({ highlightPulse = false, onVerTodoClick }) {
   const { profile } = useAuthStore();
   const [referidos, setReferidos] = useState(0);
   const [cupones, setCupones]     = useState(0);
@@ -74,10 +74,11 @@ export default function ReferralBattlePass() {
       marginTop: "16px",
       borderRadius: "16px",
       background: "linear-gradient(160deg, rgba(8,3,26,0.99) 0%, rgba(22,8,55,0.99) 100%)",
-      border: "1px solid rgba(212,175,55,0.45)",
-      boxShadow: "0 0 0 1px rgba(212,175,55,0.06), 0 8px 40px rgba(212,175,55,0.1), inset 0 1px 0 rgba(255,230,120,0.1)",
+      border: highlightPulse ? "1.5px solid rgba(212,175,55,0.85)" : "1px solid rgba(212,175,55,0.45)",
+      boxShadow: highlightPulse ? "0 0 0 1px rgba(212,175,55,0.06), 0 8px 40px rgba(212,175,55,0.1), inset 0 1px 0 rgba(255,230,120,0.1), 0 0 60px rgba(212,175,55,0.5)" : "0 0 0 1px rgba(212,175,55,0.06), 0 8px 40px rgba(212,175,55,0.1), inset 0 1px 0 rgba(255,230,120,0.1)",
       overflow: "visible",
       position: "relative",
+      zIndex: highlightPulse ? 99991 : "auto",
     }}>
 
       {/* HEADER */}
@@ -96,15 +97,42 @@ export default function ReferralBattlePass() {
             <div style={{ fontFamily: "'Cinzel',serif", fontSize: "clamp(11px,2vw,13px)", fontWeight: 900, background: "linear-gradient(135deg,#ffe87a 0%,#d4af37 40%,#fde68a 70%,#c9a84c 100%)", backgroundSize: "200% auto", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", letterSpacing: "1px", animation: "goldShimmer 3s linear infinite" }}>SISTEMA ALIANZA</div>
           </div>
         </div>
-        <Link to="/alianza"
-          onMouseEnter={e => { e.currentTarget.style.background = "rgba(212,175,55,0.18)"; e.currentTarget.style.borderColor = "rgba(212,175,55,0.7)"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "rgba(212,175,55,0.08)"; e.currentTarget.style.borderColor = "rgba(212,175,55,0.35)"; }}
-          style={{ padding: "6px 14px", background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.35)", borderRadius: "100px", fontFamily: "'Cinzel',serif", fontSize: "7.5px", color: "#d4af37", letterSpacing: "1.5px", textDecoration: "none", transition: "all .3s" }}>
-          VER TODO →
-        </Link>
+        <div style={{ position: "relative" }}>
+          <Link to="/alianza"
+            onClick={() => onVerTodoClick?.()}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(212,175,55,0.18)"; e.currentTarget.style.borderColor = "rgba(212,175,55,0.7)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(212,175,55,0.08)"; e.currentTarget.style.borderColor = "rgba(212,175,55,0.35)"; }}
+            style={{
+              padding: "6px 14px",
+              background: highlightPulse ? "rgba(212,175,55,0.22)" : "rgba(212,175,55,0.08)",
+              border: highlightPulse ? "1.5px solid rgba(212,175,55,0.9)" : "1px solid rgba(212,175,55,0.35)",
+              borderRadius: "100px", fontFamily: "'Cinzel',serif", fontSize: "7.5px", color: "#d4af37",
+              letterSpacing: "1.5px", textDecoration: "none", transition: "all .3s",
+              display: "inline-block",
+              boxShadow: highlightPulse ? "0 0 22px rgba(212,175,55,0.7)" : "none",
+              animation: highlightPulse ? "allianceSpotlightGlow 1.6s ease-in-out infinite" : "none",
+              position: highlightPulse ? "relative" : "static",
+              zIndex: highlightPulse ? 99991 : "auto",
+            }}>
+            VER TODO →
+          </Link>
+        </div>
       </div>
 
-      {/* BODY */}
+      {/* Aviso de spotlight — banner de ancho completo, nunca se corta ni se sale de pantalla */}
+      {highlightPulse && (
+        <div style={{
+          margin: "0 14px 12px", padding: "10px 14px",
+          background: "linear-gradient(135deg, rgba(15,8,32,0.98), rgba(10,6,24,0.98))",
+          border: "1.5px solid rgba(212,175,55,0.6)", borderRadius: "10px",
+          boxShadow: "0 0 24px rgba(212,175,55,0.4)",
+          fontFamily: "'Crimson Text',serif", fontSize: "13px", lineHeight: 1.4,
+          color: "rgba(255,248,220,0.95)", textAlign: "center",
+          position: "relative", zIndex: 99991,
+        }}>
+          👉 Toca <strong style={{ color: "#ffe87a" }}>"VER TODO"</strong> para ver tu progreso completo, cupones y niveles de Alianza
+        </div>
+      )}
       <div style={{ padding: "10px 12px 12px" }}>
         {loading ? (
           <div style={{ textAlign: "center", padding: "16px", fontFamily: "'Cinzel',serif", fontSize: "8px", letterSpacing: "3px", color: "rgba(212,175,55,0.4)", animation: "vipCrownFloat 1.5s ease-in-out infinite" }}>CARGANDO...</div>

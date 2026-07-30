@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ReferralBattlePass from './ReferralBattlePass';
 import VipRuleta from '../../components/ui/VipRuleta';
 import { usePlayerStore } from '../../store/usePlayerStore';
@@ -2913,6 +2913,81 @@ function MembershipCard() {
   );
 }
 
+// ─── RENEWAL ROPE NUDGE ──────────────────────────────────────────────────────
+// Cuando la membresía está por vencer, recuerda que compartir el código de
+// Alianza renueva por $1 — y de paso, le lanzas una cuerda a alguien que esa
+// membresía le puede mejorar la vida.
+const RENEWAL_NUDGE_WINDOW_DAYS = 10; // días antes de vencer en que aparece el recordatorio
+
+function RenewalRopeNudge({ onShareClick }) {
+  const memberStatus = useMembershipStore(s => s.status);
+  const renewsAt      = useMembershipStore(s => s.renewsAt);
+  const { profile }   = useAuthStore();
+  const codigoReferido = profile?.referral_code;
+
+  if (memberStatus !== 'active' || !renewsAt || !codigoReferido) return null;
+
+  const daysLeft = Math.max(0, Math.ceil((new Date(renewsAt) - Date.now()) / (1000 * 60 * 60 * 24)));
+  if (daysLeft > RENEWAL_NUDGE_WINDOW_DAYS) return null;
+
+  const urgent = daysLeft <= 3;
+
+  return (
+    <div style={{
+      marginTop: '14px',
+      borderRadius: '16px',
+      background: 'linear-gradient(130deg, rgba(212,175,55,0.12) 0%, rgba(8,3,26,0.97) 45%, rgba(124,58,237,0.12) 100%)',
+      border: `1px solid ${urgent ? 'rgba(248,113,113,0.5)' : 'rgba(212,175,55,0.4)'}`,
+      boxShadow: urgent ? '0 0 28px rgba(248,113,113,0.18)' : '0 0 24px rgba(212,175,55,0.12)',
+      padding: 'clamp(14px,2.5vw,20px)',
+      display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
+      position: 'relative', overflow: 'hidden',
+      animation: urgent ? 'glowPulse 2s ease-in-out infinite' : 'none',
+    }}>
+      <div style={{
+        flexShrink: 0, width: '44px', height: '44px', borderRadius: '12px',
+        background: 'linear-gradient(135deg, rgba(212,175,55,0.25), rgba(124,58,237,0.2))',
+        border: '1px solid rgba(212,175,55,0.45)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '22px', boxShadow: '0 0 16px rgba(212,175,55,0.35)',
+      }}>🪢</div>
+
+      <div style={{ flex: 1, minWidth: '200px' }}>
+        <div style={{
+          fontFamily: "'Cinzel',serif", fontSize: 'clamp(10px,1.8vw,12px)', fontWeight: 900,
+          color: urgent ? '#f87171' : '#fde68a',
+          textShadow: urgent ? '0 0 12px rgba(248,113,113,0.6)' : '0 0 12px rgba(212,175,55,0.6)',
+          marginBottom: '4px', letterSpacing: '0.3px',
+        }}>
+          {daysLeft === 0 ? 'Tu membresía vence hoy' : `Tu membresía vence en ${daysLeft} día${daysLeft !== 1 ? 's' : ''}`}
+        </div>
+        <div style={{
+          fontFamily: "'Raleway',sans-serif", fontSize: 'clamp(11px,1.8vw,12.5px)',
+          color: 'rgba(200,185,240,0.7)', lineHeight: 1.55,
+        }}>
+          Comparte tu código de Alianza — quizás para alguien sea justo la cuerda que le cambia la vida. Y tú renuevas tu Templo por <strong style={{ color: '#fbbf24' }}>$1 USD</strong>.
+        </div>
+      </div>
+
+      <button
+        onClick={onShareClick}
+        onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 26px rgba(251,191,36,0.6)'; e.currentTarget.style.transform = 'scale(1.03)'; }}
+        onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 4px 18px rgba(251,191,36,0.4)'; e.currentTarget.style.transform = 'scale(1)'; }}
+        style={{
+          flexShrink: 0,
+          background: 'linear-gradient(135deg,#fde68a,#fbbf24,#d97706)',
+          border: 'none', borderRadius: '10px', padding: '10px 18px',
+          fontFamily: "'Cinzel',serif", fontSize: '9.5px', fontWeight: 900,
+          color: '#1a0a2e', cursor: 'pointer',
+          letterSpacing: '0.08em', textTransform: 'uppercase',
+          boxShadow: '0 4px 18px rgba(251,191,36,0.4)',
+          whiteSpace: 'nowrap', transition: 'all .25s',
+        }}
+      >🪢 Compartir mi código</button>
+    </div>
+  );
+}
+
 const STRIPE_1MES_P   = 'https://buy.stripe.com/5kQ3cv9pJc0ad4ydGMenS0n';
 const STRIPE_3MESES_P = 'https://buy.stripe.com/9B614natN0hs0hM0U0enS0o';
 
@@ -2981,6 +3056,49 @@ export default function ProfilePage() {
   const [userId, setUserId] = useState(null);
   const [userIdReady, setUserIdReady] = useState(false);
   const vipStatus = useAuthStore(s => s.isVip());
+  const location = useLocation();
+  const allianceRef = useRef(null);
+  const [allianceHighlight, setAllianceHighlight] = useState(false);
+  const [allianceTourSeen, setAllianceTourSeen] = useState(true); // asume visto hasta confirmar lo contrario (evita parpadeo)
+  const [allianceTourLoading, setAllianceTourLoading] = useState(true);
+
+  // Se lee de Supabase (profiles.alliance_tour_seen), no de la URL ni de localStorage —
+  // así un refresh de /profile?highlight=alianza no lo vuelve a disparar.
+  useEffect(() => {
+    if (!userId) return;
+    supabase
+      .from('profiles')
+      .select('alliance_tour_seen')
+      .eq('id', userId)
+      .single()
+      .then(({ data, error }) => {
+        setAllianceTourSeen(error ? true : !!data?.alliance_tour_seen);
+        setAllianceTourLoading(false);
+      });
+  }, [userId]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('highlight') !== 'alianza') return;
+    if (allianceTourLoading || allianceTourSeen) return;
+    const t = setTimeout(() => {
+      allianceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setAllianceHighlight(true);
+      setAllianceTourSeen(true);
+      if (userId) {
+        localStorage.removeItem(`tdp_alliance_spotlight_${userId}`);
+        supabase
+          .from('profiles')
+          .update({ alliance_tour_seen: true })
+          .eq('id', userId)
+          .then(({ error }) => { if (error) console.error('Error guardando alliance_tour_seen:', error); });
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [location.search, userId, allianceTourLoading, allianceTourSeen]);
+
+  // Se cierra únicamente cuando el usuario confirma de verdad. Nada de auto-cierre por tiempo.
+  const dismissAllianceHighlight = useCallback(() => setAllianceHighlight(false), []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -3329,6 +3447,8 @@ function TempleReportes({ userId }) {
         @keyframes ringRotate{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         @keyframes cardEntrance{from{opacity:0;transform:translateY(28px) scale(.93)}to{opacity:1;transform:translateY(0) scale(1)}}
         @keyframes cardPulseRing{0%{opacity:.6;transform:scale(1)}100%{opacity:0;transform:scale(1.8)}}
+        @keyframes allianceSpotlightGlow{0%,100%{box-shadow:0 0 40px rgba(212,175,55,.4)}50%{box-shadow:0 0 70px rgba(212,175,55,.75)}}
+        @keyframes allianceTooltipFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
         @keyframes cardIconFloat{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-52%) scale(1.05)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes slideUp{from{transform:translateY(28px);opacity:0}to{transform:translateY(0);opacity:1}}
@@ -3431,8 +3551,18 @@ function TempleReportes({ userId }) {
 
               <XPBar xp={user.xp} xpMax={user.xpToNext} level={user.level} userId={userId}/>
               <MembershipCard />
+              <RenewalRopeNudge onShareClick={() => allianceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />
               <TemploWeeklyPlan />
-              <ReferralBattlePass />
+
+              {/* Overlay decorativo: oscurece visualmente pero deja pasar scroll y clics —
+                  el único cierre real es picarle a "VER TODO" dentro de ReferralBattlePass */}
+              {allianceHighlight && (
+                <div style={{ position: "fixed", inset: 0, zIndex: 99990, background: "rgba(5,2,10,0.82)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)", pointerEvents: "none" }} />
+              )}
+
+              <div ref={allianceRef}>
+                <ReferralBattlePass highlightPulse={allianceHighlight} onVerTodoClick={dismissAllianceHighlight} />
+              </div>
 
               {/* ── QR ALIANZA ── */}
               {profile?.referral_code && (
@@ -3697,4 +3827,4 @@ function TempleReportes({ userId }) {
       {showAdmin&&user.isAdmin&&<AdminPanel rewards={rewards} achievements={achievements} onUpdateRewards={setRewards} onUpdateAchievements={setAchievements} onClose={()=>setShowAdmin(false)}/>}
     </div>
   );
-} 
+}

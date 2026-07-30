@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "../../services/supabase";
 
 // ─── PALETTE ─────────────────────────────────────────────
 const C = {
@@ -1659,7 +1660,15 @@ export default function TStoreTutorial({onComplete}) {
 
   const cur=STEPS[step];
   const isLast=step===STEPS.length-1;
-  const advance=()=>{ if(isLast){if(onComplete)onComplete();} else setStep(s=>s+1); };
+  const advance=()=>{
+    if(isLast){
+      supabase.auth.getUser().then(({data})=>{
+        const uid=data?.user?.id;
+        if(uid) localStorage.setItem(`tdp_alliance_unlock_${uid}`,'1');
+      });
+      if(onComplete)onComplete();
+    } else setStep(s=>s+1);
+  };
 
   const highlightPortalIds=(()=>{
     if (cur.screen!=="home") return [];

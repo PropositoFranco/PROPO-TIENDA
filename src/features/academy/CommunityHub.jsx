@@ -1,4 +1,4 @@
-  /**
+/**
    * CommunityHub.jsx  —  src/features/academy/CommunityHub.jsx
    *
    * Feed · Miembros · DMs · Leaderboard
@@ -19,7 +19,7 @@
   import { useAuthStore }   from '../../store/useAuthStore';
   import { usePlayerStore } from '../../store/usePlayerStore';
   import { supabase }       from '../../services/supabase';
-  import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+  import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
   import useMembershipStore, { ACADEMY_MODULES, MODULE_TYPE_CONFIG } from '../../store/useMembershipStore';
 import { missionsService } from '../../services/missions.service';
 
@@ -4201,9 +4201,9 @@ if (!error) {
   const CommunityHub = () => {
     const user        = useAuthStore(s => s.user);
     const playerLevel = usePlayerStore(s => s.level);
-
+    const location     = useLocation();
+    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
     const [activeTab,    setActiveTab]    = useState(() => {
       const tab = searchParams.get('tab');
       if (tab === 'ranking') return 'leaderboard';
@@ -4217,6 +4217,23 @@ if (!error) {
     const [myStats,      setMyStats]      = useState(null);
     const [unreadDMs,    setUnreadDMs]    = useState(0);
     const [newFeedPosts, setNewFeedPosts] = useState(0);
+    const [showVictoryCelebration, setShowVictoryCelebration] = useState(!!location?.state?.celebrateAllianceUnlock);
+
+    // Limpia el state de navegación para que un refresh no vuelva a disparar el modal
+    useEffect(() => {
+      if (location?.state?.celebrateAllianceUnlock) {
+        navigate(location.pathname + location.search, { replace: true, state: {} });
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Cierra el modal de "Primera Victoria Forjada" y manda al usuario a ver
+    // su Código de Alianza en el perfil, con el badge del sidebar encendido.
+    const handleVictoryContinue = useCallback(() => {
+      setShowVictoryCelebration(false);
+      if (user?.id) localStorage.setItem(`tdp_alliance_spotlight_${user.id}`, '1');
+      navigate('/profile?highlight=alianza');
+    }, [user?.id, navigate]);
 
     const { levelCfg, pointsCfg, categories, ready, getLvl } = useCommunityConfig();
 
@@ -4762,6 +4779,54 @@ if (!error) {
             />
           )}
         </div>
+
+        {/* Modal: Primera Victoria Forjada — desbloqueo de Alianza */}
+        {showVictoryCelebration && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1rem',
+          }}>
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(15,8,32,0.99), rgba(10,6,24,0.99))',
+              border: `1.5px solid ${C.gold}88`,
+              borderRadius: '1.5rem', padding: '2rem 1.75rem',
+              width: '100%', maxWidth: 420,
+              boxShadow: `0 0 80px ${C.gold}33`,
+              textAlign: 'center',
+              animation: 'victoryPop 0.4s cubic-bezier(0.16,1,0.3,1)',
+            }}>
+              <p style={{ fontSize: '3rem', margin: '0 0 0.75rem', filter: `drop-shadow(0 0 20px ${C.gold})` }}>🏆</p>
+              <p style={{
+                fontFamily: '"Cinzel", serif', fontWeight: 900,
+                fontSize: '1.05rem', color: C.gold,
+                margin: '0 0 0.5rem', letterSpacing: '0.06em',
+              }}>¡PRIMERA VICTORIA FORJADA!</p>
+              <p style={{
+                fontFamily: '"Crimson Text", serif', fontSize: '0.98rem',
+                color: 'rgba(255,255,255,0.75)', margin: '0 0 1.75rem', lineHeight: 1.5,
+              }}>
+                Completaste tu primer protocolo y desbloqueaste tu <strong style={{ color: C.gold }}>Código de Alianza</strong>. Ve a tu perfil para verlo y empezar a invitar guerreros.
+              </p>
+              <button onClick={handleVictoryContinue} style={{
+                padding: '0.85em 2em',
+                background: `linear-gradient(135deg, ${C.gold}33, ${C.gold}18)`,
+                border: `1.5px solid ${C.gold}`,
+                borderRadius: '0.6rem', color: C.gold,
+                fontFamily: '"Cinzel", serif', fontSize: '0.8rem',
+                fontWeight: 700, letterSpacing: '0.08em', cursor: 'pointer',
+                boxShadow: `0 0 24px ${C.gold}44`,
+              }}>👑 VER MI CÓDIGO DE ALIANZA</button>
+              <style>{`
+                @keyframes victoryPop {
+                  from { opacity:0; transform: scale(0.9) translateY(10px); }
+                  to   { opacity:1; transform: scale(1) translateY(0); }
+                }
+              `}</style>
+            </div>
+          </div>
+        )}
 
         {/* Toast de recompensa */}
         {toast && <RewardToast reward={toast} onDone={() => setToast(null)} />}

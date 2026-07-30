@@ -568,8 +568,11 @@ if (eventos) {
 
       <div style={{ position: "relative", zIndex: 1, maxWidth: "820px", margin: "0 auto", padding: "0 clamp(16px,4vw,24px) 100px" }}>
 
-        {/* ══ HERO — centrado al estilo v6 ══ */}
-        <div style={{ textAlign: "center", paddingTop: "clamp(32px,6vh,56px)", marginBottom: "40px" }}>
+        {/* ══════════════════════════════════════════════════════════════════
+             PARTE 1 — EL PACTO (épica oscurecida)
+        ══════════════════════════════════════════════════════════════════ */}
+        <div style={{ textAlign: "center", position: "relative", overflow: "hidden", background: "linear-gradient(160deg,rgba(8,3,26,0.99) 0%,rgba(22,8,55,0.99) 100%)", border: "1px solid rgba(212,175,55,0.4)", borderRadius: "22px", padding: "clamp(32px,6vh,48px) clamp(20px,4vw,32px) 34px", marginTop: "clamp(20px,4vh,32px)", marginBottom: "24px", boxShadow: "0 0 0 1px rgba(212,175,55,0.06), 0 8px 40px rgba(212,175,55,0.12), inset 0 1px 0 rgba(255,230,120,0.1)" }}>
+          <div style={{ position: "absolute", top: 0, left: "12%", right: "12%", height: "1px", background: "linear-gradient(90deg,transparent,rgba(212,175,55,0.7),transparent)" }} />
 
           {/* Eyebrow */}
           <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "linear-gradient(135deg,rgba(212,175,55,0.12),rgba(139,92,246,0.08))", border: "1px solid rgba(212,175,55,0.35)", borderRadius: "20px", padding: "6px 16px", marginBottom: "20px", fontSize: "9px", fontWeight: "700", letterSpacing: "0.18em", fontFamily: "'Cinzel',serif", color: "#d4af37", textTransform: "uppercase", boxShadow: "0 0 20px rgba(212,175,55,0.1)" }}>
@@ -593,14 +596,44 @@ if (eventos) {
           </p>
 
           {/* ── IMPACTO REAL — conteo global ── */}
-          <p style={{ fontFamily: "'Raleway',sans-serif", fontSize: "clamp(12px,1.8vw,13px)", color: "rgba(212,175,55,0.6)", maxWidth: "440px", margin: "0 auto 30px", lineHeight: "1.7", fontStyle: "italic" }}>
+          <p style={{ fontFamily: "'Raleway',sans-serif", fontSize: "clamp(12px,1.8vw,13px)", color: "rgba(212,175,55,0.6)", maxWidth: "440px", margin: "0 auto 0", lineHeight: "1.7", fontStyle: "italic" }}>
             Cada aliado que traes suma al movimiento completo: cada{" "}
             <strong style={{ color: "#fbbf24", fontStyle: "normal" }}>6 Templarios nuevos</strong>{" "}libera una beca de 6 meses, y cada{" "}
             <strong style={{ color: "#fbbf24", fontStyle: "normal" }}>25</strong>{" "}dona un costal de alimento a un refugio canino.
           </p>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════
+             PARTE 2 — TU CÓDIGO DE ACCESO (épica oscurecida)
+        ══════════════════════════════════════════════════════════════════ */}
+        <div style={{ textAlign: "center", position: "relative", overflow: "hidden", background: "linear-gradient(160deg,rgba(8,3,26,0.99) 0%,rgba(22,8,55,0.99) 100%)", border: "1px solid rgba(167,139,250,0.35)", borderRadius: "22px", padding: "30px clamp(20px,4vw,32px) 26px", marginBottom: "24px", boxShadow: "0 0 0 1px rgba(167,139,250,0.06), 0 8px 40px rgba(124,58,237,0.14), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
+          <div style={{ position: "absolute", top: 0, left: "12%", right: "12%", height: "1px", background: "linear-gradient(90deg,transparent,rgba(167,139,250,0.7),rgba(212,175,55,0.5),transparent)" }} />
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "9px", marginBottom: "18px" }}>
+            <div style={{ width: "3px", height: "18px", borderRadius: "999px", background: "linear-gradient(180deg,#a78bfa,#7c3aed)", boxShadow: "0 0 10px rgba(167,139,250,0.7)" }} />
+            <span style={{ fontFamily: "'Cinzel',serif", fontSize: "9px", fontWeight: "700", letterSpacing: "0.18em", color: "rgba(167,139,250,0.8)", textTransform: "uppercase" }}>Tu Código de Alianza</span>
+          </div>
+
+          {/* ── 2 formas de invitar ── */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", justifyContent: "center", marginBottom: "22px", maxWidth: "480px", marginLeft: "auto", marginRight: "auto" }}>
+            <div style={{ flex: "1 1 190px", display: "flex", alignItems: "flex-start", gap: "10px", background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.18)", borderRadius: "14px", padding: "12px 14px", textAlign: "left" }}>
+              <span style={{ fontSize: "18px", flexShrink: 0 }}>📷</span>
+              <div>
+                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "9.5px", fontWeight: "700", color: "#a78bfa", letterSpacing: "0.06em", marginBottom: "3px" }}>Forma 1 · Escanean</div>
+                <div style={{ fontFamily: "'Raleway',sans-serif", fontSize: "11.5px", color: "rgba(200,185,240,0.6)", lineHeight: "1.5" }}>Tu aliado escanea el QR directo desde su celular.</div>
+              </div>
+            </div>
+            <div style={{ flex: "1 1 190px", display: "flex", alignItems: "flex-start", gap: "10px", background: "rgba(96,165,250,0.05)", border: "1px solid rgba(96,165,250,0.18)", borderRadius: "14px", padding: "12px 14px", textAlign: "left" }}>
+              <span style={{ fontSize: "18px", flexShrink: 0 }}>🔗</span>
+              <div>
+                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "9.5px", fontWeight: "700", color: "#60a5fa", letterSpacing: "0.06em", marginBottom: "3px" }}>Forma 2 · Le compartes</div>
+                <div style={{ fontFamily: "'Raleway',sans-serif", fontSize: "11.5px", color: "rgba(200,185,240,0.6)", lineHeight: "1.5" }}>Copia el link o mándalo directo con "Compartir".</div>
+              </div>
+            </div>
+          </div>
 
           {/* ── CÓDIGO + QR ── */}
-          <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "20px", background: "rgba(124,58,237,0.06)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "20px", padding: "28px 22px", marginBottom: "20px", animation: "alianza-code-pulse 3s ease-in-out infinite", width: "100%", maxWidth: "320px", position: "relative", overflow: "hidden" }}>
+          <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "20px", background: "rgba(124,58,237,0.06)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "20px", padding: "28px 22px", animation: "alianza-code-pulse 3s ease-in-out infinite", width: "100%", maxWidth: "320px", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: "1px", background: "linear-gradient(90deg,transparent,rgba(167,139,250,0.7),rgba(212,175,55,0.5),transparent)" }} />
             <div style={{ padding: "14px", background: "#fff", borderRadius: "16px", boxShadow: "0 0 40px rgba(124,58,237,0.35)" }}>
               <QRCodeSVG value={shareLink} size={180} bgColor="#ffffff" fgColor="#1a0a2e" level="M" />
@@ -619,23 +652,23 @@ if (eventos) {
               </div>
             </div>
           </div>
+        </div>
 
-          {/* ── STATS ── (estilo v6: limpio, sin cajita gris) */}
-          <div style={{ display: "flex", alignItems: "center", gap: "14px", justifyContent: "center", flexWrap: "wrap" }}>
-            {[
-              { val: referidosActivos, sub: "Aliados activos", color: curr?.color || "#a78bfa" },
-              { val: curr ? `Nv.${curr.nivel}` : "—", sub: curr?.label || "Sin nivel", color: curr?.color || "rgba(255,255,255,0.3)" },
-              { val: cuponesDisponibles.length || 0, sub: "Cupones listos", color: cuponesDisponibles.length > 0 ? "#fbbf24" : "rgba(255,255,255,0.3)" },
-            ].map((s, i, arr) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: "'Cinzel',serif", fontSize: "clamp(28px,5vw,36px)", fontWeight: "900", lineHeight: 1, color: s.color, textShadow: `0 0 20px ${s.color}80`, animation: cuponesDisponibles.length > 0 && i === 2 ? "coinBounce 2.5s ease-in-out infinite" : "none" }}>{s.val}</div>
-                  <div style={{ fontFamily: "'Cinzel',serif", fontSize: "8.5px", color: "rgba(200,185,240,0.4)", textTransform: "uppercase", letterSpacing: "0.13em", marginTop: "4px" }}>{s.sub}</div>
-                </div>
-                {i < arr.length - 1 && <div style={{ width: "1px", height: "40px", background: "rgba(255,255,255,0.07)" }} />}
+        {/* ── STATS ── (estilo v6: limpio, sin cajita, puente hacia el trayecto) */}
+        <div style={{ display: "flex", alignItems: "center", gap: "14px", justifyContent: "center", flexWrap: "wrap", marginBottom: "28px" }}>
+          {[
+            { val: referidosActivos, sub: "Aliados activos", color: curr?.color || "#a78bfa" },
+            { val: curr ? `Nv.${curr.nivel}` : "—", sub: curr?.label || "Sin nivel", color: curr?.color || "rgba(255,255,255,0.3)" },
+            { val: cuponesDisponibles.length || 0, sub: "Cupones listos", color: cuponesDisponibles.length > 0 ? "#fbbf24" : "rgba(255,255,255,0.3)" },
+          ].map((s, i, arr) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "clamp(28px,5vw,36px)", fontWeight: "900", lineHeight: 1, color: s.color, textShadow: `0 0 20px ${s.color}80`, animation: cuponesDisponibles.length > 0 && i === 2 ? "coinBounce 2.5s ease-in-out infinite" : "none" }}>{s.val}</div>
+                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "8.5px", color: "rgba(200,185,240,0.4)", textTransform: "uppercase", letterSpacing: "0.13em", marginTop: "4px" }}>{s.sub}</div>
               </div>
-            ))}
-          </div>
+              {i < arr.length - 1 && <div style={{ width: "1px", height: "40px", background: "rgba(255,255,255,0.07)" }} />}
+            </div>
+          ))}
         </div>
 
         {/* ══ TRAYECTO ══ */}
@@ -669,70 +702,77 @@ if (eventos) {
           </div>
         </div>
 
-        {/* ══ TABS ══ */}
-        <div style={{ display: "flex", gap: "4px", marginBottom: "26px", background: "linear-gradient(160deg,rgba(8,3,26,0.99) 0%,rgba(22,8,55,0.99) 100%)", borderRadius: "13px", padding: "4px", border: "1px solid rgba(212,175,55,0.3)" }}>
-          {[{ id: "niveles", label: "⚡ Niveles" }, { id: "ranking", label: "🏆 Ranking" }, { id: "como", label: "📖 Cómo funciona" }].map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ flex: 1, padding: "11px", background: activeTab === tab.id ? "linear-gradient(135deg,rgba(212,175,55,0.2),rgba(139,92,246,0.12))" : "transparent", border: activeTab === tab.id ? "1px solid rgba(212,175,55,0.5)" : "1px solid transparent", borderRadius: "10px", cursor: "pointer", color: activeTab === tab.id ? "#d4af37" : "rgba(200,185,240,0.4)", fontFamily: "'Cinzel',serif", fontSize: "10px", fontWeight: "700", letterSpacing: "0.1em", textTransform: "uppercase", transition: "all 0.3s", boxShadow: activeTab === tab.id ? "0 0 20px rgba(212,175,55,0.2)" : "none" }}>{tab.label}</button>
-          ))}
+        {/* ══════════════════════════════════════════════════════════════════
+             PARTE 3 — NIVELES / RANKING / CÓMO FUNCIONA (épica oscurecida)
+        ══════════════════════════════════════════════════════════════════ */}
+        <div style={{ position: "relative", overflow: "hidden", background: "linear-gradient(160deg,rgba(8,3,26,0.99) 0%,rgba(22,8,55,0.99) 100%)", border: "1px solid rgba(212,175,55,0.4)", borderRadius: "22px", padding: "clamp(20px,4vw,28px)", marginBottom: "36px", boxShadow: "0 0 0 1px rgba(212,175,55,0.06), 0 8px 40px rgba(212,175,55,0.1), inset 0 1px 0 rgba(255,230,120,0.1)" }}>
+          <div style={{ position: "absolute", top: 0, left: "12%", right: "12%", height: "1px", background: "linear-gradient(90deg,transparent,rgba(212,175,55,0.7),transparent)" }} />
+
+          {/* ══ TABS ══ */}
+          <div style={{ display: "flex", gap: "4px", marginBottom: "22px", background: "rgba(0,0,0,0.3)", borderRadius: "13px", padding: "4px", border: "1px solid rgba(212,175,55,0.25)" }}>
+            {[{ id: "niveles", label: "⚡ Niveles" }, { id: "ranking", label: "🏆 Ranking" }, { id: "como", label: "📖 Cómo funciona" }].map(tab => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ flex: 1, padding: "11px", background: activeTab === tab.id ? "linear-gradient(135deg,rgba(212,175,55,0.2),rgba(139,92,246,0.12))" : "transparent", border: activeTab === tab.id ? "1px solid rgba(212,175,55,0.5)" : "1px solid transparent", borderRadius: "10px", cursor: "pointer", color: activeTab === tab.id ? "#d4af37" : "rgba(200,185,240,0.4)", fontFamily: "'Cinzel',serif", fontSize: "10px", fontWeight: "700", letterSpacing: "0.1em", textTransform: "uppercase", transition: "all 0.3s", boxShadow: activeTab === tab.id ? "0 0 20px rgba(212,175,55,0.2)" : "none" }}>{tab.label}</button>
+            ))}
+          </div>
+
+          {/* ══ TAB: NIVELES ══ */}
+          {activeTab === "niveles" && (
+            <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,270px),1fr))" }}>
+              {ALIANZA_LEVELS.map(level => {
+                const cupon = cuponesDisponibles.find(c => c.nivel === level.nivel);
+                return <LevelCard key={level.nivel} level={level} referidosActivos={referidosActivos} cuponActivo={cupon} cuponesCanjeados={cuponesCanjeados} onClaim={(n, eventId) => setShowModal({ nivel: n, cupon })} />;
+              })}
+            </div>
+          )}
+
+          {/* ══ TAB: RANKING ══ */}
+          {activeTab === "ranking" && (
+            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "20px", padding: "26px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "9px", marginBottom: "6px" }}>
+                <div style={{ width: "3px", height: "18px", borderRadius: "999px", background: "linear-gradient(180deg,#fbbf24,#d97706)", boxShadow: "0 0 10px rgba(251,191,36,0.6)" }} />
+                <span style={{ fontFamily: "'Cinzel',serif", fontSize: "9px", fontWeight: "700", letterSpacing: "0.18em", color: "rgba(212,175,55,0.75)", textTransform: "uppercase" }}>Top Alianzas — Esta Semana</span>
+              </div>
+              {rankingAlianzas.length === 0
+                ? <div style={{ textAlign: "center", padding: "40px 20px", fontFamily: "'Cinzel',serif", fontSize: "11px", letterSpacing: "3px", color: "rgba(200,185,240,0.3)" }}>AÚN NO HAY ALIANZAS REGISTRADAS</div>
+                : rankingAlianzas.map((a, i) => <RankingCard key={a.id} alianza={a} position={i} />)
+              }
+              {alianzaUsuario && (
+                <div style={{ marginTop: "14px", padding: "16px 18px", background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: "14px" }}>
+                  <div style={{ fontFamily: "'Cinzel',serif", fontSize: "8px", letterSpacing: "3px", color: "rgba(167,139,250,0.55)", marginBottom: "6px" }}>TU ALIANZA</div>
+                  <div style={{ fontFamily: "'Cinzel',serif", fontSize: "15px", fontWeight: "900", color: "#a78bfa" }}>{alianzaUsuario.nombre}</div>
+                  <div style={{ fontFamily: "'Raleway',sans-serif", fontSize: "11px", color: "rgba(200,185,240,0.45)", marginTop: "4px" }}>{alianzaUsuario.total_members} miembros · {alianzaUsuario.puntuacion_semanal} pts esta semana</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ══ TAB: CÓMO FUNCIONA ══ */}
+          {activeTab === "como" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
+              <HowItWorksCarousel />
+              <div style={{ padding: "20px 22px", background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.14)", borderRadius: "16px" }}>
+                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "8.5px", fontWeight: "700", color: "#fbbf24", marginBottom: "14px", letterSpacing: "0.16em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "7px" }}>
+                  <span>⚠</span> Reglas del bono
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {[
+                    { text: "El bono aparece después de que tu aliado completa su pago de $1.", icon: "🔔" },
+                    { text: "Tienes exactamente 3 días para pagar tu $1 y activar el mes extra.", icon: "⏳", accent: "#fbbf24" },
+                    { text: "Si el cupón vence, se pierde — no se acumula ni se transfiere.", icon: "⚠", accent: "#f87171" },
+                    { text: "La membresía extendida entra en vigor inmediatamente al confirmar.", icon: "✓", accent: "#34d399" },
+                    { text: "Cada nivel que alcanzas desbloquea un bono. Lleva a las personas correctas — familia, amigos, quien ya busca algo más — y el Templo recompensa cada etapa del camino.", icon: "✦", accent: "#a78bfa" },
+                    { text: "Tus aliados también suman al conteo global del Templo: cada 6 Templarios nuevos libera una beca completa de 6 meses, y cada 25 dona un costal de alimento a un refugio canino.", icon: "🐾", accent: "#34d399" },
+                  ].map((rule, i) => (
+                    <div key={i} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                      <div style={{ flexShrink: 0, width: "24px", height: "24px", borderRadius: "8px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", marginTop: "1px" }}>{rule.icon}</div>
+                      <span style={{ fontFamily: "'Raleway',sans-serif", fontSize: "13px", color: rule.accent ? rule.accent : "rgba(200,185,240,0.75)", lineHeight: "1.65" }}>{rule.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* ══ TAB: NIVELES ══ */}
-        {activeTab === "niveles" && (
-          <div style={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,270px),1fr))" }}>
-            {ALIANZA_LEVELS.map(level => {
-              const cupon = cuponesDisponibles.find(c => c.nivel === level.nivel);
-              return <LevelCard key={level.nivel} level={level} referidosActivos={referidosActivos} cuponActivo={cupon} cuponesCanjeados={cuponesCanjeados} onClaim={(n, eventId) => setShowModal({ nivel: n, cupon })} />;
-            })}
-          </div>
-        )}
-
-        {/* ══ TAB: RANKING ══ */}
-        {activeTab === "ranking" && (
-          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "20px", padding: "26px", display: "flex", flexDirection: "column", gap: "12px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "9px", marginBottom: "6px" }}>
-              <div style={{ width: "3px", height: "18px", borderRadius: "999px", background: "linear-gradient(180deg,#fbbf24,#d97706)", boxShadow: "0 0 10px rgba(251,191,36,0.6)" }} />
-              <span style={{ fontFamily: "'Cinzel',serif", fontSize: "9px", fontWeight: "700", letterSpacing: "0.18em", color: "rgba(212,175,55,0.75)", textTransform: "uppercase" }}>Top Alianzas — Esta Semana</span>
-            </div>
-            {rankingAlianzas.length === 0
-              ? <div style={{ textAlign: "center", padding: "40px 20px", fontFamily: "'Cinzel',serif", fontSize: "11px", letterSpacing: "3px", color: "rgba(200,185,240,0.3)" }}>AÚN NO HAY ALIANZAS REGISTRADAS</div>
-              : rankingAlianzas.map((a, i) => <RankingCard key={a.id} alianza={a} position={i} />)
-            }
-            {alianzaUsuario && (
-              <div style={{ marginTop: "14px", padding: "16px 18px", background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: "14px" }}>
-                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "8px", letterSpacing: "3px", color: "rgba(167,139,250,0.55)", marginBottom: "6px" }}>TU ALIANZA</div>
-                <div style={{ fontFamily: "'Cinzel',serif", fontSize: "15px", fontWeight: "900", color: "#a78bfa" }}>{alianzaUsuario.nombre}</div>
-                <div style={{ fontFamily: "'Raleway',sans-serif", fontSize: "11px", color: "rgba(200,185,240,0.45)", marginTop: "4px" }}>{alianzaUsuario.total_members} miembros · {alianzaUsuario.puntuacion_semanal} pts esta semana</div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ══ TAB: CÓMO FUNCIONA ══ */}
-        {activeTab === "como" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
-            <HowItWorksCarousel />
-            <div style={{ padding: "20px 22px", background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.14)", borderRadius: "16px" }}>
-              <div style={{ fontFamily: "'Cinzel',serif", fontSize: "8.5px", fontWeight: "700", color: "#fbbf24", marginBottom: "14px", letterSpacing: "0.16em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "7px" }}>
-                <span>⚠</span> Reglas del bono
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {[
-                  { text: "El bono aparece después de que tu aliado completa su pago de $1.", icon: "🔔" },
-                  { text: "Tienes exactamente 3 días para pagar tu $1 y activar el mes extra.", icon: "⏳", accent: "#fbbf24" },
-                  { text: "Si el cupón vence, se pierde — no se acumula ni se transfiere.", icon: "⚠", accent: "#f87171" },
-                  { text: "La membresía extendida entra en vigor inmediatamente al confirmar.", icon: "✓", accent: "#34d399" },
-                  { text: "Cada nivel que alcanzas desbloquea un bono. Lleva a las personas correctas — familia, amigos, quien ya busca algo más — y el Templo recompensa cada etapa del camino.", icon: "✦", accent: "#a78bfa" },
-                  { text: "Tus aliados también suman al conteo global del Templo: cada 6 Templarios nuevos libera una beca completa de 6 meses, y cada 25 dona un costal de alimento a un refugio canino.", icon: "🐾", accent: "#34d399" },
-                ].map((rule, i) => (
-                  <div key={i} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                    <div style={{ flexShrink: 0, width: "24px", height: "24px", borderRadius: "8px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", marginTop: "1px" }}>{rule.icon}</div>
-                    <span style={{ fontFamily: "'Raleway',sans-serif", fontSize: "13px", color: rule.accent ? rule.accent : "rgba(200,185,240,0.75)", lineHeight: "1.65" }}>{rule.text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ══ CUPONES ACTIVOS ══ */}
         {cuponesDisponibles.length > 0 && (

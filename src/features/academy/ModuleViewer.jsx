@@ -1342,7 +1342,7 @@ const VideoPlayer = ({ cfg, videoId }) => {
 };
 
 // ─── Quick Nav ────────────────────────────────────────────────────────────────
-const QuickNav = () => {
+const QuickNav = ({ feedTourActive = false, onFeedTourClick } = {}) => {
   const { pathname, search } = useLocation();
   const ITEMS = [
     {
@@ -1377,8 +1377,27 @@ const QuickNav = () => {
       <nav aria-label="Acceso rápido" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 999, background: 'rgba(10,6,20,0.97)', borderTop: '1px solid rgba(192,132,252,0.2)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', display: 'flex', alignItems: 'stretch', justifyContent: 'space-around', height: '64px', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {ITEMS.map((item) => {
           const active = isActive(item);
+          const isFeedHighlighted = feedTourActive && item.label === 'Feed';
           return (
-            <Link key={item.to} to={item.to} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', textDecoration: 'none', color: active ? '#C084FC' : 'rgba(255,255,255,0.3)', borderTop: `2px solid ${active ? '#C084FC' : 'transparent'}`, padding: '6px 4px', transition: 'color 0.2s, border-color 0.2s', position: 'relative', WebkitTapHighlightColor: 'transparent', fontFamily: 'Cinzel, serif', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            <Link
+              key={item.to}
+              to={item.to}
+              state={isFeedHighlighted ? { celebrateAllianceUnlock: true } : undefined}
+              onClick={() => { if (isFeedHighlighted) onFeedTourClick?.(); }}
+              style={{
+                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                textDecoration: 'none',
+                color: isFeedHighlighted ? '#fff' : (active ? '#C084FC' : 'rgba(255,255,255,0.3)'),
+                borderTop: `2px solid ${active ? '#C084FC' : 'transparent'}`,
+                padding: '6px 4px', transition: 'color 0.2s, border-color 0.2s', position: 'relative',
+                WebkitTapHighlightColor: 'transparent', fontFamily: 'Cinzel, serif', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase',
+                ...(isFeedHighlighted ? {
+                  background: 'rgba(192,132,252,0.22)',
+                  borderRadius: '0.6rem',
+                  margin: '6px',
+                } : {}),
+              }}
+            >
               {active && (<div style={{ position: 'absolute', top: '-1px', left: '15%', right: '15%', height: '2px', background: 'linear-gradient(90deg, transparent, #C084FC, transparent)', borderRadius: '0 0 4px 4px', pointerEvents: 'none' }} />)}
               {item.icon}
               {item.label}
@@ -1475,6 +1494,8 @@ const ModuleViewer = () => {
   const [showEvidenceModal, setShowEvidenceModal] = useState(false);
   const [rewardAnimation, setRewardAnimation] = useState(null); // { xp, gems, coins }
   const [tourStep, setTourStep] = useState(0);
+  const [feedTourSeen, setFeedTourSeen] = useState(true); // asume visto hasta confirmar lo contrario (evita parpadeo)
+  const [feedTourLoading, setFeedTourLoading] = useState(true);
 
   const module = ACADEMY_MODULES.find(m => m.slug === slug);
   const isCompleted = completedModules.includes(slug);
@@ -1507,6 +1528,28 @@ const ModuleViewer = () => {
     fetchProtocolo();
   }, [user?.email]);
 
+  // Tour del Feed: se lee de Supabase (profiles.feed_tour_seen), no de localStorage —
+  // así se recuerda por cuenta, sin importar el dispositivo o navegador.
+  useEffect(() => {
+    if (!user?.id) return;
+    const fetchFeedTourSeen = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('feed_tour_seen')
+          .eq('id', user.id)
+          .single();
+        setFeedTourSeen(error ? true : !!data?.feed_tour_seen);
+      } catch (err) {
+        console.error('Error obteniendo feed_tour_seen:', err);
+        setFeedTourSeen(true); // ante la duda, no interrumpir con el tour
+      } finally {
+        setFeedTourLoading(false);
+      }
+    };
+    fetchFeedTourSeen();
+  }, [user?.id]);
+
   // Tour guiado: solo la primera vez que se abre este módulo, mientras no esté sellado
   useEffect(() => {
     if (protocoloLoading || isCompleted || !slug) return;
@@ -1521,6 +1564,28 @@ const ModuleViewer = () => {
     setTourStep(0);
     localStorage.setItem(`templo_tour_modulo_${slug}`, '1');
   }, [slug]);
+
+  // Tour del Feed (paso 4): se cierra únicamente al picarle de verdad a "Feed",
+  // y se marca en Supabase (profiles.feed_tour_seen) para que quede por cuenta, no por navegador.
+  const cerrarTourFeed = useCallback(() => {
+    setTourStep(0);
+    setFeedTourSeen(true);
+    if (user?.id) {
+      supabase
+        .from('profiles')
+        .update({ feed_tour_seen: true })
+        .eq('id', user.id)
+        .then(({ error }) => { if (error) console.error('Error guardando feed_tour_seen:', error); });
+    }
+  }, [user?.id]);
+
+  // Si el módulo YA estaba sellado antes de esta visita (no lo acabas de sellar ahora)
+  // y nunca has visto el tour del Feed, dispáralo también al entrar.
+  useEffect(() => {
+    if (protocoloLoading || feedTourLoading || feedTourSeen || !isCompleted || !slug) return;
+    const t = setTimeout(() => setTourStep(4), 700);
+    return () => clearTimeout(t);
+  }, [protocoloLoading, feedTourLoading, feedTourSeen, isCompleted, slug]);
 
   // Detecta cuando el usuario llega de verdad, con scroll, a la zona del ejercicio
   const exerciseGateRef = useRef(null);
@@ -1552,7 +1617,13 @@ const ModuleViewer = () => {
     addCrystals?.(rewards.gems + rewards.coins);
     setShowEvidenceModal(false);
     setRewardAnimation(rewards);
-    setTimeout(() => setRewardAnimation(null), 4000);
+    setTimeout(() => {
+      setRewardAnimation(null);
+      // Tour del Feed: solo una vez en la vida del usuario, y no si viene la ceremonia de graduación
+      if (protocolo !== 'R5' && !feedTourSeen) {
+        setTourStep(4);
+      }
+    }, 4000);
     // Trigger ceremonia si completó R5 (último módulo)
     if (protocolo === 'R5') {
       setTimeout(() => activarGraduacion(), 1200);
@@ -1881,7 +1952,54 @@ const ModuleViewer = () => {
         </div>
       )}
 
-    <QuickNav />
+    {tourStep === 4 && (
+      <>
+        {/* Franja superior: oscurece todo por encima de la barra inferior (incluye el botón VOLVER) */}
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))', background: 'rgba(5,2,10,0.86)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', zIndex: 99990, pointerEvents: 'auto' }} />
+        {/* Franja izquierda de la barra: bloquea "Hub" */}
+        <div style={{ position: 'fixed', bottom: 0, left: 0, width: '25%', height: 'calc(64px + env(safe-area-inset-bottom, 0px))', background: 'rgba(5,2,10,0.86)', zIndex: 99990, pointerEvents: 'auto' }} />
+        {/* Franja derecha de la barra: bloquea "Ranking" y "Perfil" */}
+        <div style={{ position: 'fixed', bottom: 0, left: '50%', right: 0, height: 'calc(64px + env(safe-area-inset-bottom, 0px))', background: 'rgba(5,2,10,0.86)', zIndex: 99990, pointerEvents: 'auto' }} />
+
+        {/* Aro de luz alrededor del hueco — decorativo, deja pasar el clic al botón real de abajo */}
+        <div style={{
+          position: 'fixed', bottom: 0, left: '25%', width: '25%',
+          height: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+          border: '2px solid #C084FC', borderBottom: 'none',
+          borderRadius: '0.85rem 0.85rem 0 0',
+          boxShadow: '0 0 30px #C084FC99, inset 0 0 24px #C084FC44',
+          zIndex: 99991, pointerEvents: 'none',
+          animation: 'feedSpotlightPulse 1.5s ease-in-out infinite',
+        }} />
+
+        {/* Mensaje del tour, justo arriba del hueco */}
+        <div style={{
+          position: 'fixed', left: '50%', transform: 'translateX(-50%)',
+          bottom: 'calc(64px + env(safe-area-inset-bottom, 0px) + 0.75rem)',
+          width: 'min(92vw, 380px)', zIndex: 99992, pointerEvents: 'none',
+          background: 'linear-gradient(135deg, rgba(30,10,45,0.98), rgba(15,5,25,0.98))',
+          border: '1px solid #C084FC88', borderRadius: '1rem',
+          padding: '1rem 1.25rem', textAlign: 'center',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.6), 0 0 30px #C084FC30',
+        }}>
+          <p style={{ fontFamily: '"Cinzel", serif', fontSize: 'clamp(0.7rem,2vw,0.8rem)', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#C084FC', marginBottom: '0.5rem' }}>🏛️ Conoce la Comunidad</p>
+          <p style={{ fontFamily: '"Crimson Text", serif', fontSize: 'clamp(0.85rem,2.3vw,0.98rem)', color: 'rgba(255,255,255,0.85)', lineHeight: 1.45, marginBottom: '0.6rem' }}>
+            Date una vuelta por ahí. Procura visitarla seguido — es importante compartir tus victorias y celebrar las de los demás.
+          </p>
+          <p style={{ fontFamily: '"Cinzel", serif', fontSize: 'clamp(0.62rem,1.5vw,0.7rem)', letterSpacing: '0.06em', color: '#C084FCcc', fontStyle: 'italic' }}>👇 Toca "Feed" para continuar</p>
+          <div style={{ fontSize: 'clamp(1.2rem,4vw,1.5rem)', color: '#C084FC', marginTop: '0.2rem', animation: 'tourModArrowBounce 1.2s ease-in-out infinite', filter: 'drop-shadow(0 0 12px #C084FC)' }}>⬇</div>
+        </div>
+
+        <style>{`
+          @keyframes feedSpotlightPulse {
+            0%,100%{ box-shadow: 0 0 30px #C084FC99, inset 0 0 24px #C084FC44; }
+            50%{ box-shadow: 0 0 48px #C084FCcc, inset 0 0 34px #C084FC66; }
+          }
+        `}</style>
+      </>
+    )}
+
+    <QuickNav feedTourActive={tourStep === 4} onFeedTourClick={cerrarTourFeed} />
     </div>
   );
 };

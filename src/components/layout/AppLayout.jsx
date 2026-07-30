@@ -59,6 +59,19 @@ useEffect(() => {
 const [unclaimedCount, setUnclaimedCount] = useState(0);
   const [bonusPopup, setBonusPopup] = useState(null);
   const [hideHeader, setHideHeader] = useState(false);
+  const [allianceSpotlight, setAllianceSpotlight] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const checkAllianceFlag = () => setAllianceSpotlight(!!localStorage.getItem(`tdp_alliance_spotlight_${user.id}`));
+    checkAllianceFlag();
+    window.addEventListener('focus', checkAllianceFlag);
+    window.addEventListener('storage', checkAllianceFlag);
+    return () => {
+      window.removeEventListener('focus', checkAllianceFlag);
+      window.removeEventListener('storage', checkAllianceFlag);
+    };
+  }, [user?.id]);
 
 useEffect(() => {
   const fix = () => {
@@ -179,6 +192,10 @@ useEffect(() => {
         @keyframes badgePulse {
           0%,100% { box-shadow: 0 0 6px rgba(255,68,68,0.6); transform: scale(1); }
           50%      { box-shadow: 0 0 16px rgba(255,68,68,1); transform: scale(1.15); }
+        }
+        @keyframes allianceBadgePulse {
+          0%,100% { box-shadow: 0 0 10px rgba(212,175,55,0.9), 0 0 20px rgba(212,175,55,0.5); transform: scale(1); }
+          50%      { box-shadow: 0 0 16px rgba(212,175,55,1), 0 0 32px rgba(212,175,55,0.7); transform: scale(1.18); }
         }
         @keyframes rewardTooltipIn {
           from { opacity:0; transform: translateX(-50%) translateY(4px); }
@@ -411,10 +428,19 @@ nav {
             <nav style={{flex:1,padding:'2px 6px',display:'flex',flexDirection:'column',gap:0,justifyContent:'flex-start',overflowY:'auto'}}>
               {NAV_ITEMS.map((item) => {
                 const isActive = location.pathname === item.path;
+                const showAllianceBadge = item.path === '/profile' && allianceSpotlight;
                 return (
                   <button key={item.path} onClick={() => { navigate(item.path); toggleSidebar(); }} className={`sidebar-nav-item ${isActive ? 'active' : 'inactive'}`}>
-                    <span style={{fontSize:20,filter:isActive?'drop-shadow(0 0 8px rgba(255,215,0,1))':'none'}}>{item.icon}</span>
+                    <span style={{fontSize:20,filter:isActive?'drop-shadow(0 0 8px rgba(255,215,0,1))':'none',position:'relative',display:'inline-flex'}}>
+                      {item.icon}
+                      {showAllianceBadge && (
+                        <span style={{position:'absolute',top:-4,right:-8,width:13,height:13,borderRadius:'50%',background:'linear-gradient(135deg,#D4AF37,#FFE566)',border:'1.5px solid rgba(255,229,102,0.9)',animation:'allianceBadgePulse 1.6s ease-in-out infinite'}}/>
+                      )}
+                    </span>
                     {item.label}
+                    {showAllianceBadge && (
+                      <span style={{marginLeft:'auto',fontSize:14,filter:'drop-shadow(0 0 6px rgba(212,175,55,0.9))'}}>🎁</span>
+                    )}
                   </button>
                 );
               })}
