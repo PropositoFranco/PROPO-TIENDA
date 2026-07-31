@@ -4,6 +4,7 @@ import { ProtectedRoute, AdminRoute } from './ProtectedRoute';
 import { useAuthStore } from '../store/useAuthStore';
 import AppLayout from '../components/layout/AppLayout';
 import MembershipGuard from './MembershipGuard';
+import RewardClaimGate from '../features/academy/RewardClaimGate';
 
 import LoginPage from '../features/auth/LoginPage';
 import RegisterPage from '../features/auth/RegisterPage';
@@ -125,6 +126,7 @@ export default function AppRouter() {
     <BrowserRouter>
       <AdminCursor />
       <Suspense fallback={null}>
+        <RewardClaimGate>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -193,6 +195,7 @@ export default function AppRouter() {
 
           <Route path="*" element={<CatchAll />} />
         </Routes>
+        </RewardClaimGate>
       </Suspense>
     </BrowserRouter>
   );

@@ -218,6 +218,7 @@ const STEPS=[
   {screen:"home",       highlight:"coins",         master:"Estos son tus PropoCoins.",           sub:"Nacen de completar tu protocolo semanal, y se usan para desbloquear herramientas extra. Entre más constante seas con tu evaluación, más PropoCoins acumulas.",btn:"Continuar"},
   {screen:"home",       highlight:"apoyo",         master:"Tus herramientas de apoyo.",          sub:"Claves, Victorias Rápidas y Mapas del Templo te dan técnicas extra para profundizar. Úsalas cuando quieras ir más allá de tu evaluación — no las necesitas para avanzar.",btn:"Continuar"},
   {screen:"home",       highlight:"templo",        master:"100 Templarios Dijeron.",             sub:"Aquí pones a prueba lo que vas aprendiendo y compites por un lugar en el podio. Es el juego del templo — divertido, pero no es tu evaluación.",btn:"Continuar"},
+  {screen:"evaluacion", highlight:null,            master:"Tu Evaluación Semanal.",              sub:"Cada semana respondes preguntas cortas por territorio, deslizando del 1 al 10. Toma menos de 5 minutos y es lo único que de verdad mueve tu progreso.",btn:"¿Y dónde vive esto?"},
   {screen:"territories",highlight:null,            master:"Los Territorios del Templo.",         sub:"Tu vida se organiza en 8 áreas: Cuerpo, Mente, Emociones, Relaciones, Riqueza, Vocación, Espiritualidad y Ocio. Tu Evaluación Semanal revisa estas áreas y te dice en cuál enfocarte primero.",btn:"Continuar"},
   {screen:"territories",highlight:"t_connections", master:"Cada color te ubica.",                sub:"Los colores y símbolos conectan cada herramienta con su territorio, para que sepas de un vistazo en qué área estás trabajando.",btn:"Ver la Tienda"},
   {screen:"modules",    highlight:null,            master:"La Tienda del Templo.",               sub:"Aquí desbloqueas herramientas extra con los PropoCoins que ganaste en tu evaluación. Revisa el objetivo y el territorio de cada una antes de canjear.",btn:"Ver tu Arsenal"},
@@ -225,7 +226,7 @@ const STEPS=[
   {screen:"missions",   highlight:null,            master:"Operaciones del Templo.",             sub:"Retos activos con recompensa fija en XP y PropoCoins — desde entrar por primera vez a la tienda, hasta pelear el Top 1 en 100 Templarios. Cuando el avance llega a 100%, reclamas.",btn:"Ver la Academia"},
   {screen:"academia",   highlight:null,            master:"La Academia del Templo.",             sub:"Cada semana se abre un módulo nuevo, y tu Evaluación Semanal vive justo aquí dentro. Tus módulos anteriores quedan guardados como historial de tu crecimiento.",btn:"Ver la Comunidad"},
   {screen:"comunidad",  highlight:null,            master:"La Comunidad del Templo.",            sub:"Publica tu avance o tus dudas y gana XP y PropoCoins solo por participar. Cada punto te acerca al siguiente rango — de Discípulo a Guardián, y más allá.",btn:"Finalizar"},
-  {screen:"final",      highlight:null,            master:"El templo te espera, Templario.",     sub:"Recuerda: tu Evaluación Semanal es lo único que no puedes saltarte. Menos de 5 minutos, cada semana. Todo lo demás es tuyo para explorar cuando quieras.",btn:"Completar mi Evaluación"},
+  {screen:"final",      highlight:null,            master:"El templo te espera, Templario.",     sub:"Recuerda: tu Evaluación Semanal es lo único que no puedes saltarte. Menos de 5 minutos, cada semana. Y si alguna vez tienes dudas, puedes volver a ver este tutorial completo desde el botón Tutorial, ahí abajo a la derecha de tu Lobby.",btn:"Completar mi Evaluación"},
 ];
 
 // ─── TITLE SHIMMER ───────────────────────────────────────
@@ -797,6 +798,115 @@ function TerritoriesScreen({highlight,mobile,panelH}) {
           );
         })}
       </motion.div>
+    </div>
+  );
+}
+
+// ─── EVALUATION SCREEN ───────────────────────────────────
+const EVAL_CATEGORIES=["Visión","Control","Influencia","Autonomía","Realización"];
+const EVAL_QUESTIONS=[
+  {id:"V1",text:"Tengo claridad total de lo que quiero construir este año"},
+  {id:"V2",text:"Sé exactamente cuáles son mis 3 prioridades actuales"},
+  {id:"V3",text:"Planifico mi semana antes de comenzarla"},
+  {id:"V4",text:"Evito tareas que no aportan a mis metas principales"},
+  {id:"V5",text:"Siento dirección y propósito en mi día a día"},
+];
+
+function EvalSlider({value=5,mobile}) {
+  const pct=(value/10)*100;
+  return (
+    <div style={{marginTop:10}}>
+      <div style={{position:"relative",height:6,borderRadius:3,background:"rgba(255,255,255,0.08)"}}>
+        <div style={{position:"absolute",left:0,top:0,height:"100%",width:`${pct}%`,
+          borderRadius:3,background:`linear-gradient(90deg,${C.blue},${C.cyan})`}}/>
+        <div style={{position:"absolute",top:"50%",left:`${pct}%`,
+          width:16,height:16,borderRadius:"50%",background:"#fff",
+          border:`2px solid ${C.blue}`,transform:"translate(-50%,-50%)",
+          boxShadow:`0 0 8px ${C.blueGlow}`}}/>
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
+        {Array.from({length:5}).map((_,i)=>(
+          <div key={i} style={{height:3,width:"18%",borderRadius:2,
+            background:i<Math.round(value/2)?C.blue:"rgba(255,255,255,0.08)"}}/>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EvaluationScreen({mobile,panelH}) {
+  return (
+    <div style={{height:"100%",overflowY:"auto",
+      padding:mobile?`16px 14px ${panelH+20}px`:`28px 60px ${panelH+30}px`}}>
+      <div style={{maxWidth:620,margin:"0 auto"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontFamily:"'Cinzel',serif",fontSize:mobile?10:12,letterSpacing:2,
+            color:"rgba(255,255,255,0.55)",textTransform:"uppercase"}}>Progreso de Evaluación</div>
+          <div style={{fontSize:mobile?11:12,color:"rgba(255,255,255,0.55)"}}>1 de 5</div>
+        </div>
+        <div style={{height:5,borderRadius:3,background:"rgba(255,255,255,0.08)",marginBottom:16}}>
+          <div style={{height:"100%",width:"20%",borderRadius:3,
+            background:`linear-gradient(90deg,${C.blue},${C.cyan})`,
+            boxShadow:`0 0 8px ${C.blueGlow}`}}/>
+        </div>
+        <div style={{display:"flex",gap:mobile?6:10,overflowX:"auto",marginBottom:16,paddingBottom:4}}>
+          {EVAL_CATEGORIES.map((cat,i)=>(
+            <div key={cat} style={{flexShrink:0,padding:mobile?"6px 10px":"8px 16px",
+              borderRadius:8,fontFamily:"'Cinzel',serif",fontSize:mobile?9:11,fontWeight:700,
+              letterSpacing:1,whiteSpace:"nowrap",
+              color:i===0?"#fff":"rgba(255,255,255,0.35)",
+              borderBottom:i===0?`2px solid ${C.blue}`:"2px solid transparent",
+              textShadow:i===0?`0 0 8px ${C.blueGlow}`:"none"}}>
+              {cat}
+            </div>
+          ))}
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:14,
+          background:`linear-gradient(135deg,${C.blue},#2255CC)`,
+          borderRadius:14,padding:mobile?"14px 16px":"18px 22px",marginBottom:18,
+          boxShadow:`0 0 20px rgba(68,136,255,0.25)`}}>
+          <div style={{width:mobile?38:46,height:mobile?38:46,borderRadius:"50%",
+            background:"rgba(255,255,255,0.18)",display:"flex",alignItems:"center",
+            justifyContent:"center",fontSize:mobile?18:22,flexShrink:0}}>👁</div>
+          <div>
+            <div style={{fontFamily:"'Cinzel',serif",fontSize:mobile?16:20,fontWeight:900,
+              color:"#fff"}}>Visión</div>
+            <div style={{fontSize:mobile?11:12,color:"rgba(255,255,255,0.85)",marginTop:2}}>
+              Claridad de propósito y dirección de vida</div>
+          </div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {EVAL_QUESTIONS.map(q=>(
+            <div key={q.id} style={{background:"rgba(255,255,255,0.04)",
+              border:"1px solid rgba(255,255,255,0.08)",borderRadius:12,
+              padding:mobile?"12px 14px":"16px 18px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
+                <div style={{flex:1}}>
+                  <div style={{display:"inline-block",fontFamily:"'Cinzel',serif",fontSize:9,
+                    fontWeight:700,letterSpacing:1,color:C.blue,
+                    background:"rgba(68,136,255,0.12)",borderRadius:4,
+                    padding:"2px 6px",marginBottom:6}}>{q.id}</div>
+                  <div style={{fontSize:mobile?12:13,color:C.blue,fontWeight:600,lineHeight:1.4}}>
+                    {q.text}</div>
+                </div>
+                <div style={{fontFamily:"'Cinzel',serif",fontSize:mobile?14:16,fontWeight:900,
+                  color:"#fff",flexShrink:0}}>5</div>
+              </div>
+              <EvalSlider value={5} mobile={mobile}/>
+            </div>
+          ))}
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:20,gap:10}}>
+          <div style={{flex:1,textAlign:"center",padding:mobile?"9px 0":"11px 0",
+            borderRadius:8,border:"1px solid rgba(255,255,255,0.12)",
+            fontFamily:"'Cinzel',serif",fontSize:mobile?11:12,fontWeight:700,
+            color:"rgba(255,255,255,0.4)"}}>← Anterior</div>
+          <div style={{flex:1,textAlign:"center",padding:mobile?"9px 0":"11px 0",
+            borderRadius:8,background:`linear-gradient(90deg,${C.blue},${C.cyan})`,
+            fontFamily:"'Cinzel',serif",fontSize:mobile?11:12,fontWeight:700,color:"#fff",
+            boxShadow:`0 0 12px ${C.blueGlow}`}}>Siguiente →</div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1426,29 +1536,62 @@ function CommunityScreen({mobile,panelH}) {
 }
 
 // ─── FINAL SCREEN ────────────────────────────────────────
-function FinalScreen({mobile}) {
+function FinalScreen({mobile,panelH}) {
   return (
-    <div style={{height:"100%",display:"flex",alignItems:"center",justifyContent:"center",
-      flexDirection:"column",gap:mobile?12:18,position:"relative"}}>
-      <Particles count={10} colors={[C.goldGlow,"rgba(255,229,102,0.8)",C.purpleGlow,C.blueGlow]}/>
-      <motion.div initial={{scale:0}} animate={{scale:1}} transition={{type:"spring",stiffness:90}}
-        style={{fontSize:mobile?70:100,filter:`drop-shadow(0 0 14px ${C.gold})`}}>🏛</motion.div>
-      <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.4}}
-        style={{fontFamily:"'Cinzel Decorative',serif",fontSize:mobile?18:26,fontWeight:900,
-          color:C.goldBright,textShadow:`0 0 14px ${C.gold}`,letterSpacing:mobile?2:4,textAlign:"center"}}>
-        EL TEMPLO TE ESPERA</motion.div>
-      <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.7}}
-        style={{fontFamily:"'Cinzel',serif",fontSize:mobile?9:12,letterSpacing:mobile?2:4,
-          color:"rgba(212,175,55,0.55)",textAlign:"center"}}>
-        · TU CAMINO · TU TEMPLO · TU LEGADO ·</motion.div>
-      <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:1}}
-        style={{display:"flex",gap:mobile?18:36,marginTop:mobile?4:8}}>
-        {["🗝","⚡","🗺","🧘","🎯","🎒","✨"].map((ic,i)=>(
-          <div key={i} style={{fontSize:mobile?20:26,filter:`drop-shadow(0 0 4px ${C.gold})`,
-            animation:`floatIcon ${1.8+i*0.12}s ease-in-out ${i*0.14}s infinite alternate`}}>
-            {ic}
-          </div>
-        ))}
+    <div style={{height:"100%",position:"relative"}}>
+      <motion.div initial={{opacity:1}} animate={{opacity:0.12}} transition={{delay:1.4,duration:0.7}}
+        style={{height:"100%",display:"flex",alignItems:"center",justifyContent:"center",
+        flexDirection:"column",gap:mobile?12:18,position:"relative"}}>
+        <Particles count={10} colors={[C.goldGlow,"rgba(255,229,102,0.8)",C.purpleGlow,C.blueGlow]}/>
+        <motion.div initial={{scale:0}} animate={{scale:1}} transition={{type:"spring",stiffness:90}}
+          style={{fontSize:mobile?70:100,filter:`drop-shadow(0 0 14px ${C.gold})`}}>🏛</motion.div>
+        <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.4}}
+          style={{fontFamily:"'Cinzel Decorative',serif",fontSize:mobile?18:26,fontWeight:900,
+            color:C.goldBright,textShadow:`0 0 14px ${C.gold}`,letterSpacing:mobile?2:4,textAlign:"center"}}>
+          EL TEMPLO TE ESPERA</motion.div>
+        <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.7}}
+          style={{fontFamily:"'Cinzel',serif",fontSize:mobile?9:12,letterSpacing:mobile?2:4,
+            color:"rgba(212,175,55,0.55)",textAlign:"center"}}>
+          · TU CAMINO · TU TEMPLO · TU LEGADO ·</motion.div>
+        <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:1}}
+          style={{display:"flex",gap:mobile?18:36,marginTop:mobile?4:8}}>
+          {["🗝","⚡","🗺","🧘","🎯","🎒","✨"].map((ic,i)=>(
+            <div key={i} style={{fontSize:mobile?20:26,filter:`drop-shadow(0 0 4px ${C.gold})`,
+              animation:`floatIcon ${1.8+i*0.12}s ease-in-out ${i*0.14}s infinite alternate`}}>
+              {ic}
+            </div>
+          ))}
+        </motion.div>
+      </motion.div>
+
+      {/* ── OSCURECIDO + RINCÓN DEL TUTORIAL ── */}
+      <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:1.4,duration:0.6}}
+        style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.72)",zIndex:40,pointerEvents:"none"}}/>
+
+      <motion.div initial={{opacity:0,scale:0.8}} animate={{opacity:1,scale:1}}
+        transition={{delay:1.6,type:"spring",stiffness:120}}
+        style={{position:"absolute",bottom:panelH+(mobile?34:44),right:mobile?14:26,zIndex:56,
+          display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8,maxWidth:mobile?170:220}}>
+        <div style={{textAlign:"right",
+          fontFamily:"'Nunito',sans-serif",fontSize:mobile?10:12,
+          color:"rgba(255,255,255,0.85)",lineHeight:1.4,
+          textShadow:"0 0 6px rgba(0,0,0,0.9)"}}>
+          Aquí siempre puedes volver a ver este tutorial
+        </div>
+        <div style={{position:"relative",flexShrink:0}}>
+          <GlowRing color={C.orange} size={mobile?90:120}/>
+          <motion.div animate={{scale:[1,1.06,1]}}
+            transition={{duration:1.6,repeat:Infinity,ease:"easeInOut"}}
+            style={{display:"flex",alignItems:"center",gap:6,
+            padding:mobile?"8px 12px":"10px 16px",borderRadius:20,
+            background:`linear-gradient(135deg,${C.orange},#CC5500)`,
+            border:`1px solid ${C.orangeGlow}`,
+            boxShadow:`0 0 18px ${C.orangeGlow}`,position:"relative",zIndex:1}}>
+            <span style={{fontSize:mobile?14:16}}>🎓</span>
+            <span style={{fontFamily:"'Cinzel',serif",fontSize:mobile?10:12,fontWeight:700,
+              color:"#fff",letterSpacing:1,textShadow:"0 0 8px rgba(0,0,0,0.5)"}}>TUTORIAL</span>
+          </motion.div>
+        </div>
       </motion.div>
     </div>
   );
@@ -1727,6 +1870,13 @@ export default function TStoreTutorial({onComplete}) {
               {...commonScreenProps}/>
           </motion.div>
         )}
+        {cur.screen==="evaluacion"&&(
+          <motion.div key="evaluacion"
+            initial={{opacity:0,scale:1.04}} animate={{opacity:1,scale:1}} exit={{opacity:0,scale:0.97}}
+            transition={{duration:0.55}} style={{position:"absolute",inset:0}}>
+            <EvaluationScreen {...commonScreenProps}/>
+          </motion.div>
+        )}
         {cur.screen==="territories"&&(
           <motion.div key="territories"
             initial={{opacity:0,scale:1.06}} animate={{opacity:1,scale:1}} exit={{opacity:0,scale:0.96}}
@@ -1777,7 +1927,7 @@ export default function TStoreTutorial({onComplete}) {
           <motion.div key="final"
             initial={{opacity:0,scale:1.08}} animate={{opacity:1,scale:1}} exit={{opacity:0,scale:0.95}}
             transition={{duration:0.8}} style={{position:"absolute",inset:0}}>
-            <FinalScreen mobile={mobile}/>
+            <FinalScreen mobile={mobile} panelH={panelH}/>
           </motion.div>
         )}
       </AnimatePresence>

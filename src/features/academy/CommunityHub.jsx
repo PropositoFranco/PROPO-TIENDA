@@ -2749,9 +2749,104 @@ if (!error) {
   };
 
   // ════════════════════════════════════════════════════════════════════════════
+  //  Cuenta regresiva a cierre de ciclo (Lunes 00:00 UTC / día 1 de mes 00:00 UTC)
+  // ════════════════════════════════════════════════════════════════════════════
+  function useClosureCountdown() {
+    const calc = () => {
+      const now = new Date();
+      const nextMonday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      const day = nextMonday.getUTCDay();
+      const daysToAdd = day === 1 ? 7 : ((8 - day) % 7) || 7;
+      nextMonday.setUTCDate(nextMonday.getUTCDate() + daysToAdd);
+      const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+      const parts = (target) => {
+        const diff = Math.max(0, target - now);
+        return {
+          d: Math.floor(diff / 86400000),
+          h: Math.floor((diff % 86400000) / 3600000),
+          m: Math.floor((diff % 3600000) / 60000),
+          s: Math.floor((diff % 60000) / 1000),
+        };
+      };
+      return { '7d': parts(nextMonday), '30d': parts(nextMonth) };
+    };
+    const [countdown, setCountdown] = useState(calc);
+    useEffect(() => {
+      const id = setInterval(() => setCountdown(calc()), 1000);
+      return () => clearInterval(id);
+    }, []);
+    return countdown;
+  }
+
+  // ── Cajita de dígito individual (estilo reloj digital) ──
+  const CountdownDigit = ({ value, unit, color, urgent }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{
+        fontFamily: '"Cinzel", serif', fontWeight: 900,
+        fontSize: 'clamp(1.1rem,4vw,1.6rem)', lineHeight: 1,
+        color: '#fff', minWidth: '1.5em', textAlign: 'center',
+        padding: '0.15em 0.1em',
+        background: `linear-gradient(160deg, rgba(${color},0.5), rgba(${color},0.15))`,
+        border: `1.5px solid rgba(${color},0.9)`,
+        borderRadius: '0.4rem',
+        textShadow: `0 0 14px rgba(${color},1), 0 0 28px rgba(${color},0.6)`,
+        boxShadow: `0 0 18px rgba(${color},0.6), inset 0 1px 0 rgba(255,255,255,0.25)`,
+        animation: urgent ? 'countdownDigitBlink 1s ease-in-out infinite' : 'none',
+      }}>{String(value).padStart(2, '0')}</div>
+      <span style={{
+        fontFamily: '"Cinzel", serif', fontWeight: 800, fontSize: '0.5rem',
+        color: `rgba(${color},0.9)`, letterSpacing: '0.1em', marginTop: '0.2rem',
+      }}>{unit}</span>
+    </div>
+  );
+
+  // ── Contador urgente premium — grande, brillante, con segundero en vivo ──
+  const UrgentCountdown = ({ time, size = 'normal' }) => {
+    const isCritical = time.d === 0 && time.h < 6;
+    const isWarning  = time.d === 0 && time.h < 24 && !isCritical;
+    const color = isCritical ? '239,68,68' : isWarning ? '251,146,60' : '245,197,24';
+    const scale = size === 'large' ? 1 : 0.72;
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem',
+        transform: `scale(${scale})`, transformOrigin: 'center',
+      }}>
+        <span style={{
+          fontFamily: '"Cinzel", serif', fontWeight: 900,
+          fontSize: '0.68rem', letterSpacing: '0.2em', textTransform: 'uppercase',
+          color: `rgba(${color},1)`,
+          textShadow: `0 0 12px rgba(${color},0.9)`,
+        }}>{isCritical ? '🔥 ÚLTIMA HORA' : '⏳ CIERRA EN'}</span>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '0.35rem',
+          padding: '0.5em 0.85em',
+          borderRadius: '0.9rem',
+          background: `linear-gradient(135deg, rgba(${color},0.22), rgba(6,4,14,0.92))`,
+          border: `2px solid rgba(${color},0.85)`,
+          boxShadow: `0 0 30px rgba(${color},0.55), 0 0 60px rgba(${color},0.25), inset 0 1px 0 rgba(255,255,255,0.15)`,
+          animation: `countdownBoxPulse ${isCritical ? '0.8s' : '2.2s'} ease-in-out infinite`,
+        }}>
+          {time.d > 0 && (
+            <>
+              <CountdownDigit value={time.d} unit="D" color={color} />
+              <span style={{ color: `rgba(${color},0.8)`, fontWeight: 900, fontSize: '1.1rem', marginBottom: '0.9rem' }}>:</span>
+            </>
+          )}
+          <CountdownDigit value={time.h} unit="H" color={color} />
+          <span style={{ color: `rgba(${color},0.8)`, fontWeight: 900, fontSize: '1.1rem', marginBottom: '0.9rem' }}>:</span>
+          <CountdownDigit value={time.m} unit="M" color={color} />
+          <span style={{ color: `rgba(${color},0.8)`, fontWeight: 900, fontSize: '1.1rem', marginBottom: '0.9rem' }}>:</span>
+          <CountdownDigit value={time.s} unit="S" color={color} urgent={isCritical} />
+        </div>
+      </div>
+    );
+  };
+
+  // ════════════════════════════════════════════════════════════════════════════
   //  TAB: LEADERBOARD — TEMPLO DORADO
   // ════════════════════════════════════════════════════════════════════════════
   const LeaderboardTab = ({ myUser, getLvl, levelCfg }) => {
+    const closureCountdown = useClosureCountdown();
     const [data7d,    setData7d]    = useState([]);
     const [data30d,   setData30d]   = useState([]);
     const [dataAll,   setDataAll]   = useState([]);
@@ -3496,31 +3591,34 @@ if (!error) {
                     }}>
                       {/* Header período */}
                       <div style={{
-                        padding: '0.75rem 1.1rem',
+                        padding: '0.85rem 1.1rem 1rem',
                         borderBottom: `1px solid rgba(${periodAccentRgb},0.25)`,
                         background: `linear-gradient(135deg, rgba(${periodAccentRgb},0.18), rgba(${periodAccentRgb},0.05))`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '0.5rem',
                       }}>
-                        <p style={{
-                          fontFamily: '"Cinzel", serif',
-                          fontWeight: 800,
-                          fontSize: 'clamp(0.7rem,1.8vw,0.82rem)',
-                          color: periodAccent,
-                          margin: 0,
-                          letterSpacing: '0.12em',
-                          textTransform: 'uppercase',
-                          textShadow: `0 0 14px rgba(${periodAccentRgb},0.8)`,
-                        }}>{periodLabel}</p>
-                        <span style={{
-                          fontFamily: '"Cinzel", serif',
-                          fontSize: '0.6rem',
-                          color: `rgba(${periodAccentRgb},0.6)`,
-                          fontWeight: 700,
-                          letterSpacing: '0.08em',
-                        }}>{periodPrizes.length} premios</span>
+                        <div style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          gap: '0.5rem', marginBottom: '0.7rem',
+                        }}>
+                          <p style={{
+                            fontFamily: '"Cinzel", serif',
+                            fontWeight: 800,
+                            fontSize: 'clamp(0.7rem,1.8vw,0.82rem)',
+                            color: periodAccent,
+                            margin: 0,
+                            letterSpacing: '0.12em',
+                            textTransform: 'uppercase',
+                            textShadow: `0 0 14px rgba(${periodAccentRgb},0.8)`,
+                          }}>{periodLabel}</p>
+                          <span style={{
+                            fontFamily: '"Cinzel", serif',
+                            fontSize: '0.6rem',
+                            color: `rgba(${periodAccentRgb},0.6)`,
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            whiteSpace: 'nowrap',
+                          }}>{periodPrizes.length} premios</span>
+                        </div>
+                        <UrgentCountdown time={closureCountdown[period]} size="large" />
                       </div>
 
                       {/* Lista premios */}
@@ -3801,6 +3899,14 @@ if (!error) {
                 0%,100% { opacity: 0.4; transform: scaleX(0.97); }
                 50%      { opacity: 1;   transform: scaleX(1); }
               }
+              @keyframes countdownBoxPulse {
+                0%,100% { transform: scale(1);    filter: brightness(1); }
+                50%      { transform: scale(1.035); filter: brightness(1.25); }
+              }
+              @keyframes countdownDigitBlink {
+                0%,100% { opacity: 1; }
+                50%      { opacity: 0.35; }
+              }
             `}</style>
 
             {/* Icono ranking */}
@@ -3895,17 +4001,19 @@ if (!error) {
               overflow: 'hidden',
             }}>
               <div style={{
-                padding: '0.75rem 1.25rem',
+                padding: '0.75rem 1.25rem 0.9rem',
                 borderBottom: `1px solid rgba(${accentRgb},0.2)`,
                 background: `linear-gradient(135deg, rgba(${accentRgb},0.12), rgba(10,6,20,0.7))`,
-                display: 'flex', alignItems: 'center', gap: '0.5rem',
               }}>
                 <p style={{
                   fontFamily: '"Cinzel", serif', fontWeight: 800,
                   fontSize: 'clamp(0.75rem,2vw,0.88rem)', color: C.gold,
-                  margin: 0, letterSpacing: '0.1em', textTransform: 'uppercase',
+                  margin: '0 0 0.6rem', letterSpacing: '0.1em', textTransform: 'uppercase',
                   textShadow: `0 0 16px rgba(${accentRgb},0.8)`,
                 }}>{title}</p>
+                {snapKey !== 'alltime' && (
+                  <UrgentCountdown time={closureCountdown[snapKey]} />
+                )}
               </div>
               {loading ? (
                 <div style={{ padding: '1.5rem', textAlign: 'center' }}><Spinner /></div>

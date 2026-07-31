@@ -22,6 +22,7 @@ export const usePrizeStore = create((set, get) => ({
         .select('*')
         .eq('user_id', user.id)
         .eq('claimed', false)
+        .neq('category', 'community_ranking')
         .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle();

@@ -2647,5 +2647,500 @@ window.addEventListener('message', function(e) {
 scaleScene();
 window.addEventListener('resize', scaleScene);
 </script>
+<!-- ══════════════════════════════════════════
+     EL ORÁCULO — "¿Sabías que...?"  v3
+     Carrusel horizontal real (varias tarjetas visibles a la vez),
+     scroll nativo con snap, fotos completas sin recortar.
+══════════════════════════════════════════ -->
+<button id="oraculo-btn" aria-label="El Oráculo" style="
+  position:fixed; bottom:calc(88px + env(safe-area-inset-bottom)); left:16px; z-index:900;
+  width:58px; height:58px; border-radius:50%; cursor:pointer;
+  background:linear-gradient(160deg, rgba(30,16,4,0.95), rgba(10,5,32,0.98));
+  border:1px solid var(--gold-dim); display:flex; align-items:center; justify-content:center;
+  font-size:24px; box-shadow:0 0 16px rgba(212,175,55,0.35);">🔮</button>
+
+<div id="oraculo-modal" style="
+  position:fixed; inset:0; z-index:2500; display:none; flex-direction:column; align-items:center; justify-content:center;
+  background:rgba(1,0,10,0); backdrop-filter:blur(0px); transition:all .35s ease;">
+
+  <div style="width:min(96vw,1180px); padding:0 8px; box-sizing:border-box;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <span id="oraculo-chapter-label" style="font-family:'Cinzel',serif; font-size:11px; letter-spacing:2.5px;"></span>
+      <button id="oraculo-close" style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.85);
+        width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:16px; flex-shrink:0;">✕</button>
+    </div>
+    <div id="oraculo-progress" style="display:flex; gap:4px; margin-bottom:18px;"></div>
+  </div>
+
+  <div style="position:relative; width:min(96vw,1180px);">
+    <button id="oraculo-arrow-prev" aria-label="Anterior" style="
+      position:absolute; left:-6px; top:50%; transform:translateY(-50%); z-index:25;
+      width:40px; height:40px; border-radius:50%; border:1px solid rgba(255,255,255,0.25);
+      background:rgba(10,6,20,0.75); color:rgba(255,255,255,0.9); font-size:18px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px);">‹</button>
+    <button id="oraculo-arrow-next" aria-label="Siguiente" style="
+      position:absolute; right:-6px; top:50%; transform:translateY(-50%); z-index:25;
+      width:40px; height:40px; border-radius:50%; border:1px solid rgba(255,255,255,0.25);
+      background:rgba(10,6,20,0.75); color:rgba(255,255,255,0.9); font-size:18px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px);">›</button>
+
+    <div id="oraculo-track" style="
+      display:flex; gap:16px; overflow-x:auto; scroll-snap-type:x mandatory; scroll-behavior:smooth;
+      padding:6px clamp(16px, calc(50% - 150px), 40%) 10px; -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;"></div>
+  </div>
+</div>
+
+<style>
+#oraculo-track::-webkit-scrollbar { display:none; }
+@keyframes oraclePulseBtn { 0%,100%{ box-shadow:0 0 16px rgba(212,175,55,0.5);} 50%{ box-shadow:0 0 30px rgba(212,175,55,0.95), 0 0 46px rgba(212,175,55,0.35);} }
+@keyframes oracleLive { 0%,100%{ opacity:1;} 50%{ opacity:0.3;} }
+@keyframes oracleFloat { 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-8px);} }
+#oraculo-btn.pulse { animation: oraclePulseBtn 2s ease-in-out infinite; }
+.oraculo-card { scroll-snap-align:center; flex:0 0 auto; width:300px; border-radius:20px; overflow:hidden;
+  background:linear-gradient(160deg, rgba(6,2,22,0.99), rgba(3,1,12,0.99));
+  transition:transform .3s ease, opacity .3s ease, border-color .3s ease, box-shadow .3s ease;
+  opacity:0.5; transform:scale(0.94); cursor:pointer; }
+.oraculo-card.active { opacity:1; transform:scale(1); }
+@media (max-width:640px){ .oraculo-card{ width:78vw; } }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  const R_STORE_CLAVES = 'store?tab=claves';
+  const R_STORE_VICTORIAS = 'store?tab=victorias';
+  const R_STORE = 'store';
+  const R_MISSIONS = 'missions';
+  const R_ARENA = 'games/templarios-dijeron';
+
+  const CHAPTERS = [
+    { label: 'LA TIENDA',      color: '#D4AF37' },
+    { label: 'MISIONES',       color: '#8b5cf6' },
+    { label: '100 TEMPLARIOS', color: '#f59e0b' },
+  ];
+
+  // ── Fotos reales, tomadas directo de tus cards (mismas que usa la Tienda) ──
+  // Bucket real: t-store-assets (público), carpeta hero-cards/ — sube ahí las 6 fotos.
+  const SUPABASE_IMG_BASE = "https://hdwzhwuhlrtrmhnecypm.supabase.co/storage/v1/object/public/t-store-assets/hero-cards";
+  const IMG_CLAVE01_HERO = `${SUPABASE_IMG_BASE}/clave01-hero.jpg`;
+  const IMG_VR04_HERO = `${SUPABASE_IMG_BASE}/victoria-rapida-04-hero.jpg`;
+  const IMG_CARTOGRAFO_HERO = `${SUPABASE_IMG_BASE}/mision-cartografo-hero.jpg`;
+  const IMG_OBSERVADOR_HERO = `${SUPABASE_IMG_BASE}/mision-observador-hero.jpg`;
+  const IMG_CONSTANCIA_HERO = `${SUPABASE_IMG_BASE}/mision-constancia-hero.jpg`;
+  const IMG_ASCENSO_HERO = `${SUPABASE_IMG_BASE}/ascenso-ranking-hero.jpg`;
+
+
+  const SLIDES = [
+    { ch:0, kind:'staff', badge:'LA TIENDA',
+      hook:'tu vida está dividida en 8 Territorios — y probablemente hay 2 o 3 que llevas años ignorando sin darte cuenta.',
+      cta:'Ver mis 8 territorios', route:R_STORE },
+    { ch:0, kind:'photo', img:IMG_CLAVE01_HERO, badge:'CLAVE',
+      hook:'tienes un protocolo que usan los Navy SEALs para controlar la mente bajo presión extrema — en solo 4 minutos.',
+      cta:'Desbloquear el protocolo', route:R_STORE_CLAVES },
+    { ch:0, kind:'photo', img:IMG_VR04_HERO, badge:'VICTORIA RÁPIDA',
+      hook:'hay una herramienta que revela exactamente qué hacen los CEOs antes de tocar el celular por la mañana.',
+      cta:'Programar mi cerebro', route:R_STORE_VICTORIAS },
+    { ch:0, kind:'icon', icon:'🗺️', badge:'LA TIENDA',
+      hook:'no todo en la Tienda pesa igual — Victorias Rápidas dan resultados en días, Claves te transforman a fondo, y los Mapas te dan la vista completa de un territorio.',
+      cta:'Explorar la Tienda', route:R_STORE },
+
+    { ch:1, kind:'icon', icon:'📜', badge:'MISIONES',
+      hook:'el Templo registra cada acto que haces — y te recompensa por cosas que probablemente ya ibas a hacer de todos modos.',
+      cta:'Ver mis misiones', route:R_MISSIONS },
+    { ch:1, kind:'photo', img:IMG_CARTOGRAFO_HERO, badge:'MISIÓN',
+      hook:'el "Cartógrafo" te paga 40 XP + 25 PropoCoins solo por explorar los 8 módulos del Templo una sola vez.',
+      cta:'Activar el Cartógrafo', route:R_MISSIONS },
+    { ch:1, kind:'photo', img:IMG_CONSTANCIA_HERO, badge:'MISIÓN',
+      hook:'"Constancia del Guardián" te premia solo por aparecer en 4 semanas distintas. No necesitas ser perfecto, necesitas ser constante.',
+      cta:'Ver mi constancia', route:R_MISSIONS },
+    { ch:1, kind:'photo', img:IMG_OBSERVADOR_HERO, badge:'MISIÓN',
+      hook:'"El Observador" te recompensa por leer solo 5 módulos distintos de la Tienda. La observación es el primer acto del Guerrero.',
+      cta:'Convertirme en Observador', route:R_MISSIONS },
+
+    { ch:2, kind:'custom', render:'ranking', badge:'100 TEMPLARIOS',
+      hook:'puedes poner a prueba todo lo que sabes contra otros Templarios en tiempo real — y ahora mismo hay un ranking corriendo en vivo.',
+      cta:'Entrar a la Arena', route:R_ARENA },
+    { ch:2, kind:'custom', render:'streak', badge:'100 TEMPLARIOS',
+      hook:'cada racha que mantienes te acerca más rápido a tu siguiente Rango — y un solo día perdido la reinicia a cero.',
+      cta:'Cuidar mi racha', route:R_ARENA },
+    { ch:2, kind:'photo', img:IMG_ASCENSO_HERO, badge:'100 TEMPLARIOS',
+      hook:'hay una Competencia Semanal activa ahora mismo con cuenta regresiva — y el top 1 se lleva mucho más que el top 10.',
+      cta:'Ver el ranking', route:R_ARENA },
+    { ch:2, kind:'custom', render:'locked', badge:'100 TEMPLARIOS',
+      hook:'hay una prueba bloqueada — la "Prueba del Consejo" — que vale el doble de puntos y solo se abre al completar las otras tres.',
+      cta:'Desbloquear el Consejo', route:R_ARENA },
+  ];
+
+  function hexToRgb(hex) {
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return { r, g, b };
+  }
+
+  function customBandHTML(render, color) {
+    const c = hexToRgb(color);
+    const base = `width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%, rgba(${c.r},${c.g},${c.b},0.3) 0%, transparent 65%), linear-gradient(180deg, rgba(8,4,20,0.4), rgba(3,1,10,0.95));`;
+    if (render === 'ranking') {
+      let rows = '';
+      for (let i = 1; i <= 3; i++) {
+        rows += `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;background:${i===1?`rgba(${c.r},${c.g},${c.b},0.24)`:'rgba(255,255,255,0.05)'};border:1px solid rgba(${c.r},${c.g},${c.b},${i===1?0.6:0.18});">
+          <span style="font-family:'Cinzel',serif;font-size:11px;color:${i===1?color:'rgba(255,255,255,0.55)'};">#${i}</span>
+          <div style="flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;">
+            <div style="height:100%;width:${100-i*22}%;background:linear-gradient(90deg, rgba(${c.r},${c.g},${c.b},0.95), rgba(${c.r},${c.g},${c.b},0.4));"></div>
+          </div></div>`;
+      }
+      return `<div style="${base}"><div style="display:flex;flex-direction:column;gap:8px;width:82%;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+          <span style="width:7px;height:7px;border-radius:50%;background:#ef4444;box-shadow:0 0 10px #ef4444;animation:oracleLive 1.4s ease-in-out infinite;"></span>
+          <span style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:#fca5a5;">EN VIVO</span>
+        </div>${rows}</div></div>`;
+    }
+    if (render === 'streak') {
+      return `<div style="${base}"><div style="text-align:center;">
+        <div style="font-size:52px;filter:drop-shadow(0 0 22px rgba(${c.r},${c.g},${c.b},0.9));animation:oracleFloat 2.6s ease-in-out infinite;">🔥</div>
+        <div style="font-family:'Cinzel',serif;font-size:26px;font-weight:800;color:${color};text-shadow:0 0 20px rgba(${c.r},${c.g},${c.b},0.7);margin-top:2px;">7 DÍAS</div>
+      </div></div>`;
+    }
+    // locked
+    return `<div style="${base}"><div style="text-align:center;">
+      <div style="font-size:46px;opacity:0.9;filter:drop-shadow(0 0 22px rgba(${c.r},${c.g},${c.b},0.8));animation:oracleFloat 2.6s ease-in-out infinite;">🔒</div>
+      <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:1.5px;color:${color};margin-top:8px;">PRUEBA DEL CONSEJO</div>
+    </div>`;
+  }
+
+  function badgeChip(text, color) {
+    const c = hexToRgb(color);
+    return `<span style="display:inline-block;padding:5px 12px;border-radius:20px;font-family:'Cinzel',serif;font-size:9px;
+      letter-spacing:1.8px;font-weight:700;color:${color};background:rgba(${c.r},${c.g},${c.b},0.18);
+      border:1px solid rgba(${c.r},${c.g},${c.b},0.55);backdrop-filter:blur(3px);">${text}</span>`;
+  }
+
+  // ── Báculo de los 8 Territorios — portado tal cual del canvas de TStoreTutorial.jsx ──
+  const STAFF_SPHERES = [
+    { name:"Cuerpo",         color:"#FF4444", icon:"💪" },
+    { name:"Mente",          color:"#4488FF", icon:"🧠" },
+    { name:"Emociones",      color:"#FF3377", icon:"❤️" },
+    { name:"Relaciones",     color:"#44FF88", icon:"👥" },
+    { name:"Riqueza",        color:"#D4AF37", icon:"💰" },
+    { name:"Vocación",       color:"#CC44FF", icon:"🎯" },
+    { name:"Espiritualidad", color:"#44DDFF", icon:"🌸" },
+    { name:"Ocio",           color:"#FF7A22", icon:"🌴" },
+  ];
+
+  function hexToRgbArrStaff(hex) {
+    const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return r ? [parseInt(r[1],16), parseInt(r[2],16), parseInt(r[3],16)] : [255,255,255];
+  }
+
+  function initStaffVisual(canvas) {
+    const ctx = canvas.getContext("2d");
+    let frameId = null;
+    let t = 0;
+    let sphereAngles = STAFF_SPHERES.map((_, i) => (i / STAFF_SPHERES.length) * Math.PI * 2);
+    let lastW = 0, lastH = 0;
+
+    function resize() {
+      const w = canvas.offsetWidth, h = canvas.offsetHeight;
+      if (w === lastW && h === lastH) return;
+      lastW = w; lastH = h;
+      canvas.width = w * window.devicePixelRatio;
+      canvas.height = h * window.devicePixelRatio;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    // El modal del oráculo empieza oculto (display:none), así que el canvas
+    // nace con 0x0 de tamaño. ResizeObserver detecta el momento real en que
+    // el modal se abre y el canvas pasa a tener su tamaño real.
+    if (window.ResizeObserver) {
+      const ro = new ResizeObserver(resize);
+      ro.observe(canvas);
+    }
+
+    let lastTime = 0;
+    function drawFrame(timestamp) {
+      if (timestamp - lastTime < 50) { frameId = requestAnimationFrame(drawFrame); return; }
+      lastTime = timestamp;
+      const W = canvas.offsetWidth, H = canvas.offsetHeight;
+      ctx.clearRect(0, 0, W, H);
+      t++;
+      const cx = W / 2, cy = H * 0.42;
+      const staffH = H * 0.62;
+      const topY = cy - staffH * 0.08;
+      const botY = topY + staffH;
+      const coreSphereR = Math.min(W, H) * 0.10;
+      const orbitR = coreSphereR * 2.7;
+
+      sphereAngles = sphereAngles.map(a => a + 0.006);
+
+      const activeColor = "#D4AF37";
+      const [ar, ag, ab] = hexToRgbArrStaff(activeColor);
+
+      // Vara (bastón)
+      const grd = ctx.createLinearGradient(cx - 8, topY, cx + 8, botY);
+      grd.addColorStop(0, "#1a1010"); grd.addColorStop(0.3, "#3d2a0a");
+      grd.addColorStop(0.7, "#2a1a05"); grd.addColorStop(1, "#0d0508");
+      ctx.save();
+      ctx.shadowBlur = 8; ctx.shadowColor = activeColor;
+      ctx.fillStyle = grd; ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(cx - 7, topY, 14, botY - topY, 3);
+      else ctx.rect(cx - 7, topY, 14, botY - topY);
+      ctx.fill();
+      ctx.strokeStyle = "#b8860b";
+      ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 0;
+      ctx.beginPath(); ctx.moveTo(cx - 7, topY); ctx.lineTo(cx - 7, botY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + 7, topY); ctx.lineTo(cx + 7, botY); ctx.stroke();
+      for (let i = 0; i < 3; i++) {
+        const ry = topY + (botY - topY) * (0.28 + i * 0.22);
+        ctx.strokeStyle = "#d4af37";
+        ctx.lineWidth = 2.5; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.ellipse(cx, ry, 12, 5, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.fillStyle = "#d4af37";
+      ctx.shadowColor = "#d4af37";
+      ctx.shadowBlur = 8;
+      const gemY = topY + (botY - topY) * 0.5;
+      ctx.beginPath(); ctx.moveTo(cx, gemY - 10); ctx.lineTo(cx + 7, gemY); ctx.lineTo(cx, gemY + 10); ctx.lineTo(cx - 7, gemY); ctx.closePath(); ctx.fill();
+      ctx.restore();
+
+      // Anillo del núcleo
+      ctx.save();
+      ctx.strokeStyle = "#d4af37"; ctx.lineWidth = 3; ctx.shadowColor = "#f59e0b"; ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.arc(cx, cy, coreSphereR + 18, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = "#b8860b";
+      ctx.beginPath(); ctx.arc(cx, cy, coreSphereR + 12, 0, Math.PI * 2); ctx.stroke();
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2, r1 = coreSphereR + 10, r2 = coreSphereR + 22;
+        ctx.strokeStyle = "#d4af37"; ctx.lineWidth = 2; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2); ctx.stroke();
+      }
+      ctx.restore();
+
+      // Núcleo central
+      const pulse = Math.sin(t * 0.06) * 0.5 + 0.5;
+      ctx.save();
+      const gr = ctx.createRadialGradient(cx, cy, coreSphereR * 0.1, cx, cy, coreSphereR + 20);
+      gr.addColorStop(0, `rgba(${ar},${ag},${ab},${0.35 + pulse * 0.15})`); gr.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, cy, coreSphereR + 20, 0, Math.PI * 2); ctx.fill();
+      const sg = ctx.createRadialGradient(cx - coreSphereR * 0.3, cy - coreSphereR * 0.3, coreSphereR * 0.05, cx, cy, coreSphereR);
+      sg.addColorStop(0, `rgba(${Math.min(255, ar + 120)},${Math.min(255, ag + 100)},${Math.min(255, ab + 80)},0.9)`);
+      sg.addColorStop(0.5, `rgba(${Math.min(255, ar + 40)},${Math.min(255, ag + 30)},${ab},0.88)`);
+      sg.addColorStop(1, `rgba(${Math.max(0, ar - 30)},${Math.max(0, ag - 30)},${Math.max(0, ab - 30)},0.92)`);
+      ctx.fillStyle = sg; ctx.shadowColor = activeColor; ctx.shadowBlur = 14 + pulse * 8;
+      ctx.beginPath(); ctx.arc(cx, cy, coreSphereR, 0, Math.PI * 2); ctx.fill();
+      const hg = ctx.createRadialGradient(cx - coreSphereR * 0.35, cy - coreSphereR * 0.35, 0, cx - coreSphereR * 0.2, cy - coreSphereR * 0.2, coreSphereR * 0.6);
+      hg.addColorStop(0, "rgba(255,255,255,0.42)"); hg.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(cx, cy, coreSphereR, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0; ctx.font = `${coreSphereR * 0.72}px serif`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("✦", cx, cy);
+      ctx.restore();
+
+      // Las 8 esferas orbitando
+      STAFF_SPHERES.forEach((s, i) => {
+        const angle = sphereAngles[i];
+        const sx = cx + Math.cos(angle) * orbitR;
+        const sy = cy + Math.sin(angle) * orbitR;
+        const opacity = 0.85;
+        const sr = coreSphereR * 0.46;
+        const [cr, cg, cb] = hexToRgbArrStaff(s.color);
+        ctx.save();
+        ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.14)`;
+        ctx.lineWidth = 0.8; ctx.setLineDash([4, 6]);
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(sx, sy); ctx.stroke();
+        ctx.setLineDash([]); ctx.restore();
+        ctx.save(); ctx.globalAlpha = opacity;
+        const glowG = ctx.createRadialGradient(sx, sy, sr * 0.2, sx, sy, sr * 1.6);
+        glowG.addColorStop(0, `rgba(${cr},${cg},${cb},0.3)`); glowG.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = glowG; ctx.beginPath(); ctx.arc(sx, sy, sr * 1.6, 0, Math.PI * 2); ctx.fill();
+        const ssg = ctx.createRadialGradient(sx - sr * 0.3, sy - sr * 0.3, sr * 0.05, sx, sy, sr);
+        ssg.addColorStop(0, `rgba(${Math.min(255, cr + 90)},${Math.min(255, cg + 90)},${Math.min(255, cb + 90)},0.95)`);
+        ssg.addColorStop(0.6, `rgba(${cr},${cg},${cb},0.9)`);
+        ssg.addColorStop(1, `rgba(${Math.max(0, cr - 50)},${Math.max(0, cg - 50)},${Math.max(0, cb - 50)},0.95)`);
+        ctx.fillStyle = ssg; ctx.shadowColor = s.color; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2); ctx.fill();
+        const shg = ctx.createRadialGradient(sx - sr * 0.35, sy - sr * 0.4, 0, sx - sr * 0.2, sy - sr * 0.2, sr * 0.6);
+        shg.addColorStop(0, "rgba(255,255,255,0.45)"); shg.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = shg; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0; ctx.font = `${sr * 0.88}px serif`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(s.icon, sx, sy); ctx.restore();
+      });
+
+      frameId = requestAnimationFrame(drawFrame);
+    }
+
+    frameId = requestAnimationFrame(drawFrame);
+  }
+
+  const track = document.getElementById('oraculo-track');
+
+  // ── Construir las 12 tarjetas de una sola vez (carrusel real, no una story) ──
+  SLIDES.forEach(function (s, i) {
+    const chapter = CHAPTERS[s.ch];
+    const c = hexToRgb(chapter.color);
+
+    const bandH = s.kind === 'staff' ? 300 : 180;
+    let bandHTML;
+    if (s.kind === 'staff') {
+      bandHTML = `<div style="width:100%;height:${bandH}px;position:relative;overflow:hidden;
+        background:radial-gradient(ellipse at 50% 38%, rgba(212,175,55,0.28) 0%, rgba(8,4,20,0.94) 72%);">
+        <canvas class="staff-canvas" style="width:100%;height:100%;display:block;"></canvas>
+      </div>`;
+    } else if (s.kind === 'photo') {
+      bandHTML = `<div style="width:100%;height:${bandH}px;display:flex;align-items:center;justify-content:center;
+        background:radial-gradient(ellipse at 50% 30%, rgba(${c.r},${c.g},${c.b},0.22) 0%, rgba(8,4,20,0.9) 75%);">
+        <img src="${s.img}" alt="" style="width:100%;height:100%;object-fit:contain;"></div>`;
+    } else if (s.kind === 'custom') {
+      bandHTML = `<div style="width:100%;height:${bandH}px;">${customBandHTML(s.render, chapter.color)}</div>`;
+    } else {
+      bandHTML = `<div style="width:100%;height:${bandH}px;display:flex;align-items:center;justify-content:center;
+        background:radial-gradient(ellipse at 50% 35%, rgba(${c.r},${c.g},${c.b},0.32) 0%, transparent 60%), linear-gradient(180deg, rgba(8,4,20,0.32), rgba(3,1,10,0.97));">
+        <span style="font-size:64px;filter:drop-shadow(0 0 26px rgba(${c.r},${c.g},${c.b},0.7));animation:oracleFloat 3s ease-in-out infinite;">${s.icon}</span>
+      </div>`;
+    }
+
+    const cardEl = document.createElement('div');
+    cardEl.className = 'oraculo-card';
+    cardEl.dataset.i = i;
+    cardEl.style.border = `1px solid rgba(${c.r},${c.g},${c.b},0.4)`;
+    cardEl.style.boxShadow = `0 0 40px rgba(${c.r},${c.g},${c.b},0.18)`;
+    cardEl.innerHTML = `
+      ${bandHTML}
+      <div style="padding:14px 18px 0;">${badgeChip(s.badge, chapter.color)}</div>
+      <div style="padding:10px 18px 18px;">
+        <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;margin-bottom:6px;text-transform:uppercase;color:var(--gold);">¿Sabías que...</div>
+        <div style="font-family:'Crimson Text',serif;font-size:16px;line-height:1.32;color:#f4f0ff;margin-bottom:14px;min-height:82px;">${s.hook}</div>
+        <button class="oraculo-cta" style="width:100%;padding:12px 14px;border-radius:10px;cursor:pointer;
+          font-family:'Cinzel',serif;font-size:11px;letter-spacing:1.2px;font-weight:700;color:#0a0614;
+          background:linear-gradient(135deg, rgba(${c.r},${c.g},${c.b},0.95), rgba(${c.r},${c.g},${c.b},0.65));
+          border:1px solid rgba(${c.r},${c.g},${c.b},0.9); box-shadow:0 4px 18px rgba(${c.r},${c.g},${c.b},0.35);">${s.cta} →</button>
+      </div>`;
+    cardEl.querySelector('.oraculo-cta').addEventListener('click', function (e) {
+      e.stopPropagation();
+      goTo(s.route);
+      closeOraculo();
+    });
+    cardEl.addEventListener('click', function () { goToSlide(i); });
+    track.appendChild(cardEl);
+
+    if (s.kind === 'staff') {
+      const canvasEl = cardEl.querySelector('.staff-canvas');
+      if (canvasEl) initStaffVisual(canvasEl);
+    }
+  });
+
+  const cards = Array.from(track.querySelectorAll('.oraculo-card'));
+  const progressEl = document.getElementById('oraculo-progress');
+  const chapterLabelEl = document.getElementById('oraculo-chapter-label');
+  const modal = document.getElementById('oraculo-modal');
+  const btn = document.getElementById('oraculo-btn');
+  const closeBtn = document.getElementById('oraculo-close');
+  const arrowPrev = document.getElementById('oraculo-arrow-prev');
+  const arrowNext = document.getElementById('oraculo-arrow-next');
+
+  progressEl.innerHTML = SLIDES.map(function (s, i) {
+    return `<div data-i="${i}" style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.15);overflow:hidden;cursor:pointer;">
+      <div class="seg-fill" style="height:100%;width:0%;background:${CHAPTERS[s.ch].color};transition:width .2s ease;"></div>
+    </div>`;
+  }).join('');
+  progressEl.querySelectorAll('[data-i]').forEach(function (seg) {
+    seg.addEventListener('click', function () { goToSlide(parseInt(seg.getAttribute('data-i'), 10)); });
+  });
+  const segFills = progressEl.querySelectorAll('.seg-fill');
+
+  let activeIdx = 0;
+  let sb = null, userId = null, seen = true;
+
+  function setActive(i) {
+    activeIdx = i;
+    cards.forEach(function (c, idx) { c.classList.toggle('active', idx === i); });
+    segFills.forEach(function (f, idx) { f.style.width = idx <= i ? '100%' : '0%'; });
+    const chapter = CHAPTERS[SLIDES[i].ch];
+    chapterLabelEl.textContent = '✦ ' + chapter.label;
+    chapterLabelEl.style.color = chapter.color;
+    arrowPrev.style.visibility = i === 0 ? 'hidden' : 'visible';
+    arrowNext.style.visibility = i === cards.length - 1 ? 'hidden' : 'visible';
+  }
+
+  function goToSlide(i) {
+    i = Math.max(0, Math.min(cards.length - 1, i));
+    cards[i].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    setActive(i);
+  }
+
+  // Detecta qué tarjeta quedó al centro mientras el usuario hace scroll/swipe libremente
+  let scrollTimer = null;
+  track.addEventListener('scroll', function () {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(function () {
+      const trackRect = track.getBoundingClientRect();
+      const centerX = trackRect.left + trackRect.width / 2;
+      let closest = 0, best = Infinity;
+      cards.forEach(function (c, idx) {
+        const r = c.getBoundingClientRect();
+        const d = Math.abs((r.left + r.width / 2) - centerX);
+        if (d < best) { best = d; closest = idx; }
+      });
+      setActive(closest);
+    }, 80);
+  });
+
+  arrowPrev.addEventListener('click', function () { goToSlide(activeIdx - 1); });
+  arrowNext.addEventListener('click', function () { goToSlide(activeIdx + 1); });
+  document.addEventListener('keydown', function (e) {
+    if (modal.style.display !== 'flex') return;
+    if (e.key === 'ArrowRight') goToSlide(activeIdx + 1);
+    if (e.key === 'ArrowLeft') goToSlide(activeIdx - 1);
+    if (e.key === 'Escape') closeOraculo();
+  });
+
+  function openOraculo() {
+    modal.style.display = 'flex';
+    requestAnimationFrame(function () {
+      modal.style.background = 'rgba(1,0,10,0.96)';
+      modal.style.backdropFilter = 'blur(20px)';
+      goToSlide(0);
+    });
+    if (!seen && userId && sb) {
+      sb.from('profiles').update({ oraculo_seen: true }).eq('id', userId).then(function () {
+        seen = true;
+        btn.classList.remove('pulse');
+      });
+    }
+  }
+
+  function closeOraculo() {
+    modal.style.background = 'rgba(1,0,10,0)';
+    modal.style.backdropFilter = 'blur(0px)';
+    setTimeout(function () { modal.style.display = 'none'; }, 250);
+  }
+
+  btn.addEventListener('click', openOraculo);
+  closeBtn.addEventListener('click', closeOraculo);
+
+  async function initOraculo() {
+    try {
+      const supabaseUrl = localStorage.getItem('_sb_url');
+      const supabaseKey = localStorage.getItem('_sb_key');
+      if (!supabaseUrl || !supabaseKey || !window.supabase) return;
+      sb = window.supabase.createClient(supabaseUrl, supabaseKey, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+      });
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) return;
+      userId = session.user.id;
+      const { data: profile } = await sb.from('profiles').select('oraculo_seen').eq('id', userId).single();
+      seen = !!(profile && profile.oraculo_seen);
+      if (!seen) btn.classList.add('pulse');
+    } catch (err) {
+      console.error('El Oráculo: no se pudo inicializar', err);
+    }
+  }
+
+  initOraculo();
+})();
+</script>
 </body>
 </html>
