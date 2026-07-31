@@ -2664,17 +2664,23 @@ window.addEventListener('resize', scaleScene);
   background:rgba(1,0,10,0); backdrop-filter:blur(0px); transition:all .35s ease;">
 
   <div style="width:min(96vw,1180px); padding:0 8px; box-sizing:border-box;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-      <div style="display:flex; align-items:baseline; gap:10px;">
-        <span id="oraculo-chapter-label" style="font-family:'Cinzel',serif; font-size:11px; letter-spacing:2.5px;"></span>
-        <span id="oraculo-counter" style="font-family:'Cinzel',serif; font-size:10px; letter-spacing:1.5px; color:rgba(255,255,255,0.45);"></span>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+      <div>
+        <h2 style="margin:0; font-family:'Cinzel',serif; font-size:clamp(20px,3.2vw,30px); letter-spacing:3px;
+          color:var(--gold); text-shadow:0 0 22px rgba(212,175,55,0.55); font-weight:700;">🔮 EL ORÁCULO</h2>
+        <p style="margin:6px 0 0; font-family:'Crimson Text',serif; font-style:italic; font-size:14px;
+          color:rgba(240,225,255,0.82); max-width:560px;">
+          Cada carta revela una función real que ya tienes disponible en tu Templo — descúbrelas todas antes de cerrar.
+        </p>
       </div>
       <button id="oraculo-close" style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.85);
-        width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:16px; flex-shrink:0;">✕</button>
+        width:34px; height:34px; border-radius:50%; cursor:pointer; font-size:16px; flex-shrink:0;">✕</button>
     </div>
-    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-      <span style="font-family:'Crimson Text',serif; font-style:italic; font-size:12.5px; color:rgba(212,175,55,0.85);">
-        ‹ desliza, toca las flechas o los puntos para descubrir cada territorio ›
+    <div style="display:flex; align-items:baseline; gap:10px; margin:14px 0 6px;">
+      <span id="oraculo-chapter-label" style="font-family:'Cinzel',serif; font-size:11px; letter-spacing:2.5px;"></span>
+      <span id="oraculo-counter" style="font-family:'Cinzel',serif; font-size:10px; letter-spacing:1.5px; color:rgba(255,255,255,0.45);"></span>
+      <span style="font-family:'Crimson Text',serif; font-style:italic; font-size:12px; color:rgba(212,175,55,0.7); margin-left:auto;">
+        ‹ desliza o usa las flechas ›
       </span>
     </div>
     <div id="oraculo-progress" style="display:flex; gap:4px; margin-bottom:18px;"></div>
