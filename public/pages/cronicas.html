@@ -1365,6 +1365,12 @@ canvas#fx{position:fixed;inset:0;z-index:2;pointer-events:none}
   <canvas id="interior-canvas"></canvas>
   <div class="flicker"></div>
 
+  <!-- Barra de progreso — 5 puertas, se va llenando conforme el Templario las visita -->
+  <div id="progress-checklist" style="position:absolute;top:14px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:7px;z-index:36;pointer-events:none;">
+    <div style="font-family:'Cinzel',serif;font-size:clamp(8px,2vw,10px);font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(245,211,120,.7);text-shadow:0 0 8px rgba(0,0,0,.9);">Tu Progreso</div>
+    <div id="progress-steps" style="display:flex;align-items:center;"></div>
+  </div>
+
   <!-- THREE DOORS -->
   <div id="doors-wrap">
 
@@ -1584,6 +1590,40 @@ canvas#fx{position:fixed;inset:0;z-index:2;pointer-events:none}
       50%{ opacity:1; }
     }
     #door-pager-hint{ animation: hintFade 2.4s ease-in-out infinite; }
+
+    /* ── Barra de progreso: 5 palomitas ── */
+    .progress-step{
+      width:22px;height:22px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Cinzel',serif;font-size:10px;font-weight:700;
+      background:rgba(10,4,4,.75);
+      border:1.5px solid rgba(212,175,55,.4);
+      color:rgba(245,211,120,.55);
+      box-shadow:0 0 8px rgba(0,0,0,.6);
+      transition:all .4s ease;
+      flex-shrink:0;
+    }
+    .progress-line{
+      width:16px;height:2px;background:rgba(212,175,55,.25);
+      transition:background .4s ease;
+      flex-shrink:0;
+    }
+    .progress-step.done{
+      background:radial-gradient(circle,#F5D378,#C9A84C);
+      border-color:#F5D378;
+      color:#2A1500;
+      box-shadow:0 0 14px rgba(245,211,120,.85),0 0 26px rgba(245,211,120,.4);
+    }
+    .progress-line.done{
+      background:linear-gradient(90deg,#C9A84C,#F5D378);
+      box-shadow:0 0 6px rgba(245,211,120,.6);
+    }
+    @keyframes progressPop{
+      0%{ transform:scale(1); }
+      40%{ transform:scale(1.35); }
+      100%{ transform:scale(1); }
+    }
+    .progress-step.just-done{ animation: progressPop .5s ease; }
   </style>
 
   <!-- Master Templar -->
@@ -1826,6 +1866,7 @@ window.addEventListener('load', () => {
 
   // Pintar la primera página (2 puertas visibles de las 5 totales)
   renderDoorPage(0);
+  renderProgressChecklist();
 
   // Loading bar
   const fill = $('lfill');
@@ -2458,6 +2499,30 @@ function renderDoorPage(page) {
   }
 }
 
+// ══════════════════════════════════════════
+//  BARRA DE PROGRESO — 5 palomitas, una por puerta
+// ══════════════════════════════════════════
+function getVistas() {
+  try { return JSON.parse(localStorage.getItem('cronicas_vistas') || '[]'); }
+  catch (_) { return []; }
+}
+
+function renderProgressChecklist(justCompletedIdx) {
+  const wrap = $('progress-steps');
+  if (!wrap) return;
+  const vistas = getVistas();
+  let html = '';
+  DOORS.forEach((d, i) => {
+    const done = vistas.includes(i);
+    const pop  = (justCompletedIdx === i) ? ' just-done' : '';
+    html += `<div class="progress-step${done ? ' done' : ''}${pop}" title="${(d.label || '').replace(/"/g,'')}">${done ? '✓' : (i + 1)}</div>`;
+    if (i < DOORS.length - 1) {
+      html += `<div class="progress-line${vistas.includes(i) ? ' done' : ''}"></div>`;
+    }
+  });
+  wrap.innerHTML = html;
+}
+
 function handleDoorClick(slot) {
   const indices = DOOR_PAGES[doorPage];
   const realIndex = indices[slot];
@@ -2482,6 +2547,7 @@ function openScroll(idx) {
     if (!vistas.includes(idx)) {
       vistas.push(idx);
       localStorage.setItem('cronicas_vistas', JSON.stringify(vistas));
+      renderProgressChecklist(idx);
     }
   } catch (_) {}
 
