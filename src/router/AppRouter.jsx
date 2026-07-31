@@ -17,6 +17,7 @@ import ArsenalRPGPage from '../features/arsenal/ArsenalRPGPage';
 
 const CanjeadorPage = lazy(() => import('../features/packages/CanjeadorPage'));
 const HubPage            = lazy(() => import('../features/hub/HubPage'));
+const CronicasPage       = lazy(() => import('../features/hub/CronicasPage'));
 const StorePage          = lazy(() => import('../features/store/StorePage'));
 const LibraryPage        = lazy(() => import('../features/library/LibraryPage'));
 const InventoryPage      = lazy(() => import('../features/inventory/InventoryPage'));
@@ -160,6 +161,7 @@ export default function AppRouter() {
             <Route element={<AppLayout />}>
               <Route element={<MembershipGuard />}>
                 <Route path="/hub" element={<HubPage />} />
+                <Route path="/cronicas" element={<CronicasPage />} />
                 <Route path="/store" element={<StorePage />} />
                 <Route path="/library" element={<LibraryPage />} />
                 <Route path="/inventory" element={<InventoryPage />} />

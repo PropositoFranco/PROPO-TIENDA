@@ -60,6 +60,8 @@ const [unclaimedCount, setUnclaimedCount] = useState(0);
   const [bonusPopup, setBonusPopup] = useState(null);
   const [hideHeader, setHideHeader] = useState(false);
   const [allianceSpotlight, setAllianceSpotlight] = useState(false);
+  const [cronicasUnseen, setCronicasUnseen] = useState(0);
+  const [cronHov, setCronHov] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -70,6 +72,25 @@ const [unclaimedCount, setUnclaimedCount] = useState(0);
     return () => {
       window.removeEventListener('focus', checkAllianceFlag);
       window.removeEventListener('storage', checkAllianceFlag);
+    };
+  }, [user?.id]);
+
+  // ── CRÓNICAS DEL TEMPLO — pergaminos nuevos sin ver ──
+  useEffect(() => {
+    const TOTAL_CRONICAS = 5; // sube este número cada vez que agregues una puerta nueva
+    const checkCronicas = () => {
+      const vistas = (() => {
+        try { return JSON.parse(localStorage.getItem('cronicas_vistas') || '[]'); }
+        catch { return []; }
+      })();
+      setCronicasUnseen(Math.max(0, TOTAL_CRONICAS - vistas.length));
+    };
+    checkCronicas();
+    window.addEventListener('focus', checkCronicas);
+    window.addEventListener('storage', checkCronicas);
+    return () => {
+      window.removeEventListener('focus', checkCronicas);
+      window.removeEventListener('storage', checkCronicas);
     };
   }, [user?.id]);
 
@@ -498,6 +519,70 @@ nav {
 
         {/* Right */}
         <div style={{display:'flex',alignItems:'center',gap: window.innerWidth < 1024 ? 6 : 10, marginLeft: window.innerWidth < 1024 ? 'auto' : undefined, marginRight: window.innerWidth < 1024 ? 4 : undefined}}>
+
+          {/* 📜 CRÓNICAS DEL TEMPLO */}
+          <div
+            onClick={() => navigate('/cronicas')}
+            onMouseEnter={() => setCronHov(true)}
+            onMouseLeave={() => setCronHov(false)}
+            style={{
+              position:'relative', cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              width: window.innerWidth < 1024 ? 34 : 48,
+              height: window.innerWidth < 1024 ? 34 : 48,
+              background: cronicasUnseen > 0
+                ? (cronHov ? 'linear-gradient(135deg,rgba(212,175,55,0.25),rgba(180,100,255,0.18))' : 'linear-gradient(135deg,rgba(212,175,55,0.14),rgba(180,100,255,0.10))')
+                : 'rgba(255,255,255,0.04)',
+              border: `1.5px solid ${cronicasUnseen > 0 ? (cronHov ? 'rgba(212,175,55,0.9)' : 'rgba(212,175,55,0.45)') : 'rgba(212,175,55,0.18)'}`,
+              borderRadius:12,
+              boxShadow: cronicasUnseen > 0
+                ? (cronHov ? '0 0 24px rgba(212,175,55,0.6), 0 0 48px rgba(212,175,55,0.2)' : '0 0 12px rgba(212,175,55,0.2)')
+                : 'none',
+              opacity: cronicasUnseen > 0 ? 1 : 0.42,
+              transition:'all 0.3s ease',
+            }}
+          >
+            <span style={{
+              fontSize: window.innerWidth < 1024 ? 16 : 20,
+              filter: cronicasUnseen > 0 ? 'drop-shadow(0 0 8px rgba(212,175,55,0.8))' : 'none',
+              display:'block',
+            }}>📜</span>
+
+            {cronicasUnseen > 0 && (
+              <div style={{
+                position:'absolute', top:-6, right:-6,
+                minWidth:18, height:18,
+                background:'linear-gradient(135deg,#D4AF37,#FFE566)',
+                borderRadius:9,
+                border:'2px solid rgba(8,3,26,0.9)',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontFamily:'Cinzel,serif', fontSize:9, fontWeight:900,
+                color:'#1a0a00',
+                animation:'allianceBadgePulse 1.8s ease-in-out infinite',
+                zIndex:10, padding:'0 3px',
+              }}>
+                {cronicasUnseen > 9 ? '9+' : cronicasUnseen}
+              </div>
+            )}
+
+            {cronHov && (
+              <div style={{
+                position:'absolute', bottom:-42, left:'50%',
+                transform:'translateX(-50%)',
+                background:'rgba(8,3,26,0.97)',
+                border:'1px solid rgba(212,175,55,0.5)',
+                borderRadius:8, padding:'5px 12px',
+                whiteSpace:'nowrap',
+                fontFamily:'Cinzel,serif', fontSize:9,
+                letterSpacing:'1.5px', color:'#d4af37',
+                boxShadow:'0 4px 20px rgba(0,0,0,0.8)',
+                animation:'rewardTooltipIn 0.2s ease',
+                zIndex:999,
+              }}>
+                ✦ Crónicas del Templo{cronicasUnseen > 0 ? ` · ${cronicasUnseen} nueva${cronicasUnseen > 1 ? 's' : ''}` : ''}
+              </div>
+            )}
+          </div>
 
           {/* 🎁 COFRE DE RECOMPENSAS */}
           {unclaimedCount > 0 && (

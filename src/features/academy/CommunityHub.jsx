@@ -2952,6 +2952,74 @@ if (!error) {
           filter: 'blur(8px)',
         }} />
 
+        {/* ══ CÓMO SUBIR DE NIVEL ══ */}
+        <div style={{
+          position: 'relative', zIndex: 1,
+          marginBottom: '1.25rem',
+          padding: '1.1rem 1.25rem',
+          borderRadius: '1rem',
+          background: 'linear-gradient(135deg, rgba(192,132,252,0.08) 0%, rgba(10,6,20,0.55) 55%, rgba(245,197,24,0.05) 100%)',
+          border: '1.5px solid rgba(192,132,252,0.35)',
+          boxShadow: '0 0 24px rgba(192,132,252,0.1), inset 0 1px 0 rgba(255,255,255,0.05)',
+        }}>
+          <p style={{
+            fontFamily: '"Cinzel", serif', fontSize: '0.68rem',
+            letterSpacing: '0.16em', textTransform: 'uppercase',
+            color: C.gold, margin: '0 0 0.85rem',
+            display: 'flex', alignItems: 'center', gap: '0.5em',
+          }}>⚔️ ¿Cómo subo de nivel?</p>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+            gap: '0.6rem',
+          }}>
+            {[
+              { icon: '📝', label: 'Publicar un post',        pts: 10, color: C.purple },
+              { icon: '💬', label: 'Comentar',                 pts: 5,  color: C.blue   },
+              { icon: '🔥', label: 'Dar like',                 pts: 1,  color: '#F97316' },
+              { icon: '❤️', label: 'Recibir un like',          pts: 3,  color: C.red    },
+              { icon: '✉️', label: 'Enviar un mensaje directo',pts: 2,  color: C.green  },
+            ].map((a, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: '0.6rem',
+                padding: '0.6rem 0.75rem',
+                background: `linear-gradient(135deg, ${a.color}14, rgba(255,255,255,0.02))`,
+                border: `1px solid ${a.color}40`,
+                borderRadius: '0.7rem',
+              }}>
+                <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{a.icon}</span>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <p style={{
+                    margin: 0, fontSize: '0.72rem', fontWeight: 600,
+                    color: 'rgba(255,255,255,0.88)', lineHeight: 1.2,
+                  }}>{a.label}</p>
+                  <p style={{
+                    margin: '0.15rem 0 0', fontFamily: '"Cinzel", serif',
+                    fontSize: '0.78rem', fontWeight: 800, color: a.color,
+                    textShadow: `0 0 8px ${a.color}66`,
+                  }}>+{a.pts} pts</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p style={{
+            margin: '0.85rem 0 0', fontSize: '0.7rem',
+            color: 'rgba(255,255,255,0.55)', lineHeight: 1.4,
+          }}>
+            Acumula puntos participando en la comunidad y sube de rango en el mapa de niveles de abajo. 👇
+          </p>
+
+          <p style={{
+            margin: '0.5rem 0 0', fontSize: '0.65rem',
+            color: 'rgba(255,255,255,0.4)', lineHeight: 1.4,
+            fontStyle: 'italic',
+          }}>
+            ⚜️ Nota: el XP y los Propocoins que ganas al <strong style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'normal' }}>sellar módulos del Templo</strong> suben tu nivel de perfil general (arriba), no tu rango de Comunidad — son dos sistemas independientes.
+          </p>
+        </div>
+
         {/* ══ BLOQUE SUPERIOR: perfil + mapa de niveles ══ */}
         <div style={{
           display: 'grid',

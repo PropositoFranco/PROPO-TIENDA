@@ -235,6 +235,17 @@ useEffect(() => {
 
   }, [profile?.id, user?.id, badgeTick]);
 
+  // ── CRÓNICAS DEL TEMPLO — cuántos pergaminos nuevos sin ver ────
+  useEffect(() => {
+    const TOTAL_CRONICAS = 5;
+    const vistas = (() => {
+      try { return JSON.parse(localStorage.getItem('cronicas_vistas') || '[]'); }
+      catch { return []; }
+    })();
+    const sinVer = Math.max(0, TOTAL_CRONICAS - vistas.length);
+    sendToFrame('cronicasBadge', sinVer);
+  }, [badgeTick]);
+
   // ── VIP RULETA SPINS → iframe ─────────────────────────────────
   useEffect(() => {
     if (!user?.id) return;

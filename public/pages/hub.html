@@ -382,6 +382,21 @@ body.perf-low .portal-badge {
   color:var(--gold-bright);
   box-shadow:0 0 10px rgba(212,175,55,0.3);
 }
+.hicon { position:relative; }
+.hicon-badge {
+  position:absolute; top:-5px; right:-5px;
+  min-width:16px; height:16px; padding:0 3px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#D4AF37,#FFE566);
+  color:#1a0a00;
+  font-size:9px; font-weight:900;
+  display:none; align-items:center; justify-content:center;
+  border:1px solid #FFE566;
+  box-shadow:0 0 8px rgba(212,175,55,0.9), 0 0 16px rgba(212,175,55,0.5);
+  animation: badgePop 0.5s cubic-bezier(0.175,0.885,0.32,1.4) both,
+             badgePulse 2.2s ease-in-out 0.5s infinite;
+  font-family:'Cinzel',serif;
+}
 
 /* ══════════════════════════════════════════
    MAIN CONTENT
@@ -1257,6 +1272,10 @@ body.hub-locked .maestro-bubble { display: flex; }
         <div class="coin-plus">+</div>
       </div>
       <div class="header-icons">
+        <div class="hicon" onclick="goTo('cronicas')" title="Crónicas del Templo">
+          📜
+          <div class="hicon-badge" id="badge-cronicas" style="display:none">0</div>
+        </div>
         <div class="hicon" onclick="goTo('mensajes')" title="Mensajes">✉</div>
         <div class="hicon" onclick="goTo('notificaciones')" title="Notificaciones">🔔</div>
         <div class="hicon" onclick="goTo('configuracion')" title="Configuración">🧝</div>
@@ -2598,6 +2617,17 @@ if (!offerStyle) {
 }
   }
 }
+
+// ── CRÓNICAS DEL TEMPLO BADGE ──
+window.addEventListener('message', function(e) {
+  if (e.data?.type !== 'cronicasBadge') return;
+  var n = e.data.data || 0;
+  var badgeCron = document.getElementById('badge-cronicas');
+  if (badgeCron) {
+    if (n > 0) { badgeCron.style.display = 'flex'; badgeCron.textContent = n > 9 ? '9+' : String(n); }
+    else { badgeCron.style.display = 'none'; }
+  }
+});
 
 // ── RULETA VIP BADGE ──
 window.addEventListener('message', function(e) {
