@@ -1369,7 +1369,7 @@ canvas#fx{position:fixed;inset:0;z-index:2;pointer-events:none}
   <div id="doors-wrap">
 
     <!-- DOOR 1 -->
-    <div class="d-col" onclick="openScroll(0)">
+    <div class="d-col" id="d-col-0" onclick="handleDoorClick(0)">
       <div class="door-svg-wrap door-both">
 <svg viewBox="0 0 160 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
 <defs>
@@ -1458,7 +1458,7 @@ canvas#fx{position:fixed;inset:0;z-index:2;pointer-events:none}
     </div>
 
     <!-- DOOR 2 CENTER — tallest, grandest -->
-    <div class="d-col" onclick="openScroll(1)">
+    <div class="d-col" id="d-col-1" onclick="handleDoorClick(1)">
       <div class="door-svg-wrap door-both">
 <svg viewBox="0 0 190 460" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
 <defs>
@@ -1557,6 +1557,21 @@ canvas#fx{position:fixed;inset:0;z-index:2;pointer-events:none}
 
 
   </div><!-- /doors-wrap -->
+
+  <!-- Navegación entre las 5 puertas (2 visibles a la vez) -->
+  <div id="door-pager" style="position:absolute;bottom:14px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:22px;z-index:35;pointer-events:none;">
+    <button id="door-prev" onclick="changeDoorPage(-1)" style="pointer-events:all;background:rgba(10,4,4,.7);border:1.5px solid rgba(212,175,55,.6);color:#F5D378;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(212,175,55,.25);transition:all .2s;">‹</button>
+    <div style="display:flex;gap:8px;pointer-events:all;">
+      <span class="door-dot" style="width:8px;height:8px;border-radius:50%;background:rgba(212,175,55,.3);transition:all .3s;"></span>
+      <span class="door-dot" style="width:8px;height:8px;border-radius:50%;background:rgba(212,175,55,.3);transition:all .3s;"></span>
+      <span class="door-dot" style="width:8px;height:8px;border-radius:50%;background:rgba(212,175,55,.3);transition:all .3s;"></span>
+    </div>
+    <button id="door-next" onclick="changeDoorPage(1)" style="pointer-events:all;background:rgba(10,4,4,.7);border:1.5px solid rgba(212,175,55,.6);color:#F5D378;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(212,175,55,.25);transition:all .2s;">›</button>
+  </div>
+  <style>
+    .door-dot.active{background:#F5D378 !important;box-shadow:0 0 8px rgba(212,175,55,.9);}
+    #door-prev:hover, #door-next:hover{border-color:rgba(212,175,55,1);box-shadow:0 0 20px rgba(212,175,55,.5);}
+  </style>
 
   <!-- Master Templar -->
   <div id="master-wrap">
@@ -1697,11 +1712,11 @@ Ya no es solo un número que subes. Ahora tiene nombre, tiene historia, tiene gu
 
 [header]🛡️ LO QUE CAMBIÓ
 
-- Tu Alianza tiene ahora su propia narrativa dentro del Templo — una guía te recibe la primera vez que la exploras
-- Cada nivel que subes activa tu recompensa solo — nada que reclamar, nada que se te olvide
-- Tu código de acceso quedó blindado con un candado más — nadie más puede tocarlo
-- El conteo de aliados ahora corre con doble candado, por dispositivo y por IP — cada aliado que sumas es 100% real, a prueba de trampas
-- Tu QR de Alianza ahora se descarga en dorado o en blanco, donde tú lo necesites
+• Tu Alianza tiene ahora su propia narrativa dentro del Templo — una guía te recibe la primera vez que la exploras
+• Cada nivel que subes activa tu recompensa solo — nada que reclamar, nada que se te olvide
+• Tu código de acceso quedó blindado con un candado más — nadie más puede tocarlo
+• El conteo de aliados ahora corre con doble candado, por dispositivo y por IP — cada aliado que sumas es 100% real, a prueba de trampas
+• Tu QR de Alianza ahora se descarga en dorado o en blanco, donde tú lo necesites
 
 [highlight]⚡ Cada aliado que traes ya no es solo un número. Es parte de tu historia dentro del Templo.
 
@@ -1717,10 +1732,10 @@ Antes el camino terminaba muy rápido. Llegabas al tope y la emoción se apagaba
 
 [header]⚔️ LO QUE CAMBIÓ
 
-- Tu camino pasó de 6 niveles a 20 — mucho más largo, mucho más recorrido por delante
-- Más rangos que conquistar, cada uno con su propio peso
-- Más recompensas repartidas en el trayecto — ya no se agotan a las pocas semanas
-- Cada subida de nivel se siente como debería: un logro, no un trámite
+• Tu camino pasó de 6 niveles a 20 — mucho más largo, mucho más recorrido por delante
+• Más rangos que conquistar, cada uno con su propio peso
+• Más recompensas repartidas en el trayecto — ya no se agotan a las pocas semanas
+• Cada subida de nivel se siente como debería: un logro, no un trámite
 
 [highlight]🔥 Tu ascenso ya no termina rápido. Ahora tiene el peso que siempre debió tener.
 
@@ -1729,16 +1744,16 @@ Antes el camino terminaba muy rápido. Llegabas al tope y la emoción se apagaba
   {
     label: '⚜ PUERTA III ⚜',
     title: 'PUERTA III — Nunca Te Perderás',
-    image: 'https://i.imgur.com/9HvGObq.jpeg', // TODO: reemplazar por imagen real de Puerta III
+    image: 'https://i.imgur.com/9HvGObq.jpeg',
     content: `[intro]🧭 NUNCA TE PERDERÁS
 
 El Templo es grande. Nadie debería caminarlo solo la primera vez.
 
 [header]🗺️ LO QUE CAMBIÓ
 
-- Un guía te recibe la primera vez que entras a tu Feed — nada queda oculto
-- Tu Academia ahora te muestra el camino en 3 pasos: tu progreso, lo que desbloqueas, tu módulo obligatorio
-- El paso que revela tu protocolo ya no se puede saltar a medias — te quedas hasta entenderlo de verdad
+• Un guía te recibe la primera vez que entras a tu Feed — nada queda oculto
+• Tu Academia ahora te muestra el camino en 3 pasos: tu progreso, lo que desbloqueas, tu módulo obligatorio
+• El paso que revela tu protocolo ya no se puede saltar a medias — te quedas hasta entenderlo de verdad
 
 [highlight]✦ Cada Templario nuevo entra sabiendo exactamente qué sigue. Nadie se pierde en el Templo.
 
@@ -1747,15 +1762,15 @@ El Templo es grande. Nadie debería caminarlo solo la primera vez.
   {
     label: '✦ PUERTA IV ✦',
     title: 'PUERTA IV — El Templo Cuida De Ti',
-    image: 'https://i.imgur.com/zsm8ZfH.jpeg', // TODO: reemplazar por imagen real de Puerta IV
+    image: 'https://i.imgur.com/zsm8ZfH.jpeg',
     content: `[intro]🛡️ EL TEMPLO CUIDA DE TI
 
 Un guardián no solo exige. También cuida a los suyos.
 
 [header]🔥 LO QUE CAMBIÓ
 
-- Tu Hub ahora pesa menos en tu celular — animaciones más ligeras, y se pausan solas cuando no las ves
-- Una semana antes de que venza tu membresía, el Templo te avisa y te muestra cómo renovar por solo $1 USD
+• Tu Hub ahora pesa menos en tu celular — animaciones más ligeras, y se pausan solas cuando no las ves
+• Una semana antes de que venza tu membresía, el Templo te avisa y te muestra cómo renovar por solo $1 USD
 
 [highlight]⚡ El Templo no espera a que caigas. Te avisa antes.
 
@@ -1764,16 +1779,16 @@ Un guardián no solo exige. También cuida a los suyos.
   {
     label: '⚜ PUERTA V ⚜',
     title: 'PUERTA V — Tu Esfuerzo Se Celebra',
-    image: 'https://i.imgur.com/9HvGObq.jpeg', // TODO: reemplazar por imagen real de Puerta V
+    image: 'https://i.imgur.com/9HvGObq.jpeg',
     content: `[intro]🏆 TU ESFUERZO SE CELEBRA
 
 Cada semana que cumples merece más que un checkmark silencioso.
 
 [header]🎉 LO QUE CAMBIÓ
 
-- Al revelar tu protocolo: confeti, celebración, y +20 Propocoins de bono
-- Tu primera evaluación completada ahora trae su propio bono especial
-- La validación de tu evidencia es más justa — ya no te castiga por una falla técnica que no fue tu culpa
+• Al revelar tu protocolo: confeti, celebración, y +20 Propocoins de bono
+• Tu primera evaluación completada ahora trae su propio bono especial
+• La validación de tu evidencia es más justa — ya no te castiga por una falla técnica que no fue tu culpa
 
 [highlight]⚔️ Tu esfuerzo ya no pasa desapercibido. El Templo lo celebra contigo.
 
@@ -1796,19 +1811,8 @@ window.addEventListener('load', () => {
   // Load any saved admin edits first
   loadSavedData();
 
-  // Apply door labels & images (null-safe)
-  DOORS.forEach((d, i) => {
-    const lbl = $(`door-label-${i}`);
-    if (lbl) lbl.textContent = d.label;
-    if (d.image) {
-      const img = $(`door-img-${i}`);
-      const ph  = $(`door-ph-${i}`);
-      if (img) {
-        img.src = d.image;
-        img.onload = () => { img.style.opacity = '.72'; if (ph) ph.style.display = 'none'; };
-      }
-    }
-  });
+  // Pintar la primera página (2 puertas visibles de las 5 totales)
+  renderDoorPage(0);
 
   // Loading bar
   const fill = $('lfill');
@@ -2370,6 +2374,71 @@ function clearScrollTimers() {
 
 function st(fn, ms) {
   scrollTimers.push(setTimeout(fn, ms));
+}
+
+// ══════════════════════════════════════════
+//  PAGINACIÓN — 5 puertas, 2 arcos físicos a la vez
+// ══════════════════════════════════════════
+const DOOR_PAGES = [[0,1],[2,3],[4]]; // índices de DOORS agrupados de 2 en 2
+let doorPage = 0;
+
+function renderDoorPage(page) {
+  doorPage = page;
+  const indices = DOOR_PAGES[page];
+
+  // Slot 0 — siempre hay una puerta
+  const d0 = DOORS[indices[0]];
+  const lbl0 = $('door-label-0');
+  if (lbl0) lbl0.textContent = d0.label;
+  if (d0.image) {
+    const img0 = $('door-img-0');
+    const ph0  = $('door-ph-0');
+    if (img0) {
+      img0.style.opacity = '0';
+      img0.src = d0.image;
+      img0.onload = () => { img0.style.opacity = '.72'; if (ph0) ph0.style.display = 'none'; };
+    }
+  }
+
+  // Slot 1 — puede no existir en la última página (queda 1 puerta sola)
+  const col1 = $('d-col-1');
+  if (indices[1] !== undefined) {
+    if (col1) col1.style.display = '';
+    const d1 = DOORS[indices[1]];
+    const lbl1 = $('door-label-1');
+    if (lbl1) lbl1.textContent = d1.label;
+    if (d1.image) {
+      const img1 = $('door-img-1');
+      const ph1  = $('door-ph-1');
+      if (img1) {
+        img1.style.opacity = '0';
+        img1.src = d1.image;
+        img1.onload = () => { img1.style.opacity = '.72'; if (ph1) ph1.style.display = 'none'; };
+      }
+    }
+  } else if (col1) {
+    col1.style.display = 'none';
+  }
+
+  // Flechas y puntos
+  const prevBtn = $('door-prev');
+  const nextBtn = $('door-next');
+  if (prevBtn) prevBtn.style.visibility = page === 0 ? 'hidden' : 'visible';
+  if (nextBtn) nextBtn.style.visibility = page === DOOR_PAGES.length - 1 ? 'hidden' : 'visible';
+  document.querySelectorAll('.door-dot').forEach((dot, i) => dot.classList.toggle('active', i === page));
+}
+
+function handleDoorClick(slot) {
+  const indices = DOOR_PAGES[doorPage];
+  const realIndex = indices[slot];
+  if (realIndex === undefined) return;
+  openScroll(realIndex);
+}
+
+function changeDoorPage(delta) {
+  const next = doorPage + delta;
+  if (next < 0 || next >= DOOR_PAGES.length) return;
+  renderDoorPage(next);
 }
 
 function openScroll(idx) {
