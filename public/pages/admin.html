@@ -1368,6 +1368,46 @@
 
         <!-- PANEL: PENDIENTES DE REGISTRO -->
         <div id="upanel-pend" class="upanel">
+
+          <!-- 🧭 TRAZABILIDAD — resumen, cohortes semanales, antigüedad -->
+          <div class="an-panel" style="margin-bottom:16px;">
+            <div class="an-panel-title">🧭 Trazabilidad · resumen general</div>
+            <div id="pzLoading" style="font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:1px;color:var(--text-faint);padding:10px 2px;">Consultando trazabilidad...</div>
+            <div id="pzBody" style="display:none;">
+              <div class="tz-stats-grid" id="pzResumen" style="margin-bottom:16px;"></div>
+
+              <div class="an-grid">
+                <div class="an-panel" style="background:rgba(0,0,0,.15);">
+                  <div class="an-panel-title" style="font-size:10px;">📈 Cohortes semanales — llegaron vs. se resolvieron vs. siguen pendientes</div>
+                  <div style="font-size:9.5px;color:var(--text-faint);font-family:'Cinzel',serif;letter-spacing:.5px;margin-bottom:10px;">
+                    Agrupado por la semana en que se generó el código (fecha de compra). "Resueltos" = ya se registraron, a la fecha de hoy.
+                  </div>
+                  <div class="an-scroll" style="max-height:340px;">
+                    <table style="width:100%;border-collapse:collapse;font-size:10.5px;">
+                      <thead>
+                        <tr style="border-bottom:1.5px solid rgba(56,189,248,.3);">
+                          <th style="text-align:left;padding:6px;color:#38bdf8;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">SEMANA</th>
+                          <th style="text-align:center;padding:6px;color:#38bdf8;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">LLEGARON</th>
+                          <th style="text-align:center;padding:6px;color:#38bdf8;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">✅ RESUELTOS</th>
+                          <th style="text-align:center;padding:6px;color:#38bdf8;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">⏳ PENDIENTES</th>
+                          <th style="text-align:left;padding:6px;color:#38bdf8;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;">% RESUELTO</th>
+                        </tr>
+                      </thead>
+                      <tbody id="pzCohortesBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="an-panel" style="background:rgba(0,0,0,.15);">
+                  <div class="an-panel-title" style="font-size:10px;">⏳ Antigüedad del backlog actual</div>
+                  <div style="font-size:9.5px;color:var(--text-faint);font-family:'Cinzel',serif;letter-spacing:.5px;margin-bottom:10px;">
+                    Cuánto llevan esperando, hoy, los que todavía no se registran.
+                  </div>
+                  <div id="pzAntiguedad"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="ufilters">
             <input id="pend-search" type="text" placeholder="🔍 Buscar por correo…" oninput="_renderPend()" class="ufilter-input">
             <button onclick="document.getElementById('pend-search').value='';_renderPend()" class="ufilter-btn">✕ Limpiar</button>
@@ -4283,15 +4323,110 @@
         ? `<span style="background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.35);border-radius:5px;padding:2px 7px;font-size:8px;color:#38bdf8;font-family:'Cinzel',serif;white-space:nowrap;">✅ Enviado ${reenvioAgo}${r.resend_count > 1 ? ' · x'+r.resend_count : ''}</span>`
         : `<span style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:2px 7px;font-size:8px;color:rgba(255,255,255,.3);font-family:'Cinzel',serif;">— nunca enviado</span>`;
 
+      const rowId = 'pendhist_' + r.user_email.replace(/[^a-zA-Z0-9]/g, '_');
+      const histBtn = r.resend_count > 0
+        ? `<button class="act-btn" style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.55);margin-left:4px;" onclick="_toggleHistorial('${rowId}', this)">🕐</button>`
+        : '';
+
       return `<tr>
         <td style="font-size:11px;color:var(--text-dim);">${r.user_email || '—'}</td>
         <td>${memBadge}</td>
         <td style="font-size:11px;color:rgba(255,255,255,.6);">${monto}</td>
         <td style="font-size:11px;font-weight:700;color:${diasColor};">${dias}d</td>
         <td>${estadoHtml}</td>
-        <td><button class="act-btn" onclick="reenviarUnoPendiente('${emailSafe}', this)">📧 Reenviar</button></td>
+        <td><button class="act-btn" onclick="reenviarUnoPendiente('${emailSafe}', this)">📧 Reenviar</button>${histBtn}</td>
+      </tr>
+      <tr id="${rowId}" style="display:none;">
+        <td colspan="6" style="padding:8px 16px 14px;background:rgba(56,189,248,.04);">
+          <div style="font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;color:rgba(56,189,248,.7);margin-bottom:6px;">📜 HISTORIAL DE REENVÍOS — ${r.user_email}</div>
+          <div id="${rowId}_content" style="font-size:10.5px;color:var(--text-dim);">Cargando...</div>
+        </td>
       </tr>`;
     }).join('');
+  }
+
+  function _toggleHistorial(rowId, btn) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    const showing = row.style.display !== 'none';
+    row.style.display = showing ? 'none' : 'table-row';
+    if (!showing) {
+      const content = document.getElementById(rowId + '_content');
+      const email = row.previousElementSibling?.querySelector('td')?.textContent;
+      const hist = (window._pendHistorial || {})[email] || [];
+      if (!hist.length) {
+        content.innerHTML = '<span style="color:var(--text-faint);">Sin eventos registrados (el reenvío se hizo antes de activar el historial detallado).</span>';
+      } else {
+        content.innerHTML = hist.map((h, i) =>
+          `<div style="padding:3px 0;">${i === 0 ? '🟢' : '🔵'} ${new Date(h.sent_at).toLocaleString('es-MX', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</div>`
+        ).join('');
+      }
+    }
+  }
+
+  /* ══════════════════════════════════════
+    🧭 TRAZABILIDAD DE PENDIENTES — cohortes semanales, antigüedad, historial real
+    Fuente: RPC admin_get_pending_traceability() — nada calculado a ojo en el cliente.
+  ══════════════════════════════════════ */
+  function _pzWeekLabel(iso) {
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+  }
+
+  async function loadPendingTraceability() {
+    document.getElementById('pzLoading').style.display = 'block';
+    document.getElementById('pzBody').style.display = 'none';
+
+    const { data, error } = await supabaseClient.rpc('admin_get_pending_traceability');
+    if (error) {
+      document.getElementById('pzLoading').textContent = '⚠ No se pudo consultar: ' + error.message;
+      return;
+    }
+
+    document.getElementById('pzLoading').style.display = 'none';
+    document.getElementById('pzBody').style.display = 'block';
+
+    // guardamos el historial real por persona para los toggles de la tabla
+    window._pendHistorial = {};
+    (data.personas || []).forEach(p => { window._pendHistorial[p.user_email] = p.historial_reenvios || []; });
+
+    const r = data.resumen || {};
+    document.getElementById('pzResumen').innerHTML =
+      _tzStat(r.total_pendientes ?? 0, '⏳ Pendientes ahora', (r.total_pendientes ?? 0) > 0) +
+      _tzStat(r.total_resueltos ?? 0, '✅ Resueltos') +
+      _tzStat(r.nunca_reenviados ?? 0, '📭 Nunca reenviados', (r.nunca_reenviados ?? 0) > 0) +
+      _tzStat((r.espera_promedio_dias_pendientes ?? 0) + 'd', '⏱️ Espera promedio (pendientes)');
+
+    const cohortes = data.cohortes_semanales || [];
+    const cBody = document.getElementById('pzCohortesBody');
+    if (!cohortes.length) {
+      cBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-faint);padding:16px;">Sin datos todavía.</td></tr>`;
+    } else {
+      cBody.innerHTML = cohortes.map(c => {
+        const pct = c.llegaron > 0 ? Math.round((c.resueltos / c.llegaron) * 100) : 0;
+        const pctColor = pct >= 80 ? '#44FF88' : pct >= 40 ? '#f59e0b' : '#ef4444';
+        return `<tr style="border-bottom:1px solid rgba(255,255,255,.05);">
+          <td style="padding:6px;color:var(--text-dim);">${_pzWeekLabel(c.semana)}</td>
+          <td style="padding:6px;text-align:center;color:rgba(255,255,255,.7);">${c.llegaron}</td>
+          <td style="padding:6px;text-align:center;color:#44FF88;">${c.resueltos}</td>
+          <td style="padding:6px;text-align:center;color:${(c.pendientes>0?'#f59e0b':'rgba(255,255,255,.3)')};">${c.pendientes}</td>
+          <td style="padding:6px;">
+            <div style="display:inline-block;width:50px;height:7px;background:rgba(255,255,255,.06);border-radius:6px;overflow:hidden;vertical-align:middle;">
+              <div style="height:100%;width:${pct}%;background:${pctColor};"></div>
+            </div>
+            <span style="font-size:9.5px;color:${pctColor};margin-left:4px;">${pct}%</span>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    const a = data.antiguedad_actual || {};
+    document.getElementById('pzAntiguedad').innerHTML = _tzBars([
+      { label: '0-3 días',   value: a.d0_3 ?? 0 },
+      { label: '4-7 días',   value: a.d4_7 ?? 0 },
+      { label: '8-14 días',  value: a.d8_14 ?? 0 },
+      { label: '15+ días ⚠', value: a.d15_mas ?? 0 },
+    ]);
   }
 
   async function reenviarUnoPendiente(email, btn) {
@@ -4698,7 +4833,7 @@
     document.getElementById('upanel-' + tab).classList.add('upanel--active');
     if (tab === 'vip') filterVip();
     if (tab === 'mem') filterMemberships();
-    if (tab === 'pend') loadPendingRegistrations();
+    if (tab === 'pend') { loadPendingRegistrations(); loadPendingTraceability(); }
   }
   </script>
   </body>
