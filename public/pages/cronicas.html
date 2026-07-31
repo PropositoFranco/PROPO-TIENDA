@@ -1559,18 +1559,31 @@ canvas#fx{position:fixed;inset:0;z-index:2;pointer-events:none}
   </div><!-- /doors-wrap -->
 
   <!-- Navegación entre las 5 puertas (2 visibles a la vez) -->
-  <div id="door-pager" style="position:absolute;bottom:14px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:22px;z-index:35;pointer-events:none;">
-    <button id="door-prev" onclick="changeDoorPage(-1)" style="pointer-events:all;background:rgba(10,4,4,.7);border:1.5px solid rgba(212,175,55,.6);color:#F5D378;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(212,175,55,.25);transition:all .2s;">‹</button>
-    <div style="display:flex;gap:8px;pointer-events:all;">
-      <span class="door-dot" style="width:8px;height:8px;border-radius:50%;background:rgba(212,175,55,.3);transition:all .3s;"></span>
-      <span class="door-dot" style="width:8px;height:8px;border-radius:50%;background:rgba(212,175,55,.3);transition:all .3s;"></span>
-      <span class="door-dot" style="width:8px;height:8px;border-radius:50%;background:rgba(212,175,55,.3);transition:all .3s;"></span>
+  <div id="door-pager" style="position:absolute;bottom:8px;left:0;right:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;z-index:35;pointer-events:none;">
+    <div id="door-pager-hint" style="pointer-events:none;font-family:'Cinzel',serif;font-size:clamp(9px,2.2vw,11px);font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#F5D378;text-shadow:0 0 10px rgba(212,175,55,.8),0 0 20px rgba(212,175,55,.4);white-space:nowrap;"></div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:20px;">
+      <button id="door-prev" onclick="changeDoorPage(-1)" style="pointer-events:all;background:rgba(10,4,4,.75);border:1.5px solid rgba(212,175,55,.7);color:#F5D378;width:38px;height:38px;border-radius:50%;font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(212,175,55,.3);transition:all .2s;">‹</button>
+      <div style="display:flex;gap:8px;pointer-events:all;">
+        <span class="door-dot" style="width:8px;height:8px;border-radius:50%;background:rgba(212,175,55,.3);transition:all .3s;"></span>
+        <span class="door-dot" style="width:8px;height:8px;border-radius:50%;background:rgba(212,175,55,.3);transition:all .3s;"></span>
+        <span class="door-dot" style="width:8px;height:8px;border-radius:50%;background:rgba(212,175,55,.3);transition:all .3s;"></span>
+      </div>
+      <button id="door-next" onclick="changeDoorPage(1)" style="pointer-events:all;background:rgba(10,4,4,.75);border:1.5px solid rgba(212,175,55,.7);color:#F5D378;width:38px;height:38px;border-radius:50%;font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(212,175,55,.3);transition:all .2s;">›</button>
     </div>
-    <button id="door-next" onclick="changeDoorPage(1)" style="pointer-events:all;background:rgba(10,4,4,.7);border:1.5px solid rgba(212,175,55,.6);color:#F5D378;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(212,175,55,.25);transition:all .2s;">›</button>
   </div>
   <style>
     .door-dot.active{background:#F5D378 !important;box-shadow:0 0 8px rgba(212,175,55,.9);}
     #door-prev:hover, #door-next:hover{border-color:rgba(212,175,55,1);box-shadow:0 0 20px rgba(212,175,55,.5);}
+    @keyframes doorNextCall{
+      0%,100%{ transform:translateX(0); box-shadow:0 0 14px rgba(212,175,55,.3); }
+      50%{ transform:translateX(5px); box-shadow:0 0 26px rgba(212,175,55,.75),0 0 44px rgba(212,175,55,.3); }
+    }
+    #door-next.call-attention{ animation: doorNextCall 1.6s ease-in-out infinite; border-color:rgba(255,229,102,.9); }
+    @keyframes hintFade{
+      0%,100%{ opacity:.65; }
+      50%{ opacity:1; }
+    }
+    #door-pager-hint{ animation: hintFade 2.4s ease-in-out infinite; }
   </style>
 
   <!-- Master Templar -->
@@ -2423,9 +2436,26 @@ function renderDoorPage(page) {
   // Flechas y puntos
   const prevBtn = $('door-prev');
   const nextBtn = $('door-next');
-  if (prevBtn) prevBtn.style.visibility = page === 0 ? 'hidden' : 'visible';
-  if (nextBtn) nextBtn.style.visibility = page === DOOR_PAGES.length - 1 ? 'hidden' : 'visible';
+  const isFirst = page === 0;
+  const isLast  = page === DOOR_PAGES.length - 1;
+  if (prevBtn) prevBtn.style.visibility = isFirst ? 'hidden' : 'visible';
+  if (nextBtn) {
+    nextBtn.style.visibility = isLast ? 'hidden' : 'visible';
+    nextBtn.classList.toggle('call-attention', !isLast);
+  }
   document.querySelectorAll('.door-dot').forEach((dot, i) => dot.classList.toggle('active', i === page));
+
+  // Texto guía: cuántas puertas hay y que toque › para ver más
+  const hint = $('door-pager-hint');
+  if (hint) {
+    const totalDoors = DOORS.length;
+    const rango = indices.length > 1
+      ? `${indices[0] + 1}–${indices[indices.length - 1] + 1}`
+      : `${indices[0] + 1}`;
+    hint.textContent = isLast
+      ? `PUERTA ${rango} DE ${totalDoors}`
+      : `PUERTAS ${rango} DE ${totalDoors} · TOCA › PARA VER MÁS`;
+  }
 }
 
 function handleDoorClick(slot) {
