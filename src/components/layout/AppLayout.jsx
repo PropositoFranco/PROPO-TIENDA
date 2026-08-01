@@ -382,7 +382,7 @@ nav {
       `}</style>
 
       {/* Sidebar */}
-      {sidebarOpen && window.innerWidth < 1024 && (
+      {sidebarOpen && window.innerWidth < 1024 && !location.pathname.startsWith('/cronicas') && (
         <div onClick={toggleSidebar} style={{
           position:'fixed', inset:0, zIndex:199,
           background:'rgba(0,0,0,0.35)',
@@ -391,7 +391,7 @@ nav {
       )}
 
       <AnimatePresence>
-        {sidebarOpen && (
+        {sidebarOpen && !location.pathname.startsWith('/cronicas') && (
           <motion.aside
             initial={{ x: -280 }}
             animate={{ x: 0 }}
@@ -480,7 +480,7 @@ nav {
       </AnimatePresence>
 
       {/* Top Bar */}
-      <header data-topbar style={{position:'fixed',top:0,left:0,right:0,zIndex:40, display: location.pathname.startsWith('/recompensa') || hideHeader ? 'none' : 'flex', opacity: sidebarOpen && window.innerWidth < 1024 ? 0 : 1, pointerEvents: sidebarOpen && window.innerWidth < 1024 ? 'none' : 'auto',background:'linear-gradient(90deg,#060112 0%,#0f0225 50%,#080119 100%)',borderBottom:'1px solid rgba(212,175,55,.28)',boxShadow:'0 4px 30px rgba(0,0,0,.9),0 1px 0 rgba(212,175,55,.14)',padding:'0 clamp(8px,3vw,28px)',height:68,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+      <header data-topbar style={{position:'fixed',top:0,left:0,right:0,zIndex:40, display: location.pathname.startsWith('/recompensa') || location.pathname.startsWith('/cronicas') || hideHeader ? 'none' : 'flex', opacity: sidebarOpen && window.innerWidth < 1024 ? 0 : 1, pointerEvents: sidebarOpen && window.innerWidth < 1024 ? 'none' : 'auto',background:'linear-gradient(90deg,#060112 0%,#0f0225 50%,#080119 100%)',borderBottom:'1px solid rgba(212,175,55,.28)',boxShadow:'0 4px 30px rgba(0,0,0,.9),0 1px 0 rgba(212,175,55,.14)',padding:'0 clamp(8px,3vw,28px)',height:68,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
 
         {/* Left */}
         <div style={{display:'flex',alignItems:'center',gap:14}}>
@@ -714,9 +714,9 @@ nav {
 
       {/* Main Content */}
       <main
-  className={`flex-1 ${location.pathname === '/hub' || location.pathname.startsWith('/recompensa') ? 'overflow-hidden' : 'overflow-auto mt-[68px]'}`}
+  className={`flex-1 ${location.pathname === '/hub' || location.pathname.startsWith('/recompensa') || location.pathname.startsWith('/cronicas') ? 'overflow-hidden' : 'overflow-auto mt-[68px]'}`}
   style={{ 
-    padding: location.pathname === '/hub' || location.pathname.startsWith('/recompensa') ? '0' : '40px 0 40px',
+    padding: location.pathname === '/hub' || location.pathname.startsWith('/recompensa') || location.pathname.startsWith('/cronicas') ? '0' : '40px 0 40px',
     display: location.pathname === '/admin' ? 'none' : undefined
   }}
 >
