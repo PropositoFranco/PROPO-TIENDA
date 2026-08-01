@@ -173,11 +173,14 @@ useEffect(() => {
   }, [user?.id, level]);
 
 useEffect(() => {
-    const header = document.querySelector('[data-topbar]');
-    if (!header) return;
-    const forceHidden = location.pathname.startsWith('/recompensa') || location.pathname.startsWith('/cronicas');
+    // Ya NO tocamos header.style.display aquí — eso ahora vive 100% en el JSX
+    // del <header data-topbar> (más abajo en el render), como única fuente de
+    // verdad. Tocarlo también aquí generaba una guerra silenciosa entre React
+    // y el DOM directo: React creía que el último valor puesto era uno, el DOM
+    // real tenía otro, y en cuanto este efecto disparaba (por sidebarOpen o
+    // cambio de ruta) pisaba el estado real de hideHeader (ej. El Oráculo
+    // abierto) sin que React se enterara — el header reaparecía solo.
     const dimForSidebar = sidebarOpen && window.innerWidth < 1024;
-    header.style.display = (forceHidden || dimForSidebar) ? 'none' : 'flex';
     const iframe = document.querySelector('iframe');
     if (iframe) iframe.style.filter = dimForSidebar ? 'brightness(0.15)' : 'none';
   }, [sidebarOpen, location.pathname]);
@@ -476,7 +479,7 @@ nav {
       </AnimatePresence>
 
       {/* Top Bar */}
-      <header data-topbar style={{position:'fixed',top:0,left:0,right:0,zIndex:40, display: location.pathname.startsWith('/recompensa') || location.pathname.startsWith('/cronicas') || hideHeader ? 'none' : 'flex', opacity: sidebarOpen && window.innerWidth < 1024 ? 0 : 1, pointerEvents: sidebarOpen && window.innerWidth < 1024 ? 'none' : 'auto',background:'linear-gradient(90deg,#060112 0%,#0f0225 50%,#080119 100%)',borderBottom:'1px solid rgba(212,175,55,.28)',boxShadow:'0 4px 30px rgba(0,0,0,.9),0 1px 0 rgba(212,175,55,.14)',padding:'0 clamp(8px,3vw,28px)',height:68,alignItems:'center',justifyContent:'space-between'}}>
+      <header data-topbar style={{position:'fixed',top:0,left:0,right:0,zIndex:40, display: location.pathname.startsWith('/recompensa') || location.pathname.startsWith('/cronicas') || hideHeader || (sidebarOpen && window.innerWidth < 1024) ? 'none' : 'flex', opacity: sidebarOpen && window.innerWidth < 1024 ? 0 : 1, pointerEvents: sidebarOpen && window.innerWidth < 1024 ? 'none' : 'auto',background:'linear-gradient(90deg,#060112 0%,#0f0225 50%,#080119 100%)',borderBottom:'1px solid rgba(212,175,55,.28)',boxShadow:'0 4px 30px rgba(0,0,0,.9),0 1px 0 rgba(212,175,55,.14)',padding:'0 clamp(8px,3vw,28px)',height:68,alignItems:'center',justifyContent:'space-between'}}>
 
         {/* Left */}
         <div style={{display:'flex',alignItems:'center',gap:14}}>

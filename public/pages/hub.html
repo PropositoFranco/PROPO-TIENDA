@@ -2653,12 +2653,12 @@ window.addEventListener('resize', scaleScene);
      Carrusel horizontal real (varias tarjetas visibles a la vez),
      scroll nativo con snap, fotos completas sin recortar.
 ══════════════════════════════════════════ -->
-<button id="oraculo-btn" aria-label="El Oráculo" style="
+<button id="oraculo-btn" aria-label="La Guía" style="
   position:fixed; bottom:calc(88px + env(safe-area-inset-bottom)); left:16px; z-index:900;
   width:58px; height:58px; border-radius:50%; cursor:pointer;
   background:linear-gradient(160deg, rgba(30,16,4,0.95), rgba(10,5,32,0.98));
   border:1px solid var(--gold-dim); display:flex; align-items:center; justify-content:center;
-  font-size:24px; box-shadow:0 0 16px rgba(212,175,55,0.35);">🔮</button>
+  font-size:24px; box-shadow:0 0 16px rgba(212,175,55,0.35);">🧭</button>
 
 <div id="oraculo-modal" style="
   position:fixed; inset:0; z-index:2500; display:none;
@@ -2675,7 +2675,7 @@ window.addEventListener('resize', scaleScene);
     <div id="oraculo-header-row" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
       <div>
         <h2 id="oraculo-title" style="margin:0; font-family:'Cinzel',serif; font-size:clamp(20px,3.2vw,30px); letter-spacing:3px;
-          color:var(--gold); text-shadow:0 0 22px rgba(212,175,55,0.55); font-weight:700;">🔮 EL ORÁCULO</h2>
+          color:var(--gold); text-shadow:0 0 22px rgba(212,175,55,0.55); font-weight:700;">🧭 LA GUÍA</h2>
         <p id="oraculo-subtitle" style="margin:6px 0 0; font-family:'Crimson Text',serif; font-style:italic; font-size:14px;
           color:rgba(240,225,255,0.82); max-width:560px;">
           Cada carta revela una función real que ya tienes disponible en tu Templo — descúbrelas todas antes de cerrar.
@@ -2733,7 +2733,11 @@ body.oraculo-mobile .oraculo-card{ width:clamp(260px, 84vw, 520px); }
 body.oraculo-mobile #oraculo-track{ padding-left:8vw !important; padding-right:8vw !important; }
 body.oraculo-mobile #oraculo-arrow-prev, body.oraculo-mobile #oraculo-arrow-next{ display:none; }
 body.oraculo-mobile #oraculo-hint-arrows{ display:none; }
-body.oraculo-mobile #oraculo-subtitle{ display:none; }
+body.oraculo-mobile #oraculo-subtitle{
+  display:-webkit-box !important; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden;
+  font-size:11.5px !important; line-height:1.4 !important; margin:4px 0 0 !important; max-width:100% !important;
+  color:rgba(240,225,255,0.75) !important;
+}
 body.oraculo-mobile #oraculo-title{ font-size:18px !important; }
 body.oraculo-mobile #oraculo-header-row{ margin-bottom:0 !important; }
 body.oraculo-mobile #oraculo-meta-row{ margin:8px 0 4px !important; }
