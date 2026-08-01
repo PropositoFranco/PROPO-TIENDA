@@ -1930,6 +1930,7 @@ function scaleScene() {
   const vw = VP.w || window.innerWidth;
   const vh = VP.h || window.innerHeight;
 const isMobile = vw < 1024;
+  document.body.classList.toggle('is-mobile-scene', isMobile);
 
   const scene = document.getElementById('scene');
   const W = isMobile ? vw : 1600;
@@ -2661,13 +2662,14 @@ window.addEventListener('resize', scaleScene);
 
 <div id="oraculo-modal" style="
   position:fixed; inset:0; z-index:2500; display:none;
+  flex-direction:column; align-items:center; justify-content:flex-start;
   overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding:max(24px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
+  box-sizing:border-box;
   background:rgba(1,0,10,0); backdrop-filter:blur(0px); transition:all .35s ease;">
 
  <div id="oraculo-modal-inner" style="
-   min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
-   padding:max(20px, env(safe-area-inset-top)) 0 max(20px, env(safe-area-inset-bottom));
-   box-sizing:border-box;">
+   margin:auto 0; width:100%; display:flex; flex-direction:column; align-items:center;">
 
   <div style="width:min(96vw,1180px); padding:0 8px; box-sizing:border-box;">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
@@ -2727,12 +2729,10 @@ window.addEventListener('resize', scaleScene);
 .oraculo-card.active { opacity:1; transform:scale(1); }
 .oraculo-band { width:100%; }
 
-@media (max-width:640px){
-  .oraculo-card{ width:84vw; }
-  #oraculo-track{ padding-left:8vw !important; padding-right:8vw !important; }
-  #oraculo-arrow-prev, #oraculo-arrow-next{ display:none; }
-  #oraculo-hint-arrows{ display:none; }
-}
+body.is-mobile-scene .oraculo-card{ width:clamp(260px, 84vw, 520px); }
+body.is-mobile-scene #oraculo-track{ padding-left:8vw !important; padding-right:8vw !important; }
+body.is-mobile-scene #oraculo-arrow-prev, body.is-mobile-scene #oraculo-arrow-next{ display:none; }
+body.is-mobile-scene #oraculo-hint-arrows{ display:none; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -3133,6 +3133,11 @@ window.addEventListener('resize', scaleScene);
 
   function openOraculo() {
     modal.style.display = 'flex';
+    const appHeader = document.getElementById('header');
+    const appBottomNav = document.getElementById('bottom-nav');
+    if (appHeader) appHeader.style.display = 'none';
+    if (appBottomNav) appBottomNav.style.display = 'none';
+    document.body.style.overflow = 'hidden';
     requestAnimationFrame(function () {
       modal.style.background = 'rgba(1,0,10,0.96)';
       modal.style.backdropFilter = 'blur(20px)';
@@ -3149,6 +3154,11 @@ window.addEventListener('resize', scaleScene);
   function closeOraculo() {
     modal.style.background = 'rgba(1,0,10,0)';
     modal.style.backdropFilter = 'blur(0px)';
+    const appHeader = document.getElementById('header');
+    const appBottomNav = document.getElementById('bottom-nav');
+    if (appHeader) appHeader.style.display = '';
+    if (appBottomNav) appBottomNav.style.display = '';
+    document.body.style.overflow = '';
     setTimeout(function () { modal.style.display = 'none'; }, 250);
   }
 
