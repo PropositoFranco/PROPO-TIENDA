@@ -933,7 +933,7 @@ canvas#fx{position:fixed;inset:0;z-index:2;pointer-events:none}
 <body>
 
 <!-- Botón flecha ↩ Lobby — reemplaza el header de la app dentro de esta página -->
-<a id="lobby-btn" href="/" onclick="if(document.referrer && document.referrer.indexOf(location.host)!==-1){history.back();return false;}">
+<a id="lobby-btn" href="#" onclick="if(window.parent && window.parent !== window){window.parent.postMessage({type:'navigate', data:'hub'}, '*');}else{window.location.href='/hub';} return false;">
   <span aria-hidden="true">←</span> LOBBY
 </a>
 
@@ -2431,29 +2431,24 @@ function startDoorCinematic() {
 
 function startInterior() {
   const dw = $('doors-wrap');
-  const mw = $('master-wrap');
-  const mb = $('master-bubble');
 
-  // 1. Doors appear at normal size
+  // 1. Doors appear at normal size (brillante, sin oscurecer)
   setTimeout(() => { dw.classList.add('show'); }, 300);
 
-  // 2. Master rises from below, BIG
+  // 2. Las puertas quedan clicables/tocables en cuanto terminan de aparecer.
+  //    (Antes esto dependía de dismissMaster(), que solo se disparaba al
+  //    hacer click en el botón del Gran Maestro — un elemento que ya no
+  //    se muestra en pantalla, dejando las puertas bloqueadas para siempre.)
   setTimeout(() => {
-    mw.classList.add('up');
-  }, 1200);
-
-  // 3. Doors shrink to background while master is big
-  setTimeout(() => {
-    dw.classList.add('backstage');
-  }, 1600);
-
-  // 4. Speech bubble appears at top
-  setTimeout(() => {
-    mb.classList.add('show');
-  }, 2400);
-
-  // Auto-dismiss after 10s
-  setTimeout(dismissMaster, 10000);
+    dw.classList.add('ready');
+    dw.querySelectorAll('.door-svg-wrap').forEach((d, i) => {
+      setTimeout(() => {
+        d.style.transition = 'filter .5s';
+        d.style.filter = 'drop-shadow(0 -8px 50px rgba(201,168,76,.8)) drop-shadow(0 0 90px rgba(155,28,28,.4)) drop-shadow(0 16px 60px rgba(0,0,0,.97))';
+        setTimeout(() => { d.style.filter = ''; }, 700);
+      }, i * 260);
+    });
+  }, 900);
 }
 
 function dismissMaster() {

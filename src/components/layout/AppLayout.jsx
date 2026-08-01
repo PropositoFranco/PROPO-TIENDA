@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useFullscreen } from '../../hooks/useFullscreen';
+import { useFullscreen } from "../../hooks/useFullscreen";
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -175,16 +175,12 @@ useEffect(() => {
 useEffect(() => {
     const header = document.querySelector('[data-topbar]');
     if (!header) return;
-    if (sidebarOpen && window.innerWidth < 1024) {
-      header.style.display = 'none';
-      const iframe = document.querySelector('iframe');
-      if (iframe) iframe.style.filter = 'brightness(0.15)';
-    } else {
-      header.style.display = 'flex';
-      const iframe = document.querySelector('iframe');
-      if (iframe) iframe.style.filter = 'none';
-    }
-  }, [sidebarOpen]);
+    const forceHidden = location.pathname.startsWith('/recompensa') || location.pathname.startsWith('/cronicas');
+    const dimForSidebar = sidebarOpen && window.innerWidth < 1024;
+    header.style.display = (forceHidden || dimForSidebar) ? 'none' : 'flex';
+    const iframe = document.querySelector('iframe');
+    if (iframe) iframe.style.filter = dimForSidebar ? 'brightness(0.15)' : 'none';
+  }, [sidebarOpen, location.pathname]);
 
   return (
     <div className="relative w-full h-full bg-dark-900 flex" style={{ overflow: location.pathname === '/admin' ? 'visible' : 'clip' }}>
@@ -480,7 +476,7 @@ nav {
       </AnimatePresence>
 
       {/* Top Bar */}
-      <header data-topbar style={{position:'fixed',top:0,left:0,right:0,zIndex:40, display: location.pathname.startsWith('/recompensa') || location.pathname.startsWith('/cronicas') || hideHeader ? 'none' : 'flex', opacity: sidebarOpen && window.innerWidth < 1024 ? 0 : 1, pointerEvents: sidebarOpen && window.innerWidth < 1024 ? 'none' : 'auto',background:'linear-gradient(90deg,#060112 0%,#0f0225 50%,#080119 100%)',borderBottom:'1px solid rgba(212,175,55,.28)',boxShadow:'0 4px 30px rgba(0,0,0,.9),0 1px 0 rgba(212,175,55,.14)',padding:'0 clamp(8px,3vw,28px)',height:68,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+      <header data-topbar style={{position:'fixed',top:0,left:0,right:0,zIndex:40, display: location.pathname.startsWith('/recompensa') || location.pathname.startsWith('/cronicas') || hideHeader ? 'none' : 'flex', opacity: sidebarOpen && window.innerWidth < 1024 ? 0 : 1, pointerEvents: sidebarOpen && window.innerWidth < 1024 ? 'none' : 'auto',background:'linear-gradient(90deg,#060112 0%,#0f0225 50%,#080119 100%)',borderBottom:'1px solid rgba(212,175,55,.28)',boxShadow:'0 4px 30px rgba(0,0,0,.9),0 1px 0 rgba(212,175,55,.14)',padding:'0 clamp(8px,3vw,28px)',height:68,alignItems:'center',justifyContent:'space-between'}}>
 
         {/* Left */}
         <div style={{display:'flex',alignItems:'center',gap:14}}>
