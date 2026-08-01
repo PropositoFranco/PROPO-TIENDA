@@ -1762,7 +1762,7 @@ function CountdownOrBuy({ module, ownedIds, btnHovered, setBtnHovered, buyLoadin
 // ─────────────────────────────────────────────
 //  MODULE CARD
 // ─────────────────────────────────────────────
-function ModuleCard({ module, onOpen, owned = false, isSeen = false }) {
+function ModuleCard({ module, onOpen, owned = false, isSeen = false, bestsellerRank = null }) {
   const [hovered, setHovered] = useState(false);
   const { user } = useAuthStore();
   const cat = CATEGORY_CONFIG[module.category] || CATEGORY_CONFIG.todo;
@@ -1815,6 +1815,7 @@ function ModuleCard({ module, onOpen, owned = false, isSeen = false }) {
         @keyframes coinPulse { 0%,100%{ opacity:1; text-shadow:0 0 6px #c8c8e0,0 0 14px rgba(200,200,230,0.5); } 50%{ opacity:0.8; text-shadow:0 0 14px #e8e8ff,0 0 28px rgba(220,220,255,0.9),0 0 40px rgba(200,200,240,0.5); } }
         @keyframes sinCosto { 0%,100%{ box-shadow:0 0 14px rgba(37,99,168,0.7),0 0 30px rgba(37,99,168,0.3),inset 0 1px 0 rgba(255,255,255,0.15); filter:brightness(1); } 50%{ box-shadow:0 0 22px rgba(37,99,168,1),0 0 50px rgba(100,160,255,0.5),inset 0 1px 0 rgba(255,255,255,0.25); filter:brightness(1.2); } }
         @keyframes badgeFreeCard { 0%,100%{ transform:scale(1); box-shadow:0 0 14px rgba(0,200,83,0.8),0 0 28px rgba(0,200,83,0.4); } 50%{ transform:scale(1.08); box-shadow:0 0 22px rgba(0,200,83,1),0 0 44px rgba(0,200,83,0.6); } }
+        @keyframes bestsellerFlame { 0%,100%{ transform:scale(1) rotate(0deg); box-shadow:0 0 14px rgba(255,111,0,0.85),0 0 30px rgba(255,171,0,0.4); } 50%{ transform:scale(1.06) rotate(-1deg); box-shadow:0 0 22px rgba(255,111,0,1),0 0 48px rgba(255,171,0,0.65); } }
       `}</style>
       <EnergyBorder color={module.color} />
       <div style={{ position:'relative', height:'clamp(160px,20vw,210px)', background: module.image ? 'transparent' : `linear-gradient(135deg, rgba(${c.r},${c.g},${c.b},0.25) 0%, rgba(${c.r},${c.g},${c.b},0.05) 50%, rgba(0,0,0,0.6) 100%)`, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -1847,6 +1848,24 @@ function ModuleCard({ module, onOpen, owned = false, isSeen = false }) {
             animation: 'badgeFreeCard 1.6s ease-in-out infinite',
           }}>
             🎁 ¡GRATIS!
+          </div>
+        )}
+
+        {bestsellerRank && !lockInfo && !owned && (
+          <div style={{
+            position: 'absolute', top: '12px', left: '12px', zIndex: 7,
+            display: 'flex', alignItems: 'center', gap: '5px',
+            padding: '5px 12px',
+            background: 'linear-gradient(135deg, #7b1e00, #ff6f00, #ffab00)',
+            border: '2px solid rgba(255,171,0,0.85)',
+            borderRadius: '12px',
+            boxShadow: '0 0 16px rgba(255,111,0,0.9), 0 0 32px rgba(255,171,0,0.4)',
+            fontFamily: "'Cinzel', serif",
+            fontSize: '9.5px', fontWeight: '900', letterSpacing: '1.6px',
+            color: '#2a0e00',
+            animation: 'bestsellerFlame 1.5s ease-in-out infinite',
+          }}>
+            🔥 #{bestsellerRank} MÁS ELEGIDO
           </div>
         )}
 
@@ -2102,12 +2121,28 @@ export default function TempleStorePage({
   const [ownedIds, setOwnedIds] = useState(new Set());
   const [seenIds, setSeenIds] = useState(new Set());
   const [successModule, setSuccessModule] = useState(null);
+  const [bestsellerMap, setBestsellerMap] = useState({});
 
   const { user } = useAuthStore();
 
   useEffect(() => {
     if (user?.id) missionsService.trackEvent(user.id, 'visit_store');
   }, [user?.id]);
+
+  useEffect(() => {
+    const loadBestsellers = async () => {
+      try {
+        const { data, error } = await supabase.rpc('get_bestseller_modules', { limit_count: 3 });
+        if (error) throw error;
+        const map = {};
+        (data || []).forEach(row => { map[row.product_id] = row.rank; });
+        setBestsellerMap(map);
+      } catch (err) {
+        console.error('Error cargando más vendidos:', err);
+      }
+    };
+    loadBestsellers();
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -2271,7 +2306,7 @@ updateHubNewStatus(data, seenSet);
         ) : (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(clamp(240px,28vw,320px), 1fr))', gap:'clamp(12px,2.5vw,24px)', padding:'4px 4px 8px' }}>
             {currentModules.map(module => (
-              <ModuleCard key={module.id} module={module} onOpen={handleOpen} owned={ownedIds.has(module.id)} isSeen={seenIds.has(module.id)} />
+              <ModuleCard key={module.id} module={module} onOpen={handleOpen} owned={ownedIds.has(module.id)} isSeen={seenIds.has(module.id)} bestsellerRank={bestsellerMap[module.id] || null} />
             ))}
           </div>
         )}
