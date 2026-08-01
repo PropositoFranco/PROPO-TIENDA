@@ -2660,8 +2660,14 @@ window.addEventListener('resize', scaleScene);
   font-size:24px; box-shadow:0 0 16px rgba(212,175,55,0.35);">🔮</button>
 
 <div id="oraculo-modal" style="
-  position:fixed; inset:0; z-index:2500; display:none; flex-direction:column; align-items:center; justify-content:center;
+  position:fixed; inset:0; z-index:2500; display:none;
+  overflow-y:auto; -webkit-overflow-scrolling:touch;
   background:rgba(1,0,10,0); backdrop-filter:blur(0px); transition:all .35s ease;">
+
+ <div id="oraculo-modal-inner" style="
+   min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+   padding:max(20px, env(safe-area-inset-top)) 0 max(20px, env(safe-area-inset-bottom));
+   box-sizing:border-box;">
 
   <div style="width:min(96vw,1180px); padding:0 8px; box-sizing:border-box;">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
@@ -2680,7 +2686,7 @@ window.addEventListener('resize', scaleScene);
       <span id="oraculo-chapter-label" style="font-family:'Cinzel',serif; font-size:11px; letter-spacing:2.5px;"></span>
       <span id="oraculo-counter" style="font-family:'Cinzel',serif; font-size:10px; letter-spacing:1.5px; color:rgba(255,255,255,0.45);"></span>
       <span style="font-family:'Crimson Text',serif; font-style:italic; font-size:12px; color:rgba(212,175,55,0.7); margin-left:auto;">
-        ‹ desliza o usa las flechas ›
+        <span id="oraculo-hint-swipe">‹ desliza</span><span id="oraculo-hint-arrows"> o usa las flechas</span> ›
       </span>
     </div>
     <div id="oraculo-progress" style="display:flex; gap:4px; margin-bottom:18px;"></div>
@@ -2704,6 +2710,7 @@ window.addEventListener('resize', scaleScene);
       padding:6px clamp(16px, calc(50% - 150px), 40%) 10px; -webkit-overflow-scrolling:touch;
       scrollbar-width:none;"></div>
   </div>
+ </div>
 </div>
 
 <style>
@@ -2718,7 +2725,14 @@ window.addEventListener('resize', scaleScene);
   transition:transform .3s ease, opacity .3s ease, border-color .3s ease, box-shadow .3s ease;
   opacity:0.5; transform:scale(0.94); cursor:pointer; }
 .oraculo-card.active { opacity:1; transform:scale(1); }
-@media (max-width:640px){ .oraculo-card{ width:78vw; } }
+.oraculo-band { width:100%; }
+
+@media (max-width:640px){
+  .oraculo-card{ width:84vw; }
+  #oraculo-track{ padding-left:8vw !important; padding-right:8vw !important; }
+  #oraculo-arrow-prev, #oraculo-arrow-next{ display:none; }
+  #oraculo-hint-arrows{ display:none; }
+}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2997,23 +3011,23 @@ window.addEventListener('resize', scaleScene);
     const chapter = CHAPTERS[s.ch];
     const c = hexToRgb(chapter.color);
 
-    const bandH = s.kind === 'staff' ? 300 : 180;
+    const bandH = s.kind === 'staff' ? 'clamp(200px, 62vw, 300px)' : 'clamp(130px, 40vw, 180px)';
     let bandHTML;
     if (s.kind === 'staff') {
-      bandHTML = `<div style="width:100%;height:${bandH}px;position:relative;overflow:hidden;
+      bandHTML = `<div class="oraculo-band" style="height:${bandH};position:relative;overflow:hidden;
         background:radial-gradient(ellipse at 50% 38%, rgba(212,175,55,0.28) 0%, rgba(8,4,20,0.94) 72%);">
         <canvas class="staff-canvas" style="width:100%;height:100%;display:block;"></canvas>
       </div>`;
     } else if (s.kind === 'photo') {
-      bandHTML = `<div style="width:100%;height:${bandH}px;display:flex;align-items:center;justify-content:center;
+      bandHTML = `<div class="oraculo-band" style="height:${bandH};display:flex;align-items:center;justify-content:center;
         background:radial-gradient(ellipse at 50% 30%, rgba(${c.r},${c.g},${c.b},0.22) 0%, rgba(8,4,20,0.9) 75%);">
         <img src="${s.img}" alt="" style="width:100%;height:100%;object-fit:contain;"></div>`;
     } else if (s.kind === 'custom') {
-      bandHTML = `<div style="width:100%;height:${bandH}px;">${customBandHTML(s.render, chapter.color)}</div>`;
+      bandHTML = `<div class="oraculo-band" style="height:${bandH};">${customBandHTML(s.render, chapter.color)}</div>`;
     } else {
-      bandHTML = `<div style="width:100%;height:${bandH}px;display:flex;align-items:center;justify-content:center;
+      bandHTML = `<div class="oraculo-band" style="height:${bandH};display:flex;align-items:center;justify-content:center;
         background:radial-gradient(ellipse at 50% 35%, rgba(${c.r},${c.g},${c.b},0.32) 0%, transparent 60%), linear-gradient(180deg, rgba(8,4,20,0.32), rgba(3,1,10,0.97));">
-        <span style="font-size:64px;filter:drop-shadow(0 0 26px rgba(${c.r},${c.g},${c.b},0.7));animation:oracleFloat 3s ease-in-out infinite;">${s.icon}</span>
+        <span style="font-size:clamp(44px,11vw,64px);filter:drop-shadow(0 0 26px rgba(${c.r},${c.g},${c.b},0.7));animation:oracleFloat 3s ease-in-out infinite;">${s.icon}</span>
       </div>`;
     }
 
