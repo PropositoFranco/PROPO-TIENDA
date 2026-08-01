@@ -56,9 +56,11 @@ export const usePrizeStore = create((set, get) => ({
         return null;
       }
 
-      usePlayerStore.getState().setPlayerData({
-        cristales: data.new_balance,
-      });
+      // Antes: setPlayerData({ cristales: data.new_balance }) sin 'level' —
+      // eso reseteaba nivel/rango a 1/DESPERTAR en el header por un instante.
+      // Ahora: addCristales/addXP suman sobre el valor actual, sin tocar nivel/rango de golpe.
+      if (data.coins_won > 0) usePlayerStore.getState().addCristales(data.coins_won);
+      if (data.xp_won > 0) usePlayerStore.getState().addXP(data.xp_won, data.coins_won);
 
       set({ pendingReward: null, isClaiming: false });
 

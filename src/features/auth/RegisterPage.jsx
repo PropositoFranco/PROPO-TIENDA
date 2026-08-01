@@ -82,7 +82,12 @@ export default function RegisterPage() {
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email,
             password,
-            options: { data: { referral_code: refCode || null } },
+            options: {
+              data: {
+                referral_code: refCode || null,
+                aliado_slug: localStorage.getItem('pending_aliado_slug') || null,
+              },
+            },
           });
           if (signUpError || !signUpData?.user) {
             pushToast('Error al crear cuenta. Intenta de nuevo.');
@@ -167,6 +172,7 @@ export default function RegisterPage() {
             referral_code: triggerData?.referral_code ||
               Array.from({ length: 6 }, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random() * 36)]).join(''),
             referred_by: resolvedReferredBy,
+            aliado_slug_registro: localStorage.getItem('pending_aliado_slug') || null,
           }, { onConflict: 'id' });
           if (error) { pushToast('Error al guardar perfil'); return; }
           // Activar membresía si tiene pago en access_codes con su email
@@ -324,6 +330,7 @@ navigate('/bienvenido', { replace: true });
                   role: 'templario',
                   referred_by: referredBy,
                   referral_code: referralCode,
+                  aliado_slug_registro: localStorage.getItem('pending_aliado_slug') || null,
                 },
             { onConflict: 'id' }
           );

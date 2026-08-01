@@ -50,6 +50,18 @@ export default function App() {
     if (ref) localStorage.setItem('pending_ref_code', ref.toUpperCase());
   }, []);
 
+  // Captura universal del slug de aliado — funciona en CUALQUIER página
+  // (landing, /offers, QR, link directo, lo que sea) mientras traiga ?aliado=slug.
+  // Se guarda una sola vez (no se pisa si ya hay uno) para no perder la
+  // atribución si el usuario navega por varias páginas antes de registrarse.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const aliado = params.get('aliado');
+    if (aliado && !localStorage.getItem('pending_aliado_slug')) {
+      localStorage.setItem('pending_aliado_slug', aliado.toLowerCase().trim());
+    }
+  }, []);
+
   useEffect(() => {
     initAuth();
   }, []);

@@ -50,6 +50,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { usePlayerStore } from '../../store/usePlayerStore';
 import { supabase } from '../../services/supabase';
 
 // ─── Paleta (idéntica a CommunityHub / AcademyHub) ─────────────────────────
@@ -208,6 +209,13 @@ export default function RewardClaimGate({ children }) {
       setPhase('error');
       return;
     }
+
+    // Sincroniza el header (PropoCoins/XP/Nivel) al instante, sin esperar recarga.
+    // Usa addCristales/addXP (suman sobre el valor actual) — NUNCA setPlayerData a medias,
+    // porque esa función resetea nivel/rango a 1/DESPERTAR si no recibe 'level'.
+    if (data.coins_won > 0) usePlayerStore.getState().addCristales(data.coins_won);
+    if (data.xp_won > 0) usePlayerStore.getState().addXP(data.xp_won, data.coins_won);
+
     setClaimResult(data);
     setPhase('celebrating');
   }, [current]);

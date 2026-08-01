@@ -223,7 +223,7 @@ export default function AliadoDisplayPage() {
 
     const { data: aliadoData, error } = await supabase
       .from('aliados')
-      .select('*, sorteo_eventos(id, nombre, cupo_por_ronda, activo)')
+      .select('nombre, activo, sorteo_activo_id, sorteo_eventos(id, nombre, cupo_por_ronda, activo)')
       .eq('slug', slug)
       .single();
 

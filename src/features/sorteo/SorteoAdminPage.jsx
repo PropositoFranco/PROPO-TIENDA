@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../services/supabase';
+import LtvComisionesTab from './LtvComisionesTab';
 
 const C = {
   bg:      '#07040f',
@@ -85,7 +86,8 @@ export default function SorteoAdminPage() {
   const [loadingMetricas, setLoadingMetricas] = useState(false);
   const [aliados,       setAliados]       = useState([]);
   const [loadingAliados, setLoadingAliados] = useState(false);
-  const [formAliado,    setFormAliado]    = useState({ nombre: '', slug: '' });
+  const [formAliado,    setFormAliado]    = useState({ nombre: '', slug: '', rol: '', comision_pct: '', manager_aliado_id: '' });
+  const [guardandoComision, setGuardandoComision] = useState(null); // id del aliado que se está guardando inline
   const [errAliado,     setErrAliado]     = useState('');
   const [creandoAliado, setCreandoAliado] = useState(false);
   const [copiadoAliado, setCopiadoAliado] = useState('');
@@ -257,14 +259,26 @@ export default function SorteoAdminPage() {
       nombre: formAliado.nombre.trim(),
       slug,
       activo: true,
+      rol: formAliado.rol || null,
+      comision_pct: formAliado.comision_pct === '' ? null : Number(formAliado.comision_pct),
+      manager_aliado_id: formAliado.manager_aliado_id || null,
     });
     setCreandoAliado(false);
     if (error) {
       setErrAliado(error.code === '23505' ? 'Ese slug ya existe. Elige otro nombre.' : 'Error al crear. Intenta de nuevo.');
       return;
     }
-    setFormAliado({ nombre: '', slug: '' });
+    setFormAliado({ nombre: '', slug: '', rol: '', comision_pct: '', manager_aliado_id: '' });
     cargarAliados();
+  };
+
+  // Edita rol / % comisión / gerente de un aliado ya existente (inline, sin recargar la página)
+  const actualizarComisionAliado = async (id, cambios) => {
+    setGuardandoComision(id);
+    const { error } = await supabase.from('aliados').update(cambios).eq('id', id);
+    setGuardandoComision(null);
+    if (error) { alert('Error al guardar. Intenta de nuevo.'); return; }
+    setAliados(prev => prev.map(a => a.id === id ? { ...a, ...cambios } : a));
   };
 
   const guardarEventoGlobal = async (nuevoId) => {
@@ -353,6 +367,7 @@ export default function SorteoAdminPage() {
             { id: 'aliados',   label: '🤝 ALIADOS' },
             { id: 'qrfisicos', label: '📦 QR FÍSICOS' },
             { id: 'metricas',  label: '📊 MÉTRICAS' },
+            { id: 'ltv',       label: '💰 LTV' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -946,6 +961,47 @@ export default function SorteoAdminPage() {
                 />
               </div>
               
+              <div style={{ minWidth: 130 }}>
+                <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>ROL (COMISIÓN)</label>
+                <select
+                  value={formAliado.rol}
+                  onChange={e => setFormAliado(f => ({ ...f, rol: e.target.value }))}
+                  style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 11 }}
+                >
+                  <option value="">— Sin comisión —</option>
+                  <option value="punto_aliado">Punto Aliado (0%)</option>
+                  <option value="lider">Líder</option>
+                  <option value="gerente">Gerente</option>
+                </select>
+              </div>
+              {(formAliado.rol === 'lider' || formAliado.rol === 'gerente') && (
+                <div style={{ minWidth: 90 }}>
+                  <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>% COMISIÓN</label>
+                  <input
+                    type="number" step="0.01" min="0" max="100"
+                    value={formAliado.comision_pct}
+                    onChange={e => setFormAliado(f => ({ ...f, comision_pct: e.target.value }))}
+                    placeholder="15"
+                    style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'monospace', fontSize: 12 }}
+                  />
+                </div>
+              )}
+              {formAliado.rol === 'lider' && (
+                <div style={{ minWidth: 160 }}>
+                  <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>REPORTA A GERENTE</label>
+                  <select
+                    value={formAliado.manager_aliado_id}
+                    onChange={e => setFormAliado(f => ({ ...f, manager_aliado_id: e.target.value }))}
+                    style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 11 }}
+                  >
+                    <option value="">— Ninguno —</option>
+                    {aliados.filter(a => a.rol === 'gerente').map(g => (
+                      <option key={g.id} value={g.id}>{g.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <button
                 onClick={crearAliado}
                 disabled={creandoAliado}
@@ -1018,7 +1074,49 @@ export default function SorteoAdminPage() {
                       <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, margin: 0 }}>📊 {aliado.scan_count || 0} scans</p>
                     </div>
 
-                    
+                    {/* Comisión: rol / % / gerente — editable inline */}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', minWidth: 260 }}>
+                      <select
+                        value={aliado.rol || ''}
+                        onChange={e => actualizarComisionAliado(aliado.id, { rol: e.target.value || null })}
+                        disabled={guardandoComision === aliado.id}
+                        style={{ padding: '7px 10px', background: '#07040f', border: `1px solid ${aliado.rol ? C.borderHi : C.border}`, borderRadius: 7, color: aliado.rol ? C.text : C.muted, fontFamily: 'Cinzel, serif', fontSize: 9 }}
+                      >
+                        <option value="">— Sin comisión —</option>
+                        <option value="punto_aliado">Punto Aliado</option>
+                        <option value="lider">Líder</option>
+                        <option value="gerente">Gerente</option>
+                      </select>
+                      {(aliado.rol === 'lider' || aliado.rol === 'gerente') && (
+                        <>
+                          <input
+                            type="number" step="0.01" min="0" max="100"
+                            defaultValue={aliado.comision_pct ?? ''}
+                            onBlur={e => {
+                              const v = e.target.value === '' ? null : Number(e.target.value);
+                              if (v !== aliado.comision_pct) actualizarComisionAliado(aliado.id, { comision_pct: v });
+                            }}
+                            placeholder="%"
+                            title="% de comisión"
+                            style={{ width: 56, padding: '7px 8px', background: '#07040f', border: `1px solid ${aliado.comision_pct != null ? C.borderHi : C.border}`, borderRadius: 7, color: C.gold, fontFamily: 'monospace', fontSize: 10 }}
+                          />
+                          {aliado.rol === 'lider' && (
+                            <select
+                              value={aliado.manager_aliado_id || ''}
+                              onChange={e => actualizarComisionAliado(aliado.id, { manager_aliado_id: e.target.value || null })}
+                              disabled={guardandoComision === aliado.id}
+                              title="Reporta a gerente"
+                              style={{ padding: '7px 10px', background: '#07040f', border: `1px solid ${C.border}`, borderRadius: 7, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9 }}
+                            >
+                              <option value="">— Sin gerente —</option>
+                              {aliados.filter(a => a.rol === 'gerente' && a.id !== aliado.id).map(g => (
+                                <option key={g.id} value={g.id}>{g.nombre}</option>
+                              ))}
+                            </select>
+                          )}
+                        </>
+                      )}
+                    </div>
 
                     {/* Botones */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -1137,6 +1235,9 @@ export default function SorteoAdminPage() {
           )}
         </div>
       )}
+
+      {/* ══ TAB: LTV / COMISIONES ══ */}
+      {tabActiva === 'ltv' && <LtvComisionesTab />}
 
       {/* Modal QR físico */}
       {qrFModal && (
