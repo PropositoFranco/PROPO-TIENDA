@@ -139,6 +139,9 @@ useEffect(() => {
     if (type === 'navigate' && data) {
       navigate('/' + data);
     }
+    if (type === 'oraculo-modal') {
+      setHideHeader(!!data?.open);
+    }
   };
   window.addEventListener('message', handler);
   return () => window.removeEventListener('message', handler);

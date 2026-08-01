@@ -2672,11 +2672,11 @@ window.addEventListener('resize', scaleScene);
    margin:auto 0; width:100%; display:flex; flex-direction:column; align-items:center;">
 
   <div style="width:min(96vw,1180px); padding:0 8px; box-sizing:border-box;">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+    <div id="oraculo-header-row" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
       <div>
-        <h2 style="margin:0; font-family:'Cinzel',serif; font-size:clamp(20px,3.2vw,30px); letter-spacing:3px;
+        <h2 id="oraculo-title" style="margin:0; font-family:'Cinzel',serif; font-size:clamp(20px,3.2vw,30px); letter-spacing:3px;
           color:var(--gold); text-shadow:0 0 22px rgba(212,175,55,0.55); font-weight:700;">🔮 EL ORÁCULO</h2>
-        <p style="margin:6px 0 0; font-family:'Crimson Text',serif; font-style:italic; font-size:14px;
+        <p id="oraculo-subtitle" style="margin:6px 0 0; font-family:'Crimson Text',serif; font-style:italic; font-size:14px;
           color:rgba(240,225,255,0.82); max-width:560px;">
           Cada carta revela una función real que ya tienes disponible en tu Templo — descúbrelas todas antes de cerrar.
         </p>
@@ -2684,7 +2684,7 @@ window.addEventListener('resize', scaleScene);
       <button id="oraculo-close" style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.85);
         width:34px; height:34px; border-radius:50%; cursor:pointer; font-size:16px; flex-shrink:0;">✕</button>
     </div>
-    <div style="display:flex; align-items:baseline; gap:10px; margin:14px 0 6px;">
+    <div id="oraculo-meta-row" style="display:flex; align-items:baseline; gap:10px; margin:14px 0 6px;">
       <span id="oraculo-chapter-label" style="font-family:'Cinzel',serif; font-size:11px; letter-spacing:2.5px;"></span>
       <span id="oraculo-counter" style="font-family:'Cinzel',serif; font-size:10px; letter-spacing:1.5px; color:rgba(255,255,255,0.45);"></span>
       <span style="font-family:'Crimson Text',serif; font-style:italic; font-size:12px; color:rgba(212,175,55,0.7); margin-left:auto;">
@@ -2729,10 +2729,19 @@ window.addEventListener('resize', scaleScene);
 .oraculo-card.active { opacity:1; transform:scale(1); }
 .oraculo-band { width:100%; }
 
-body.is-mobile-scene .oraculo-card{ width:clamp(260px, 84vw, 520px); }
-body.is-mobile-scene #oraculo-track{ padding-left:8vw !important; padding-right:8vw !important; }
-body.is-mobile-scene #oraculo-arrow-prev, body.is-mobile-scene #oraculo-arrow-next{ display:none; }
-body.is-mobile-scene #oraculo-hint-arrows{ display:none; }
+body.oraculo-mobile .oraculo-card{ width:clamp(260px, 84vw, 520px); }
+body.oraculo-mobile #oraculo-track{ padding-left:8vw !important; padding-right:8vw !important; }
+body.oraculo-mobile #oraculo-arrow-prev, body.oraculo-mobile #oraculo-arrow-next{ display:none; }
+body.oraculo-mobile #oraculo-hint-arrows{ display:none; }
+body.oraculo-mobile #oraculo-subtitle{ display:none; }
+body.oraculo-mobile #oraculo-title{ font-size:18px !important; }
+body.oraculo-mobile #oraculo-header-row{ margin-bottom:0 !important; }
+body.oraculo-mobile #oraculo-meta-row{ margin:8px 0 4px !important; }
+body.oraculo-mobile #oraculo-progress{ margin-bottom:10px !important; }
+body.oraculo-mobile #oraculo-modal-inner{ margin:0 !important; }
+body.oraculo-mobile #oraculo-modal{ padding-top:12px !important; padding-bottom:12px !important; }
+body.oraculo-mobile .oraculo-card > div:last-child{ padding:8px 14px 14px !important; }
+body.oraculo-mobile .oraculo-card > div:last-child > div:nth-child(2){ min-height:0 !important; font-size:14px !important; margin-bottom:10px !important; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -3006,6 +3015,13 @@ body.is-mobile-scene #oraculo-hint-arrows{ display:none; }
 
   const track = document.getElementById('oraculo-track');
 
+  function updateOraculoMobile() {
+    document.body.classList.toggle('oraculo-mobile', window.innerWidth < 1024);
+  }
+  updateOraculoMobile();
+  window.addEventListener('resize', updateOraculoMobile);
+
+
   // ── Construir las 12 tarjetas de una sola vez (carrusel real, no una story) ──
   SLIDES.forEach(function (s, i) {
     const chapter = CHAPTERS[s.ch];
@@ -3138,6 +3154,7 @@ body.is-mobile-scene #oraculo-hint-arrows{ display:none; }
     if (appHeader) appHeader.style.display = 'none';
     if (appBottomNav) appBottomNav.style.display = 'none';
     document.body.style.overflow = 'hidden';
+    window.parent.postMessage({ type: 'oraculo-modal', data: { open: true } }, '*');
     requestAnimationFrame(function () {
       modal.style.background = 'rgba(1,0,10,0.96)';
       modal.style.backdropFilter = 'blur(20px)';
@@ -3159,6 +3176,7 @@ body.is-mobile-scene #oraculo-hint-arrows{ display:none; }
     if (appHeader) appHeader.style.display = '';
     if (appBottomNav) appBottomNav.style.display = '';
     document.body.style.overflow = '';
+    window.parent.postMessage({ type: 'oraculo-modal', data: { open: false } }, '*');
     setTimeout(function () { modal.style.display = 'none'; }, 250);
   }
 
