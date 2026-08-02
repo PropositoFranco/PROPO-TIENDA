@@ -2730,9 +2730,17 @@ window.addEventListener('resize', scaleScene);
   opacity:0.5; transform:scale(0.94); cursor:pointer; }
 .oraculo-card.active { opacity:1; transform:scale(1); }
 .oraculo-band { width:100%; }
+.oraculo-card-inner { display:flex; flex-direction:column; height:100%; }
+.oraculo-content { display:flex; flex-direction:column; flex:1; min-height:0; padding:14px 18px 18px; }
+.oraculo-badge-row { flex-shrink:0; margin-bottom:8px; }
+.oraculo-text-row { flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center; }
+.oraculo-sabias-label { display:flex; align-items:center; gap:6px; margin-bottom:8px; flex-shrink:0;
+  font-family:'Cinzel',serif; font-size:12.5px; letter-spacing:2px; text-transform:uppercase; color:var(--gold); font-weight:700; }
+.oraculo-hook { font-family:'Crimson Text',serif; font-size:16px; line-height:1.32; color:#f4f0ff; margin-bottom:14px; }
+.oraculo-cta { flex-shrink:0; }
 
-body.oraculo-mobile .oraculo-card{ width:clamp(260px, 84vw, 520px); }
-body.oraculo-mobile #oraculo-track{ padding-left:8vw !important; padding-right:8vw !important; }
+body.oraculo-mobile .oraculo-card{ width:clamp(260px, 84vw, 520px); height:100%; }
+body.oraculo-mobile #oraculo-track{ padding-left:8vw !important; padding-right:8vw !important; flex:1 !important; min-height:0 !important; height:auto !important; }
 body.oraculo-mobile #oraculo-arrow-prev, body.oraculo-mobile #oraculo-arrow-next{ display:none; }
 body.oraculo-mobile #oraculo-hint-arrows{ display:none; }
 body.oraculo-mobile #oraculo-subtitle{
@@ -2744,10 +2752,28 @@ body.oraculo-mobile #oraculo-title{ font-size:18px !important; }
 body.oraculo-mobile #oraculo-header-row{ margin-bottom:0 !important; }
 body.oraculo-mobile #oraculo-meta-row{ margin:8px 0 4px !important; }
 body.oraculo-mobile #oraculo-progress{ margin-bottom:10px !important; }
-body.oraculo-mobile #oraculo-modal-inner{ margin:0 !important; }
-body.oraculo-mobile #oraculo-modal{ padding-top:12px !important; padding-bottom:12px !important; }
-body.oraculo-mobile .oraculo-card > div:last-child{ padding:8px 14px 14px !important; }
-body.oraculo-mobile .oraculo-card > div:last-child > div:nth-child(2){ min-height:0 !important; font-size:14px !important; margin-bottom:10px !important; }
+/* El modal entero se vuelve una columna flex de altura real: bloque de
+   título arriba (auto) + zona de la card abajo (flex:1 = todo lo que sobra).
+   Así la card SIEMPRE mide exactamente el espacio disponible, nunca más,
+   nunca menos — cero scroll posible, sin importar el tamaño del celular. */
+body.oraculo-mobile #oraculo-modal-inner{ margin:0 !important; flex:1 !important; min-height:0 !important; width:100% !important; }
+body.oraculo-mobile #oraculo-modal-inner > div:last-child{ flex:1 !important; min-height:0 !important; display:flex !important; flex-direction:column !important; }
+body.oraculo-mobile #oraculo-modal{ padding-top:10px !important; padding-bottom:10px !important; }
+
+/* La card se acuesta de lado: imagen a la izquierda, texto+botón a la
+   derecha — en vez de apilados, así cabe todo de una sola vista. */
+body.oraculo-mobile .oraculo-card-inner{ flex-direction:row !important; }
+body.oraculo-mobile .oraculo-band{ height:100% !important; width:38% !important; flex:0 0 38% !important; }
+body.oraculo-mobile .oraculo-band img{ object-fit:cover !important; }
+body.oraculo-mobile .oraculo-content{ flex:1 !important; min-width:0 !important; padding:12px 14px !important; justify-content:space-between !important; }
+body.oraculo-mobile .oraculo-badge-row{ margin-bottom:6px !important; }
+body.oraculo-mobile .oraculo-badge-row span{ font-size:8px !important; padding:3px 8px !important; }
+body.oraculo-mobile .oraculo-sabias-label{ font-size:10px !important; margin-bottom:6px !important; }
+body.oraculo-mobile .oraculo-hook{
+  font-size:clamp(11px,3vw,13px) !important; line-height:1.32 !important; margin-bottom:8px !important;
+  display:-webkit-box !important; -webkit-box-orient:vertical !important; -webkit-line-clamp:9 !important; line-clamp:9 !important; overflow:hidden !important;
+}
+body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !important; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -3059,18 +3085,19 @@ body.oraculo-mobile .oraculo-card > div:last-child > div:nth-child(2){ min-heigh
     cardEl.style.border = `1px solid rgba(${c.r},${c.g},${c.b},0.4)`;
     cardEl.style.boxShadow = `0 0 40px rgba(${c.r},${c.g},${c.b},0.18)`;
     cardEl.innerHTML = `
-      ${bandHTML}
-      <div style="padding:14px 18px 0;">${badgeChip(s.badge, chapter.color)}</div>
-      <div style="padding:10px 18px 18px;">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
-          <span style="font-size:13px;">✦</span>
-          <span style="font-family:'Cinzel',serif;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;">¿Sabías que...?</span>
+      <div class="oraculo-card-inner">
+        ${bandHTML}
+        <div class="oraculo-content">
+          <div class="oraculo-badge-row">${badgeChip(s.badge, chapter.color)}</div>
+          <div class="oraculo-text-row">
+            <div class="oraculo-sabias-label"><span style="font-size:13px;">✦</span><span>¿Sabías que...?</span></div>
+            <div class="oraculo-hook">${s.hook}</div>
+          </div>
+          <button class="oraculo-cta" style="width:100%;padding:12px 14px;border-radius:10px;cursor:pointer;
+            font-family:'Cinzel',serif;font-size:11px;letter-spacing:1.2px;font-weight:700;color:#0a0614;
+            background:linear-gradient(135deg, rgba(${c.r},${c.g},${c.b},0.95), rgba(${c.r},${c.g},${c.b},0.65));
+            border:1px solid rgba(${c.r},${c.g},${c.b},0.9); box-shadow:0 4px 18px rgba(${c.r},${c.g},${c.b},0.35);">${s.cta} →</button>
         </div>
-        <div style="font-family:'Crimson Text',serif;font-size:16px;line-height:1.32;color:#f4f0ff;margin-bottom:14px;min-height:82px;">${s.hook}</div>
-        <button class="oraculo-cta" style="width:100%;padding:12px 14px;border-radius:10px;cursor:pointer;
-          font-family:'Cinzel',serif;font-size:11px;letter-spacing:1.2px;font-weight:700;color:#0a0614;
-          background:linear-gradient(135deg, rgba(${c.r},${c.g},${c.b},0.95), rgba(${c.r},${c.g},${c.b},0.65));
-          border:1px solid rgba(${c.r},${c.g},${c.b},0.9); box-shadow:0 4px 18px rgba(${c.r},${c.g},${c.b},0.35);">${s.cta} →</button>
       </div>`;
     cardEl.querySelector('.oraculo-cta').addEventListener('click', function (e) {
       e.stopPropagation();
