@@ -13,7 +13,7 @@
   --dark:#050202;--dark2:#0A0404;--dark3:#120606;
   --parchment:#F0E4C0;--parchment2:#D8C898;
 }
-html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Crimson Text',serif;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Crimson Text',serif;user-select:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;touch-action:none}
 
 /* ── SCENE SYSTEM ── */
 .scene{position:fixed;inset:0;opacity:0;pointer-events:none;transition:opacity .7s ease;z-index:10}
@@ -37,7 +37,7 @@ canvas#fx{position:fixed;inset:0;z-index:2;pointer-events:none}
 /* ════════════════════════════════
    SCENE 1 — EXTERIOR / INTRO
 ════════════════════════════════ */
-#scene-intro{flex-direction:column;overflow:hidden}
+#scene-intro{flex-direction:column;overflow:hidden;touch-action:none}
 
 /* Sky layers */
 .sky{position:absolute;inset:0;background:linear-gradient(180deg,#0A0204 0%,#16060A 35%,#200808 60%,#0C0404 100%)}
@@ -2332,43 +2332,74 @@ function initGuideArrow() {
 function initDrag() {
   const ghost = $('drag-ghost');
   let dragging = false;
+  let usingTouch = false;   // once a touch session starts, ignore the synthetic mouse events that follow it
+  let templeRect = null;    // cached once per drag — no layout reads inside touchmove
+  let pendingP = null;      // latest raw finger/cursor position
+  let rafId = null;
 
-  function pos(e) { return e.touches ? {x: e.touches[0].clientX, y: e.touches[0].clientY} : {x: e.clientX, y: e.clientY}; }
+  function pos(e) {
+    if (e.touches && e.touches.length) return {x: e.touches[0].clientX, y: e.touches[0].clientY};
+    if (e.changedTouches && e.changedTouches.length) return {x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY};
+    return {x: e.clientX, y: e.clientY};
+  }
 
-  function onStart(e) {
+  function inTemple(p, tr) {
+    return p.x > tr.left && p.x < tr.right && p.y > tr.top && p.y < tr.bottom + 80;
+  }
+
+  function paint() {
+    rafId = null;
+    if (!dragging || !pendingP) return;
+    const p = pendingP;
+    ghost.style.left = p.x + 'px'; ghost.style.top = p.y + 'px';
+    ghost.innerHTML = inTemple(p, templeRect) ? '⚜' : '⚔️';
+  }
+
+  function beginDrag(e, p) {
     if (phase !== 'idle') return;
     dragging = true;
+    templeRect = $('temple-wrap').getBoundingClientRect(); // read once, reuse for the whole gesture
     ghost.classList.add('on');
-    const p = pos(e);
-    ghost.style.left = p.x + 'px'; ghost.style.top = p.y + 'px';
+    pendingP = p;
+    paint();
     $('drag-hint').style.opacity = '.25';
     e.preventDefault();
   }
 
+  function onTouchStart(e) {
+    usingTouch = true;
+    beginDrag(e, pos(e));
+  }
+  function onMouseStart(e) {
+    if (usingTouch) return; // ignore the ghost-click mousedown that follows a real touch
+    beginDrag(e, pos(e));
+  }
+
   function onMove(e) {
     if (!dragging) return;
-    const p = pos(e);
-    ghost.style.left = p.x + 'px'; ghost.style.top = p.y + 'px';
-    const tr = $('temple-wrap').getBoundingClientRect();
-    const inTemple = p.x > tr.left && p.x < tr.right && p.y > tr.top && p.y < tr.bottom + 70;
-    ghost.innerHTML = inTemple ? '⚜' : '⚔️';
+    pendingP = pos(e);
     e.preventDefault();
+    if (rafId == null) rafId = requestAnimationFrame(paint);
   }
 
   function onEnd(e) {
     if (!dragging) return;
     dragging = false; ghost.classList.remove('on');
-    const p = e.changedTouches ? {x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY} : {x: e.clientX, y: e.clientY};
-    const tr = $('temple-wrap').getBoundingClientRect();
-    if (p.x > tr.left && p.x < tr.right && p.y > tr.top && p.y < tr.bottom + 80) startApproach();
+    if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
+    const p = pos(e);
+    const tr = templeRect || $('temple-wrap').getBoundingClientRect();
+    if (inTemple(p, tr)) startApproach();
+    templeRect = null; pendingP = null;
   }
 
-  $('scene-intro').addEventListener('mousedown', onStart);
-  $('scene-intro').addEventListener('touchstart', onStart, {passive: false});
+  const scene = $('scene-intro');
+  scene.addEventListener('mousedown', onMouseStart);
+  scene.addEventListener('touchstart', onTouchStart, {passive: false});
   document.addEventListener('mousemove', onMove);
   document.addEventListener('touchmove', onMove, {passive: false});
   document.addEventListener('mouseup', onEnd);
   document.addEventListener('touchend', onEnd);
+  document.addEventListener('touchcancel', onEnd);
 }
 
 // ══════════════════════════════════════════
