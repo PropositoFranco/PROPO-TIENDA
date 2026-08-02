@@ -1018,6 +1018,26 @@ if (!error) {
             ⚡ Entendido — Entrar al Feed
           </button>
         </div>
+
+        {/* Indicadores de scroll — avisan que hay que deslizar hacia abajo */}
+        <div style={{
+          position:'absolute', top:'50%', left:'clamp(0.4rem,3vw,1.5rem)',
+          fontSize:'clamp(1.5rem,4vw,2.2rem)', color:'rgba(192,132,252,.6)',
+          animation:'scrollHintBounce 1.6s ease-in-out infinite',
+          pointerEvents:'none', textShadow:'0 0 14px rgba(192,132,252,.7)',
+        }}>⌄</div>
+        <div style={{
+          position:'absolute', top:'50%', right:'clamp(0.4rem,3vw,1.5rem)',
+          fontSize:'clamp(1.5rem,4vw,2.2rem)', color:'rgba(192,132,252,.6)',
+          animation:'scrollHintBounce 1.6s ease-in-out infinite 0.3s',
+          pointerEvents:'none', textShadow:'0 0 14px rgba(192,132,252,.7)',
+        }}>⌄</div>
+        <style>{`
+          @keyframes scrollHintBounce {
+            0%,100%  { transform: translateY(calc(-50% + 0px));  opacity:.55; }
+            50%       { transform: translateY(calc(-50% + 12px)); opacity:1; }
+          }
+        `}</style>
       </div>,
       document.body
     );
