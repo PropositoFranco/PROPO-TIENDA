@@ -16,6 +16,7 @@
     useState, useEffect, useRef,
     useCallback, useMemo, memo,
   } from 'react';
+  import { createPortal } from 'react-dom';
   import { useAuthStore }   from '../../store/useAuthStore';
   import { usePlayerStore } from '../../store/usePlayerStore';
   import { supabase }       from '../../services/supabase';
@@ -289,6 +290,13 @@ import { missionsService } from '../../services/missions.service';
     const [showRules,      setShowRules]      = useState(() => {
       return !localStorage.getItem('_feed_rules_accepted');
     });
+
+    // Oculta la barra superior de AppLayout SOLO mientras este modal está abierto
+    // (reutiliza el mismo mecanismo que tu app ya usa para contenido a pantalla completa)
+    useEffect(() => {
+      if (showRules) window.dispatchEvent(new Event('vip-content-open'));
+      return () => window.dispatchEvent(new Event('vip-content-close'));
+    }, [showRules]);
 
     // ─── Cargar posts ──────────────────────────────────────────────────────────
     const loadPosts = useCallback(async () => {
@@ -940,7 +948,7 @@ if (!error) {
 
     // ─── Render ────────────────────────────────────────────────────────────────
 
-    if (showRules) return (
+    if (showRules) return createPortal(
       <div style={{
         position:'fixed', inset:0, zIndex:99999,
         background:'rgba(2,1,10,.92)', backdropFilter:'blur(14px)',
@@ -1010,7 +1018,8 @@ if (!error) {
             ⚡ Entendido — Entrar al Feed
           </button>
         </div>
-      </div>
+      </div>,
+      document.body
     );
 
     return (
