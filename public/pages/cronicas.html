@@ -297,7 +297,7 @@ canvas#fx{position:fixed;inset:0;z-index:2;pointer-events:none}
 /* ── 3 DOORS ── */
 #doors-wrap{
   position:absolute;
-  bottom:0;left:0;right:0;
+  bottom:70px;left:0;right:0;
   display:flex;align-items:flex-end;justify-content:center;
   gap:clamp(16px,4vw,60px);
   opacity:0;
@@ -331,6 +331,36 @@ canvas#fx{position:fixed;inset:0;z-index:2;pointer-events:none}
 }
 .d-lbl.center-lbl{color:var(--gold-bright);font-size:clamp(10px,1.5vw,14px)}
 
+/* Botón visible "ENTRAR" — respaldo garantizado para móvil, grande y fácil de tocar */
+.door-enter-btn{
+  display:block;
+  margin:2px auto 0;
+  padding:10px 22px;
+  min-width:120px;
+  font-family:'Cinzel',serif;
+  font-size:clamp(11px,2.6vw,13px);
+  font-weight:700;
+  letter-spacing:2.5px;
+  text-transform:uppercase;
+  color:#F5D378;
+  background:rgba(20,8,8,.75);
+  border:1.5px solid rgba(212,175,55,.75);
+  border-radius:22px;
+  cursor:pointer;
+  box-shadow:0 0 16px rgba(212,175,55,.35);
+  transition:all .2s ease;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  appearance:none;-webkit-appearance:none;
+}
+.door-enter-btn:active,
+.door-enter-btn:hover{
+  background:rgba(212,175,55,.16);
+  border-color:#F5D378;
+  box-shadow:0 0 26px rgba(212,175,55,.6);
+  transform:translateY(-2px);
+}
+
 /* Door SVG containers — sized by viewport HEIGHT so they always look tall */
 .door-svg-wrap{
   position:relative;
@@ -354,7 +384,7 @@ canvas#fx{position:fixed;inset:0;z-index:2;pointer-events:none}
   appearance:none;-webkit-appearance:none;
 }
 /* Both doors — equal, large, fill screen height */
-.door-both{ height:62vh; width:auto; }
+.door-both{ height:62vh; width:auto; transform:scaleY(1.09); transform-origin:bottom center; }
 .door-both svg{ height:100%; width:auto; }
 
 
@@ -1537,6 +1567,7 @@ canvas#fx{position:fixed;inset:0;z-index:2;pointer-events:none}
 </svg>
       </div>
       <div class="d-lbl" id="door-label-0">⚜ CÁMARA I ⚜</div>
+      <button type="button" class="door-enter-btn" onclick="event.stopPropagation();handleDoorClick(0)">Entrar ›</button>
     </div>
 
     <!-- DOOR 2 CENTER — tallest, grandest -->
@@ -1639,6 +1670,7 @@ canvas#fx{position:fixed;inset:0;z-index:2;pointer-events:none}
 </svg>
       </div>
       <div class="d-lbl center-lbl" id="door-label-1">✦ CÁMARA II ✦</div>
+      <button type="button" class="door-enter-btn" onclick="event.stopPropagation();handleDoorClick(1)">Entrar ›</button>
     </div>
 
 
