@@ -944,8 +944,9 @@ if (!error) {
       <div style={{
         position:'fixed', inset:0, zIndex:99999,
         background:'rgba(2,1,10,.92)', backdropFilter:'blur(14px)',
-        display:'flex', alignItems:'center', justifyContent:'center',
-        padding:'1rem',
+        display:'flex', alignItems:'flex-start', justifyContent:'center',
+        overflowY:'auto', WebkitOverflowScrolling:'touch',
+        padding:'clamp(0.75rem,3vh,2rem) 1rem',
       }}>
         <div style={{
           maxWidth:'440px', width:'100%',
