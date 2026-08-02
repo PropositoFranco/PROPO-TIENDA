@@ -2661,7 +2661,9 @@ window.addEventListener('resize', scaleScene);
   font-size:24px; box-shadow:0 0 16px rgba(212,175,55,0.35);">🧭</button>
 
 <div id="oraculo-modal" style="
-  position:fixed; inset:0; z-index:2500; display:none;
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  width:100vw; height:100vh; height:100dvh;
+  z-index:2147483647; display:none;
   flex-direction:column; align-items:center; justify-content:flex-start;
   overflow-y:auto; -webkit-overflow-scrolling:touch;
   padding:max(24px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom));
@@ -3151,13 +3153,53 @@ body.oraculo-mobile .oraculo-card > div:last-child > div:nth-child(2){ min-heigh
     if (e.key === 'Escape') closeOraculo();
   });
 
+  let savedScrollY = 0;
+
+  function lockBodyScroll() {
+    savedScrollY = window.scrollY || window.pageYOffset || 0;
+    document.documentElement.style.height = '100%';
+    document.body.style.position = 'fixed';
+    document.body.style.top = (-savedScrollY) + 'px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function unlockBodyScroll() {
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    document.body.style.overflow = '';
+    document.documentElement.style.height = '';
+    window.scrollTo(0, savedScrollY);
+  }
+
+  function forceFullscreenModal() {
+    // Blindaje extra: fija el modal exactamente al viewport REAL del
+    // dispositivo en este instante (no al de un ancestro con transform,
+    // ni al de un cálculo viejo), usando px explícitos como respaldo de
+    // 100dvh en navegadores que aún no lo soportan bien.
+    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = vw + 'px';
+    modal.style.height = vh + 'px';
+  }
+
   function openOraculo() {
     modal.style.display = 'flex';
     const appHeader = document.getElementById('header');
     const appBottomNav = document.getElementById('bottom-nav');
     if (appHeader) appHeader.style.display = 'none';
     if (appBottomNav) appBottomNav.style.display = 'none';
-    document.body.style.overflow = 'hidden';
+    lockBodyScroll();
+    forceFullscreenModal();
+    updateOraculoMobile();
     window.parent.postMessage({ type: 'oraculo-modal', data: { open: true } }, '*');
     requestAnimationFrame(function () {
       modal.style.background = 'rgba(1,0,10,0.96)';
@@ -3179,10 +3221,25 @@ body.oraculo-mobile .oraculo-card > div:last-child > div:nth-child(2){ min-heigh
     const appBottomNav = document.getElementById('bottom-nav');
     if (appHeader) appHeader.style.display = '';
     if (appBottomNav) appBottomNav.style.display = '';
-    document.body.style.overflow = '';
+    unlockBodyScroll();
     window.parent.postMessage({ type: 'oraculo-modal', data: { open: false } }, '*');
-    setTimeout(function () { modal.style.display = 'none'; }, 250);
+    setTimeout(function () {
+      modal.style.display = 'none';
+      modal.style.width = '';
+      modal.style.height = '';
+    }, 250);
   }
+
+  // Si el teclado/barra del navegador cambia el viewport visual mientras
+  // el modal está abierto, lo re-ajustamos al instante — cero huecos.
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', function () {
+      if (modal.style.display === 'flex') forceFullscreenModal();
+    });
+  }
+  window.addEventListener('orientationchange', function () {
+    if (modal.style.display === 'flex') setTimeout(forceFullscreenModal, 60);
+  });
 
   btn.addEventListener('click', openOraculo);
   closeBtn.addEventListener('click', closeOraculo);
