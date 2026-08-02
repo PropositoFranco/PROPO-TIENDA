@@ -949,9 +949,10 @@ if (!error) {
       }}>
         <div style={{
           maxWidth:'440px', width:'100%',
+          maxHeight:'90dvh', overflowY:'auto', WebkitOverflowScrolling:'touch',
           background:'radial-gradient(ellipse at top,rgba(192,132,252,.14) 0%,rgba(4,2,14,.98) 70%)',
           border:'1.5px solid rgba(192,132,252,.4)', borderRadius:'1.5rem',
-          padding:'clamp(1.75rem,5vw,2.5rem)', textAlign:'center',
+          padding:'clamp(1.25rem,5vw,2.5rem)', textAlign:'center',
           boxShadow:'0 0 100px rgba(192,132,252,.18)', position:'relative',
         }}>
           <div style={{ position:'absolute',top:0,left:'20%',right:'20%',height:'1px',

@@ -1942,7 +1942,15 @@ window.addEventListener('load', () => {
   let restoredPage = 0;
   let alreadyReachedDoors = false;
   try {
-    alreadyReachedDoors = sessionStorage.getItem('templo_reached_doors') === '1';
+    const reachedFlag = sessionStorage.getItem('templo_reached_doors') === '1';
+    const reachedTs = parseInt(sessionStorage.getItem('templo_reached_doors_ts'), 10) || 0;
+    const elapsed = Date.now() - reachedTs;
+    // Solo consideramos esto un "reinicio automático" (pestaña descartada por
+    // el sistema) si pasaron pocos minutos desde que llegamos a las puertas.
+    // Si pasó más tiempo, es una apertura nueva y genuina: se muestra la
+    // animación de intro completa como siempre.
+    const RELOAD_WINDOW_MS = 3 * 60 * 1000; // 3 minutos
+    alreadyReachedDoors = reachedFlag && reachedTs > 0 && elapsed < RELOAD_WINDOW_MS;
     restoredPage = parseInt(sessionStorage.getItem('templo_door_page'), 10) || 0;
   } catch (_) {}
 
@@ -2501,7 +2509,10 @@ function startInterior() {
   // 1. Doors appear at normal size (brillante, sin oscurecer)
   setTimeout(() => {
     dw.classList.add('show');
-    try { sessionStorage.setItem('templo_reached_doors', '1'); } catch (_) {}
+    try {
+      sessionStorage.setItem('templo_reached_doors', '1');
+      sessionStorage.setItem('templo_reached_doors_ts', String(Date.now()));
+    } catch (_) {}
   }, 300);
 
   // 2. Las puertas quedan clicables/tocables en cuanto terminan de aparecer.
