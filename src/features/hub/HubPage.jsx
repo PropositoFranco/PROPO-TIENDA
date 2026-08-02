@@ -19,6 +19,7 @@ export default function HubPage() {
     localStorage.getItem('show_tstore_tutorial') === '1'
   );
   const [badgeTick, setBadgeTick] = useState(0);
+  const [oraculoOpen, setOraculoOpen] = useState(false);
 const getVh = () => window.visualViewport?.height ?? window.innerHeight;
 const [vh, setVh] = useState(() => getVh());
 
@@ -274,6 +275,9 @@ useEffect(() => {
         }
         navigate(`/${path}`);
       }
+      if (type === 'oraculo-modal') {
+        setOraculoOpen(!!data?.open);
+      }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
@@ -287,10 +291,11 @@ useEffect(() => {
         onLoad={handleFrameLoad}
         style={{
           width: '100%',
-          height: `${vh - 68}px`,
+          height: oraculoOpen ? `${vh}px` : `${vh - 68}px`,
           border: 'none',
           display: 'block',
-          marginTop: '68px',
+          marginTop: oraculoOpen ? 0 : '68px',
+          transition: 'margin-top .18s ease, height .18s ease',
         }}
       />
       {showTutorial && (
