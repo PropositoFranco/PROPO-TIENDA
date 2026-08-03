@@ -3491,16 +3491,16 @@ function TempleReportes({ userId }) {
       <div style={{position:'relative',zIndex:10,maxWidth:'1100px',margin:'0 auto',padding:'0 20px 120px'}}>
 
         {/* ══ HERO ══ */}
-        <div style={{position:'relative',borderRadius:'28px',overflow:'hidden',background:'linear-gradient(145deg,rgba(124,58,237,0.22) 0%,rgba(8,3,26,0.97) 45%,rgba(2,0,12,0.99) 100%)',border:'1px solid rgba(212,175,55,0.45)',padding:'clamp(18px,3.5vw,36px)',marginTop:'clamp(8px,2vh,16px)',boxShadow:'0 0 0 1px rgba(212,175,55,0.08),0 40px 100px rgba(124,58,237,0.3),0 0 80px rgba(212,175,55,0.08),inset 0 1px 0 rgba(212,175,55,0.2),inset 0 -1px 0 rgba(124,58,237,0.15)'}}>
+        <div style={{position:'relative',borderRadius:'22px',overflow:'hidden',background:'linear-gradient(145deg,rgba(124,58,237,0.22) 0%,rgba(8,3,26,0.97) 45%,rgba(2,0,12,0.99) 100%)',border:'1px solid rgba(212,175,55,0.45)',padding:'clamp(12px,2.2vw,24px)',marginTop:'clamp(6px,1.5vh,12px)',boxShadow:'0 0 0 1px rgba(212,175,55,0.08),0 40px 100px rgba(124,58,237,0.3),0 0 80px rgba(212,175,55,0.08),inset 0 1px 0 rgba(212,175,55,0.2),inset 0 -1px 0 rgba(124,58,237,0.15)'}}>
           <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',opacity:.45}}>
             <defs><linearGradient id="sl" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="transparent"/><stop offset="50%" stopColor="rgba(212,175,55,0.28)"/><stop offset="100%" stopColor="transparent"/></linearGradient></defs>
             {[18,38,62,82].map((y,i)=><line key={i} x1="0" y1={`${y}%`} x2="100%" y2={`${y}%`} stroke="url(#sl)" strokeWidth="1" strokeDasharray="60 80" style={{animation:`energyLine ${8+i*2.5}s linear ${i*1.8}s infinite`}}/>)}
           </svg>
 
-          <div style={{position:'relative',display:'flex',flexWrap:'wrap',gap:'clamp(16px,3.5vw,32px)',alignItems:'center'}}>
+          <div style={{position:'relative',display:'flex',flexWrap:'wrap',gap:'clamp(10px,2vw,20px)',alignItems:'center'}}>
             {/* Avatar */}
             <div style={{position:'relative',flexShrink:0}}>
-              <div style={{width:'clamp(72px,11vw,104px)',height:'clamp(72px,11vw,104px)',borderRadius:'50%',border:'2px solid rgba(212,175,55,0.4)',animation:'avatarPulse 3.5s ease-in-out infinite',background:'linear-gradient(135deg,rgba(124,58,237,0.28),rgba(212,175,55,0.14))',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'clamp(28px,5.5vw,42px)',position:'relative',overflow:'hidden'}}>
+              <div style={{width:'clamp(58px,8vw,80px)',height:'clamp(58px,8vw,80px)',borderRadius:'50%',border:'2px solid rgba(212,175,55,0.4)',animation:'avatarPulse 3.5s ease-in-out infinite',background:'linear-gradient(135deg,rgba(124,58,237,0.28),rgba(212,175,55,0.14))',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'clamp(28px,5.5vw,42px)',position:'relative',overflow:'hidden'}}>
                 <img src={maestroImg} alt="Maestro" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
                 <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none'}}>
                   <circle cx="50%" cy="50%" r="48%" fill="none" stroke="rgba(212,175,55,0.25)" strokeWidth="1" strokeDasharray="6 5" style={{animation:'ringRotate 10s linear infinite',transformOrigin:'center',transformBox:'fill-box'}}/>
@@ -3516,34 +3516,34 @@ function TempleReportes({ userId }) {
                 <div style={{width:'28px',height:'1px',background:'rgba(212,175,55,0.28)'}}/>
                 INICIADO EN {user.joinDate||'EL TEMPLO'}
               </div>
-              <h1 style={{fontFamily:"'Cinzel',serif",fontSize:'clamp(19px,3.6vw,30px)',fontWeight:'900',lineHeight:1.05,letterSpacing:'.05em',background:'linear-gradient(135deg,#f0c040 0%,#d4af37 35%,#fff8dc 55%,#d4af37 100%)',backgroundSize:'200% auto',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',animation:'goldShimmer 4s linear infinite',marginBottom:'3px'}}>{user.name}</h1>
-              <div style={{fontFamily:"'Raleway',sans-serif",fontSize:'11px',color:'rgba(200,185,240,0.35)',letterSpacing:'2px',marginBottom:'10px'}}>{user.username}</div>
+              <h1 style={{fontFamily:"'Cinzel',serif",fontSize:'clamp(16px,2.8vw,24px)',fontWeight:'900',lineHeight:1.05,letterSpacing:'.05em',background:'linear-gradient(135deg,#f0c040 0%,#d4af37 35%,#fff8dc 55%,#d4af37 100%)',backgroundSize:'200% auto',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',animation:'goldShimmer 4s linear infinite',marginBottom:'2px'}}>{user.name}</h1>
+              <div style={{fontFamily:"'Raleway',sans-serif",fontSize:'10px',color:'rgba(200,185,240,0.35)',letterSpacing:'2px',marginBottom:'6px'}}>{user.username}</div>
 
               {userId && (
-                <div style={{marginBottom:'10px'}}>
+                <div style={{marginBottom:'6px'}}>
                   <LocationCorrector userId={userId} />
                 </div>
               )}
 
-              <div style={{display:'flex',gap:'clamp(12px,2.5vw,24px)',flexWrap:'wrap',marginBottom:'16px'}}>
-                <div style={{display:'flex',alignItems:'center',gap:'8px',marginLeft:'-8px'}}>
-                  <div style={{position:'relative',width:'40px',height:'40px',borderRadius:'50%',background:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'19px',boxShadow:'0 0 18px rgba(212,175,55,0.4)',animation:'coinBounce 3s ease-in-out infinite'}}>
+              <div style={{display:'flex',gap:'clamp(8px,1.8vw,18px)',flexWrap:'wrap',marginBottom:'10px'}}>
+                <div style={{display:'flex',alignItems:'center',gap:'6px',marginLeft:'-8px'}}>
+                  <div style={{position:'relative',width:'32px',height:'32px',borderRadius:'50%',background:'none',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'15px',boxShadow:'0 0 18px rgba(212,175,55,0.4)',animation:'coinBounce 3s ease-in-out infinite'}}>
   🪙
   <div style={{position:'absolute',inset:0,borderRadius:'50%',background:'linear-gradient(135deg,transparent 0%,rgba(255,255,255,0.15) 50%,transparent 100%)',backgroundSize:'200% 200%',animation:'silverSweep 2s ease-in-out infinite'}}/>
   <div style={{position:'absolute',inset:'-8px',borderRadius:'50%',border:'1px solid rgba(212,175,55,0.3)',animation:'ringRotate 4s linear infinite'}}/>
   <div style={{position:'absolute',inset:'-16px',borderRadius:'50%',border:'1px dashed rgba(212,175,55,0.15)',animation:'ringRotate 7s linear reverse infinite'}}/>
 </div>
                   <div>
-                    <div style={{fontFamily:"'Cinzel',serif",fontSize:'clamp(17px,2.6vw,23px)',fontWeight:'900',color:'#d4af37',textShadow:'0 0 22px rgba(212,175,55,1)',lineHeight:1}}>{user.propocoins.toLocaleString()}</div>
-                    <div style={{fontFamily:"'Cinzel',serif",fontSize:'6.5px',letterSpacing:'3px',color:'rgba(212,175,55,0.95)'}}>PROPOCOINS</div>
+                    <div style={{fontFamily:"'Cinzel',serif",fontSize:'clamp(14px,2.1vw,19px)',fontWeight:'900',color:'#d4af37',textShadow:'0 0 22px rgba(212,175,55,1)',lineHeight:1}}>{user.propocoins.toLocaleString()}</div>
+                    <div style={{fontFamily:"'Cinzel',serif",fontSize:'6px',letterSpacing:'2.5px',color:'rgba(212,175,55,0.95)'}}>PROPOCOINS</div>
                   </div>
                 </div>
                 {[{v:arsenalItems.length,l:'HERRAMIENTAS',c:'#8b5cf6',icon:'🛠️'},{v:achievements.filter(a=>a.unlocked).length,l:'LOGROS',c:'#06b6d4',icon:'🏆'}].map((s,i)=>(
-  <div key={i} style={{display:'flex',alignItems:'center',gap:'8px',padding:'0 16px',borderLeft:'1px solid rgba(255,255,255,0.06)'}}>
-    <div style={{width:'36px',height:'36px',borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',boxShadow:`0 0 18px ${s.c}66`,border:`1px solid ${s.c}44`,background:`radial-gradient(ellipse at 30% 25%,${s.c}22 0%,transparent 70%)`}}>{s.icon}</div>
+  <div key={i} style={{display:'flex',alignItems:'center',gap:'6px',padding:'0 12px',borderLeft:'1px solid rgba(255,255,255,0.06)'}}>
+    <div style={{width:'28px',height:'28px',borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',boxShadow:`0 0 18px ${s.c}66`,border:`1px solid ${s.c}44`,background:`radial-gradient(ellipse at 30% 25%,${s.c}22 0%,transparent 70%)`}}>{s.icon}</div>
     <div>
-      <div style={{fontFamily:"'Cinzel',serif",fontSize:'clamp(17px,2.6vw,23px)',fontWeight:'900',color:s.c,textShadow:`0 0 22px ${s.c}`,lineHeight:1}}>{s.v}</div>
-      <div style={{fontFamily:"'Cinzel',serif",fontSize:'6.5px',letterSpacing:'3px',color:s.c,opacity:.95}}>{s.l}</div>
+      <div style={{fontFamily:"'Cinzel',serif",fontSize:'clamp(14px,2.1vw,19px)',fontWeight:'900',color:s.c,textShadow:`0 0 22px ${s.c}`,lineHeight:1}}>{s.v}</div>
+      <div style={{fontFamily:"'Cinzel',serif",fontSize:'6px',letterSpacing:'2.5px',color:s.c,opacity:.95}}>{s.l}</div>
     </div>
   </div>
 ))}
@@ -3566,12 +3566,12 @@ function TempleReportes({ userId }) {
 
               {/* ── QR ALIANZA ── */}
               {profile?.referral_code && (
-                <div style={{ margin: "8px 0 4px", padding: "24px 20px", background: "rgba(124,58,237,0.06)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "20px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
-                  <div style={{ fontFamily: "'Cinzel',serif", fontSize: "9px", fontWeight: "700", letterSpacing: "0.18em", color: "rgba(167,139,250,0.6)", textTransform: "uppercase" }}>Tu QR de Alianza</div>
-                  <div style={{ padding: "12px", background: "#fff", borderRadius: "14px", boxShadow: "0 0 32px rgba(124,58,237,0.4)" }}>
+                <div style={{ margin: "6px 0 4px", padding: "16px 16px", background: "rgba(124,58,237,0.06)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: "16px", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                  <div style={{ fontFamily: "'Cinzel',serif", fontSize: "8px", fontWeight: "700", letterSpacing: "0.18em", color: "rgba(167,139,250,0.6)", textTransform: "uppercase" }}>Tu QR de Alianza</div>
+                  <div style={{ padding: "10px", background: "#fff", borderRadius: "12px", boxShadow: "0 0 32px rgba(124,58,237,0.4)" }}>
                     <QRCodeSVG
                       value={`https://templodelpropositooficial.netlify.app/?ref=${profile.referral_code}`}
-                      size={160}
+                      size={128}
                       bgColor="#ffffff"
                       fgColor="#1a0a2e"
                       level="M"
