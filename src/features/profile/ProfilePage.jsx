@@ -2024,20 +2024,20 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
         }}>
           <div style={{
             display:'flex', alignItems:'center', justifyContent:'space-between',
-            flexWrap:'wrap', gap:'16px',
-            padding:'16px 20px',
+            flexWrap:'wrap', gap:'12px',
+            padding:'12px 16px',
             background:'linear-gradient(90deg,rgba(212,175,55,0.18) 0%,rgba(139,92,246,0.12) 50%,rgba(212,175,55,0.18) 100%)',
-            borderRadius:'16px',
+            borderRadius:'14px',
             border:'1px solid rgba(212,175,55,0.35)',
             boxShadow:'0 0 40px rgba(212,175,55,0.1), inset 0 1px 0 rgba(255,230,120,0.2)',
-            marginBottom:'24px',
+            marginBottom:'16px',
           }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
-              <div style={{ fontSize:'clamp(28px,4vw,40px)', filter:'drop-shadow(0 0 20px rgba(212,175,55,1)) drop-shadow(0 0 40px rgba(212,175,55,0.6))', animation:'vipCrownFloat 2.2s ease-in-out infinite' }}>👑</div>
+            <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+              <div style={{ fontSize:'clamp(22px,3vw,30px)', filter:'drop-shadow(0 0 20px rgba(212,175,55,1)) drop-shadow(0 0 40px rgba(212,175,55,0.6))', animation:'vipCrownFloat 2.2s ease-in-out infinite' }}>👑</div>
               <div>
-                <div style={{ fontFamily:"'Cinzel',serif", fontSize:'clamp(6px,1.2vw,8px)', letterSpacing:'5px', color:'rgba(212,175,55,0.6)', marginBottom:'3px' }}>⚔ PASE DE BATALLA EXCLUSIVO ⚔</div>
-                <div style={{ fontFamily:"'Cinzel',serif", fontSize:'clamp(16px,3vw,26px)', fontWeight:900, background:'linear-gradient(135deg,#ffe87a 0%,#d4af37 30%,#fff8dc 55%,#d4af37 80%,#ffe87a 100%)', backgroundSize:'200% auto', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', letterSpacing:'3px', animation:'goldShimmer 3s linear infinite' }}>PROPO-PASS</div>
-                <div style={{ fontFamily:"'Raleway',sans-serif", fontSize:'clamp(8px,1.5vw,11px)', color:'rgba(200,185,240,0.55)', letterSpacing:'1px', marginTop:'2px' }}>Acelera tu evolución con este pase exclusivo</div>
+                <div style={{ fontFamily:"'Cinzel',serif", fontSize:'clamp(6px,1.2vw,8px)', letterSpacing:'4px', color:'rgba(212,175,55,0.6)', marginBottom:'2px' }}>⚔ PASE DE BATALLA EXCLUSIVO ⚔</div>
+                <div style={{ fontFamily:"'Cinzel',serif", fontSize:'clamp(15px,2.4vw,21px)', fontWeight:900, background:'linear-gradient(135deg,#ffe87a 0%,#d4af37 30%,#fff8dc 55%,#d4af37 80%,#ffe87a 100%)', backgroundSize:'200% auto', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', letterSpacing:'2.5px', animation:'goldShimmer 3s linear infinite' }}>PROPO-PASS</div>
+                <div style={{ fontFamily:"'Raleway',sans-serif", fontSize:'clamp(7.5px,1.3vw,10px)', color:'rgba(200,185,240,0.55)', letterSpacing:'1px', marginTop:'2px' }}>Acelera tu evolución con este pase exclusivo</div>
               </div>
             </div>
             {!isVip ? (
@@ -2061,7 +2061,7 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
                 <span style={{ position:'relative', zIndex:1 }}>👑 DESBLOQUEAR VIP · $9.99/MES</span>
               </button>
             ) : (
-              <div style={{ padding:'8px 20px', background:'linear-gradient(135deg,rgba(212,175,55,0.2),rgba(139,92,246,0.15))', border:'1px solid rgba(212,175,55,0.6)', borderRadius:'100px', fontFamily:"'Cinzel',serif", fontSize:'clamp(8px,1.5vw,10px)', color:'#d4af37', letterSpacing:'2px', boxShadow:'0 0 20px rgba(212,175,55,0.4)' }}>✦ VIP ACTIVO ✦</div>
+              <div style={{ padding:'6px 16px', background:'linear-gradient(135deg,rgba(212,175,55,0.2),rgba(139,92,246,0.15))', border:'1px solid rgba(212,175,55,0.6)', borderRadius:'100px', fontFamily:"'Cinzel',serif", fontSize:'clamp(7.5px,1.4vw,10px)', color:'#d4af37', letterSpacing:'1.8px', boxShadow:'0 0 20px rgba(212,175,55,0.4)' }}>✦ VIP ACTIVO ✦</div>
             )}
           </div>
         </div>
@@ -2644,7 +2644,7 @@ function AchievementsSection({ achievements, onSelectAch }) {
 // ─── DIVIDER ──────────────────────────────────────────────────────────────────
 function Divider({ icon='◈', label='' }) {
   return (
-    <div style={{display:'flex',alignItems:'center',gap:'14px',margin:'52px 0 32px'}}>
+    <div style={{display:'flex',alignItems:'center',gap:'12px',margin:'clamp(22px,4vh,34px) 0 clamp(16px,2.5vh,22px)'}}>
       <div style={{flex:1,height:'1px',background:'linear-gradient(to right,transparent,rgba(212,175,55,0.55))'}}/>
       <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
         <span style={{fontFamily:"'Cinzel',serif",fontSize:'14px',color:'rgba(212,175,55,0.9)'}}>{icon}</span>
@@ -3516,8 +3516,8 @@ function TempleReportes({ userId }) {
                 <div style={{width:'28px',height:'1px',background:'rgba(212,175,55,0.28)'}}/>
                 INICIADO EN {user.joinDate||'EL TEMPLO'}
               </div>
-              <h1 style={{fontFamily:"'Cinzel',serif",fontSize:'clamp(16px,2.8vw,24px)',fontWeight:'900',lineHeight:1.05,letterSpacing:'.05em',background:'linear-gradient(135deg,#f0c040 0%,#d4af37 35%,#fff8dc 55%,#d4af37 100%)',backgroundSize:'200% auto',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',animation:'goldShimmer 4s linear infinite',marginBottom:'2px'}}>{user.name}</h1>
-              <div style={{fontFamily:"'Raleway',sans-serif",fontSize:'10px',color:'rgba(200,185,240,0.35)',letterSpacing:'2px',marginBottom:'6px'}}>{user.username}</div>
+              <h1 style={{fontFamily:"'Cinzel',serif",fontSize:'clamp(18px,3.1vw,26px)',fontWeight:'900',lineHeight:1.05,letterSpacing:'.05em',background:'linear-gradient(135deg,#f0c040 0%,#d4af37 35%,#fff8dc 55%,#d4af37 100%)',backgroundSize:'200% auto',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text',animation:'goldShimmer 4s linear infinite',marginBottom:'2px'}}>{user.name}</h1>
+              <div style={{fontFamily:"'Raleway',sans-serif",fontSize:'11px',color:'rgba(200,185,240,0.35)',letterSpacing:'2px',marginBottom:'6px'}}>{user.username}</div>
 
               {userId && (
                 <div style={{marginBottom:'6px'}}>
@@ -3542,8 +3542,8 @@ function TempleReportes({ userId }) {
   <div key={i} style={{display:'flex',alignItems:'center',gap:'6px',padding:'0 12px',borderLeft:'1px solid rgba(255,255,255,0.06)'}}>
     <div style={{width:'28px',height:'28px',borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',boxShadow:`0 0 18px ${s.c}66`,border:`1px solid ${s.c}44`,background:`radial-gradient(ellipse at 30% 25%,${s.c}22 0%,transparent 70%)`}}>{s.icon}</div>
     <div>
-      <div style={{fontFamily:"'Cinzel',serif",fontSize:'clamp(14px,2.1vw,19px)',fontWeight:'900',color:s.c,textShadow:`0 0 22px ${s.c}`,lineHeight:1}}>{s.v}</div>
-      <div style={{fontFamily:"'Cinzel',serif",fontSize:'6px',letterSpacing:'2.5px',color:s.c,opacity:.95}}>{s.l}</div>
+      <div style={{fontFamily:"'Cinzel',serif",fontSize:'clamp(15.5px,2.35vw,21px)',fontWeight:'900',color:'#d4af37',textShadow:'0 0 22px rgba(212,175,55,1)',lineHeight:1}}>{user.propocoins.toLocaleString()}</div>
+                    <div style={{fontFamily:"'Cinzel',serif",fontSize:'6.5px',letterSpacing:'2.5px',color:'rgba(212,175,55,0.95)'}}>PROPOCOINS</div>
     </div>
   </div>
 ))}
