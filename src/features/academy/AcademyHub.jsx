@@ -23,7 +23,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { usePlayerStore } from '../../store/usePlayerStore';
 import { supabase } from '../../services/supabase';
 // ─── Tarjeta del módulo semanal (hero) ───────────────────────────────────────
-const CurrentModuleHero = ({ module, isCompleted, onClick }) => {
+const CurrentModuleHero = ({ module, isCompleted, onClick, isMobile }) => {
   const cfg = MODULE_TYPE_CONFIG[module.type];
   return (
     <Link
@@ -34,11 +34,11 @@ const CurrentModuleHero = ({ module, isCompleted, onClick }) => {
         textDecoration: 'none',
         position: 'relative',
         overflow: 'hidden',
-        borderRadius: '1.25rem',
+        borderRadius: isMobile ? '1rem' : '1.25rem',
         border: `1px solid ${cfg.color}44`,
         background: `radial-gradient(ellipse at 70% 40%, ${cfg.color}18 0%, transparent 70%), rgba(255,255,255,0.03)`,
-        padding: 'clamp(1.5rem, 5vw, 2.5rem)',
-        marginBottom: 'clamp(1.5rem, 4vw, 2.5rem)',
+        padding: isMobile ? '1rem 1.1rem' : 'clamp(1.5rem, 5vw, 2.5rem)',
+        marginBottom: isMobile ? '1rem' : 'clamp(1.5rem, 4vw, 2.5rem)',
         transition: 'all 0.4s cubic-bezier(0.16,1,0.3,1)',
       }}
       onMouseEnter={e => {
@@ -55,11 +55,11 @@ const CurrentModuleHero = ({ module, isCompleted, onClick }) => {
       {/* Etiqueta "Esta semana" */}
       <div style={{
         display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-        padding: '0.3em 0.85em',
+        padding: isMobile ? '0.25em 0.7em' : '0.3em 0.85em',
         background: `${cfg.color}22`,
         border: `1px solid ${cfg.color}44`,
         borderRadius: '999px',
-        marginBottom: '1.25rem',
+        marginBottom: isMobile ? '0.75rem' : '1.25rem',
       }}>
         <span style={{
           width: '6px', height: '6px', borderRadius: '50%',
@@ -69,58 +69,62 @@ const CurrentModuleHero = ({ module, isCompleted, onClick }) => {
         }} />
         <span style={{
           fontFamily: '"Cinzel", serif',
-          fontSize: 'clamp(0.65rem, 1.5vw, 0.75rem)',
-          letterSpacing: '0.15em',
+          fontSize: isMobile ? '0.58rem' : 'clamp(0.65rem, 1.5vw, 0.75rem)',
+          letterSpacing: isMobile ? '0.1em' : '0.15em',
           textTransform: 'uppercase',
           color: cfg.color,
         }}>Módulo activo · Semana {module.week}</span>
       </div>
 
-      {/* Icono grande */}
-      <div style={{
-        position: 'absolute', right: 'clamp(1rem, 4vw, 2rem)', top: '50%',
-        transform: 'translateY(-50%)',
-        fontSize: 'clamp(3rem, 8vw, 5rem)',
-        opacity: 0.15,
-        pointerEvents: 'none',
-        userSelect: 'none',
-      }}>{cfg.icon}</div>
+      {/* Icono grande — se oculta en móvil, no aporta y quita espacio al texto */}
+      {!isMobile && (
+        <div style={{
+          position: 'absolute', right: 'clamp(1rem, 4vw, 2rem)', top: '50%',
+          transform: 'translateY(-50%)',
+          fontSize: 'clamp(3rem, 8vw, 5rem)',
+          opacity: 0.15,
+          pointerEvents: 'none',
+          userSelect: 'none',
+        }}>{cfg.icon}</div>
+      )}
 
       <h2 style={{
         fontFamily: '"Cinzel", serif',
-        fontSize: 'clamp(1.25rem, 4vw, 2rem)',
+        fontSize: isMobile ? '1.05rem' : 'clamp(1.25rem, 4vw, 2rem)',
         fontWeight: 700,
         color: '#fff',
-        lineHeight: 1.2,
+        lineHeight: 1.25,
         marginBottom: '0.5rem',
-        maxWidth: '75%',
+        maxWidth: isMobile ? '100%' : '75%',
+        overflowWrap: 'break-word', wordBreak: 'break-word',
       }}>{module.title}</h2>
 
       <p style={{
         fontFamily: '"Crimson Text", serif',
-        fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)',
+        fontSize: isMobile ? '0.8rem' : 'clamp(0.9rem, 2.5vw, 1.1rem)',
         color: 'rgba(255,255,255,0.5)',
-        marginBottom: '1.5rem',
-        maxWidth: '65%',
+        marginBottom: isMobile ? '1rem' : '1.5rem',
+        maxWidth: isMobile ? '100%' : '65%',
+        overflowWrap: 'break-word', wordBreak: 'break-word',
       }}>{module.subtitle}</p>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.75rem' : '1.25rem', flexWrap: 'wrap' }}>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: '0.4em',
-          padding: '0.6em 1.5em',
+          padding: isMobile ? '0.55em 1.1em' : '0.6em 1.5em',
           background: cfg.color,
           borderRadius: '0.5rem',
           color: '#000',
           fontFamily: '"Cinzel", serif',
           fontWeight: 700,
-          fontSize: 'clamp(0.7rem, 1.8vw, 0.8rem)',
+          fontSize: isMobile ? '0.65rem' : 'clamp(0.7rem, 1.8vw, 0.8rem)',
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
         }}>
           {isCompleted ? '✓ Revisitar' : '▶ Comenzar ahora'}
         </span>
         <span style={{
-          fontSize: 'clamp(0.7rem, 1.5vw, 0.8rem)',
+          fontSize: isMobile ? '0.62rem' : 'clamp(0.7rem, 1.5vw, 0.8rem)',
           color: 'rgba(255,255,255,0.35)',
           fontFamily: '"Cinzel", serif',
         }}>+{module.xpReward} XP · {module.duration}</span>
@@ -766,7 +770,23 @@ const CountdownEvaluacion = ({ protocoLoFecha, onExpiradoChange }) => {
 };
 
 // ─── Componente principal ────────────────────────────────────────────────────
+// ─── Hook: detección responsive real (resize + orientación) ─────────────────
+const useIsMobile = (breakpoint = 900) => {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth <= breakpoint : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    setIsMobile(mq.matches);
+    return () => mq.removeEventListener('change', handler);
+  }, [breakpoint]);
+  return isMobile;
+};
+
 const AcademyHub = () => {
+  const isMobile = useIsMobile();
   const user = useAuthStore(s => s.user);
   const userProtocolo = useMembershipStore(s => s.userProtocolo);
   const currentWeekStore = useMembershipStore(s => s.currentWeek);
@@ -931,36 +951,44 @@ const onRitualCompleto = useCallback(async () => {
       <div style={{
         maxWidth: '64rem',
         margin: '0 auto',
-        padding: 'clamp(1rem, 5vw, 2rem) clamp(1rem, 4vw, 1.5rem)',
+        padding: isMobile ? '0.75rem 0.85rem 1.5rem' : 'clamp(1rem, 5vw, 2rem) clamp(1rem, 4vw, 1.5rem)',
         minHeight: '100vh',
         position: 'relative', zIndex: 1,
       }}>
 
       {/* Header */}
-      <header style={{ marginBottom: 'clamp(1.5rem, 4vw, 2.5rem)' }}>
+      <header style={{ marginBottom: isMobile ? '1rem' : 'clamp(1.5rem, 4vw, 2.5rem)' }}>
         {/* Título épico con rayos */}
-        <div style={{ position: 'relative', textAlign: 'center', padding: '2.5rem 0 1.5rem', marginBottom: '1.5rem' }}>
+        <div style={{
+          position: 'relative', textAlign: 'center',
+          padding: isMobile ? '1rem 0 0.75rem' : '2.5rem 0 1.5rem',
+          marginBottom: isMobile ? '0.75rem' : '1.5rem',
+        }}>
           {/* Rayo solar central */}
-          <div style={{
-            position: 'absolute', top: 0, left: '50%',
-            width: 3, height: '100%',
-            background: 'linear-gradient(180deg, rgba(192,132,252,0.9) 0%, rgba(245,197,24,0.6) 40%, transparent 100%)',
-            transform: 'translateX(-50%) rotate(-18deg)',
-            transformOrigin: 'top center',
-            animation: 'academyRaySway 8s ease-in-out infinite',
-            filter: 'blur(1px)', pointerEvents: 'none',
-          }} />
-          <div style={{
-            position: 'absolute', top: 0, left: '50%',
-            width: 180, height: '85%',
-            background: 'radial-gradient(ellipse at top, rgba(192,132,252,0.18) 0%, rgba(245,197,24,0.08) 40%, transparent 70%)',
-            transform: 'translateX(-50%) rotate(12deg)',
-            transformOrigin: 'top center',
-            animation: 'academyRaySway2 11s ease-in-out infinite',
-            filter: 'blur(8px)', pointerEvents: 'none',
-          }} />
-          {/* Estrellas decorativas */}
-          {[
+          {!isMobile && (
+            <div style={{
+              position: 'absolute', top: 0, left: '50%',
+              width: 3, height: '100%',
+              background: 'linear-gradient(180deg, rgba(192,132,252,0.9) 0%, rgba(245,197,24,0.6) 40%, transparent 100%)',
+              transform: 'translateX(-50%) rotate(-18deg)',
+              transformOrigin: 'top center',
+              animation: 'academyRaySway 8s ease-in-out infinite',
+              filter: 'blur(1px)', pointerEvents: 'none',
+            }} />
+          )}
+          {!isMobile && (
+            <div style={{
+              position: 'absolute', top: 0, left: '50%',
+              width: 180, height: '85%',
+              background: 'radial-gradient(ellipse at top, rgba(192,132,252,0.18) 0%, rgba(245,197,24,0.08) 40%, transparent 70%)',
+              transform: 'translateX(-50%) rotate(12deg)',
+              transformOrigin: 'top center',
+              animation: 'academyRaySway2 11s ease-in-out infinite',
+              filter: 'blur(8px)', pointerEvents: 'none',
+            }} />
+          )}
+          {/* Estrellas decorativas — solo desktop, en móvil quitan aire innecesario */}
+          {!isMobile && [
             { top:'12%', left:'8%', delay:'0s', size:3 },
             { top:'28%', left:'18%', delay:'0.6s', size:2 },
             { top:'8%', left:'78%', delay:'0.3s', size:3 },
@@ -979,33 +1007,35 @@ const onRitualCompleto = useCallback(async () => {
           {/* Título */}
           <h1 style={{
             fontFamily: '"Cinzel", serif', fontWeight: 900,
-            fontSize: 'clamp(2.2rem, 6vw, 4rem)',
-            margin: '0 0 0.25rem', lineHeight: 1,
+            fontSize: isMobile ? '1.9rem' : 'clamp(2.2rem, 6vw, 4rem)',
+            margin: '0 0 0.2rem', lineHeight: 1,
             background: 'linear-gradient(90deg, #C084FC 0%, #F5C518 35%, #fff 50%, #F5C518 65%, #C084FC 100%)',
             backgroundSize: '200% auto',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
             animation: 'academyTitleShine 4s linear infinite',
-            letterSpacing: '0.06em',
+            letterSpacing: isMobile ? '0.03em' : '0.06em',
             position: 'relative', zIndex: 1,
           }}>ACADEMIA</h1>
           <h2 style={{
             fontFamily: '"Cinzel", serif', fontWeight: 700,
-            fontSize: 'clamp(1.1rem, 3vw, 1.8rem)',
-            margin: '0 0 0.875rem', lineHeight: 1,
+            fontSize: isMobile ? '0.95rem' : 'clamp(1.1rem, 3vw, 1.8rem)',
+            margin: isMobile ? '0 0 0.5rem' : '0 0 0.875rem', lineHeight: 1,
             background: 'linear-gradient(90deg, #F5C518, #fff, #F5C518)',
             backgroundSize: '200% auto',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
             animation: 'academyTitleShine 5s linear infinite reverse',
-            letterSpacing: '0.22em', textTransform: 'uppercase',
+            letterSpacing: isMobile ? '0.12em' : '0.22em', textTransform: 'uppercase',
             position: 'relative', zIndex: 1,
           }}>de Crecimiento</h2>
           <p style={{
             fontFamily: '"Crimson Text", serif',
-            fontSize: 'clamp(0.95rem, 2vw, 1.15rem)',
-            color: 'rgba(255,255,255,0.55)', margin: '0 0 1.5rem',
-            letterSpacing: '0.12em', textTransform: 'uppercase',
+            fontSize: isMobile ? '0.68rem' : 'clamp(0.95rem, 2vw, 1.15rem)',
+            color: 'rgba(255,255,255,0.55)', margin: isMobile ? '0 auto 0.75rem' : '0 0 1.5rem',
+            maxWidth: isMobile ? '88%' : 'none',
+            letterSpacing: isMobile ? '0.05em' : '0.12em', textTransform: 'uppercase',
+            lineHeight: 1.4,
             animation: 'academySubFade 1s ease both',
             position: 'relative', zIndex: 1,
           }}>✦ Plan personalizado · 6 meses · 1 actividad por semana ✦</p>
@@ -1017,28 +1047,28 @@ const onRitualCompleto = useCallback(async () => {
 
         {/* Barra de progreso épica */}
         <div style={{
-          padding: 'clamp(1rem, 3vw, 1.5rem)',
+          padding: isMobile ? '0.75rem 0.85rem' : 'clamp(1rem, 3vw, 1.5rem)',
           background: 'linear-gradient(135deg, rgba(124,58,237,0.15) 0%, rgba(10,6,20,0.85) 55%, rgba(245,197,24,0.06) 100%)',
           border: '1.5px solid rgba(124,58,237,0.4)',
-          borderRadius: '1.25rem',
-          marginBottom: '1.25rem',
+          borderRadius: isMobile ? '1rem' : '1.25rem',
+          marginBottom: isMobile ? '0.85rem' : '1.25rem',
           boxShadow: '0 0 40px rgba(124,58,237,0.15), inset 0 1px 0 rgba(255,255,255,0.08)',
         }}>
           <div style={{
             display: 'flex', justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '0.875rem', flexWrap: 'wrap', gap: '0.5rem',
+            marginBottom: isMobile ? '0.5rem' : '0.875rem', flexWrap: 'wrap', gap: '0.5rem',
           }}>
             <span style={{
               fontFamily: '"Cinzel", serif',
-              fontSize: 'clamp(0.7rem, 1.5vw, 0.8rem)',
-              letterSpacing: '0.15em', textTransform: 'uppercase',
+              fontSize: isMobile ? '0.62rem' : 'clamp(0.7rem, 1.5vw, 0.8rem)',
+              letterSpacing: isMobile ? '0.08em' : '0.15em', textTransform: 'uppercase',
               color: 'rgba(192,132,252,0.8)',
               display: 'flex', alignItems: 'center', gap: '0.5em',
             }}>⚜️ Progreso del programa</span>
             <span style={{
               fontFamily: '"Cinzel", serif', fontWeight: 900,
-              fontSize: 'clamp(1rem, 2.5vw, 1.25rem)',
+              fontSize: isMobile ? '0.95rem' : 'clamp(1rem, 2.5vw, 1.25rem)',
               background: 'linear-gradient(90deg, #C084FC, #F5C518)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -1046,7 +1076,7 @@ const onRitualCompleto = useCallback(async () => {
             }}>{progress}%</span>
           </div>
           <div style={{
-            height: '10px', borderRadius: '999px',
+            height: isMobile ? '6px' : '10px', borderRadius: '999px',
             background: 'rgba(255,255,255,0.06)',
             border: '1px solid rgba(192,132,252,0.2)',
             overflow: 'hidden',
@@ -1065,38 +1095,44 @@ const onRitualCompleto = useCallback(async () => {
         </div>
 
         {/* Stats rápidas épicas */}
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+        <div style={{
+          display: isMobile ? 'grid' : 'flex',
+          gridTemplateColumns: isMobile ? '1fr 1fr' : undefined,
+          gap: isMobile ? '0.5rem' : '0.75rem', flexWrap: 'wrap',
+          marginBottom: '0.25rem',
+        }}>
           {[
-            { icon: '✅', value: completedModules.length, label: 'Activaciones Templarias Completadas', color: '#10B981' },
+            { icon: '✅', value: completedModules.length, label: 'Activaciones Completadas', color: '#10B981' },
             { icon: '👁', value: openedCount, label: 'Explorados', color: '#60A5FA' },
             { icon: '⏰', value: `${weeksLeft}sem`, label: 'Restantes', color: '#F97316' },
             { icon: '🗓', value: `${memberDays}d`, label: 'Como miembro', color: '#F5C518' },
           ].map(({ icon, value, label, color }) => (
             <div key={label} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
-              gap: '0.25rem',
-              padding: 'clamp(0.875rem, 2.5vw, 1.1rem) clamp(1rem, 3vw, 1.5rem)',
+              gap: isMobile ? '0.15rem' : '0.25rem',
+              padding: isMobile ? '0.6rem 0.5rem' : 'clamp(0.875rem, 2.5vw, 1.1rem) clamp(1rem, 3vw, 1.5rem)',
               background: `linear-gradient(135deg, ${color}18 0%, rgba(10,6,20,0.85) 60%, ${color}08 100%)`,
               border: `1.5px solid ${color}44`,
-              borderRadius: '1rem',
-              flex: '1', minWidth: 'clamp(4.5rem, 15vw, 6rem)',
+              borderRadius: isMobile ? '0.75rem' : '1rem',
+              flex: isMobile ? 'none' : '1', minWidth: isMobile ? 0 : 'clamp(4.5rem, 15vw, 6rem)',
               boxShadow: `0 0 20px ${color}18, inset 0 1px 0 rgba(255,255,255,0.07)`,
               animation: 'statCardPulse 3s ease-in-out infinite',
               transition: 'all 0.3s',
             }}>
-              <span style={{ fontSize: 'clamp(1rem, 2.5vw, 1.35rem)' }}>{icon}</span>
+              <span style={{ fontSize: isMobile ? '0.85rem' : 'clamp(1rem, 2.5vw, 1.35rem)' }}>{icon}</span>
               <span style={{
                 fontFamily: '"Cinzel", serif', fontWeight: 900,
-                fontSize: 'clamp(1rem, 2.5vw, 1.35rem)',
+                fontSize: isMobile ? '0.9rem' : 'clamp(1rem, 2.5vw, 1.35rem)',
                 color: color,
                 textShadow: `0 0 16px ${color}99`,
               }}>{value}</span>
               <span style={{
-                fontSize: 'clamp(0.6rem, 1.2vw, 0.65rem)',
+                fontSize: isMobile ? '0.52rem' : 'clamp(0.6rem, 1.2vw, 0.65rem)',
                 color: 'rgba(255,255,255,0.45)',
                 fontFamily: '"Cinzel", serif',
-                letterSpacing: '0.08em',
+                letterSpacing: '0.05em',
                 textAlign: 'center',
+                lineHeight: 1.25,
               }}>{label}</span>
             </div>
           ))}
@@ -1108,8 +1144,8 @@ const onRitualCompleto = useCallback(async () => {
 
         {/* ── Navegación Comunidad & Ranking ── */}
         <div style={{
-          display: 'flex', gap: '0.75rem',
-          marginTop: '1.25rem', marginBottom: '0.25rem',
+          display: 'flex', gap: isMobile ? '0.5rem' : '0.75rem',
+          marginTop: isMobile ? '0.85rem' : '1.25rem', marginBottom: '0.25rem',
           flexWrap: 'wrap',
         }}>
           {[
@@ -1151,12 +1187,12 @@ const onRitualCompleto = useCallback(async () => {
               to={to}
               onClick={e => { if (tourStep > 0) e.preventDefault(); }}
               style={{
-                flex: '1', minWidth: 'clamp(140px, 40vw, 200px)',
-                display: 'flex', alignItems: 'center', gap: '0.875rem',
-                padding: 'clamp(0.875rem, 2.5vw, 1.1rem) clamp(1rem, 3vw, 1.4rem)',
+                flex: '1', minWidth: isMobile ? 'calc(50% - 0.25rem)' : 'clamp(140px, 40vw, 200px)',
+                display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '0.875rem',
+                padding: isMobile ? '0.65rem 0.6rem' : 'clamp(0.875rem, 2.5vw, 1.1rem) clamp(1rem, 3vw, 1.4rem)',
                 background: `linear-gradient(135deg, ${color}18 0%, rgba(10,6,20,0.88) 60%, ${color}08 100%)`,
                 border: `1.5px solid ${color}44`,
-                borderRadius: '1rem',
+                borderRadius: isMobile ? '0.75rem' : '1rem',
                 textDecoration: 'none',
                 boxShadow: `0 0 24px ${color}14, inset 0 1px 0 rgba(255,255,255,0.06)`,
                 transition: 'all 0.3s cubic-bezier(0.16,1,0.3,1)',
@@ -1185,7 +1221,7 @@ const onRitualCompleto = useCallback(async () => {
               }} />
               <div style={{ position: 'relative', flexShrink: 0, zIndex: 1 }}>
                 <span style={{
-                  fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+                  fontSize: isMobile ? '1.3rem' : 'clamp(1.5rem, 4vw, 2rem)',
                   filter: `drop-shadow(0 0 8px ${color}88)`,
                   display: 'block',
                 }}>{icon}</span>
@@ -1207,20 +1243,26 @@ const onRitualCompleto = useCallback(async () => {
                   }}>{newCount > 0 ? (newCount > 9 ? '9+' : newCount) : ''}</span>
                 )}
               </div>
-              <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ position: 'relative', zIndex: 1, minWidth: 0 }}>
                 <div style={{
                   fontFamily: '"Cinzel", serif', fontWeight: 900,
-                  fontSize: 'clamp(0.85rem, 2.2vw, 1rem)',
+                  fontSize: isMobile ? '0.72rem' : 'clamp(0.85rem, 2.2vw, 1rem)',
                   color: color,
                   textShadow: `0 0 16px ${color}88`,
-                  letterSpacing: '0.08em',
+                  letterSpacing: isMobile ? '0.03em' : '0.08em',
                   marginBottom: '0.15rem',
+                  whiteSpace: isMobile ? 'nowrap' : 'normal',
+                  overflow: isMobile ? 'hidden' : 'visible',
+                  textOverflow: isMobile ? 'ellipsis' : 'clip',
                 }}>{label}</div>
                 <div style={{
                   fontFamily: '"Crimson Text", serif',
-                  fontSize: 'clamp(0.75rem, 1.8vw, 0.85rem)',
+                  fontSize: isMobile ? '0.62rem' : 'clamp(0.75rem, 1.8vw, 0.85rem)',
                   color: 'rgba(255,255,255,0.4)',
                   letterSpacing: '0.05em',
+                  whiteSpace: isMobile ? 'nowrap' : 'normal',
+                  overflow: isMobile ? 'hidden' : 'visible',
+                  textOverflow: isMobile ? 'ellipsis' : 'clip',
                 }}>{sub}</div>
               </div>
               <div style={{
@@ -1229,15 +1271,17 @@ const onRitualCompleto = useCallback(async () => {
                 gap: '0.35rem',
                 position: 'relative', zIndex: 1,
               }}>
-                <span style={{
-                  fontFamily: '"Cinzel", serif',
-                  fontSize: 'clamp(0.55rem, 1.2vw, 0.62rem)',
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  color: `${color}99`,
-                  whiteSpace: 'nowrap',
-                }}>Ver</span>
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                {!isMobile && (
+                  <span style={{
+                    fontFamily: '"Cinzel", serif',
+                    fontSize: 'clamp(0.55rem, 1.2vw, 0.62rem)',
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    color: `${color}99`,
+                    whiteSpace: 'nowrap',
+                  }}>Ver</span>
+                )}
+                <svg width={isMobile ? 14 : 18} height={isMobile ? 14 : 18} viewBox="0 0 18 18" fill="none">
                   <path d="M6.5 4.5L11.5 9L6.5 13.5" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" opacity="0.7"/>
                 </svg>
               </div>
@@ -1266,6 +1310,7 @@ const onRitualCompleto = useCallback(async () => {
             module={currentModule}
             isCompleted={isCurrentCompleted}
             onClick={() => setTourStep(0)}
+            isMobile={isMobile}
           />
         </div>
       )}
