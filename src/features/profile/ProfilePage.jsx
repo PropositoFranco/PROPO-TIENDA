@@ -397,7 +397,7 @@ function EnergySphere({ type, isActive, onClick, index }) {
     <div onClick={() => { onClick(); SFX.click(); }} onMouseEnter={()=>{setHov(true);SFX.hover();}} onMouseLeave={()=>setHov(false)}
       style={{position:'relative',width:`${sz}px`,height:`${sz}px`,borderRadius:'50%',cursor:'pointer',transition:'all 0.45s cubic-bezier(0.34,1.2,0.64,1)',flexShrink:0,animation:`sphereFloat ${3.5+index*0.6}s ease-in-out ${index*0.4}s infinite`,zIndex:isActive?10:hov?8:1}}>
       {/* Outer glow */}
-      <div style={{position:'absolute',inset:`${isActive?-55:hov?-38:-20}px`,borderRadius:'50%',background:isActive?'radial-gradient(ellipse,rgba(192,192,192,0.16) 0%,rgba(212,175,55,0.1) 40%,transparent 70%)':hov?'radial-gradient(ellipse,rgba(192,192,192,0.1) 0%,transparent 65%)':'transparent',transition:'all .45s ease',pointerEvents:'none'}}/>
+      <div style={{position:'absolute',inset:`${isActive?-38:hov?-26:-14}px`,borderRadius:'50%',background:isActive?'radial-gradient(ellipse,rgba(192,192,192,0.16) 0%,rgba(212,175,55,0.1) 40%,transparent 70%)':hov?'radial-gradient(ellipse,rgba(192,192,192,0.1) 0%,transparent 65%)':'transparent',transition:'all .45s ease',pointerEvents:'none'}}/>
       {/* Body */}
       <div style={{position:'absolute',inset:0,borderRadius:'50%',background:isActive?'radial-gradient(ellipse at 30% 25%,rgba(220,220,255,0.22) 0%,rgba(100,60,200,0.72) 40%,rgba(55,5,145,0.96) 100%)':hov?'radial-gradient(ellipse at 30% 25%,rgba(200,200,240,0.18) 0%,rgba(90,40,190,0.62) 45%,rgba(48,0,124,0.93) 100%)':'radial-gradient(ellipse at 30% 25%,rgba(160,130,220,0.14) 0%,rgba(78,28,168,0.55) 50%,rgba(38,0,100,0.9) 100%)',border:isActive?'2px solid rgba(212,175,55,0.95)':hov?'1.5px solid rgba(212,175,55,0.7)':'1.5px solid rgba(212,175,55,0.32)',boxShadow:isActive?'0 0 55px rgba(212,175,55,0.65),0 0 110px rgba(139,92,246,0.4),inset 0 0 40px rgba(192,192,192,0.08)':hov?'0 0 36px rgba(212,175,55,0.42),0 0 72px rgba(139,92,246,0.26),inset 0 0 24px rgba(192,192,192,0.06)':'0 0 16px rgba(139,92,246,0.24),inset 0 1px 0 rgba(255,255,255,0.1)',transition:'all .45s ease',overflow:'hidden'}}>
         {/* Specular highlight */}
@@ -411,11 +411,11 @@ function EnergySphere({ type, isActive, onClick, index }) {
       </div>
       {/* Label */}
       <div style={{position:'absolute',inset:0,borderRadius:'50%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'2px',zIndex:2}}>
-        <div style={{fontFamily:"'Cinzel',serif",fontSize:isActive?'11px':'9px',fontWeight:'900',letterSpacing:'1.5px',color:isActive?'#fde68a':hov?'#e8d5a3':'rgba(240,220,180,0.8)',textShadow:isActive?'0 0 16px rgba(212,175,55,0.9),0 0 30px rgba(255,255,255,0.4)':hov?'0 0 12px rgba(212,175,55,0.7)':'none',textAlign:'center',lineHeight:1.2,transition:'all .4s ease'}}>
+        <div style={{fontFamily:"'Cinzel',serif",fontSize:isActive?'9.5px':'8px',fontWeight:'900',letterSpacing:'1.2px',color:isActive?'#fde68a':hov?'#e8d5a3':'rgba(240,220,180,0.8)',textShadow:isActive?'0 0 16px rgba(212,175,55,0.9),0 0 30px rgba(255,255,255,0.4)':hov?'0 0 12px rgba(212,175,55,0.7)':'none',textAlign:'center',lineHeight:1.2,transition:'all .4s ease'}}>
           {type.line1}
-          {type.line2&&<><br/><span style={{fontSize:'7.5px',letterSpacing:'1px',opacity:.85}}>{type.line2}</span></>}
+          {type.line2&&<><br/><span style={{fontSize:'6.5px',letterSpacing:'0.8px',opacity:.85}}>{type.line2}</span></>}
         </div>
-        <div style={{fontSize:isActive?'18px':hov?'15px':'13px',transition:'font-size .4s ease',filter:isActive?'drop-shadow(0 0 8px rgba(212,175,55,0.8))':hov?'drop-shadow(0 0 5px rgba(212,175,55,0.5))':'none',lineHeight:1.2}}>{type.icon}</div>
+        <div style={{fontSize:isActive?'15px':hov?'13px':'11px',transition:'font-size .4s ease',filter:isActive?'drop-shadow(0 0 8px rgba(212,175,55,0.8))':hov?'drop-shadow(0 0 5px rgba(212,175,55,0.5))':'none',lineHeight:1.2}}>{type.icon}</div>
       </div>
     </div>
   );
@@ -774,7 +774,7 @@ function ArsenalCard({ item, delay=0, onClick }) {
   const lv=LEVEL_CONFIG[item.level]||LEVEL_CONFIG.AVANZADO;
   return (
     <div onClick={()=>onClick&&onClick(item)} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{position:'relative',borderRadius:'20px',overflow:'hidden',cursor:'pointer',background:`linear-gradient(155deg,rgba(${c.r},${c.g},${c.b},0.14) 0%,rgba(8,3,26,0.97) 55%,rgba(2,0,12,0.99) 100%)`,border:`1px solid rgba(${c.r},${c.g},${c.b},${hov?.65:.2})`,boxShadow:`0 4px 24px rgba(0,0,0,0.6)`,transform:hov?'translateY(-8px) scale(1.02)':'translateZ(0)',transition:'transform .38s cubic-bezier(0.34,1.1,0.64,1),border-color .38s ease',animation:`cardEntrance .5s cubic-bezier(0.34,1.1,0.64,1) ${delay}s both`,willChange:'transform'}}>
-      <div style={{height:'160px',position:'relative',overflow:'hidden',background:`linear-gradient(145deg,rgba(${c.r},${c.g},${c.b},0.38) 0%,rgba(${c.r},${c.g},${c.b},0.12) 45%,rgba(0,0,0,0.7) 100%)`}}>
+      <div style={{height:'118px',position:'relative',overflow:'hidden',background:`linear-gradient(145deg,rgba(${c.r},${c.g},${c.b},0.38) 0%,rgba(${c.r},${c.g},${c.b},0.12) 45%,rgba(0,0,0,0.7) 100%)`}}>
         <div style={{position:'absolute',inset:0,background:`radial-gradient(ellipse at 25% 30%,rgba(${c.r},${c.g},${c.b},0.42) 0%,transparent 60%)`}}/>
         <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',opacity:.07}}>{[...Array(6)].map((_,i)=><line key={`h${i}`} x1="0" y1={`${(i+1)*14}%`} x2="100%" y2={`${(i+1)*14}%`} stroke={item.color} strokeWidth="1"/>)}{[...Array(7)].map((_,i)=><line key={`v${i}`} x1={`${(i+1)*13}%`} y1="0" x2={`${(i+1)*13}%`} y2="100%" stroke={item.color} strokeWidth="1"/>)}<circle cx="50%" cy="50%" r="46" fill="none" stroke={item.color} strokeWidth="1.5"/><circle cx="50%" cy="50%" r="28" fill="none" stroke={item.color} strokeWidth=".8"/></svg>
         {hov&&[1.5,2.2,3.0].map((sc,i)=><div key={i} style={{position:'absolute',left:'50%',top:'50%',marginLeft:'-27px',marginTop:'-27px',width:'54px',height:'54px',borderRadius:'50%',border:`1px solid rgba(${c.r},${c.g},${c.b},${.45-i*.12})`,transform:`scale(${sc})`,animation:`cardPulseRing ${1.6+i*.55}s ease-out infinite`}}/>)}
@@ -2078,7 +2078,7 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
 
           {/* ── SCROLL COMPARTIDO — VIP arriba, GRATIS abajo, alineados por columna ── */}
           <div className="bp-scroll" style={{ overflowX:'auto', overflowY:'visible', paddingBottom:'16px', marginBottom:'4px' }}>
-            <div style={{ minWidth:'1760px', position:'relative' }}>
+            <div style={{ minWidth:'1280px', position:'relative' }}>
 
           {/* ── FILA VIP ── */}
           <div style={{
@@ -2110,7 +2110,7 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
                     const isCurr    = isVip && currentVipLevel === lvl.n;
                     const isHov     = hovVip === lvl.n;
                     const isClicked = clickedVip === lvl.n;
-                    const sz = isCurr ? '66px' : '56px';
+                    const sz = isCurr ? '48px' : '40px';
                     return (
                       <div key={lvl.n}
                         onClick={e => {
@@ -2292,7 +2292,7 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
                         style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', cursor:'pointer', position:'relative', width:'88px' }}
                       >
                         <div style={{
-                          width:'56px', height:'56px', borderRadius:'50%',
+                          width:'42px', height:'42px', borderRadius:'50%',
                           background: unlocked ? `radial-gradient(ellipse at 30% 25%, ${rarity.color}66 0%, ${rarity.color}28 50%, transparent 100%)` : 'rgba(255,255,255,0.03)',
                           border:`2.5px solid ${isCurrent ? '#fff' : unlocked ? rarity.border : 'rgba(139,92,246,0.25)'}`,
                           display:'flex', alignItems:'center', justifyContent:'center',
@@ -2623,7 +2623,7 @@ function AchievementsSection({ achievements, onSelectAch }) {
       </div>
 
       {/* Achievement list */}
-      <div key={listKey} style={{display:'flex',flexDirection:'column',gap:'9px'}}>
+      <div key={listKey} style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(clamp(240px,32vw,320px),1fr))',gap:'9px'}}>
         {visibleAchs.length === 0 ? (
           <div style={{textAlign:'center',padding:'52px 20px',borderRadius:'16px',background:'rgba(255,255,255,0.01)',border:'1px dashed rgba(255,255,255,0.05)',animation:'achTabIn .4s ease'}}>
             <div style={{fontSize:'32px',marginBottom:'12px',opacity:.2}}>{activeTab.icon}</div>
@@ -3623,7 +3623,7 @@ function TempleReportes({ userId }) {
         <Divider icon="◈" label="MI ARSENAL"/>
 
         {/* Sphere row */}
-        <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:'clamp(8px,3vw,50px)',flexWrap:'wrap',padding:'0 10px',marginBottom:'12px'}}>
+        <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:'clamp(6px,1.8vw,22px)',flexWrap:'wrap',padding:'0 10px',marginBottom:'12px'}}>
           {CONTENT_TYPES.map((t,i)=>(
             <EnergySphere key={t.id} type={t} isActive={activeFilter===t.id} onClick={()=>handleSphereClick(t.id)} index={i}/>
           ))}
@@ -3656,7 +3656,7 @@ function TempleReportes({ userId }) {
               <div style={{width:'30px',height:'1px',background:'linear-gradient(to left,transparent,rgba(212,175,55,0.4))'}}/>
             </div>
             {filteredItems.length>0?(
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(clamp(220px,28vw,300px),1fr))',gap:'clamp(12px,2.5vw,22px)'}}>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(clamp(170px,22vw,240px),1fr))',gap:'clamp(10px,2vw,16px)'}}>
                 {filteredItems.map((item,idx)=><ArsenalCard key={item.id} item={item} delay={idx*.06} onClick={setSelectedArsenalItem}/>)}
               </div>
             ):(
