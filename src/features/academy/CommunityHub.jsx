@@ -63,7 +63,7 @@ import { missionsService } from '../../services/missions.service';
   };
 
   // ─── Hook: detección responsive real (resize + orientación) ─────────────────
-  const useIsMobile = (breakpoint = 768) => {
+  const useIsMobile = (breakpoint = 900) => {
     const [isMobile, setIsMobile] = useState(
       typeof window !== 'undefined' ? window.innerWidth <= breakpoint : false
     );
@@ -3221,7 +3221,7 @@ if (!error) {
               />
               {/* Anillo dorado exterior */}
               <div style={{
-                width: 130, height: 130, borderRadius: '50%',
+                width: isMobile ? 92 : 130, height: isMobile ? 92 : 130, borderRadius: '50%',
                 border: '2px solid rgba(245,197,24,0.6)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 0 30px rgba(245,197,24,0.3), 0 0 60px rgba(245,197,24,0.1)',
@@ -3229,11 +3229,11 @@ if (!error) {
               }}>
                 {/* Foto o iniciales */}
                 <div style={{
-                  width: 118, height: 118, borderRadius: '50%',
+                  width: isMobile ? 82 : 118, height: isMobile ? 82 : 118, borderRadius: '50%',
                   background: avatarUrl ? 'transparent' : `radial-gradient(circle at 35% 35%, ${lvl.color}55, rgba(10,6,20,0.9))`,
                   border: `2px solid ${lvl.color}66`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: '"Cinzel", serif', fontWeight: 900, fontSize: '2.3rem',
+                  fontFamily: '"Cinzel", serif', fontWeight: 900, fontSize: isMobile ? '1.6rem' : '2.3rem',
                   color: lvl.color, overflow: 'hidden',
                 }}>
                   {avatarUrl
@@ -3264,10 +3264,10 @@ if (!error) {
               {/* Badge nivel */}
               <div style={{
                 position: 'absolute', bottom: 3, right: 3,
-                width: 34, height: 34, borderRadius: '50%',
+                width: isMobile ? 26 : 34, height: isMobile ? 26 : 34, borderRadius: '50%',
                 background: 'linear-gradient(135deg, #F5C518, #D97706)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: '"Cinzel", serif', fontWeight: 900, fontSize: '0.88rem',
+                fontFamily: '"Cinzel", serif', fontWeight: 900, fontSize: isMobile ? '0.7rem' : '0.88rem',
                 color: '#0a0614', border: '2.5px solid #0a0614',
                 boxShadow: '0 0 14px rgba(245,197,24,0.7)',
                 pointerEvents: 'none',
@@ -3977,12 +3977,12 @@ if (!error) {
 
           {/* Header épico de la sección */}
           <div style={{
-            padding: 'clamp(1.1rem,3vw,1.5rem) clamp(1.25rem,4vw,2rem)',
+            padding: isMobile ? '0.85rem 1rem' : 'clamp(1.1rem,3vw,1.5rem) clamp(1.25rem,4vw,2rem)',
             borderBottom: '1px solid rgba(245,197,24,0.2)',
             background: 'linear-gradient(135deg, rgba(245,197,24,0.12) 0%, rgba(10,6,20,0.9) 60%, rgba(192,132,252,0.07) 100%)',
             display: 'flex',
             alignItems: 'center',
-            gap: 'clamp(0.875rem,3vw,1.25rem)',
+            gap: isMobile ? '0.6rem' : 'clamp(0.875rem,3vw,1.25rem)',
             flexWrap: 'wrap',
           }}>
             <style>{`
@@ -4011,26 +4011,26 @@ if (!error) {
             {/* Icono ranking */}
             <div style={{
               flexShrink: 0,
-              width: 'clamp(48px,9vw,64px)',
-              height: 'clamp(48px,9vw,64px)',
-              borderRadius: '1rem',
+              width: isMobile ? 36 : 'clamp(48px,9vw,64px)',
+              height: isMobile ? 36 : 'clamp(48px,9vw,64px)',
+              borderRadius: '0.7rem',
               background: 'linear-gradient(135deg, rgba(245,197,24,0.35) 0%, rgba(245,197,24,0.1) 100%)',
               border: '2px solid rgba(245,197,24,0.7)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 'clamp(1.5rem,4.5vw,2rem)',
+              fontSize: isMobile ? '1.1rem' : 'clamp(1.5rem,4.5vw,2rem)',
               boxShadow: '0 0 28px rgba(245,197,24,0.5), 0 0 56px rgba(245,197,24,0.18), inset 0 1px 0 rgba(255,255,255,0.15)',
               animation: 'lbHeaderIconFloat 3.5s ease-in-out infinite',
             }}>🏛️</div>
 
             {/* Texto */}
-            <div style={{ flex: 1, minWidth: 140 }}>
+            <div style={{ flex: 1, minWidth: 100 }}>
               <p style={{
                 fontFamily: '"Cinzel", serif',
                 fontWeight: 900,
-                fontSize: 'clamp(1rem,3.5vw,1.4rem)',
+                fontSize: isMobile ? '0.85rem' : 'clamp(1rem,3.5vw,1.4rem)',
                 color: '#F5C518',
-                margin: '0 0 0.2rem',
-                letterSpacing: '0.16em',
+                margin: 0,
+                letterSpacing: isMobile ? '0.1em' : '0.16em',
                 textTransform: 'uppercase',
                 background: 'linear-gradient(90deg, #D97706, #F5C518, #FDE68A, #F5C518, #D97706)',
                 backgroundSize: '300% auto',
@@ -4039,13 +4039,15 @@ if (!error) {
                 backgroundClip: 'text',
                 animation: 'lbHeaderShine 4s linear infinite',
               }}>RANKING DEL TEMPLO</p>
-              <p style={{
-                fontFamily: '"Crimson Text", serif',
-                fontSize: 'clamp(0.82rem,2vw,0.95rem)',
-                color: 'rgba(245,197,24,0.55)',
-                margin: 0,
-                letterSpacing: '0.06em',
-              }}>⚡ 7 días · 🌙 30 días · 🏛️ Todo el tiempo</p>
+              {!isMobile && (
+                <p style={{
+                  fontFamily: '"Crimson Text", serif',
+                  fontSize: 'clamp(0.82rem,2vw,0.95rem)',
+                  color: 'rgba(245,197,24,0.55)',
+                  margin: 0,
+                  letterSpacing: '0.06em',
+                }}>⚡ 7 días · 🌙 30 días · 🏛️ Todo el tiempo</p>
+              )}
             </div>
 
             {/* Pills de períodos — en móvil funcionan como selector de tablero */}
@@ -4112,14 +4114,14 @@ if (!error) {
               overflow: 'hidden',
             }}>
               <div style={{
-                padding: '0.75rem 1.25rem 0.9rem',
+                padding: isMobile ? '0.55rem 0.85rem 0.65rem' : '0.75rem 1.25rem 0.9rem',
                 borderBottom: `1px solid rgba(${accentRgb},0.2)`,
                 background: `linear-gradient(135deg, rgba(${accentRgb},0.12), rgba(10,6,20,0.7))`,
               }}>
                 <p style={{
                   fontFamily: '"Cinzel", serif', fontWeight: 800,
-                  fontSize: 'clamp(0.75rem,2vw,0.88rem)', color: C.gold,
-                  margin: '0 0 0.6rem', letterSpacing: '0.1em', textTransform: 'uppercase',
+                  fontSize: isMobile ? '0.72rem' : 'clamp(0.75rem,2vw,0.88rem)', color: C.gold,
+                  margin: '0 0 0.5rem', letterSpacing: '0.1em', textTransform: 'uppercase',
                   textShadow: `0 0 16px rgba(${accentRgb},0.8)`,
                 }}>{title}</p>
                 {snapKey !== 'alltime' && (
@@ -4145,8 +4147,8 @@ if (!error) {
                 const moved       = snap ? snap - currentRank : 0;
                 return (
                   <div key={u.user_id} style={{
-                    display: 'flex', alignItems: 'center', gap: '0.65rem',
-                    padding: '0.7rem 1.25rem',
+                    display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '0.65rem',
+                    padding: isMobile ? '0.5rem 0.85rem' : '0.7rem 1.25rem',
                     borderBottom: idx < rows.length - 1 ? '1px solid rgba(245,197,24,0.08)' : 'none',
                     background: isMe ? 'rgba(245,197,24,0.06)' : idx === 0 ? 'rgba(245,197,24,0.04)' : 'transparent',
                     borderLeft: idx < 3 ? `3px solid ${rankClr}` : '3px solid transparent',
@@ -4158,7 +4160,7 @@ if (!error) {
                       color: rankClr, minWidth: '1.4rem', textAlign: 'center',
                     }}>{idx < 3 ? medals[idx] : idx + 1}</span>
                     <div style={{
-                      width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                      width: isMobile ? 26 : 32, height: isMobile ? 26 : 32, borderRadius: '50%', flexShrink: 0,
                       background: `${ulvl.color}22`,
                       border: `1.5px solid ${idx < 3 ? rankClr + '88' : ulvl.color + '44'}`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -4237,8 +4239,8 @@ if (!error) {
 
                     {/* Fila del usuario */}
                     <div style={{
-                      display: 'flex', alignItems: 'center', gap: '0.65rem',
-                      padding: '0.7rem 1.25rem',
+                      display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '0.65rem',
+                      padding: isMobile ? '0.5rem 0.85rem' : '0.7rem 1.25rem',
                       background: `linear-gradient(135deg, rgba(${accentRgb},0.12), rgba(10,6,20,0.7))`,
                       borderBottom: 'none',
                       borderLeft: `3px solid rgba(${accentRgb},0.7)`,
