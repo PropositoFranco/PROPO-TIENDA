@@ -95,20 +95,30 @@ function hexToRgb(hex) {
 // ─── PARTICLE CANVAS ──────────────────────────────────────────────────────────
 function ParticleField() {
   const cv  = useRef(null);
-  const st  = useRef({ p:[], raf:null });
-  const drw = useCallback(()=>{
+  const st  = useRef({ p:[], raf:null, grads:null, last:null });
+  const buildGrads = useCallback((ctx,W,H)=>{
+    return [[.2,.3,'rgba(124,58,237,0.07)',.5],[.8,.7,'rgba(212,175,55,0.05)',.4],[.5,.1,'rgba(192,192,192,0.03)',.3]].map(([fx,fy,col,r])=>{
+      const g=ctx.createRadialGradient(W*fx,H*fy,0,W*fx,H*fy,W*r); g.addColorStop(0,col); g.addColorStop(1,'transparent'); return g;
+    });
+  },[]);
+  const drw = useCallback((now)=>{
     const c=cv.current; if(!c) return;
     const ctx=c.getContext('2d'); const {width:W,height:H}=c; const s=st.current;
-    if(!s.p.length) for(let i=0;i<180;i++){const pk=Math.random();s.p.push({x:Math.random()*W,y:Math.random()*H,sz:Math.random()*1.8+.2,sp:Math.random()*.22+.04,o:Math.random()*.5+.07,col:pk>.65?'#d4af37':pk>.4?'#7c3aed':pk>.2?'#c0c0c0':'#fff',ph:Math.random()*Math.PI*2,ps:Math.random()*.012+.004,dx:(Math.random()-.5)*.18});}
+    if(!s.p.length) for(let i=0;i<100;i++){const pk=Math.random();s.p.push({x:Math.random()*W,y:Math.random()*H,sz:Math.random()*1.8+.2,sp:Math.random()*.22+.04,o:Math.random()*.5+.07,col:pk>.65?'#d4af37':pk>.4?'#7c3aed':pk>.2?'#c0c0c0':'#fff',ph:Math.random()*Math.PI*2,ps:Math.random()*.012+.004,dx:(Math.random()-.5)*.18});}
+    if(!s.grads) s.grads = buildGrads(ctx,W,H);
+    // Normaliza el movimiento al tiempo real transcurrido, no a la cantidad de frames.
+    // Así se ve igual de suave en un monitor de 60Hz que en uno de 120/144Hz.
+    const dt = s.last==null ? 1 : Math.min(2.5, (now - s.last) / 16.67);
+    s.last = now;
     ctx.clearRect(0,0,W,H);
-    [[.2,.3,'rgba(124,58,237,0.07)',.5],[.8,.7,'rgba(212,175,55,0.05)',.4],[.5,.1,'rgba(192,192,192,0.03)',.3]].forEach(([fx,fy,col,r])=>{const g=ctx.createRadialGradient(W*fx,H*fy,0,W*fx,H*fy,W*r);g.addColorStop(0,col);g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);});
-    s.p.forEach(p=>{p.y-=p.sp;p.x+=p.dx;p.ph+=p.ps;if(p.y<-4){p.y=H+4;p.x=Math.random()*W;}if(p.x<-4)p.x=W+4;if(p.x>W+4)p.x=-4;ctx.globalAlpha=p.o*(0.65+Math.sin(p.ph)*.35);ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);ctx.fill();});
+    s.grads.forEach(g=>{ctx.fillStyle=g;ctx.fillRect(0,0,W,H);});
+    s.p.forEach(p=>{p.y-=p.sp*dt;p.x+=p.dx*dt;p.ph+=p.ps*dt;if(p.y<-4){p.y=H+4;p.x=Math.random()*W;}if(p.x<-4)p.x=W+4;if(p.x>W+4)p.x=-4;ctx.globalAlpha=p.o*(0.65+Math.sin(p.ph)*.35);ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);ctx.fill();});
     ctx.globalAlpha=1; s.raf=requestAnimationFrame(drw);
-  },[]);
+  },[buildGrads]);
   useEffect(()=>{
     const c=cv.current; if(!c) return;
-    const rz=()=>{c.width=c.offsetWidth;c.height=c.offsetHeight;st.current.p=[];};
-    rz(); window.addEventListener('resize',rz); st.current.raf=requestAnimationFrame(drw);
+    const rz=()=>{c.width=c.offsetWidth;c.height=c.offsetHeight;st.current.p=[];st.current.grads=null;};
+    rz(); window.addEventListener('resize',rz); st.current.last=null; st.current.raf=requestAnimationFrame(drw);
     return()=>{cancelAnimationFrame(st.current.raf);window.removeEventListener('resize',rz);};
   },[drw]);
   return <canvas ref={cv} style={{position:'fixed',inset:0,width:'100%',height:'100%',zIndex:0,pointerEvents:'none'}}/>;
@@ -774,7 +784,7 @@ function ArsenalCard({ item, delay=0, onClick }) {
   const lv=LEVEL_CONFIG[item.level]||LEVEL_CONFIG.AVANZADO;
   return (
     <div onClick={()=>onClick&&onClick(item)} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{position:'relative',borderRadius:'20px',overflow:'hidden',cursor:'pointer',background:`linear-gradient(155deg,rgba(${c.r},${c.g},${c.b},0.14) 0%,rgba(8,3,26,0.97) 55%,rgba(2,0,12,0.99) 100%)`,border:`1px solid rgba(${c.r},${c.g},${c.b},${hov?.65:.2})`,boxShadow:`0 4px 24px rgba(0,0,0,0.6)`,transform:hov?'translateY(-8px) scale(1.02)':'translateZ(0)',transition:'transform .38s cubic-bezier(0.34,1.1,0.64,1),border-color .38s ease',animation:`cardEntrance .5s cubic-bezier(0.34,1.1,0.64,1) ${delay}s both`,willChange:'transform'}}>
-      <div style={{height:'160px',position:'relative',overflow:'hidden',background:`linear-gradient(145deg,rgba(${c.r},${c.g},${c.b},0.38) 0%,rgba(${c.r},${c.g},${c.b},0.12) 45%,rgba(0,0,0,0.7) 100%)`}}>
+      <div style={{height:'118px',position:'relative',overflow:'hidden',background:`linear-gradient(145deg,rgba(${c.r},${c.g},${c.b},0.38) 0%,rgba(${c.r},${c.g},${c.b},0.12) 45%,rgba(0,0,0,0.7) 100%)`}}>
         <div style={{position:'absolute',inset:0,background:`radial-gradient(ellipse at 25% 30%,rgba(${c.r},${c.g},${c.b},0.42) 0%,transparent 60%)`}}/>
         <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',opacity:.07}}>{[...Array(6)].map((_,i)=><line key={`h${i}`} x1="0" y1={`${(i+1)*14}%`} x2="100%" y2={`${(i+1)*14}%`} stroke={item.color} strokeWidth="1"/>)}{[...Array(7)].map((_,i)=><line key={`v${i}`} x1={`${(i+1)*13}%`} y1="0" x2={`${(i+1)*13}%`} y2="100%" stroke={item.color} strokeWidth="1"/>)}<circle cx="50%" cy="50%" r="46" fill="none" stroke={item.color} strokeWidth="1.5"/><circle cx="50%" cy="50%" r="28" fill="none" stroke={item.color} strokeWidth=".8"/></svg>
         {hov&&[1.5,2.2,3.0].map((sc,i)=><div key={i} style={{position:'absolute',left:'50%',top:'50%',marginLeft:'-27px',marginTop:'-27px',width:'54px',height:'54px',borderRadius:'50%',border:`1px solid rgba(${c.r},${c.g},${c.b},${.45-i*.12})`,transform:`scale(${sc})`,animation:`cardPulseRing ${1.6+i*.55}s ease-out infinite`}}/>)}
@@ -1189,7 +1199,7 @@ const { percent: progressPct } = getXPProgress(userXP, currentVipLevel);
                       boxShadow: unlocked || isCurr ? '0 0 16px rgba(212,175,55,0.5)' : isHov && !isVip ? '0 0 14px rgba(212,175,55,0.3)' : 'none',
                       filter: (unlocked || isHov || isClicked) ? 'none' : 'grayscale(1) brightness(0.28)',
                       opacity: unlocked ? 1 : (isHov || isClicked) && !isVip ? 0.8 : 0.35,
-                      animation: isCurr ? 'vipGoldPulse 1.8s ease-in-out infinite' : 'none',
+                      animation: isCurr ? 'vipGoldPulse 2.6s ease-in-out infinite' : 'none',
                     }}>
                       {!isVip ? (isHov || isClicked ? '💰' : '👑') : (unlocked ? lvl.icon : '🔒')}
                     </div>
@@ -2020,23 +2030,23 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
         {/* ── HEADER ÉPICO ── */}
         <div style={{
           position:'relative', zIndex:1,
-          padding: 'clamp(20px,3vw,32px) clamp(20px,3vw,32px) 0',
+          padding: 'clamp(12px,1.8vw,18px) clamp(12px,1.8vw,18px) 0',
         }}>
           <div style={{
             display:'flex', alignItems:'center', justifyContent:'space-between',
             flexWrap:'wrap', gap:'12px',
-            padding:'12px 16px',
+            padding:'7px 12px',
             background:'linear-gradient(90deg,rgba(212,175,55,0.18) 0%,rgba(139,92,246,0.12) 50%,rgba(212,175,55,0.18) 100%)',
             borderRadius:'14px',
             border:'1px solid rgba(212,175,55,0.35)',
             boxShadow:'0 0 40px rgba(212,175,55,0.1), inset 0 1px 0 rgba(255,230,120,0.2)',
-            marginBottom:'16px',
+            marginBottom:'10px',
           }}>
             <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-              <div style={{ fontSize:'clamp(22px,3vw,30px)', filter:'drop-shadow(0 0 20px rgba(212,175,55,1)) drop-shadow(0 0 40px rgba(212,175,55,0.6))', animation:'vipCrownFloat 2.2s ease-in-out infinite' }}>👑</div>
+              <div style={{ fontSize:'clamp(16px,2.2vw,20px)', filter:'drop-shadow(0 0 20px rgba(212,175,55,1)) drop-shadow(0 0 40px rgba(212,175,55,0.6))', animation:'vipCrownFloat 2.2s ease-in-out infinite' }}>👑</div>
               <div>
                 <div style={{ fontFamily:"'Cinzel',serif", fontSize:'clamp(6px,1.2vw,8px)', letterSpacing:'4px', color:'rgba(212,175,55,0.6)', marginBottom:'2px' }}>⚔ PASE DE BATALLA EXCLUSIVO ⚔</div>
-                <div style={{ fontFamily:"'Cinzel',serif", fontSize:'clamp(15px,2.4vw,21px)', fontWeight:900, background:'linear-gradient(135deg,#ffe87a 0%,#d4af37 30%,#fff8dc 55%,#d4af37 80%,#ffe87a 100%)', backgroundSize:'200% auto', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', letterSpacing:'2.5px', animation:'goldShimmer 3s linear infinite' }}>PROPO-PASS</div>
+                <div style={{ fontFamily:"'Cinzel',serif", fontSize:'clamp(12px,1.8vw,15px)', fontWeight:900, background:'linear-gradient(135deg,#ffe87a 0%,#d4af37 30%,#fff8dc 55%,#d4af37 80%,#ffe87a 100%)', backgroundSize:'200% auto', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', letterSpacing:'2.5px', animation:'goldShimmer 3s linear infinite' }}>PROPO-PASS</div>
                 <div style={{ fontFamily:"'Raleway',sans-serif", fontSize:'clamp(7.5px,1.3vw,10px)', color:'rgba(200,185,240,0.55)', letterSpacing:'1px', marginTop:'2px' }}>Acelera tu evolución con este pase exclusivo</div>
               </div>
             </div>
@@ -2067,7 +2077,7 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
         </div>
 
         {/* ── FILAS DEL PASE ── */}
-        <div style={{ position:'relative', zIndex:1, padding:'0 clamp(16px,3vw,32px) clamp(20px,3vw,32px)' }}>
+        <div style={{ position:'relative', zIndex:1, padding:'0 clamp(12px,2vw,18px) clamp(12px,1.8vw,16px)' }}>
           <style>{`
             .bp-scroll::-webkit-scrollbar { height: 8px; }
             .bp-scroll::-webkit-scrollbar-track { background: rgba(212,175,55,0.08); border-radius: 8px; margin: 0 8px; }
@@ -2089,11 +2099,11 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
             borderRadius:'16px 16px 0 0',
             border:'1px solid rgba(212,175,55,0.4)',
             borderBottom:'none',
-            padding:'clamp(12px,2vw,18px) clamp(10px,2vw,16px)',
+            padding:'clamp(8px,1.4vw,10px) clamp(8px,1.4vw,10px)',
             boxShadow: isVip ? 'inset 0 1px 0 rgba(255,230,120,0.2), 0 0 40px rgba(212,175,55,0.12)' : 'inset 0 1px 0 rgba(255,230,120,0.1)',
           }}>
             {/* Badge VIP */}
-            <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px' }}>
               <div style={{ padding:'3px 12px', background: isVip ? 'linear-gradient(135deg,rgba(212,175,55,0.35),rgba(139,92,246,0.25))' : 'rgba(212,175,55,0.08)', border:`1px solid ${isVip ? 'rgba(212,175,55,0.8)' : 'rgba(212,175,55,0.3)'}`, borderRadius:'100px', fontFamily:"'Cinzel',serif", fontSize:'clamp(6px,1.2vw,8px)', letterSpacing:'3px', color: isVip ? '#fde68a' : 'rgba(212,175,55,0.4)', boxShadow: isVip ? '0 0 16px rgba(212,175,55,0.5)' : 'none' }}>
                 {isVip ? '⚔️ VIP ACTIVO' : '👑 PASE VIP — BLOQUEADO'}
               </div>
@@ -2101,10 +2111,10 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
             </div>
 
             <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-              <div style={{ flex:1, position:'relative', height:'clamp(80px,12vw,100px)', display:'flex', alignItems:'center' }}>
+              <div style={{ flex:1, position:'relative', height:'clamp(52px,7vw,64px)', display:'flex', alignItems:'center' }}>
                 {/* Línea dorada */}
                 <div style={{ position:'absolute', top:'38%', left:0, right:0, height:'3px', borderRadius:'3px', zIndex:0, background: isVip ? 'linear-gradient(90deg,rgba(212,175,55,0.2),#d4af37 20%,#ffe87a 50%,#d4af37 80%,rgba(212,175,55,0.2))' : 'linear-gradient(90deg,rgba(212,175,55,0.05),rgba(212,175,55,0.2) 50%,rgba(212,175,55,0.05))', boxShadow: isVip ? '0 0 12px rgba(212,175,55,0.8)' : 'none' }}/>
-                <div style={{ position:'relative', zIndex:1, width:'100%', display:'grid', gridTemplateColumns:'repeat(20, 88px)', alignItems:'center' }}>
+                <div style={{ position:'relative', zIndex:1, width:'100%', display:'grid', gridTemplateColumns:'repeat(20, 60px)', alignItems:'center' }}>
                   {VIP_LEVELS.map(lvl => {
                     const unlocked  = isVip && userLevel >= lvl.n;
                     const isCurr    = isVip && currentVipLevel === lvl.n;
@@ -2121,10 +2131,10 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
 }}
                         onMouseEnter={() => setHovVip(lvl.n)}
                         onMouseLeave={() => setHovVip(null)}
-                        style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', cursor: isVip && unlocked ? 'pointer' : !isVip ? 'pointer' : 'default', position:'relative', zIndex:2, width:'88px', overflow:'visible' }}
+                        style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', cursor: isVip && unlocked ? 'pointer' : !isVip ? 'pointer' : 'default', position:'relative', zIndex:2, width:'60px', overflow:'visible' }}
                       >
                         <div style={{
-                          width:'88px', height:'88px',
+                          width:'60px', height:'60px',
                           display:'flex', alignItems:'center', justifyContent:'center',
                           cursor: isVip && unlocked ? 'pointer' : !isVip ? 'pointer' : 'default',
                           fontSize: isCurr ? '28px' : '22px',
@@ -2143,7 +2153,7 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
 
                           {/* ── RAYOS SOLARES — solo nivel actual ── */}
                           {isCurr && (
-                            <div style={{ position:'absolute', inset:'-32px', zIndex:0, pointerEvents:'none' }}>
+                            <div style={{ position:'absolute', inset:'-18px', zIndex:0, pointerEvents:'none' }}>
                               <div style={{
                                 position:'absolute', inset:0,
                                 borderRadius:'50%',
@@ -2164,7 +2174,7 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
                               }}/>
                               <div style={{
                                 position:'absolute',
-                                inset:'14px',
+                                inset:'8px',
                                 borderRadius:'50%',
                                 background:'radial-gradient(ellipse, rgba(255,220,80,0.28) 0%, rgba(255,200,50,0.10) 50%, transparent 75%)',
                                 animation:'vipGoldPulse 3s ease-in-out infinite',
@@ -2179,8 +2189,8 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
                             style={{
                               position:'relative',
                               zIndex:10,
-                              width: isCurr ? 'clamp(58px,9vw,88px)' : 'clamp(48px,7vw,72px)',
-                              height: isCurr ? 'clamp(58px,9vw,88px)' : 'clamp(48px,7vw,72px)',
+                              width: isCurr ? 'clamp(38px,5.5vw,54px)' : 'clamp(32px,4.5vw,44px)',
+                              height: isCurr ? 'clamp(38px,5.5vw,54px)' : 'clamp(32px,4.5vw,44px)',
                               transform: isCurr
                                 ? 'scale(1.35)'
                                 : isHov
@@ -2271,32 +2281,32 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
             borderRadius:'0 0 16px 16px',
             border:'1px solid rgba(180,165,220,0.2)',
             borderTop:'none',
-            padding:'clamp(12px,2vw,18px) clamp(10px,2vw,16px)',
+            padding:'clamp(8px,1.4vw,10px) clamp(8px,1.4vw,10px)',
           }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px' }}>
               <div style={{ padding:'3px 12px', background:'rgba(180,165,220,0.1)', border:'1px solid rgba(180,165,220,0.3)', borderRadius:'100px', fontFamily:"'Cinzel',serif", fontSize:'clamp(6px,1.2vw,8px)', letterSpacing:'3px', color:'rgba(200,185,240,0.7)' }}>
                 🆓 RECOMPENSAS GRATIS
               </div>
             </div>
 
             <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-              <div style={{ flex:1, position:'relative', height:'clamp(80px,12vw,100px)', display:'flex', alignItems:'center' }}>
+              <div style={{ flex:1, position:'relative', height:'clamp(46px,6.5vw,58px)', display:'flex', alignItems:'center' }}>
                 <div style={{ position:'absolute', top:'38%', left:0, right:0, height:'2px', borderRadius:'2px', zIndex:0, background:'linear-gradient(90deg,rgba(180,165,220,0.05),rgba(180,165,220,0.25) 50%,rgba(180,165,220,0.05))', boxShadow:'0 0 6px rgba(180,165,220,0.2)' }}/>
-                <div style={{ position:'relative', zIndex:1, width:'100%', display:'grid', gridTemplateColumns:'repeat(20, 88px)', alignItems:'center' }}>
+                <div style={{ position:'relative', zIndex:1, width:'100%', display:'grid', gridTemplateColumns:'repeat(20, 60px)', alignItems:'center' }}>
                   {activeRewards.map((r, idx) => {
                     const unlocked  = userLevel >= r.level;
                     const isCurrent = userLevel === r.level;
                     const rarity    = getRarity(r.level);
                     return (
                       <div key={r.id} onClick={() => setActiveReward(r)}
-                        style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', cursor:'pointer', position:'relative', width:'88px' }}
+                        style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', cursor:'pointer', position:'relative', width:'60px' }}
                       >
                         <div style={{
-                          width:'42px', height:'42px', borderRadius:'50%',
+                          width:'30px', height:'30px', borderRadius:'50%',
                           background: unlocked ? `radial-gradient(ellipse at 30% 25%, ${rarity.color}66 0%, ${rarity.color}28 50%, transparent 100%)` : 'rgba(255,255,255,0.03)',
                           border:`2.5px solid ${isCurrent ? '#fff' : unlocked ? rarity.border : 'rgba(139,92,246,0.25)'}`,
                           display:'flex', alignItems:'center', justifyContent:'center',
-                          fontSize:'clamp(15px,2.5vw,22px)',
+                          fontSize:'clamp(11px,1.8vw,15px)',
                           boxShadow: isCurrent ? `0 0 32px ${rarity.glow}, 0 0 0 4px rgba(255,255,255,0.12)` : unlocked ? `0 0 24px ${rarity.glow}` : 'none',
                           filter: unlocked ? 'none' : 'grayscale(0.6) brightness(0.5)',
                           transition:'all .35s ease',
@@ -2306,9 +2316,9 @@ const [vipTooltipPos,  setVipTooltipPos]  = useState(null);
                           <span style={{ position:'relative', zIndex:1, filter: unlocked ? `drop-shadow(0 0 6px ${rarity.glow})` : 'none' }}>{unlocked ? r.icon : '🔒'}</span>
                           {unlocked && (
                             claimedIds.has(String(r.id)) ? (
-                              <div style={{ position:'absolute', top:'-6px', right:'-6px', width:'20px', height:'20px', borderRadius:'50%', background:'linear-gradient(135deg,#22c55e,#16a34a)', border:'2px solid rgba(8,3,26,0.95)', boxShadow:'0 0 14px rgba(34,197,94,0.9)', zIndex:10, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px', fontWeight:900, color:'#fff' }}>✓</div>
+                              <div style={{ position:'absolute', top:'-4px', right:'-4px', width:'14px', height:'14px', borderRadius:'50%', background:'linear-gradient(135deg,#22c55e,#16a34a)', border:'1.5px solid rgba(8,3,26,0.95)', boxShadow:'0 0 14px rgba(34,197,94,0.9)', zIndex:10, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'7px', fontWeight:900, color:'#fff' }}>✓</div>
                             ) : (
-                              <div style={{ position:'absolute', top:'-6px', right:'-6px', width:'20px', height:'20px', borderRadius:'50%', background:'linear-gradient(135deg,#ff4444,#ff8800)', border:'2px solid rgba(8,3,26,0.95)', boxShadow:'0 0 14px rgba(255,68,68,0.9)', animation:'glowPulse 2.5s ease-in-out infinite', zIndex:10, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'9px', fontWeight:900, color:'#fff' }}>!</div>
+                              <div style={{ position:'absolute', top:'-4px', right:'-4px', width:'14px', height:'14px', borderRadius:'50%', background:'linear-gradient(135deg,#ff4444,#ff8800)', border:'1.5px solid rgba(8,3,26,0.95)', boxShadow:'0 0 14px rgba(255,68,68,0.9)', animation:'glowPulse 2.5s ease-in-out infinite', zIndex:10, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'6.5px', fontWeight:900, color:'#fff' }}>!</div>
                             )
                           )}
                         </div>
@@ -3439,7 +3449,7 @@ function TempleReportes({ userId }) {
         @keyframes goldShimmer{0%{background-position:200% center}100%{background-position:0% center}}
         @keyframes xpShimmer{0%{background-position:200% center}100%{background-position:0% center}}
         @keyframes silverSweep{0%{background-position:-200% 0}100%{background-position:200% 0}}
-        @keyframes sphereFloat{0%,100%{transform:translateY(0px) translateZ(0)}50%{transform:translateY(-8px) translateZ(0)}}
+        @keyframes sphereFloat{0%,100%{transform:translateY(0px) translateZ(0)}50%{transform:translateY(-5px) translateZ(0)}}
         @keyframes runeFloat{0%,100%{opacity:.04;transform:translateY(0)}50%{opacity:.08;transform:translateY(-14px) rotate(5deg)}}
         @keyframes avatarPulse{0%,100%{box-shadow:0 0 40px rgba(212,175,55,.3),0 0 80px rgba(124,58,237,.15)}50%{box-shadow:0 0 70px rgba(212,175,55,.5),0 0 120px rgba(124,58,237,.3)}}
         @keyframes coinBounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}70%{transform:translateY(-2px)}}
@@ -3454,10 +3464,10 @@ function TempleReportes({ userId }) {
         @keyframes slideUp{from{transform:translateY(28px);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes rewardPop{0%{transform:scale(.75);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
         @keyframes achSlide{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
-        @keyframes glowPulse{0%,100%{opacity:.55}50%{opacity:1}}
+        @keyframes glowPulse{0%,100%{opacity:.62}50%{opacity:.92}}
         @keyframes rewardTooltipIn{from{opacity:0;transform:translateX(-50%) translateY(6px) scale(.94)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
         @keyframes rewardParticle{0%{transform:translate(0,0) scale(1);opacity:.9}100%{transform:translate(var(--px),var(--py)) scale(0);opacity:0}}
-        @keyframes orbPulse{0%,100%{box-shadow:0 0 28px rgba(212,175,55,0.7),0 0 60px rgba(139,92,246,0.5),inset 0 0 20px rgba(212,175,55,0.15)}50%{box-shadow:0 0 48px rgba(212,175,55,0.95),0 0 90px rgba(139,92,246,0.7),inset 0 0 30px rgba(212,175,55,0.25)}}
+        @keyframes orbPulse{0%,100%{box-shadow:0 0 30px rgba(212,175,55,0.7),0 0 62px rgba(139,92,246,0.5),inset 0 0 20px rgba(212,175,55,0.15)}50%{box-shadow:0 0 42px rgba(212,175,55,0.9),0 0 78px rgba(139,92,246,0.6),inset 0 0 26px rgba(212,175,55,0.22)}}
         @keyframes achTabIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes achCardIn{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}
         @keyframes progressFill{from{width:0%}to{width:var(--pw)}}
@@ -3470,10 +3480,10 @@ function TempleReportes({ userId }) {
 }
 @keyframes vipShimmer{0%{background-position:200% center}100%{background-position:0% center}}
 @keyframes vipNodePop{0%{transform:translateX(-50%) scale(0.4);opacity:0}70%{transform:translateX(-50%) scale(1.18)}100%{transform:translateX(-50%) scale(1);opacity:1}}
-@keyframes vipGoldPulse{0%,100%{box-shadow:0 0 18px rgba(212,175,55,0.5),0 0 40px rgba(212,175,55,0.2)}50%{box-shadow:0 0 38px rgba(212,175,55,1),0 0 80px rgba(212,175,55,0.45)}}
+@keyframes vipGoldPulse{0%,100%{box-shadow:0 0 20px rgba(212,175,55,0.5),0 0 42px rgba(212,175,55,0.22)}50%{box-shadow:0 0 32px rgba(212,175,55,0.85),0 0 62px rgba(212,175,55,0.38)}}
 @keyframes vipLockShake{0%,100%{transform:translateX(-50%) rotate(0deg)}25%{transform:translateX(-50%) rotate(-8deg)}75%{transform:translateX(-50%) rotate(8deg)}}
-@keyframes vipCrownFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-5px) scale(1.08)}}
-@keyframes vipBuyPulse{0%,100%{box-shadow:0 0 22px rgba(212,175,55,0.6),0 0 50px rgba(139,92,246,0.3)}50%{box-shadow:0 0 44px rgba(212,175,55,1),0 0 90px rgba(139,92,246,0.6),0 0 120px rgba(212,175,55,0.2)}}
+@keyframes vipCrownFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.04)}}
+@keyframes vipBuyPulse{0%,100%{box-shadow:0 0 24px rgba(212,175,55,0.55),0 0 52px rgba(139,92,246,0.28)}50%{box-shadow:0 0 38px rgba(212,175,55,0.85),0 0 76px rgba(139,92,246,0.48),0 0 100px rgba(212,175,55,0.16)}}
 @keyframes vipBuyShimmer{0%{left:-100%}100%{left:200%}}
 @keyframes vipUnlockBurst{0%{transform:scale(0.5);opacity:1}100%{transform:scale(3);opacity:0}}
 @keyframes solarRay{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
