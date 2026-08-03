@@ -4336,7 +4336,7 @@ if (!error) {
   ];
 
   // ─── Banner héroe: módulo activo ─────────────────────────────────────────────
-  const ModuleBanner = () => {
+  const ModuleBanner = ({ isMobile }) => {
     const userProtocolo    = useMembershipStore(s => s.userProtocolo);
     const currentWeekStore = useMembershipStore(s => s.currentWeek);
     const navigate         = useNavigate();
@@ -4357,11 +4357,12 @@ if (!error) {
         onClick={() => navigate(`/academia/${currentModule.slug}`)}
         style={{
           position: 'relative', overflow: 'hidden',
-          marginBottom: '1rem', cursor: 'pointer',
-          borderRadius: '1.25rem',
+          height: '100%',
+          marginBottom: isMobile ? 0 : '1rem', cursor: 'pointer',
+          borderRadius: isMobile ? '1rem' : '1.25rem',
           border: `1.5px solid ${cfg.color}55`,
           background: `linear-gradient(135deg, ${cfg.color}22 0%, rgba(10,6,20,0.92) 50%, ${cfg.color}10 100%)`,
-          padding: 'clamp(1.25rem, 3vw, 1.75rem) clamp(1.25rem, 4vw, 2rem)',
+          padding: isMobile ? '0.9rem 0.85rem' : 'clamp(1.25rem, 3vw, 1.75rem) clamp(1.25rem, 4vw, 2rem)',
           boxShadow: `0 0 60px ${cfg.color}22, 0 0 120px ${cfg.color}10, inset 0 1px 0 rgba(255,255,255,0.08)`,
           transition: 'all 0.35s cubic-bezier(0.16,1,0.3,1)',
         }}
@@ -4382,90 +4383,132 @@ if (!error) {
           background: `radial-gradient(ellipse at 80% 50%, ${cfg.color}18 0%, transparent 60%)`,
           pointerEvents: 'none',
         }} />
-        {/* Icono fantasma de fondo */}
-        <div style={{
-          position: 'absolute', right: 'clamp(1rem, 5vw, 3rem)', top: '50%',
-          transform: 'translateY(-50%)',
-          fontSize: 'clamp(4rem, 12vw, 7rem)',
-          opacity: 0.07, pointerEvents: 'none', userSelect: 'none',
-          filter: `drop-shadow(0 0 40px ${cfg.color})`,
-        }}>{cfg.icon}</div>
-
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 'clamp(1rem, 3vw, 1.75rem)' }}>
-          {/* Icono épico */}
+        {!isMobile && (
           <div style={{
-            width: 'clamp(52px, 8vw, 68px)', height: 'clamp(52px, 8vw, 68px)',
-            borderRadius: '1rem', flexShrink: 0,
-            background: `linear-gradient(135deg, ${cfg.color}33, ${cfg.color}11)`,
-            border: `2px solid ${cfg.color}66`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 'clamp(1.5rem, 4vw, 2rem)',
-            boxShadow: `0 0 24px ${cfg.color}44, inset 0 1px 0 rgba(255,255,255,0.1)`,
-            animation: 'moduleBannerFloat 3s ease-in-out infinite',
+            position: 'absolute', right: 'clamp(1rem, 5vw, 3rem)', top: '50%',
+            transform: 'translateY(-50%)',
+            fontSize: 'clamp(4rem, 12vw, 7rem)',
+            opacity: 0.07, pointerEvents: 'none', userSelect: 'none',
+            filter: `drop-shadow(0 0 40px ${cfg.color})`,
           }}>{cfg.icon}</div>
+        )}
 
-          {/* Texto */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {/* Pill */}
+        <div style={{
+          position: 'relative', zIndex: 1,
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: isMobile ? 'flex-start' : 'center',
+          gap: isMobile ? '0.6rem' : 'clamp(1rem, 3vw, 1.75rem)',
+          height: '100%',
+        }}>
+          {/* Icono épico + pill (juntos en móvil) */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '0.6rem',
+            width: isMobile ? '100%' : 'auto',
+          }}>
             <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.4em',
-              padding: '0.2em 0.75em',
-              background: `${cfg.color}22`,
-              border: `1px solid ${cfg.color}44`,
-              borderRadius: '999px',
-              marginBottom: '0.5rem',
-            }}>
-              <span style={{
-                width: 6, height: 6, borderRadius: '50%',
-                background: cfg.color,
-                boxShadow: `0 0 8px ${cfg.color}`,
-                animation: 'moduleBannerPulse 2s ease-in-out infinite',
-              }} />
+              width: isMobile ? 34 : 'clamp(52px, 8vw, 68px)', height: isMobile ? 34 : 'clamp(52px, 8vw, 68px)',
+              borderRadius: isMobile ? '0.6rem' : '1rem', flexShrink: 0,
+              background: `linear-gradient(135deg, ${cfg.color}33, ${cfg.color}11)`,
+              border: `2px solid ${cfg.color}66`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: isMobile ? '1rem' : 'clamp(1.5rem, 4vw, 2rem)',
+              boxShadow: `0 0 24px ${cfg.color}44, inset 0 1px 0 rgba(255,255,255,0.1)`,
+              animation: 'moduleBannerFloat 3s ease-in-out infinite',
+            }}>{cfg.icon}</div>
+
+            {isMobile && (
               <span style={{
                 fontFamily: '"Cinzel", serif',
-                fontSize: 'clamp(0.58rem, 1.3vw, 0.68rem)',
-                letterSpacing: '0.18em', textTransform: 'uppercase',
+                fontSize: '0.56rem',
+                letterSpacing: '0.1em', textTransform: 'uppercase',
                 color: cfg.color, fontWeight: 700,
-              }}>Tu módulo activo · Semana {currentModule.week}</span>
-            </div>
+              }}>Semana {currentModule.week}</span>
+            )}
+          </div>
+
+          {/* Texto */}
+          <div style={{ flex: 1, minWidth: 0, width: isMobile ? '100%' : 'auto' }}>
+            {/* Pill (solo desktop; en móvil ya se ve arriba junto al icono) */}
+            {!isMobile && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.4em',
+                padding: '0.2em 0.75em',
+                background: `${cfg.color}22`,
+                border: `1px solid ${cfg.color}44`,
+                borderRadius: '999px',
+                marginBottom: '0.5rem',
+              }}>
+                <span style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  background: cfg.color,
+                  boxShadow: `0 0 8px ${cfg.color}`,
+                  animation: 'moduleBannerPulse 2s ease-in-out infinite',
+                }} />
+                <span style={{
+                  fontFamily: '"Cinzel", serif',
+                  fontSize: 'clamp(0.58rem, 1.3vw, 0.68rem)',
+                  letterSpacing: '0.18em', textTransform: 'uppercase',
+                  color: cfg.color, fontWeight: 700,
+                }}>Tu módulo activo · Semana {currentModule.week}</span>
+              </div>
+            )}
 
             <h2 style={{
               fontFamily: '"Cinzel", serif', fontWeight: 900,
-              fontSize: 'clamp(1.1rem, 3.5vw, 1.75rem)',
-              color: '#fff', margin: '0 0 0.375rem', lineHeight: 1.15,
+              fontSize: isMobile ? '0.92rem' : 'clamp(1.1rem, 3.5vw, 1.75rem)',
+              color: '#fff', margin: '0 0 0.375rem', lineHeight: 1.2,
               textShadow: `0 0 30px ${cfg.color}44`,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              overflowWrap: 'break-word', wordBreak: 'break-word',
+              whiteSpace: 'normal',
             }}>{currentModule.title}</h2>
 
-            <p style={{
-              fontFamily: '"Crimson Text", serif',
-              fontSize: 'clamp(0.85rem, 2vw, 1rem)',
-              color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.4,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>{currentModule.subtitle}</p>
+            {!isMobile && (
+              <p style={{
+                fontFamily: '"Crimson Text", serif',
+                fontSize: 'clamp(0.85rem, 2vw, 1rem)',
+                color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.4,
+                overflowWrap: 'break-word', wordBreak: 'break-word',
+                whiteSpace: 'normal',
+              }}>{currentModule.subtitle}</p>
+            )}
           </div>
 
           {/* CTA */}
           <div style={{
             flexShrink: 0,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem',
+            display: 'flex',
+            flexDirection: isMobile ? 'row' : 'column',
+            alignItems: 'center',
+            justifyContent: isMobile ? 'space-between' : 'center',
+            gap: isMobile ? '0' : '0.4rem',
+            width: isMobile ? '100%' : 'auto',
           }}>
             <div style={{
-              padding: 'clamp(0.6rem, 1.5vw, 0.875rem) clamp(1rem, 3vw, 1.75rem)',
+              padding: isMobile ? '0.5rem 0.9rem' : 'clamp(0.6rem, 1.5vw, 0.875rem) clamp(1rem, 3vw, 1.75rem)',
               background: `linear-gradient(135deg, ${cfg.color}, ${cfg.color}bb)`,
               borderRadius: '0.75rem',
               fontFamily: '"Cinzel", serif', fontWeight: 900,
-              fontSize: 'clamp(0.65rem, 1.5vw, 0.8rem)',
+              fontSize: isMobile ? '0.62rem' : 'clamp(0.65rem, 1.5vw, 0.8rem)',
               letterSpacing: '0.1em', textTransform: 'uppercase',
               color: '#000',
               boxShadow: `0 0 28px ${cfg.color}66, 0 0 56px ${cfg.color}22`,
               animation: 'moduleBannerGlow 3s ease-in-out infinite',
               whiteSpace: 'nowrap',
             }}>▶ Ir al módulo</div>
-            <span style={{
-              fontFamily: '"Cinzel", serif', fontSize: '0.58rem',
-              color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em',
-            }}>+{currentModule.xpReward} XP · {currentModule.duration}</span>
+            {isMobile && (
+              <span style={{
+                fontFamily: '"Cinzel", serif', fontSize: '0.55rem',
+                color: 'rgba(255,255,255,0.3)', letterSpacing: '0.04em',
+                whiteSpace: 'nowrap',
+              }}>+{currentModule.xpReward} XP</span>
+            )}
+            {!isMobile && (
+              <span style={{
+                fontFamily: '"Cinzel", serif', fontSize: '0.58rem',
+                color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em',
+              }}>+{currentModule.xpReward} XP · {currentModule.duration}</span>
+            )}
           </div>
         </div>
 
@@ -4492,6 +4535,7 @@ if (!error) {
     const playerLevel = usePlayerStore(s => s.level);
     const location     = useLocation();
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
     const [searchParams] = useSearchParams();
     const [activeTab,    setActiveTab]    = useState(() => {
       const tab = searchParams.get('tab');
@@ -4811,10 +4855,19 @@ if (!error) {
             
           </div>
 
-          {/* ══ BANNER HÉROE — Módulo activo ══ */}
-          <ModuleBanner />
+          {/* ══ BANNER HÉROE — Módulo activo + Nivel de comunidad ══ */}
+          {/* En móvil van lado a lado en la misma fila; en desktop se quedan apilados igual que siempre */}
+          <div style={{
+            display: isMobile ? 'flex' : 'block',
+            alignItems: 'stretch',
+            gap: isMobile ? '0.6rem' : 0,
+            marginBottom: isMobile ? '1rem' : 0,
+          }}>
+          <div style={{ flex: isMobile ? 1 : 'none', minWidth: 0, width: isMobile ? '50%' : 'auto' }}>
+            <ModuleBanner isMobile={isMobile} />
+          </div>
 
-          {/* Badges de nivel y sesión — debajo del banner, versión épica */}
+          {/* Badges de nivel y sesión — debajo del banner en desktop, al lado en móvil */}
           {myStats && (() => {
             const nextLvl = levelCfg.find(l => l.level === myStats.community_level + 1);
             const currLvlCfg = levelCfg.find(l => l.level === myStats.community_level);
@@ -4824,12 +4877,13 @@ if (!error) {
             const ptsLeft = nextLvl ? nextLvl.min_points - myStats.community_points : 0;
             return (
               <div style={{
+                flex: isMobile ? 1 : 'none', minWidth: 0, width: isMobile ? '50%' : 'auto',
                 position: 'relative', overflow: 'hidden',
-                marginBottom: '1rem',
-                borderRadius: '1.25rem',
+                marginBottom: isMobile ? 0 : '1rem',
+                borderRadius: isMobile ? '1rem' : '1.25rem',
                 border: `1.5px solid ${currLvl.color}66`,
                 background: `linear-gradient(135deg, ${currLvl.color}22 0%, rgba(10,6,20,0.92) 50%, ${currLvl.color}10 100%)`,
-                padding: '1.25rem 2rem',
+                padding: isMobile ? '0.9rem 0.85rem' : '1.25rem 2rem',
                 boxShadow: `0 0 60px ${currLvl.color}22, 0 0 120px ${currLvl.color}10, inset 0 1px 0 rgba(255,255,255,0.08)`,
               }}>
                 {/* Fondo radial */}
@@ -4839,72 +4893,87 @@ if (!error) {
                   pointerEvents: 'none',
                 }} />
                 {/* Icono fantasma de fondo */}
-                <div style={{
-                  position: 'absolute', left: '1rem', top: '50%',
-                  transform: 'translateY(-50%)',
-                  fontSize: '5rem', opacity: 0.06,
-                  pointerEvents: 'none', userSelect: 'none',
-                  filter: `drop-shadow(0 0 40px ${currLvl.color})`,
-                }}>{currLvl.icon}</div>
+                {!isMobile && (
+                  <div style={{
+                    position: 'absolute', left: '1rem', top: '50%',
+                    transform: 'translateY(-50%)',
+                    fontSize: '5rem', opacity: 0.06,
+                    pointerEvents: 'none', userSelect: 'none',
+                    filter: `drop-shadow(0 0 40px ${currLvl.color})`,
+                  }}>{currLvl.icon}</div>
+                )}
 
-                <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
+                <div style={{
+                  position: 'relative', zIndex: 1,
+                  display: 'flex',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  alignItems: isMobile ? 'flex-start' : 'center',
+                  gap: isMobile ? '0.5rem' : '2rem',
+                  flexWrap: isMobile ? 'nowrap' : 'wrap',
+                }}>
 
                   {/* Izquierda: icono + nombre nivel */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '1rem', flexShrink: 0, width: isMobile ? '100%' : 'auto' }}>
                     <div style={{
-                      width: 56, height: 56, borderRadius: '1rem', flexShrink: 0,
+                      width: isMobile ? 30 : 56, height: isMobile ? 30 : 56, borderRadius: isMobile ? '0.6rem' : '1rem', flexShrink: 0,
                       background: `linear-gradient(135deg, ${currLvl.color}33, ${currLvl.color}11)`,
                       border: `2px solid ${currLvl.color}66`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '1.75rem',
+                      fontSize: isMobile ? '0.9rem' : '1.75rem',
                       boxShadow: `0 0 24px ${currLvl.color}44, inset 0 1px 0 rgba(255,255,255,0.1)`,
                     }}>{currLvl.icon}</div>
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: '0.4em',
-                        padding: '0.2em 0.75em',
+                        padding: isMobile ? '0.15em 0.5em' : '0.2em 0.75em',
                         background: `${currLvl.color}22`,
                         border: `1px solid ${currLvl.color}44`,
                         borderRadius: '999px',
-                        marginBottom: '0.4rem',
+                        marginBottom: isMobile ? '0.25rem' : '0.4rem',
                       }}>
+                        {!isMobile && (
+                          <span style={{
+                            width: 6, height: 6, borderRadius: '50%',
+                            background: currLvl.color,
+                            boxShadow: `0 0 8px ${currLvl.color}`,
+                          }} />
+                        )}
                         <span style={{
-                          width: 6, height: 6, borderRadius: '50%',
-                          background: currLvl.color,
-                          boxShadow: `0 0 8px ${currLvl.color}`,
-                        }} />
-                        <span style={{
-                          fontFamily: '"Cinzel", serif', fontSize: '0.62rem',
-                          letterSpacing: '0.16em', textTransform: 'uppercase',
+                          fontFamily: '"Cinzel", serif', fontSize: isMobile ? '0.52rem' : '0.62rem',
+                          letterSpacing: '0.1em', textTransform: 'uppercase',
                           color: '#fff', fontWeight: 700,
                           textShadow: `0 0 10px ${currLvl.color}`,
-                        }}>⚔️ Comunidad · Nv.{myStats.community_level}</span>
+                          whiteSpace: 'nowrap',
+                        }}>⚔️ Nv.{myStats.community_level}</span>
                       </div>
                       <p style={{
                         fontFamily: '"Cinzel", serif', fontWeight: 900,
-                        fontSize: '1.5rem', color: '#fff',
-                        margin: 0, lineHeight: 1.1,
+                        fontSize: isMobile ? '0.85rem' : '1.5rem', color: '#fff',
+                        margin: 0, lineHeight: 1.15,
                         textShadow: `0 0 30px ${currLvl.color}66`,
-                        letterSpacing: '0.06em',
+                        letterSpacing: '0.04em',
+                        overflowWrap: 'break-word', wordBreak: 'break-word',
                       }}>{currLvl.title}</p>
                     </div>
                   </div>
 
-                  {/* Centro: barra de progreso */}
-                  <div style={{ flex: 1, minWidth: 160 }}>
+                  {/* Barra de progreso */}
+                  <div style={{ flex: 1, minWidth: isMobile ? '100%' : 160, width: isMobile ? '100%' : 'auto' }}>
                     <div style={{
                       display: 'flex', justifyContent: 'space-between',
-                      marginBottom: '0.5rem',
+                      marginBottom: isMobile ? '0.3rem' : '0.5rem',
+                      flexWrap: 'wrap', gap: '0.2rem',
                     }}>
                       <span style={{
-                        fontFamily: '"Cinzel", serif', fontSize: '0.68rem',
+                        fontFamily: '"Cinzel", serif', fontSize: isMobile ? '0.6rem' : '0.68rem',
                         color: 'rgba(255,255,255,0.5)', fontWeight: 700,
                       }}>{myStats.community_points.toLocaleString()} pts</span>
                       {nextLvl && (
                         <span style={{
-                          fontFamily: '"Cinzel", serif', fontSize: '0.68rem',
+                          fontFamily: '"Cinzel", serif', fontSize: isMobile ? '0.58rem' : '0.68rem',
                           color: currLvl.color, fontWeight: 700,
                           textShadow: `0 0 8px ${currLvl.color}`,
+                          overflowWrap: 'break-word',
                         }}>+{ptsLeft} → {nextLvl.title} ✦</span>
                       )}
                       {!nextLvl && (
@@ -4915,7 +4984,7 @@ if (!error) {
                       )}
                     </div>
                     <div style={{
-                      height: 10, borderRadius: '999px',
+                      height: isMobile ? 7 : 10, borderRadius: '999px',
                       background: 'rgba(255,255,255,0.06)',
                       border: `1px solid ${currLvl.color}33`,
                       overflow: 'hidden',
@@ -4933,23 +5002,23 @@ if (!error) {
                     </div>
                     <div style={{
                       display: 'flex', justifyContent: 'space-between',
-                      marginTop: '0.4rem',
+                      marginTop: '0.35rem', flexWrap: 'wrap', gap: '0.2rem',
                     }}>
                       <span style={{
-                        fontFamily: '"Cinzel", serif', fontSize: '0.6rem',
+                        fontFamily: '"Cinzel", serif', fontSize: isMobile ? '0.54rem' : '0.6rem',
                         color: 'rgba(255,255,255,0.3)',
                       }}>{pct}% completado</span>
                       {nextLvl && (
                         <span style={{
-                          fontFamily: '"Cinzel", serif', fontSize: '0.6rem',
+                          fontFamily: '"Cinzel", serif', fontSize: isMobile ? '0.54rem' : '0.6rem',
                           color: 'rgba(255,255,255,0.3)',
                         }}>Meta: {nextLvl.min_points.toLocaleString()} pts</span>
                       )}
                     </div>
                   </div>
 
-                  {/* Derecha: sesión XP si hay */}
-                  {(sessionXP > 0 || sessionCoins > 0) && (
+                  {/* Derecha: sesión XP si hay — oculto en móvil (no cabe en la mitad de pantalla) */}
+                  {!isMobile && (sessionXP > 0 || sessionCoins > 0) && (
                     <div style={{
                       flexShrink: 0,
                       padding: '0.75rem 1.25rem',
@@ -4979,6 +5048,8 @@ if (!error) {
               </div>
             );
           })()}
+
+          </div>
 
           {/* Tabs */}
           <div style={{
