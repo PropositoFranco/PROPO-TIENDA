@@ -62,6 +62,21 @@ import { missionsService } from '../../services/missions.service';
     return palette[Math.abs(h) % palette.length];
   };
 
+  // ─── Hook: detección responsive real (resize + orientación) ─────────────────
+  const useIsMobile = (breakpoint = 768) => {
+    const [isMobile, setIsMobile] = useState(
+      typeof window !== 'undefined' ? window.innerWidth <= breakpoint : false
+    );
+    useEffect(() => {
+      const mq = window.matchMedia(`(max-width: ${breakpoint}px)`);
+      const handler = (e) => setIsMobile(e.matches);
+      mq.addEventListener('change', handler);
+      setIsMobile(mq.matches);
+      return () => mq.removeEventListener('change', handler);
+    }, [breakpoint]);
+    return isMobile;
+  };
+
   // ─── Componentes base ─────────────────────────────────────────────────────────
   const Avatar = memo(({ name = '', size = 36, color }) => {
     const bg = color || colorFromStr(name);
@@ -2878,6 +2893,10 @@ if (!error) {
   // ════════════════════════════════════════════════════════════════════════════
   const LeaderboardTab = ({ myUser, getLvl, levelCfg }) => {
     const closureCountdown = useClosureCountdown();
+    const isMobile = useIsMobile();
+    const [levelGuideOpen, setLevelGuideOpen] = useState(false);
+    const [showAllLevels,  setShowAllLevels]  = useState(false);
+    const [activeBoard,    setActiveBoard]    = useState('7d');
     const [data7d,    setData7d]    = useState([]);
     const [data30d,   setData30d]   = useState([]);
     const [dataAll,   setDataAll]   = useState([]);
@@ -3088,68 +3107,88 @@ if (!error) {
           border: '1.5px solid rgba(192,132,252,0.35)',
           boxShadow: '0 0 24px rgba(192,132,252,0.1), inset 0 1px 0 rgba(255,255,255,0.05)',
         }}>
-          <p style={{
-            fontFamily: '"Cinzel", serif', fontSize: '0.68rem',
-            letterSpacing: '0.16em', textTransform: 'uppercase',
-            color: C.gold, margin: '0 0 0.85rem',
-            display: 'flex', alignItems: 'center', gap: '0.5em',
-          }}>⚔️ ¿Cómo subo de nivel?</p>
+          <button
+            onClick={() => isMobile && setLevelGuideOpen(v => !v)}
+            style={{
+              width: '100%', background: 'none', border: 'none', padding: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              cursor: isMobile ? 'pointer' : 'default',
+              marginBottom: (!isMobile || levelGuideOpen) ? '0.85rem' : 0,
+            }}>
+            <p style={{
+              fontFamily: '"Cinzel", serif', fontSize: '0.68rem',
+              letterSpacing: '0.16em', textTransform: 'uppercase',
+              color: C.gold, margin: 0,
+              display: 'flex', alignItems: 'center', gap: '0.5em',
+            }}>⚔️ ¿Cómo subo de nivel?</p>
+            {isMobile && (
+              <span style={{
+                fontSize: '0.85rem', color: C.gold,
+                transform: levelGuideOpen ? 'rotate(180deg)' : 'none',
+                transition: 'transform 0.25s',
+              }}>▾</span>
+            )}
+          </button>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: '0.6rem',
-          }}>
-            {[
-              { icon: '📝', label: 'Publicar un post',        pts: 10, color: C.purple },
-              { icon: '💬', label: 'Comentar',                 pts: 5,  color: C.blue   },
-              { icon: '🔥', label: 'Dar like',                 pts: 1,  color: '#F97316' },
-              { icon: '❤️', label: 'Recibir un like',          pts: 3,  color: C.red    },
-              { icon: '✉️', label: 'Enviar un mensaje directo',pts: 2,  color: C.green  },
-            ].map((a, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: '0.6rem',
-                padding: '0.6rem 0.75rem',
-                background: `linear-gradient(135deg, ${a.color}14, rgba(255,255,255,0.02))`,
-                border: `1px solid ${a.color}40`,
-                borderRadius: '0.7rem',
+          {(!isMobile || levelGuideOpen) && (
+            <>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: '0.6rem',
               }}>
-                <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{a.icon}</span>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <p style={{
-                    margin: 0, fontSize: '0.72rem', fontWeight: 600,
-                    color: 'rgba(255,255,255,0.88)', lineHeight: 1.2,
-                  }}>{a.label}</p>
-                  <p style={{
-                    margin: '0.15rem 0 0', fontFamily: '"Cinzel", serif',
-                    fontSize: '0.78rem', fontWeight: 800, color: a.color,
-                    textShadow: `0 0 8px ${a.color}66`,
-                  }}>+{a.pts} pts</p>
-                </div>
+                {[
+                  { icon: '📝', label: 'Publicar un post',        pts: 10, color: C.purple },
+                  { icon: '💬', label: 'Comentar',                 pts: 5,  color: C.blue   },
+                  { icon: '🔥', label: 'Dar like',                 pts: 1,  color: '#F97316' },
+                  { icon: '❤️', label: 'Recibir un like',          pts: 3,  color: C.red    },
+                  { icon: '✉️', label: 'Enviar un mensaje directo',pts: 2,  color: C.green  },
+                ].map((a, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.6rem',
+                    padding: '0.6rem 0.75rem',
+                    background: `linear-gradient(135deg, ${a.color}14, rgba(255,255,255,0.02))`,
+                    border: `1px solid ${a.color}40`,
+                    borderRadius: '0.7rem',
+                  }}>
+                    <span style={{ fontSize: '1.15rem', flexShrink: 0 }}>{a.icon}</span>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <p style={{
+                        margin: 0, fontSize: '0.72rem', fontWeight: 600,
+                        color: 'rgba(255,255,255,0.88)', lineHeight: 1.2,
+                      }}>{a.label}</p>
+                      <p style={{
+                        margin: '0.15rem 0 0', fontFamily: '"Cinzel", serif',
+                        fontSize: '0.78rem', fontWeight: 800, color: a.color,
+                        textShadow: `0 0 8px ${a.color}66`,
+                      }}>+{a.pts} pts</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <p style={{
-            margin: '0.85rem 0 0', fontSize: '0.7rem',
-            color: 'rgba(255,255,255,0.55)', lineHeight: 1.4,
-          }}>
-            Acumula puntos participando en la comunidad y sube de rango en el mapa de niveles de abajo. 👇
-          </p>
+              <p style={{
+                margin: '0.85rem 0 0', fontSize: '0.7rem',
+                color: 'rgba(255,255,255,0.55)', lineHeight: 1.4,
+              }}>
+                Acumula puntos participando en la comunidad y sube de rango en el mapa de niveles de abajo. 👇
+              </p>
 
-          <p style={{
-            margin: '0.5rem 0 0', fontSize: '0.65rem',
-            color: 'rgba(255,255,255,0.4)', lineHeight: 1.4,
-            fontStyle: 'italic',
-          }}>
-            ⚜️ Nota: el XP y los Propocoins que ganas al <strong style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'normal' }}>sellar módulos del Templo</strong> suben tu nivel de perfil general (arriba), no tu rango de Comunidad — son dos sistemas independientes.
-          </p>
+              <p style={{
+                margin: '0.5rem 0 0', fontSize: '0.65rem',
+                color: 'rgba(255,255,255,0.4)', lineHeight: 1.4,
+                fontStyle: 'italic',
+              }}>
+                ⚜️ Nota: el XP y los Propocoins que ganas al <strong style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'normal' }}>sellar módulos del Templo</strong> suben tu nivel de perfil general (arriba), no tu rango de Comunidad — son dos sistemas independientes.
+              </p>
+            </>
+          )}
         </div>
 
         {/* ══ BLOQUE SUPERIOR: perfil + mapa de niveles ══ */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'min(270px,36%) 1fr',
+          gridTemplateColumns: isMobile ? '1fr' : 'min(270px,36%) 1fr',
           marginBottom: '1.25rem',
           background: 'linear-gradient(135deg, rgba(245,197,24,0.07) 0%, rgba(10,6,20,0.7) 50%, rgba(192,132,252,0.04) 100%)',
           border: '1.5px solid rgba(245,197,24,0.4)',
@@ -3160,10 +3199,11 @@ if (!error) {
           position: 'relative', zIndex: 1,
         }}>
 
-          {/* Columna izquierda: perfil */}
+          {/* Columna izquierda: perfil (arriba en móvil) */}
           <div style={{
-            padding: '2rem 1.5rem',
-            borderRight: '1px solid rgba(245,197,24,0.25)',
+            padding: isMobile ? '1.5rem 1.25rem' : '2rem 1.5rem',
+            borderRight: isMobile ? 'none' : '1px solid rgba(245,197,24,0.25)',
+            borderBottom: isMobile ? '1px solid rgba(245,197,24,0.25)' : 'none',
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
             gap: '0.8rem',
@@ -3350,19 +3390,46 @@ if (!error) {
           </div>
 
           {/* Columna derecha: mapa de niveles */}
-          <div style={{ padding: '1.5rem 1.75rem' }}>
-            <p style={{
-              fontFamily: '"Cinzel", serif', fontSize: '0.65rem',
-              letterSpacing: '0.18em', textTransform: 'uppercase',
-              color: C.gold, margin: '0 0 1rem',
-              display: 'flex', alignItems: 'center', gap: '0.5em',
-            }}>⚜️ Mapa de Niveles</p>
+          <div style={{ padding: isMobile ? '1.25rem 1.25rem' : '1.5rem 1.75rem' }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              marginBottom: '1rem', gap: '0.5rem',
+            }}>
+              <p style={{
+                fontFamily: '"Cinzel", serif', fontSize: '0.65rem',
+                letterSpacing: '0.18em', textTransform: 'uppercase',
+                color: C.gold, margin: 0,
+                display: 'flex', alignItems: 'center', gap: '0.5em',
+              }}>⚜️ Mapa de Niveles</p>
+              {isMobile && (
+                <button
+                  onClick={() => setShowAllLevels(v => !v)}
+                  style={{
+                    flexShrink: 0,
+                    padding: '0.3em 0.75em',
+                    background: 'rgba(245,197,24,0.12)',
+                    border: '1px solid rgba(245,197,24,0.4)',
+                    borderRadius: '999px',
+                    fontFamily: '"Cinzel", serif', fontSize: '0.58rem', fontWeight: 700,
+                    color: C.gold, letterSpacing: '0.06em', cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >{showAllLevels ? 'Ver menos ▾' : 'Ver todos ▸'}</button>
+              )}
+            </div>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
               gap: '0.45rem',
             }}>
-              {levelCfg.map((l, idx) => {
+              {levelCfg
+                .filter((l) => {
+                  if (!isMobile || showAllLevels) return true;
+                  // Móvil colapsado: solo nivel actual ± 1 para que se entienda de un vistazo
+                  return Math.abs(l.level - myLevel) <= 1;
+                })
+                .map((l) => {
+                const idx = levelCfg.findIndex(x => x.id === l.id);
                 const reached = myLevel >= l.level;
                 const isCurr  = myLevel === l.level;
                 const clr     = LEVEL_COLORS[idx] || C.purple;
@@ -3501,13 +3568,13 @@ if (!error) {
                 }
               `}</style>
 
-              {/* Corona fantasma de fondo — en flujo, empuja contenido hacia abajo con margen negativo */}
+              {/* Corona fantasma de fondo — reducida en móvil para no sumar scroll extra */}
               <div style={{
                 textAlign: 'center',
-                fontSize: 'clamp(7rem, 20vw, 14rem)',
+                fontSize: isMobile ? 'clamp(4rem, 16vw, 6rem)' : 'clamp(7rem, 20vw, 14rem)',
                 lineHeight: 0.8,
-                marginTop: '-0.5rem',
-                marginBottom: '-4rem',
+                marginTop: isMobile ? '0' : '-0.5rem',
+                marginBottom: isMobile ? '-1.5rem' : '-4rem',
                 opacity: 0.08,
                 pointerEvents: 'none',
                 userSelect: 'none',
@@ -3837,7 +3904,7 @@ if (!error) {
             {/* Línea vertical pulsante */}
             <div style={{
               width: '2px',
-              height: '2rem',
+              height: isMobile ? '0.85rem' : '2rem',
               background: 'linear-gradient(180deg, rgba(245,197,24,0.8), rgba(245,197,24,0.1))',
               animation: 'connectorLinePulse 2s ease-in-out infinite',
             }} />
@@ -3848,7 +3915,7 @@ if (!error) {
               flexDirection: 'column',
               alignItems: 'center',
               gap: '0.3rem',
-              padding: '0.6rem 1.75rem',
+              padding: isMobile ? '0.4rem 1.1rem' : '0.6rem 1.75rem',
               borderRadius: '999px',
               border: '1.5px solid rgba(245,197,24,0.5)',
               background: 'linear-gradient(135deg, rgba(245,197,24,0.18), rgba(10,6,20,0.95), rgba(245,197,24,0.1))',
@@ -3857,24 +3924,25 @@ if (!error) {
               <p style={{
                 fontFamily: '"Cinzel", serif',
                 fontWeight: 900,
-                fontSize: 'clamp(0.65rem,2vw,0.78rem)',
+                fontSize: isMobile ? '0.6rem' : 'clamp(0.65rem,2vw,0.78rem)',
                 color: '#F5C518',
                 margin: 0,
-                letterSpacing: '0.18em',
+                letterSpacing: '0.14em',
                 textTransform: 'uppercase',
+                textAlign: 'center',
                 background: 'linear-gradient(90deg, #D97706, #F5C518, #FDE68A, #F5C518, #D97706)',
                 backgroundSize: '200% auto',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
                 animation: 'connectorTextShine 3s linear infinite',
-              }}>⚔️ Estos son los competidores por esos premios ⚔️</p>
+              }}>{isMobile ? '⚔️ Compite por estos premios ⚔️' : '⚔️ Estos son los competidores por esos premios ⚔️'}</p>
 
-              {/* Flechas escalonadas palpitantes */}
+              {/* Flechas escalonadas palpitantes (1 en móvil, 3 en desktop) */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0' }}>
-                {[0, 1, 2].map(i => (
+                {(isMobile ? [0] : [0, 1, 2]).map(i => (
                   <div key={i} style={{
-                    fontSize: 'clamp(0.9rem,2.5vw,1.1rem)',
+                    fontSize: isMobile ? '0.85rem' : 'clamp(0.9rem,2.5vw,1.1rem)',
                     color: '#F5C518',
                     lineHeight: 0.85,
                     animation: 'connectorArrowDrop 1.6s ease-in-out infinite',
@@ -3888,7 +3956,7 @@ if (!error) {
             {/* Línea vertical inferior */}
             <div style={{
               width: '2px',
-              height: '1.5rem',
+              height: isMobile ? '0.75rem' : '1.5rem',
               background: 'linear-gradient(180deg, rgba(245,197,24,0.5), rgba(245,197,24,0.05))',
               animation: 'connectorLinePulse 2s ease-in-out infinite',
               animationDelay: '0.5s',
@@ -3980,31 +4048,41 @@ if (!error) {
               }}>⚡ 7 días · 🌙 30 días · 🏛️ Todo el tiempo</p>
             </div>
 
-            {/* Pills de períodos */}
+            {/* Pills de períodos — en móvil funcionan como selector de tablero */}
             <div style={{
               display: 'flex',
               gap: '0.5rem',
               flexWrap: 'wrap',
+              width: isMobile ? '100%' : 'auto',
             }}>
               {[
-                { icon: '⚡', label: '7D', color: '245,197,24' },
-                { icon: '🌙', label: '30D', color: '192,132,252' },
-                { icon: '🏛️', label: 'ALL', color: '96,165,250' },
-              ].map(pill => (
-                <div key={pill.label} style={{
-                  padding: '0.3em 0.75em',
-                  background: `rgba(${pill.color},0.15)`,
-                  border: `1px solid rgba(${pill.color},0.4)`,
-                  borderRadius: '999px',
-                  fontFamily: '"Cinzel", serif',
-                  fontSize: 'clamp(0.58rem,1.4vw,0.68rem)',
-                  fontWeight: 700,
-                  color: `rgba(${pill.color === '245,197,24' ? '245,197,24' : pill.color === '192,132,252' ? '192,132,252' : '96,165,250'},1)`,
-                  letterSpacing: '0.1em',
-                  whiteSpace: 'nowrap',
-                  boxShadow: `0 0 12px rgba(${pill.color},0.2)`,
-                }}>{pill.icon} {pill.label}</div>
-              ))}
+                { icon: '⚡', label: '7D', color: '245,197,24', key: '7d' },
+                { icon: '🌙', label: '30D', color: '192,132,252', key: '30d' },
+                { icon: '🏛️', label: 'ALL', color: '96,165,250', key: 'alltime' },
+              ].map(pill => {
+                const active = !isMobile || activeBoard === pill.key;
+                return (
+                  <button
+                    key={pill.label}
+                    onClick={() => isMobile && setActiveBoard(pill.key)}
+                    style={{
+                      flex: isMobile ? 1 : 'none',
+                      padding: isMobile ? '0.5em 0.5em' : '0.3em 0.75em',
+                      background: active ? `rgba(${pill.color},0.22)` : `rgba(${pill.color},0.06)`,
+                      border: `1px solid rgba(${pill.color},${active ? '0.7' : '0.25'})`,
+                      borderRadius: '999px',
+                      fontFamily: '"Cinzel", serif',
+                      fontSize: 'clamp(0.58rem,1.4vw,0.68rem)',
+                      fontWeight: 700,
+                      color: `rgba(${pill.color},${active ? '1' : '0.55'})`,
+                      letterSpacing: '0.1em',
+                      whiteSpace: 'nowrap',
+                      boxShadow: active ? `0 0 12px rgba(${pill.color},0.3)` : 'none',
+                      cursor: isMobile ? 'pointer' : 'default',
+                      transition: 'all 0.2s',
+                    }}>{pill.icon} {pill.label}</button>
+                );
+              })}
             </div>
           </div>
 
@@ -4015,20 +4093,22 @@ if (!error) {
             animation: 'lbHeaderBarPulse 3s ease-in-out infinite',
           }} />
 
-          {/* Las 3 tablas dentro del wrapper */}
+          {/* Las 3 tablas dentro del wrapper — en móvil, solo la activa (tab) */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
             gap: '0',
           }}>
           {[
             { rows: data7d,  ptsKey: 'points_7d',       snapKey: '7d',      title: '⚡ 7 días',         accentRgb: '245,197,24'  },
             { rows: data30d, ptsKey: 'points_30d',       snapKey: '30d',     title: '🌙 30 días',        accentRgb: '192,132,252' },
             { rows: dataAll, ptsKey: 'community_points', snapKey: 'alltime', title: '🏛️ Todo el tiempo', accentRgb: '96,165,250'  },
-          ].map(({ rows, ptsKey, snapKey, title, accentRgb }, colIdx) => (
+          ]
+          .filter(board => !isMobile || board.snapKey === activeBoard)
+          .map(({ rows, ptsKey, snapKey, title, accentRgb }, colIdx) => (
             <div key={snapKey} style={{
               background: `linear-gradient(180deg, rgba(${accentRgb},0.05) 0%, rgba(10,6,20,0.6) 100%)`,
-              borderRight: colIdx < 2 ? '1px solid rgba(245,197,24,0.12)' : 'none',
+              borderRight: (!isMobile && colIdx < 2) ? '1px solid rgba(245,197,24,0.12)' : 'none',
               overflow: 'hidden',
             }}>
               <div style={{
