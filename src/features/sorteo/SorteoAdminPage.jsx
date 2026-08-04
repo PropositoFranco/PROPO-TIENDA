@@ -136,7 +136,6 @@ export default function SorteoAdminPage() {
   }, []);
 
   useEffect(() => { cargarEventos(); }, [cargarEventos]);
-  useEffect(() => { cargarReportes(); }, [cargarReportes]);
 
   // ── Cargar reportes de problemas de usuarios ─────────────────────────────────
   const cargarReportes = useCallback(async () => {
@@ -154,6 +153,8 @@ export default function SorteoAdminPage() {
     setReportes(data || []);
     setLoadingReportes(false);
   }, []);
+
+  useEffect(() => { cargarReportes(); }, [cargarReportes]);
 
   const marcarReporteAtendido = async (id, nuevoStatus) => {
     setActualizandoReporte(id);

@@ -1,1475 +1,2224 @@
 /**
- * SorteoAdminPage.jsx — Templo del Propósito
- * Ruta: /admin/sorteos  (ADMIN)
- * Crear Eventos de rifa continua, ver links/QR, monitorear en vivo
+ * SorteoPage.jsx — Templo del Propósito
+ * Ruta: /sorteo/:eventoId  (PÚBLICA — sin auth, sin paywall)
+ * Sistema de rifas continuas automáticas con estética épica
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
-import LtvComisionesTab from './LtvComisionesTab';
 
+// ── Paleta ────────────────────────────────────────────────────────────────────
 const C = {
-  bg:      '#07040f',
-  card:    '#0e0818',
-  border:  'rgba(212,175,55,0.15)',
-  borderHi:'rgba(212,175,55,0.4)',
-  gold:    '#D4AF37',
-  goldDim: 'rgba(212,175,55,0.5)',
-  purple:  '#9b59ff',
-  text:    '#f0eaff',
-  muted:   'rgba(240,234,255,0.45)',
-  green:   '#44ff88',
-  red:     '#ff4466',
+  bg:        '#04020e',
+  bgCard:    'rgba(10,5,26,0.98)',
+  gold:      '#FFD700',
+  goldDim:   'rgba(255,215,0,0.75)',
+  goldGlow:  'rgba(255,215,0,0.25)',
+  goldLight: '#fff4a0',
+  purple:    '#CC44FF',
+  purpleDim: 'rgba(204,68,255,0.5)',
+  green:     '#44FF88',
+  red:       '#FF4466',
+  text:      '#FFFFFF',
+  muted:     'rgba(255,255,255,0.7)',
+  border:    'rgba(255,215,0,0.2)',
+  borderHi:  'rgba(255,215,0,0.6)',
 };
 
-const BASE_URL = window.location.origin;
+const SCREEN = {
+  LOADING:  'loading',
+  REGISTRO: 'registro',
+  ESPERA:   'espera',
+  SORTEO:   'sorteo',
+  GANADOR:  'ganador',
+  PREMIO:   'premio',
+  CAUSA:    'causa',
+  CERRADO:  'cerrado',
+};
 
-// ── Utilidades ─────────────────────────────────────────────────────────────────
-function copiarAlPortapapeles(texto) {
-  navigator.clipboard?.writeText(texto).catch(() => {});
-}
+// ── CSS Global ─────────────────────────────────────────────────────────────────
+const CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #04020e; }
+  html, body { overflow-x: hidden; overflow-y: auto; }
+  input, button { font-family: inherit; }
+  input::placeholder { color: rgba(212,175,55,0.28); }
+  input:focus { border-color: rgba(212,175,55,0.55) !important; outline: none !important; box-shadow: 0 0 0 3px rgba(212,175,55,0.08) !important; }
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.2); border-radius: 2px; }
 
-async function descargarQR(qrUrl, filename) {
-  try {
-    const res = await fetch(qrUrl);
-    const blob = await res.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(blobUrl);
-  } catch (e) {
-    window.open(qrUrl, '_blank');
+  @keyframes floatY     { 0%,100%{transform:translateY(0)}       50%{transform:translateY(-14px)} }
+  @keyframes floatYSlow { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-8px) scale(1.02)} }
+  @keyframes pulse      { 0%,100%{opacity:.55} 50%{opacity:1} }
+  @keyframes pulseGlow  { 0%,100%{box-shadow:0 0 20px rgba(212,175,55,0.2)} 50%{box-shadow:0 0 60px rgba(212,175,55,0.6),0 0 100px rgba(212,175,55,0.2)} }
+  @keyframes spin       { to{transform:rotate(360deg)} }
+  @keyframes spinSlow   { to{transform:rotate(360deg)} }
+  @keyframes fadeUp     { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeIn     { from{opacity:0} to{opacity:1} }
+  @keyframes shimmer    { 0%{background-position:200% center} 100%{background-position:-200% center} }
+  @keyframes shake      { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)} 40%{transform:translateX(7px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)} }
+  @keyframes confettiFall { 0%{transform:translateY(-10px) rotate(0deg);opacity:1} 100%{transform:translateY(110vh) rotate(720deg);opacity:0} }
+  @keyframes raysRotate { to{transform:rotate(360deg)} }
+  @keyframes slideDown  { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes sealPop    { 0%{transform:scale(0) rotate(-12deg);opacity:0} 70%{transform:scale(1.08) rotate(2deg)} 100%{transform:scale(1) rotate(0);opacity:1} }
+  @keyframes tagPop     { from{opacity:0;transform:scale(0.7)} to{opacity:1;transform:scale(1)} }
+  @keyframes scanline   { 0%{top:-2px} 100%{top:100vh} }
+  @keyframes particleDrift {
+    0%  { transform:translateY(0)   translateX(0)   rotate(0deg);   opacity:.15; }
+    33% { transform:translateY(-18px) translateX(6px)  rotate(60deg);  opacity:.35; }
+    66% { transform:translateY(-8px)  translateX(-4px) rotate(120deg); opacity:.2; }
+    100%{ transform:translateY(0)   translateX(0)   rotate(180deg); opacity:.15; }
   }
-}
+  @keyframes btnPulse   { 0%,100%{box-shadow:0 4px 28px rgba(255,215,0,0.4)} 50%{box-shadow:0 4px 60px rgba(255,215,0,0.8),0 0 100px rgba(255,215,0,0.2)} }
+  @keyframes barFill    { from{width:0%} to{width:var(--target-w)} }
+  @keyframes countUp    { from{opacity:0;transform:scale(0.6)} to{opacity:1;transform:scale(1)} }
+  @keyframes arcGlow    { 0%,100%{opacity:0.5} 50%{opacity:1} }
+  @keyframes textGlow   { 0%,100%{text-shadow:0 0 20px rgba(255,215,0,0.4)} 50%{text-shadow:0 0 60px rgba(255,215,0,1),0 0 100px rgba(255,215,0,0.4)} }
+  @keyframes floatBeca  { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-6px) scale(1.02)} }
+  @keyframes orbit      { from{transform:rotate(0deg) translateX(70px) rotate(0deg)} to{transform:rotate(360deg) translateX(70px) rotate(-360deg)} }
+  @keyframes popIn      { 0%{opacity:0;transform:scale(0.5)} 70%{transform:scale(1.08)} 100%{opacity:1;transform:scale(1)} }
+  @keyframes twinkle    { 0%,100%{opacity:var(--min,0.12);transform:scale(1)} 50%{opacity:1;transform:scale(1.6)} }
+  @keyframes drumHit    { 0%,100%{transform:scale(1)} 50%{transform:scale(1.07)} }
+  @keyframes revealZoom { 0%{transform:scale(0.2) rotate(-10deg);opacity:0} 65%{transform:scale(1.1) rotate(2deg)} 100%{transform:scale(1) rotate(0deg);opacity:1} }
+  @keyframes phaseIn    { 0%{opacity:0;transform:translateY(22px) scale(0.94)} 100%{opacity:1;transform:translateY(0) scale(1)} }
+  @keyframes goldFlash  { 0%,100%{box-shadow:0 0 24px rgba(255,215,0,0.25)} 50%{box-shadow:0 0 70px rgba(255,215,0,0.7),0 0 140px rgba(255,215,0,0.2)} }
+  @keyframes nebulaAnim { 0%,100%{transform:scale(1);opacity:0.75} 50%{transform:scale(1.06);opacity:1} }
+  @keyframes warpIn     { 0%{letter-spacing:24px;opacity:0} 100%{letter-spacing:3px;opacity:1} }
+  @keyframes heartbeat  { 0%,100%{transform:scale(1)} 14%{transform:scale(1.06)} 28%{transform:scale(1)} 42%{transform:scale(1.03)} }
+  @keyframes iconBob    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+  @keyframes cursorBlink{ 0%,100%{opacity:1} 50%{opacity:0} }
+`;
 
-// ── Componente QR via API pública ─────────────────────────────────────────────
-function QRCode({ url, size = 160 }) {
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&bgcolor=07040f&color=D4AF37&margin=10`;
+// ── Fondo épico: estrellas + nebulosa + partículas ─────────────────────────────
+function Particles() {
+  const stars = Array.from({ length: 58 }, (_, i) => ({
+    size:  0.5 + (i % 4) * 0.7,
+    left:  `${(i * 1.73 + 0.5) % 100}%`,
+    top:   `${(i * 1.61 + 0.8) % 72}%`,
+    dur:   `${2.2 + (i % 6) * 0.7}s`,
+    delay: `${(i % 8) * 0.55}s`,
+    min:   0.07 + (i % 5) * 0.05,
+  }));
+  const pts = Array.from({ length: 16 }, (_, i) => ({
+    size:  1.5 + (i % 3),
+    color: i % 4 === 0 ? 'rgba(212,175,55,0.4)'
+         : i % 4 === 1 ? 'rgba(204,68,255,0.25)'
+         : i % 4 === 2 ? 'rgba(68,136,255,0.2)' : 'rgba(255,229,102,0.3)',
+    left:  `${(i * 6.3 + 1.2) % 100}%`,
+    top:   `${(i * 6.7 + 2.8) % 100}%`,
+    dur:   `${6.5 + i * 0.45}s`,
+    delay: `${i * 0.36}s`,
+  }));
   return (
-    <img
-      src={qrUrl}
-      alt="QR"
-      style={{ width: size, height: size, borderRadius: 8, border: `1px solid ${C.border}` }}
-    />
+    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
+      {/* Nebulosa multicapa — igual que hub */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: `
+          radial-gradient(ellipse 130% 65% at 50% 0%, rgba(30,10,80,0.88) 0%, transparent 58%),
+          radial-gradient(ellipse 70% 50% at 14% 42%, rgba(10,30,95,0.48) 0%, transparent 54%),
+          radial-gradient(ellipse 70% 50% at 86% 28%, rgba(50,8,95,0.4) 0%, transparent 54%),
+          radial-gradient(ellipse 95% 70% at 50% 100%, rgba(4,2,14,0.96) 0%, transparent 64%)
+        `,
+        animation: 'nebulaAnim 22s ease-in-out infinite',
+      }} />
+      {/* Estrellas */}
+      {stars.map((s, i) => (
+        <div key={`s${i}`} style={{
+          position: 'absolute', borderRadius: '50%', background: '#fff',
+          width: s.size, height: s.size,
+          left: s.left, top: s.top,
+          ['--min']: s.min,
+          animation: `twinkle ${s.dur} ease-in-out infinite`,
+          animationDelay: s.delay,
+        }} />
+      ))}
+      {/* Partículas doradas */}
+      {pts.map((p, i) => (
+        <div key={`p${i}`} style={{
+          position: 'absolute',
+          width: p.size, height: p.size, borderRadius: '50%',
+          background: p.color,
+          left: p.left, top: p.top,
+          animation: `particleDrift ${p.dur} ease-in-out infinite`,
+          animationDelay: p.delay,
+        }} />
+      ))}
+      {/* Scanline */}
+      <div style={{
+        position: 'absolute', left: 0, right: 0, height: '1px',
+        background: 'linear-gradient(90deg,transparent,rgba(212,175,55,0.16),transparent)',
+        animation: 'scanline 20s linear infinite',
+      }} />
+    </div>
   );
 }
 
-// ── Badge de estado ────────────────────────────────────────────────────────────
-function Badge({ activo }) {
+// ── Maestro Templario ──────────────────────────────────────────────────────────
+const TEMPLARIOS = [
+  'https://i.imgur.com/84ge8bg.jpeg',
+  'https://i.imgur.com/Kl3nV5y.jpeg',
+  'https://i.imgur.com/5caFtYa.jpeg',
+  'https://i.imgur.com/elEQJb8.jpeg',
+];
+
+function Maestro({ size = 130, glow = true, animate = 'float', epic = false }) {
+  const anim = animate === 'float' ? 'floatY 3.8s ease-in-out infinite'
+             : animate === 'slow'  ? 'floatYSlow 5s ease-in-out infinite'
+             : 'none';
   return (
-    <span style={{
-      fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2,
-      color: activo ? C.green : C.muted,
-      border: `1px solid ${activo ? 'rgba(68,255,136,0.3)' : 'rgba(255,255,255,0.1)'}`,
-      borderRadius: 20, padding: '3px 10px',
-    }}>
-      {activo ? '● ACTIVO' : '○ INACTIVO'}
-    </span>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-export default function SorteoAdminPage() {
-  const [eventos,       setEventos]       = useState([]);
-  const [eventoAbierto, setEventoAbierto] = useState(null);
-  const [rondas,        setRondas]        = useState({});
-  const [loading,       setLoading]       = useState(true);
-  const [creando,       setCreando]       = useState(false);
-  const [form,          setForm]          = useState({ nombre: '', cupo: 10 });
-  const [errForm,       setErrForm]       = useState('');
-  const [copiado,       setCopiado]       = useState('');
-  const [masterStats,   setMasterStats]   = useState(null);
-  const [tabActiva,     setTabActiva]     = useState('sorteos');
-  const [metricas,      setMetricas]      = useState(null);
-  const [loadingMetricas, setLoadingMetricas] = useState(false);
-  const [aliados,       setAliados]       = useState([]);
-  const [loadingAliados, setLoadingAliados] = useState(false);
-  const [formAliado,    setFormAliado]    = useState({ nombre: '', slug: '', rol: '', comision_pct: '', manager_aliado_id: '' });
-  const [guardandoComision, setGuardandoComision] = useState(null); // id del aliado que se está guardando inline
-  const [errAliado,     setErrAliado]     = useState('');
-  const [creandoAliado, setCreandoAliado] = useState(false);
-  const [copiadoAliado, setCopiadoAliado] = useState('');
-  const [eventosActivos, setEventosActivos] = useState([]);
-  const [eventoGlobal,  setEventoGlobal]  = useState('');
-  const [guardandoGlobal, setGuardandoGlobal] = useState(false);
-  const [qrModal, setQrModal] = useState(null);
-  const [qrFisicos,     setQrFisicos]     = useState([]);
-  const [loadingQrF,    setLoadingQrF]    = useState(false);
-  const [qrFModal,      setQrFModal]      = useState(null); // { id } para descargar QR
-  const [reportes,      setReportes]      = useState([]);
-  const [loadingReportes, setLoadingReportes] = useState(false);
-  const [actualizandoReporte, setActualizandoReporte] = useState(null); // id del reporte que se está guardando
-
-  useEffect(() => {
-    const handler = () => {
-      setQrModal({ url: window.__qrModalUrl, label: window.__qrModalLabel, icon: window.__qrModalIcon });
-    };
-    window.addEventListener('abrir-qr-modal', handler);
-    return () => window.removeEventListener('abrir-qr-modal', handler);
-  }, []);
-
-  // ── CSS ──────────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const s = document.createElement('style');
-    s.textContent = `
-      @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@700;900&display=swap');
-      @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-      @keyframes pulse  { 0%,100%{opacity:.6} 50%{opacity:1} }
-      input::placeholder { color: rgba(212,175,55,0.25); }
-      input:focus { border-color: rgba(212,175,55,0.5) !important; outline: none !important; }
-    `;
-    document.head.appendChild(s);
-    return () => document.head.removeChild(s);
-  }, []);
-
-  // ── Cargar eventos ───────────────────────────────────────────────────────────
-  const cargarEventos = useCallback(async () => {
-    setLoading(true);
-    const { data } = await supabase
-      .from('sorteo_eventos')
-      .select('*')
-      .order('created_at', { ascending: false });
-    setEventos(data || []);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { cargarEventos(); }, [cargarEventos]);
-
-  // ── Cargar reportes de problemas de usuarios ─────────────────────────────────
-  const cargarReportes = useCallback(async () => {
-    setLoadingReportes(true);
-    const { data } = await supabase
-      .from('sorteo_reportes')
-      .select(`
-        id, email, mensaje, status, created_at,
-        sorteo_participantes (
-          nombre, es_ganador, tipo_premio, cupon_aceptado,
-          sorteos ( numero_ronda, estado, sorteo_eventos ( nombre ) )
-        )
-      `)
-      .order('created_at', { ascending: false });
-    setReportes(data || []);
-    setLoadingReportes(false);
-  }, []);
-
-  useEffect(() => { cargarReportes(); }, [cargarReportes]);
-
-  const marcarReporteAtendido = async (id, nuevoStatus) => {
-    setActualizandoReporte(id);
-    const { error } = await supabase.from('sorteo_reportes').update({ status: nuevoStatus }).eq('id', id);
-    setActualizandoReporte(null);
-    if (error) { alert('No se pudo actualizar. Intenta de nuevo.'); return; }
-    setReportes(prev => prev.map(r => r.id === id ? { ...r, status: nuevoStatus } : r));
-  };
-
-
-  // ── Cargar rondas de un evento ───────────────────────────────────────────────
-  const cargarRondas = useCallback(async (eventoId) => {
-    const { data } = await supabase
-      .from('sorteos')
-      .select(`
-        id, numero_ronda, cupo, estado,
-        sorteo_participantes(id, nombre, email, es_ganador, cupon_code, cupon_aceptado, premio_visto, premio_entregado, tipo_premio)
-      `)
-      .eq('evento_id', eventoId)
-      .order('numero_ronda', { ascending: false })
-      .limit(20);
-    setRondas(prev => ({ ...prev, [eventoId]: data || [] }));
-  }, []);
-
-  // ── Realtime por evento abierto ──────────────────────────────────────────────
-  useEffect(() => {
-    if (!eventoAbierto) return;
-    cargarRondas(eventoAbierto);
-    const canal = supabase
-      .channel(`admin-evento-${eventoAbierto}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sorteos', filter: `evento_id=eq.${eventoAbierto}` }, () => cargarRondas(eventoAbierto))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sorteo_participantes' }, () => cargarRondas(eventoAbierto))
-      .subscribe();
-    return () => supabase.removeChannel(canal);
-  }, [eventoAbierto, cargarRondas]);
-
-  // ── Crear evento ─────────────────────────────────────────────────────────────
-  const crearEvento = async () => {
-    if (!form.nombre.trim()) { setErrForm('Pon un nombre al evento.'); return; }
-    if (!form.cupo || form.cupo < 2 || form.cupo > 100) { setErrForm('El cupo debe ser entre 2 y 100.'); return; }
-    setErrForm('');
-    setCreando(true);
-
-    const { data, error } = await supabase
-      .from('sorteo_eventos')
-      .insert({ nombre: form.nombre.trim(), cupo_por_ronda: Number(form.cupo), activo: true })
-      .select()
-      .single();
-
-    setCreando(false);
-    if (error) { setErrForm('Error al crear. Intenta de nuevo.'); return; }
-
-    setForm({ nombre: '', cupo: 10 });
-    setEventos(prev => [data, ...prev]);
-    setEventoAbierto(data.id);
-  };
-
-  // ── Pausar / activar evento ──────────────────────────────────────────────────
-  const toggleEvento = async (id, activo) => {
-    await supabase.from('sorteo_eventos').update({ activo: !activo }).eq('id', id);
-    setEventos(prev => prev.map(e => e.id === id ? { ...e, activo: !activo } : e));
-  };
-
-  // ── Copiar link ───────────────────────────────────────────────────────────────
-  const copiarLink = (eventoId) => {
-    const link = `${BASE_URL}/sorteo/${eventoId}`;
-    copiarAlPortapapeles(link);
-    setCopiado(eventoId);
-    setTimeout(() => setCopiado(''), 2000);
-  };
-  
-  
-
-  // ── Aliados ───────────────────────────────────────────────────────────────────
-  const SUPABASE_URL = 'https://hdwzhwuhlrtrmhnecypm.supabase.co';
-
-  const cargarAliados = useCallback(async () => {
-    setLoadingAliados(true);
-    const { data } = await supabase
-      .from('aliados')
-      .select('*, sorteo_eventos(nombre)')
-      .order('scan_count', { ascending: false });
-    setAliados(data || []);
-    setLoadingAliados(false);
-  }, []);
-
-  const cargarEventosActivos = useCallback(async () => {
-    const [{ data: evs }, { data: cfg }] = await Promise.all([
-      supabase.from('sorteo_eventos').select('id, nombre').eq('activo', true).order('created_at', { ascending: false }),
-      supabase.from('config').select('value').eq('key', 'sorteo_activo_global').single(),
-    ]);
-    setEventosActivos(evs || []);
-    if (cfg?.value) setEventoGlobal(cfg.value);
-  }, []);
-
-  useEffect(() => {
-    if (tabActiva === 'metricas') {
-      setLoadingMetricas(true);
-      (async () => {
-        const [{ data: porAliado }, { data: porDia }, { data: scans }, { data: porUtm }] = await Promise.all([
-          supabase.rpc('metricas_por_aliado'),
-          supabase.from('sorteo_participantes')
-            .select('nombre, email, aliado_origen_slug, utm_source, registered_at, es_ganador')
-            .order('registered_at', { ascending: false }),
-          supabase.from('aliado_scans')
-            .select('aliado_id, device_type, scanned_at')
-            .order('scanned_at', { ascending: false }),
-          supabase.rpc('metricas_por_utm'),
-        ]);
-        setMetricas({ porAliado: porAliado || [], registros: porDia || [], scans: scans || [], porUtm: porUtm || [] });
-        setLoadingMetricas(false);
-      })();
-    }
-    if (tabActiva === 'aliados') {
-      cargarAliados();
-      cargarEventosActivos();
-    }
-  }, [tabActiva, cargarAliados, cargarEventosActivos]);
-
-  const slugify = (texto) =>
-    texto.toLowerCase().trim()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '')
-      .slice(0, 30);
-
-  const crearAliado = async () => {
-    const slug = slugify(formAliado.slug || formAliado.nombre);
-    if (!formAliado.nombre.trim()) { setErrAliado('El nombre es obligatorio.'); return; }
-    if (!slug) { setErrAliado('El slug no puede estar vacío.'); return; }
-    setErrAliado('');
-    setCreandoAliado(true);
-    const { error } = await supabase.from('aliados').insert({
-      nombre: formAliado.nombre.trim(),
-      slug,
-      activo: true,
-      rol: formAliado.rol || null,
-      comision_pct: formAliado.comision_pct === '' ? null : Number(formAliado.comision_pct),
-      manager_aliado_id: formAliado.manager_aliado_id || null,
-    });
-    setCreandoAliado(false);
-    if (error) {
-      setErrAliado(error.code === '23505' ? 'Ese slug ya existe. Elige otro nombre.' : 'Error al crear. Intenta de nuevo.');
-      return;
-    }
-    setFormAliado({ nombre: '', slug: '', rol: '', comision_pct: '', manager_aliado_id: '' });
-    cargarAliados();
-  };
-
-  // Edita rol / % comisión / gerente de un aliado ya existente (inline, sin recargar la página)
-  const actualizarComisionAliado = async (id, cambios) => {
-    setGuardandoComision(id);
-    const { error } = await supabase.from('aliados').update(cambios).eq('id', id);
-    setGuardandoComision(null);
-    if (error) { alert('Error al guardar. Intenta de nuevo.'); return; }
-    setAliados(prev => prev.map(a => a.id === id ? { ...a, ...cambios } : a));
-  };
-
-  const guardarEventoGlobal = async (nuevoId) => {
-    setGuardandoGlobal(true);
-    await supabase.from('config').update({ value: nuevoId, updated_at: new Date().toISOString() }).eq('key', 'sorteo_activo_global');
-    setEventoGlobal(nuevoId);
-    setGuardandoGlobal(false);
-  };
-
-  const toggleAliado = async (id, activo) => {
-    await supabase.from('aliados').update({ activo: !activo }).eq('id', id);
-    setAliados(prev => prev.map(a => a.id === id ? { ...a, activo: !activo } : a));
-  };
-
-  const cambiarSorteoAliado = async (id, sorteoEventoId) => {
-    await supabase.from('aliados').update({ sorteo_activo_id: sorteoEventoId }).eq('id', id);
-    setAliados(prev => prev.map(a => a.id === id ? { ...a, sorteo_activo_id: sorteoEventoId } : a));
-  };
-
-  const copiarQRAliado = (slug) => {
-    const url = `${SUPABASE_URL}/functions/v1/r/${slug}`;
-    copiarAlPortapapeles(url);
-    setCopiadoAliado(slug);
-    setTimeout(() => setCopiadoAliado(''), 2000);
-  };
-
-  const cargarMasterStats = useCallback(async () => {
-    const [
-      { count: totalEventos },
-      { count: totalRondas },
-      { count: totalRegistrados },
-      { count: totalGanadores },
-      { count: totalEntregados },
-      { count: totalAceptaron },
-      { count: totalVieron },
-    ] = await Promise.all([
-      supabase.from('sorteo_eventos').select('id', { count: 'exact', head: true }),
-      supabase.from('sorteos').select('id', { count: 'exact', head: true }),
-      supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }),
-      supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }).eq('es_ganador', true),
-      supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }).eq('premio_entregado', true),
-      supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }).eq('cupon_aceptado', true),
-      supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }).eq('premio_visto', true),
-    ]);
-    const convRate = totalGanadores > 0 ? Math.round((totalAceptaron / totalGanadores) * 100) : 0;
-    setMasterStats({ totalEventos, totalRondas, totalRegistrados, totalGanadores, totalEntregados, totalAceptaron, totalVieron, convRate });
-  }, []);
-
-  useEffect(() => { cargarMasterStats(); }, [cargarMasterStats]);
-
-  // ── Estadísticas de un evento ─────────────────────────────────────────────────
-  const statsEvento = (eventoId) => {
-    const rs = rondas[eventoId] || [];
-    const completadas = rs.filter(r => r.estado === 'completado');
-    const todasRondas = rs; // incluye abierta
-    const todosParticipantes = todasRondas.flatMap(r => r.sorteo_participantes || []);
-    const totalRegistrados = todosParticipantes.length;
-    const totalGanadores = todosParticipantes.filter(p => p.es_ganador).length;
-    const totalEntregados = todosParticipantes.filter(p => p.premio_entregado).length;
-    const totalAceptaron = todosParticipantes.filter(p => p.es_ganador && p.cupon_aceptado).length;
-    const totalVieron = todosParticipantes.filter(p => p.es_ganador && p.premio_visto).length;
-    const mediaAceptacion = totalGanadores > 0 ? Math.round((totalAceptaron / totalGanadores) * 100) : 0;
-    const rondaActiva = rs.find(r => r.estado === 'abierto');
-    return { completadas: completadas.length, totalRondas: rs.length, totalRegistrados, totalGanadores, totalEntregados, totalAceptaron, totalVieron, mediaAceptacion, rondaActiva };
-  };
-
-  // ── RENDER ───────────────────────────────────────────────────────────────────
-  return (
-    <div style={{ minHeight: '100vh', background: C.bg, padding: 'clamp(20px,4vw,40px)', fontFamily: 'sans-serif' }}>
-
-      {/* Cabecera */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 5, color: C.goldDim, marginBottom: 6 }}>
-          TEMPLO DEL PROPÓSITO · ADMIN
-        </div>
-        <h1 style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 'clamp(20px,4vw,32px)', color: C.gold, margin: 0, letterSpacing: 2 }}>
-          🎲 SISTEMA DE RIFAS
-        </h1>
-        <p style={{ color: C.muted, fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>
-          Crea eventos de rifa continua — cada QR abre rondas automáticas sin parar.
-        </p>
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-          {[
-            { id: 'sorteos',   label: '🎲 SORTEOS' },
-            { id: 'aliados',   label: '🤝 ALIADOS' },
-            { id: 'qrfisicos', label: '📦 QR FÍSICOS' },
-            { id: 'metricas',  label: '📊 MÉTRICAS' },
-            { id: 'ltv',       label: '💰 LTV' },
-            { id: 'reportes',  label: `🆘 REPORTES${reportes.filter(r => r.status === 'pendiente').length > 0 ? ` (${reportes.filter(r => r.status === 'pendiente').length})` : ''}` },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setTabActiva(tab.id);
-                if (tab.id === 'qrfisicos') {
-                  setLoadingQrF(true);
-                  Promise.all([
-                    supabase.from('qr_fisicos').select('id, activo, aliado_id, aliados(nombre, slug)').order('id'),
-                    aliados.length === 0 ? supabase.from('aliados').select('id, nombre, slug').eq('activo', true).order('nombre') : Promise.resolve({ data: null }),
-                  ]).then(([{ data: qrs }, { data: als }]) => {
-                    setQrFisicos(qrs || []);
-                    if (als) setAliados(als);
-                    setLoadingQrF(false);
-                  });
-                }
-                if (tab.id === 'reportes') cargarReportes();
-              }}
-              style={{
-                padding: '9px 20px',
-                background: tabActiva === tab.id ? `linear-gradient(135deg,${C.gold},#9a7a00)` : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${tabActiva === tab.id ? C.gold : C.border}`,
-                borderRadius: 8, cursor: 'pointer',
-                color: tabActiva === tab.id ? '#0a0614' : C.muted,
-                fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, fontWeight: 900,
-                transition: 'all .2s',
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ══ TAB: SORTEOS ══ */}
-      {tabActiva === 'sorteos' && (<>
-
-      {/* Master Stats */}
-      {masterStats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 10, marginBottom: 28 }}>
-          {[
-            { label: 'EVENTOS',      value: masterStats.totalEventos,    icon: '🎲', color: C.gold },
-            { label: 'RONDAS',       value: masterStats.totalRondas,     icon: '🔁', color: C.goldDim },
-            { label: 'REGISTRADOS',  value: masterStats.totalRegistrados,icon: '⚔️', color: C.text },
-            { label: 'GANADORES',    value: masterStats.totalGanadores,  icon: '👑', color: C.gold },
-            { label: 'ENTREGADOS',   value: masterStats.totalEntregados, icon: '📦', color: '#60A5FA' },
-            { label: 'ACEPTARON',    value: masterStats.totalAceptaron,  icon: '✅', color: C.green },
-            { label: 'VIERON',       value: masterStats.totalVieron,     icon: '👁', color: C.purple },
-            { label: 'CONVERSIÓN',   value: `${masterStats.convRate}%`,  icon: '📈', color: masterStats.convRate > 50 ? C.green : masterStats.convRate > 20 ? C.gold : C.red },
-          ].map(s => (
-            <div key={s.label} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 12px', textAlign: 'center' }}>
-              <div style={{ fontSize: 20, marginBottom: 6 }}>{s.icon}</div>
-              <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 22, color: s.color, lineHeight: 1 }}>{s.value}</div>
-              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 7, letterSpacing: 2, color: C.muted, marginTop: 5 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      {glow && (
+        <div style={{
+          position: 'absolute', inset: -24,
+          background: 'radial-gradient(circle, rgba(255,215,0,0.22) 0%, rgba(204,68,255,0.08) 50%, transparent 70%)',
+          borderRadius: '50%',
+          animation: 'pulse 3s ease-in-out infinite',
+          pointerEvents: 'none',
+        }} />
       )}
-
-      {/* Formulario crear evento */}
-      <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: 'clamp(20px,4vw,28px)', marginBottom: 32, animation: 'fadeIn .4s ease both' }}>
-        <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.gold, margin: '0 0 20px' }}>
-          + NUEVO EVENTO
-        </h2>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div style={{ flex: 2, minWidth: 200 }}>
-            <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>
-              NOMBRE DEL EVENTO
-            </label>
-            <input
-              type="text"
-              value={form.nombre}
-              onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
-              onKeyDown={e => e.key === 'Enter' && crearEvento()}
-              placeholder="Ej: Rifa Principal — Zona VIP"
-              style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 12 }}
-            />
-          </div>
-          <div style={{ minWidth: 120 }}>
-            <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>
-              CUPO POR RONDA
-            </label>
-            <input
-              type="number"
-              value={form.cupo}
-              min={2} max={100}
-              onChange={e => setForm(f => ({ ...f, cupo: e.target.value }))}
-              style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 14, textAlign: 'center' }}
-            />
-          </div>
-          <button
-            onClick={crearEvento}
-            disabled={creando}
-            style={{ padding: '11px 24px', background: `linear-gradient(135deg,${C.gold},#9a7a00)`, border: 'none', borderRadius: 8, color: '#0a0614', fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 2, fontWeight: 900, cursor: creando ? 'not-allowed' : 'pointer', opacity: creando ? 0.6 : 1, whiteSpace: 'nowrap' }}
-          >
-            {creando ? 'CREANDO...' : '⚔️ CREAR'}
-          </button>
+      {epic && TEMPLARIOS.map((src, i) => (
+        <div key={i} style={{
+          position: 'absolute',
+          width: size * 0.28, height: size * 0.28,
+          borderRadius: '50%',
+          overflow: 'hidden',
+          border: '2px solid rgba(255,215,0,0.6)',
+          boxShadow: '0 0 12px rgba(255,215,0,0.4)',
+          animation: `orbit ${6 + i * 1.5}s linear infinite`,
+          animationDelay: `${i * -1.5}s`,
+          top: '50%', left: '50%',
+          marginTop: -(size * 0.14), marginLeft: -(size * 0.14),
+          zIndex: 2,
+          transformOrigin: `0 0`,
+        }}>
+          <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
-        {errForm && <p style={{ color: C.red, fontFamily: 'Cinzel, serif', fontSize: 10, marginTop: 10, letterSpacing: 1 }}>⚠ {errForm}</p>}
+      ))}
+      <img
+        src="https://i.imgur.com/7ofsCSm.png"
+        alt="Maestro Templario"
+        style={{
+          width: size, height: 'auto',
+          filter: glow
+            ? 'drop-shadow(0 0 30px rgba(255,215,0,0.6)) drop-shadow(0 0 60px rgba(204,68,255,0.2)) drop-shadow(0 4px 12px rgba(0,0,0,0.8))'
+            : 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))',
+          animation: anim,
+          position: 'relative', zIndex: 1,
+        }}
+      />
+    </div>
+  );
+}
+
+// ── Header con contadores ──────────────────────────────────────────────────────
+function Header({ totalBecas, totalGanadores, rondaNum, eventoNombre }) {
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+      background: 'rgba(4,2,14,0.94)',
+      borderBottom: '1px solid rgba(212,175,55,0.1)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '10px clamp(16px,4vw,32px)',
+      gap: 12,
+    }}>
+      <div style={{
+        fontFamily: 'Cinzel, serif', fontWeight: 900,
+        fontSize: 'clamp(10px,2.2vw,13px)',
+        color: C.gold, letterSpacing: 2,
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        maxWidth: '35%',
+      }}>
+        ⚔ {eventoNombre || 'SORTEO'}
       </div>
 
-      {/* Lista de eventos */}
-      {loading ? (
-        <p style={{ color: C.goldDim, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, textAlign: 'center', animation: 'pulse 1.5s ease-in-out infinite' }}>
-          CARGANDO EVENTOS...
-        </p>
-      ) : eventos.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, color: C.muted }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🎲</div>
-          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 2 }}>NO HAY EVENTOS AÚN</p>
-          <p style={{ fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>Crea el primero arriba para generar tu primer QR.</p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {eventos.map(evento => {
-            const link = `${BASE_URL}/sorteo/${evento.id}`;
-            const abierto = eventoAbierto === evento.id;
-            const stats = statsEvento(evento.id);
-            const rs = rondas[evento.id] || [];
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px,3vw,32px)' }}>
+        {[
+          { val: totalBecas,     label: 'BECAS' },
+          { val: totalGanadores, label: 'GANADORES' },
+          { val: `#${rondaNum}`, label: 'RONDA' },
+        ].map(({ val, label }) => (
+          <div key={label} style={{ textAlign: 'center' }}>
+            <div style={{
+              fontFamily: 'Cinzel, serif', fontWeight: 900,
+              fontSize: 'clamp(16px,3.5vw,24px)', color: C.gold, lineHeight: 1,
+            }}>{val}</div>
+            <div style={{
+              fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2,
+              color: C.goldDim, marginTop: 2,
+            }}>{label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
+// ── Barra de progreso ──────────────────────────────────────────────────────────
+function BarraProgreso({ actual, total, color = 'gold' }) {
+  const pct = Math.min((actual / Math.max(total, 1)) * 100, 100);
+  const bg = color === 'gold'
+    ? 'linear-gradient(90deg,#9a7a00,#D4AF37,#ffe98a)'
+    : 'linear-gradient(90deg,#6b0a8a,#CC44FF,#e0a0ff)';
+  return (
+    <div>
+      <div style={{
+        height: 8, background: 'rgba(255,255,255,0.05)',
+        borderRadius: 4, overflow: 'hidden',
+      }}>
+        <div style={{
+          height: '100%', borderRadius: 4,
+          width: `${pct}%`,
+          background: bg,
+          transition: 'width 0.7s cubic-bezier(0.22,1,0.36,1)',
+          boxShadow: color === 'gold' ? `0 0 10px rgba(212,175,55,0.5)` : `0 0 10px rgba(204,68,255,0.5)`,
+        }} />
+      </div>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', marginTop: 6,
+        fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: C.muted,
+      }}>
+        <span>{actual} inscritos</span>
+        <span>{total - actual} lugares libres</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Slot Machine ───────────────────────────────────────────────────────────────
+function SlotMachine({ nombres, duracion = 3500, onTick, onFinal, finalName }) {
+  const [idx, setIdx] = useState(0);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!nombres.length) return;
+    let elapsed = 0, cur = 65, running = true;
+    const step = () => {
+      if (!running) return;
+      setIdx(i => (i + 1) % nombres.length);
+      if (onTick) onTick(cur);
+      elapsed += cur;
+      if      (elapsed < duracion * 0.28) cur = Math.max(30, cur - 3.5);
+      else if (elapsed > duracion * 0.60) cur = Math.min(440, cur + 24);
+      if (elapsed < duracion) {
+        setTimeout(step, cur);
+      } else {
+        if (finalName) {
+          const fi = nombres.findIndex(n => n === finalName);
+          if (fi !== -1) setIdx(fi);
+        }
+        setDone(true);
+        if (onFinal) onFinal();
+      }
+    };
+    const t = setTimeout(step, cur);
+    return () => { running = false; clearTimeout(t); };
+  }, [nombres, duracion]);
+
+  return (
+    <div style={{
+      height: 104, overflow: 'hidden', position: 'relative',
+      background: done
+        ? 'linear-gradient(135deg,rgba(255,215,0,0.13),rgba(255,215,0,0.05))'
+        : 'rgba(255,215,0,0.04)',
+      border: `2px solid ${done ? C.borderHi : 'rgba(255,215,0,0.3)'}`,
+      borderRadius: 18,
+      boxShadow: done
+        ? '0 0 60px rgba(255,215,0,0.4), inset 0 0 30px rgba(255,215,0,0.1)'
+        : 'inset 0 0 30px rgba(255,215,0,0.04), 0 0 40px rgba(255,215,0,0.08)',
+      transition: 'box-shadow 0.5s, border-color 0.5s',
+      animation: done ? 'goldFlash 2s ease-in-out infinite' : 'none',
+    }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 30, background: 'linear-gradient(to bottom,rgba(4,2,14,.97),transparent)', zIndex: 2 }} />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 30, background: 'linear-gradient(to top,rgba(4,2,14,.97),transparent)', zIndex: 2 }} />
+      {/* Franja de selección */}
+      <div style={{ position: 'absolute', top: 'calc(50% - 24px)', left: 0, right: 0, height: 48, background: 'rgba(255,215,0,0.04)', zIndex: 1, borderTop: '1px solid rgba(255,215,0,0.22)', borderBottom: '1px solid rgba(255,215,0,0.22)' }} />
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 3,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px',
+        fontFamily: 'Cinzel, serif', fontWeight: 900,
+        fontSize: 'clamp(20px,5.5vw,32px)',
+        background: done
+          ? 'linear-gradient(135deg,#fff4a0,#FFD700)'
+          : `linear-gradient(135deg,${C.gold},${C.goldLight})`,
+        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+        letterSpacing: done ? 5 : 2,
+        textAlign: 'center',
+        transition: 'letter-spacing 0.4s ease',
+        animation: done ? 'drumHit 0.5s ease' : 'none',
+      }}>
+        {nombres[idx]}
+      </div>
+    </div>
+  );
+}
+
+// ── Confetti ──────────────────────────────────────────────────────────────────
+function Confetti() {
+  const colors = [C.gold, '#CC44FF', '#44FF88', '#4488FF', '#FFB844', '#FF4466'];
+  return (
+    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 200, overflow: 'hidden' }}>
+      {Array.from({ length: 48 }).map((_, i) => (
+        <div key={i} style={{
+          position: 'absolute',
+          width: `${4 + i % 5}px`, height: `${9 + i % 7}px`,
+          background: colors[i % colors.length],
+          left: `${(i * 2.1) % 100}%`, top: '-12px',
+          borderRadius: i % 3 === 0 ? '50%' : 2,
+          animation: `confettiFall ${1.8 + i % 2.5}s ease-in ${i * 0.065}s infinite`,
+          opacity: 0.85,
+        }} />
+      ))}
+    </div>
+  );
+}
+
+// ── Rayos solares ─────────────────────────────────────────────────────────────
+function Rays({ size = 180, color = C.gold, opacity = 0.18, speed = '5s' }) {
+  return (
+    <div style={{
+      width: size, height: size, margin: '0 auto',
+      backgroundImage: `conic-gradient(from 0deg, transparent 0deg, ${color}${Math.round(opacity * 255).toString(16).padStart(2,'0')} 8deg, transparent 18deg)`,
+      borderRadius: '50%',
+      animation: `raysRotate ${speed} linear infinite`,
+      pointerEvents: 'none',
+    }} />
+  );
+}
+
+// ── Tag de participante ───────────────────────────────────────────────────────
+function TagParticipante({ nombre, esYo, index }) {
+  return (
+    <div style={{
+      fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1,
+      color: esYo ? C.gold : C.muted,
+      background: esYo ? 'rgba(212,175,55,0.1)' : 'rgba(255,255,255,0.04)',
+      border: `1px solid ${esYo ? C.borderHi : 'rgba(255,255,255,0.07)'}`,
+      borderRadius: 30, padding: '5px 12px',
+      animation: 'tagPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both',
+      animationDelay: `${index * 0.05}s`,
+      whiteSpace: 'nowrap',
+    }}>
+      {esYo ? '⚔️ ' : ''}{nombre}
+    </div>
+  );
+}
+
+// ── Mapa de Cuadras — tablero visual de cupo (gratis, sin pago) ──────────────
+function MapaCuadras({ participantes, cupoTotal, miEmail }) {
+  const slots = Array.from({ length: cupoTotal }, (_, i) => participantes[i] || null);
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 7 }}>
+      {slots.map((p, i) => {
+        const ocupada = !!p;
+        const esYo = p?.email === miEmail;
+        return (
+          <div key={i} style={{
+            position: 'relative', borderRadius: 9, padding: '8px 4px',
+            textAlign: 'center', minHeight: 48,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            background: ocupada ? (esYo ? 'rgba(212,175,55,0.18)' : 'rgba(212,175,55,0.08)') : 'rgba(255,255,255,0.02)',
+            border: ocupada ? `1.5px solid ${esYo ? C.borderHi : 'rgba(212,175,55,0.35)'}` : '1px dashed rgba(255,255,255,0.12)',
+            boxShadow: esYo ? `0 0 16px ${C.goldGlow}` : 'none',
+            transition: 'all .35s',
+            animation: ocupada ? 'tagPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both' : 'none',
+            animationDelay: `${i * 0.03}s`,
+          }}>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 7, letterSpacing: 1, color: ocupada ? C.goldDim : 'rgba(255,255,255,0.2)', marginBottom: 2 }}>
+              C{i + 1}
+            </div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 9, color: ocupada ? (esYo ? C.gold : C.text) : 'rgba(255,255,255,0.18)', lineHeight: 1.1, wordBreak: 'break-word' }}>
+              {ocupada ? `${esYo ? '⚔️ ' : ''}${p.nombre.split(' ')[0]}` : 'LIBRE'}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Historial de rondas ───────────────────────────────────────────────────────
+function HistorialRondas({ historial, mostrar, onToggle }) {
+  return (
+    <div style={{ marginTop: 36 }}>
+      <button onClick={onToggle} style={{
+        width: '100%', background: 'transparent',
+        border: `1px solid rgba(212,175,55,0.12)`,
+        color: 'rgba(212,175,55,0.4)', fontFamily: 'Cinzel, serif',
+        fontSize: 9, letterSpacing: 3, padding: '11px', borderRadius: 8,
+        cursor: 'pointer', marginBottom: mostrar ? 16 : 0,
+        transition: 'border-color .2s, color .2s',
+      }}>
+        {mostrar ? '▲ OCULTAR HISTORIAL' : `▼ RONDAS COMPLETADAS (${historial.length})`}
+      </button>
+      {mostrar && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))',
+          gap: 10,
+        }}>
+          {historial.map((ronda, i) => {
+            const ganador = ronda.sorteo_participantes?.find(p => p.es_ganador);
             return (
-              <div key={evento.id} style={{ background: C.card, border: `1px solid ${abierto ? C.borderHi : C.border}`, borderRadius: 16, overflow: 'hidden', transition: 'border-color .3s', animation: 'fadeIn .4s ease both' }}>
-
-                {/* Header del evento */}
-                <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: 200 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                      <span style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 'clamp(13px,2.5vw,17px)', color: C.gold }}>
-                        {evento.nombre}
-                      </span>
-                      <Badge activo={evento.activo} />
-                    </div>
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 1 }}>
-                        {evento.cupo_por_ronda} cupos / ronda
-                      </span>
-                      {abierto && rs.length > 0 && (
-                        <>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 1 }}>
-                            ⚔️ {stats.totalRegistrados} registrados
-                          </span>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.gold, letterSpacing: 1 }}>
-                            👑 {stats.totalGanadores} ganadores
-                          </span>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.green, letterSpacing: 1 }}>
-                            ✅ {stats.totalAceptaron}/{stats.totalGanadores} aceptaron ({stats.mediaAceptacion}%)
-                          </span>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: '#60A5FA', letterSpacing: 1 }}>
-                            📦 {stats.totalEntregados} entregados
-                          </span>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.purple, letterSpacing: 1 }}>
-                            👁 {stats.totalVieron} vieron
-                          </span>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 1 }}>
-                            🔁 {stats.totalRondas} rondas
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Botones */}
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <button
-                      onClick={() => { copiarLink(evento.id); }}
-                      style={{ padding: '8px 14px', background: copiado === evento.id ? 'rgba(68,255,136,0.12)' : 'rgba(212,175,55,0.08)', border: `1px solid ${copiado === evento.id ? 'rgba(68,255,136,0.4)' : C.border}`, borderRadius: 8, color: copiado === evento.id ? C.green : C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer', transition: 'all .2s' }}
-                    >
-                      {copiado === evento.id ? '✓ COPIADO' : '🔗 LINK'}
-                    </button>
-                    <button
-                      onClick={() => setEventoAbierto(abierto ? null : evento.id)}
-                      style={{ padding: '8px 14px', background: abierto ? 'rgba(155,89,255,0.15)' : 'rgba(255,255,255,0.04)', border: `1px solid ${abierto ? 'rgba(155,89,255,0.4)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 8, color: abierto ? C.purple : C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                    >
-                      {abierto ? '▲ CERRAR' : '▼ VER'}
-                    </button>
-                    <button
-                      onClick={() => toggleEvento(evento.id, evento.activo)}
-                      style={{ padding: '8px 14px', background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 8, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                    >
-                      {evento.activo ? 'PAUSAR' : 'ACTIVAR'}
-                    </button>
-                  </div>
+              <div key={ronda.id} style={{
+                background: 'rgba(10,5,26,0.9)',
+                border: '1px solid rgba(212,175,55,0.08)',
+                borderRadius: 12, padding: '12px 14px',
+                animation: 'sealPop .45s ease both',
+                animationDelay: `${i * 0.04}s`,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: 'rgba(212,175,55,0.6)', fontWeight: 700 }}>
+                    RONDA #{ronda.numero_ronda}
+                  </span>
+                  <span style={{
+                    fontFamily: 'Cinzel, serif', fontSize: 6, letterSpacing: 1,
+                    color: 'rgba(212,175,55,0.3)',
+                    border: '1px solid rgba(212,175,55,0.12)',
+                    borderRadius: 3, padding: '2px 5px',
+                  }}>SELLADA</span>
                 </div>
-
-                {/* Panel expandido */}
-                {abierto && (
-                  <div style={{ borderTop: `1px solid ${C.border}`, padding: '24px', animation: 'fadeIn .3s ease both' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 32, alignItems: 'start' }}>
-
-                      {/* QR */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-                        <QRCode url={link} size={160} />
-                        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, textAlign: 'center' }}>
-                          ESCANEAR PARA ENTRAR
-                        </p>
-                        <div style={{ background: 'rgba(212,175,55,0.06)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '8px 12px', maxWidth: 160, wordBreak: 'break-all' }}>
-                          <p style={{ fontFamily: 'monospace', fontSize: 9, color: C.goldDim, margin: 0 }}>{link}</p>
-                        </div>
-                        <button
-                          onClick={() => copiarLink(evento.id)}
-                          style={{ padding: '8px 16px', background: `linear-gradient(135deg,${C.gold},#9a7a00)`, border: 'none', borderRadius: 6, color: '#0a0614', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, fontWeight: 900, cursor: 'pointer', width: '100%' }}
-                        >
-                          📋 COPIAR LINK
-                        </button>
-                      </div>
-
-                      {/* Rondas en vivo */}
-                      <div>
-                        {/* Ronda activa */}
-                        {stats.rondaActiva && (
-                          <div style={{ background: 'rgba(212,175,55,0.05)', border: `1px solid ${C.borderHi}`, borderRadius: 12, padding: '16px', marginBottom: 16 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: 2 }}>
-                                RONDA #{stats.rondaActiva.numero_ronda} — EN VIVO
-                              </span>
-                              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.green, animation: 'pulse 1.5s ease-in-out infinite' }}>
-                                ● {stats.rondaActiva.sorteo_participantes?.length || 0}/{stats.rondaActiva.cupo}
-                              </span>
-                            </div>
-                            {/* Barra de progreso */}
-                            <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden', marginBottom: 12 }}>
-                              <div style={{ height: '100%', borderRadius: 2, width: `${Math.min(((stats.rondaActiva.sorteo_participantes?.length || 0) / stats.rondaActiva.cupo) * 100, 100)}%`, background: `linear-gradient(90deg,${C.gold},${C.purple})`, transition: 'width .5s ease' }} />
-                            </div>
-                            {/* Participantes */}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                              {(stats.rondaActiva.sorteo_participantes || []).map((p, i) => (
-                                <span key={p.id} style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 20, padding: '3px 10px', animation: 'fadeIn .3s ease both', animationDelay: `${i * 0.04}s` }}>
-                                  {p.nombre}
-                                </span>
-                              ))}
-                              {(stats.rondaActiva.sorteo_participantes?.length || 0) === 0 && (
-                                <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: 'rgba(255,255,255,0.15)', fontStyle: 'italic' }}>
-                                  Esperando participantes...
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Sin ronda activa todavía */}
-                        {!stats.rondaActiva && rs.length === 0 && (
-                          <div style={{ textAlign: 'center', padding: '20px', color: C.muted }}>
-                            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2 }}>SIN RONDAS AÚN</p>
-                            <p style={{ fontSize: 12, marginTop: 6, fontStyle: 'italic' }}>
-                              Comparte el QR — la primera ronda abre cuando alguien se registre.
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Historial de rondas completadas */}
-                        {rs.filter(r => r.estado === 'completado').length > 0 && (
-                          <div>
-                            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3, color: C.goldDim, marginBottom: 10 }}>
-                              RONDAS COMPLETADAS
-                            </p>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 340, overflowY: 'auto', paddingRight: 4 }}>
-                              {rs.filter(r => r.estado === 'completado').map(ronda => {
-                                const ganador = ronda.sorteo_participantes?.find(p => p.es_ganador);
-                                return (
-                                  <div key={ronda.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                                    <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.goldDim, minWidth: 80 }}>
-                                      RONDA #{ronda.numero_ronda}
-                                    </span>
-                                    <span style={{ fontFamily: 'Cinzel, serif', fontSize: 7, color: 'rgba(212,175,55,0.3)', border: '1px solid rgba(212,175,55,0.12)', borderRadius: 3, padding: '2px 6px', letterSpacing: 1 }}>
-                                      SELLADA
-                                    </span>
-                                    {ganador && (
-                                      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.gold, fontWeight: 700 }}>
-                                        👑 {ganador.nombre}
-                                      </span>
-                                    )}
-                                    {ganador?.cupon_code && (
-                                      <span style={{ fontFamily: 'monospace', fontSize: 10, color: C.goldDim, background: 'rgba(212,175,55,0.08)', padding: '2px 8px', borderRadius: 4 }}>
-                                        {ganador.cupon_code}
-                                      </span>
-                                    )}
-                                    <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, marginLeft: 'auto' }}>
-                                      {ronda.sorteo_participantes?.length || 0} guerreros
-                                      {(() => {
-                                        const ganadores = ronda.sorteo_participantes?.filter(p => p.es_ganador) || [];
-                                        const aceptaron = ganadores.filter(p => p.cupon_aceptado).length;
-                                        const vieron = ganadores.filter(p => p.premio_visto).length;
-                                        return ganadores.length > 0 ? ` · ✅${aceptaron}/${ganadores.length} · 👁${vieron}` : '';
-                                      })()}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                {ganador && (
+                  <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 700, color: C.gold, margin: '0 0 4px' }}>
+                    👑 {ganador.nombre}
+                  </p>
                 )}
+                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 8, color: C.muted, margin: 0 }}>
+                  {ronda.sorteo_participantes?.length || 0} guerreros
+                </p>
               </div>
             );
           })}
         </div>
       )}
-    </>)}
+    </div>
+  );
+}
 
-      {/* ══ TAB: MÉTRICAS ══ */}
-      {tabActiva === 'metricas' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          {loadingMetricas ? (
-            <div style={{ color: C.muted, fontFamily: 'Cinzel,serif', fontSize: 11, letterSpacing: 3, textAlign: 'center', padding: 60 }}>CARGANDO MÉTRICAS...</div>
-          ) : metricas ? (<>
+// ── Motor de sonido (Web Audio API — sin dependencias externas) ────────────────
+function useSoundEngine() {
+  const ctxRef = useRef(null);
+  const getCtx = useCallback(() => {
+    if (!ctxRef.current) ctxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    return ctxRef.current;
+  }, []);
 
-            {/* ── KPIs estilo Skool ── */}
-            {(() => {
-              const total = metricas.porAliado.reduce((acc, a) => ({
-                scans: acc.scans + (a.scan_count || 0),
-                registros: acc.registros + Number(a.registros || 0),
-                ganadores: acc.ganadores + Number(a.ganadores || 0),
-                aceptados: acc.aceptados + Number(a.cupones_aceptados || 0),
-                entregados: acc.entregados + Number(a.premios_entregados || 0),
-              }), { scans: 0, registros: 0, ganadores: 0, aceptados: 0, entregados: 0 });
-              const totalReg = metricas.registros.length || 0;
-              const convGlobal = total.scans ? `${Math.round(total.registros / total.scans * 100)}%` : `${totalReg > 0 ? '—' : '0%'}`;
-              const kpis = [
-                { label: 'VISITANTES (QR)', value: total.scans, color: '#CC44FF', icon: '📡' },
-                { label: 'REGISTROS', value: totalReg, color: C.gold, icon: '⚔️' },
-                { label: 'CONV. GLOBAL', value: convGlobal, color: '#4ade80', icon: '📈' },
-                { label: 'GANADORES', value: total.ganadores, color: '#f0c040', icon: '👑' },
-                { label: 'CUPONES ACTIVOS', value: total.aceptados, color: '#60a5fa', icon: '🎟️' },
-                { label: 'PREMIOS ENTREGADOS', value: total.entregados, color: '#86efac', icon: '🏆' },
-              ];
-              return (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
-                  {kpis.map((k, i) => (
-                    <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '20px 16px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-                      <div style={{ position: 'absolute', top: 8, right: 10, fontSize: 18, opacity: 0.18 }}>{k.icon}</div>
-                      <div style={{ fontSize: 32, fontWeight: 900, color: k.color, fontFamily: 'Cinzel,serif', lineHeight: 1 }}>{k.value}</div>
-                      <div style={{ fontSize: 7, letterSpacing: 2, color: C.muted, fontFamily: 'Cinzel,serif', marginTop: 8, lineHeight: 1.4 }}>{k.label}</div>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
+  const tick = useCallback((pitch = 880) => {
+    try {
+      const ctx = getCtx();
+      const osc = ctx.createOscillator(); const g = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
+      osc.type = 'square'; osc.frequency.value = pitch;
+      g.gain.setValueAtTime(0.1, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+      osc.start(); osc.stop(ctx.currentTime + 0.05);
+    } catch {}
+  }, [getCtx]);
 
-            {/* ── Fila: Pastel UTM + Barras por aliado ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 16 }}>
+  const fanfare = useCallback(() => {
+    try {
+      const ctx = getCtx();
+      [[523,0],[659,0.1],[784,0.22],[1047,0.36],[1047,0.5],[784,0.6],[1047,0.72],[1319,0.86]].forEach(([f, t]) => {
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.connect(g); g.connect(ctx.destination);
+        osc.type = 'triangle'; osc.frequency.value = f;
+        g.gain.setValueAtTime(0.15, ctx.currentTime + t);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.24);
+        osc.start(ctx.currentTime + t); osc.stop(ctx.currentTime + t + 0.24);
+      });
+    } catch {}
+  }, [getCtx]);
 
-              {/* Pastel — ¿De dónde vienen? */}
-              <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '20px 20px 16px' }}>
-                <div style={{ fontFamily: 'Cinzel,serif', fontSize: 10, letterSpacing: 3, color: C.gold, marginBottom: 16 }}>🌐 ORIGEN DE REGISTROS</div>
-                {(() => {
-                  const data = metricas.porUtm || [];
-                  const total = data.reduce((s, d) => s + Number(d.registros || 0), 0);
-                  if (total === 0) return <div style={{ color: C.muted, fontSize: 11, textAlign: 'center', padding: '20px 0' }}>Sin datos aún</div>;
-                  const COLORS = ['#D4AF37','#CC44FF','#E1306C','#69C9D0','#4285F4','#FF0000','#4ade80','#f87171'];
-                  // SVG pastel
-                  const CANAL_ICON = {
-                    'QR Aliado': '📡', 'Instagram': '📸', 'TikTok': '🎵',
-                    'Facebook': '👥', 'YouTube': '▶️', 'Google': '🔍',
-                    'Directo': '🔗',
-                  };
-                  // Construir conic-gradient para el donut
-                  const slices = [];
-                  let acc = 0;
-                  data.forEach((d, i) => {
-                    const pct = Number(d.pct);
-                    slices.push({ color: COLORS[i % COLORS.length], from: acc, to: acc + pct, label: d.canal, pct: d.pct, registros: d.registros });
-                    acc += pct;
-                  });
-                  const conicParts = slices.map(s => `${s.color} ${s.from}% ${s.to}%`).join(', ');
-                  return (
-                    <div>
-                      <div style={{ position: 'relative', width: 140, height: 140, margin: '0 auto 14px', borderRadius: '50%', background: `conic-gradient(${conicParts})` }}>
-                        <div style={{
-                          position: 'absolute', top: '50%', left: '50%',
-                          transform: 'translate(-50%,-50%)',
-                          width: 76, height: 76, borderRadius: '50%',
-                          background: C.card,
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          <span style={{ fontFamily: 'Cinzel,serif', fontWeight: 900, fontSize: 22, color: C.gold, lineHeight: 1 }}>{total}</span>
-                          <span style={{ fontFamily: 'Cinzel,serif', fontSize: 6, letterSpacing: 1.5, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>REGISTROS</span>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                        {slices.map((s, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flexShrink: 0 }} />
-                            <span style={{ fontSize: 13, marginRight: 2 }}>{CANAL_ICON[s.label] || '🌐'}</span>
-                            <span style={{ flex: 1, fontFamily: 'Cinzel,serif', fontSize: 9, letterSpacing: 0.5, color: C.text }}>{s.label}</span>
-                            <span style={{ fontSize: 11, color: s.color, fontWeight: 700, fontFamily: 'Cinzel,serif' }}>{s.registros}</span>
-                            <span style={{ fontSize: 9, color: C.muted, minWidth: 32, textAlign: 'right' }}>{s.pct}%</span>
-                          </div>
-                        ))}
-                      </div>
-                      {/* Links + QR para redes */}
-                      {(() => {
-                        const REDES = [
-                          { label: 'Instagram', utm: 'instagram', icon: '📸' },
-                          { label: 'TikTok',    utm: 'tiktok',    icon: '🎵' },
-                          { label: 'Facebook',  utm: 'facebook',  icon: '👥' },
-                          { label: 'YouTube',   utm: 'youtube',   icon: '▶️' },
-                          { label: 'Google',    utm: 'google',    icon: '🔍' },
-                        ];
-                        const [qrAbierto, setQrAbierto] = [window.__qrAbierto, window.__setQrAbierto];
-                        return (
-                          <div style={{ marginTop: 14, padding: '10px 12px', background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.15)', borderRadius: 8 }}>
-                            <div style={{ fontFamily: 'Cinzel,serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 8 }}>LINKS PARA REDES SOCIALES</div>
-                            {REDES.map((red) => {
-                              const fullUrl = `${BASE_URL}/sorteo?utm_source=${red.utm}`;
-                              return (
-                                <div key={red.utm} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
-                                  <span style={{ fontSize: 13 }}>{red.icon}</span>
-                                  <span style={{ fontFamily: 'monospace', fontSize: 8, color: 'rgba(255,255,255,0.45)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {fullUrl}
-                                  </span>
-                                  <button
-                                    onClick={() => { copiarAlPortapapeles(fullUrl); }}
-                                    style={{ flexShrink: 0, padding: '3px 8px', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: 5, color: C.gold, fontFamily: 'Cinzel,serif', fontSize: 7, letterSpacing: 1, cursor: 'pointer' }}
-                                  >
-                                    COPIAR
-                                  </button>
-                                  <button
-                                    onClick={() => { window.__qrModalUrl = fullUrl; window.__qrModalLabel = red.label; window.__qrModalIcon = red.icon; window.dispatchEvent(new Event('abrir-qr-modal')); }}
-                                    style={{ flexShrink: 0, padding: '3px 8px', background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 5, color: C.purple, fontFamily: 'Cinzel,serif', fontSize: 7, letterSpacing: 1, cursor: 'pointer' }}
-                                  >
-                                    QR
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  );
-                })()}
-              </div>
+  return { tick, fanfare };
+}
 
-              {/* Barras por aliado */}
-              <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '20px 20px 16px' }}>
-                <div style={{ fontFamily: 'Cinzel,serif', fontSize: 10, letterSpacing: 3, color: C.gold, marginBottom: 16 }}>📍 RENDIMIENTO POR ALIADO</div>
-                {metricas.porAliado.length === 0 ? (
-                  <div style={{ color: C.muted, fontSize: 11, textAlign: 'center', padding: '20px 0' }}>Sin aliados activos</div>
-                ) : (() => {
-                  const max = Math.max(...metricas.porAliado.map(a => Number(a.registros || 0)), 1);
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                      {metricas.porAliado.map((a, i) => (
-                        <div key={i}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontSize: 9, fontFamily: 'Cinzel,serif', letterSpacing: 1, color: a.activo ? '#4ade80' : C.muted }}>
-                                {a.activo ? '●' : '○'}
-                              </span>
-                              <span style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{a.nombre}</span>
-                              <span style={{ fontSize: 9, color: C.muted, fontFamily: 'monospace' }}>/{a.slug}</span>
-                            </div>
-                            <span style={{ fontSize: 11, color: C.gold, fontWeight: 700 }}>{a.registros || 0} reg</span>
-                          </div>
-                          <div style={{ height: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 6, overflow: 'hidden', marginBottom: 5 }}>
-                            <div style={{ height: '100%', width: `${(Number(a.registros || 0) / max) * 100}%`, background: `linear-gradient(90deg,#CC44FF,${C.gold})`, borderRadius: 6 }} />
-                          </div>
-                          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontFamily: 'Cinzel,serif' }}>{a.scan_count || 0} scans</span>
-                            <span style={{ fontSize: 9, color: (a.conversion_pct || 0) >= 30 ? '#4ade80' : (a.conversion_pct || 0) >= 10 ? C.gold : '#f87171', fontFamily: 'Cinzel,serif' }}>{a.conversion_pct || 0}% conv</span>
-                            <span style={{ fontSize: 9, color: '#f0c040', fontFamily: 'Cinzel,serif' }}>{a.ganadores || 0} 👑</span>
-                            <span style={{ fontSize: 9, color: '#60a5fa', fontFamily: 'Cinzel,serif' }}>{a.cupones_aceptados || 0} cupones</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
+// ── Pantalla sorteo épica: 3 fases ────────────────────────────────────────────
+function SorteoAnimacion({ nombres, ganadorNombre }) {
+  const sound = useSoundEngine();
+  const [fase, setFase] = useState(0); // 0=intro · 1=drumroll · 2=elegido
 
-            {/* ── Embudo global ── */}
-            {(() => {
-              const t = metricas.porAliado.reduce((acc, a) => ({
-                scans: acc.scans + (a.scan_count || 0),
-                registros: acc.registros + Number(a.registros || 0),
-                ganadores: acc.ganadores + Number(a.ganadores || 0),
-                vistos: acc.vistos + Number(a.cupones_vistos || 0),
-                aceptados: acc.aceptados + Number(a.cupones_aceptados || 0),
-                entregados: acc.entregados + Number(a.premios_entregados || 0),
-              }), { scans: 0, registros: 0, ganadores: 0, vistos: 0, aceptados: 0, entregados: 0 });
-              const totalReg = metricas.registros.length || 0;
-              const pasos = [
-                { label: 'SCANS QR', val: t.scans, color: '#CC44FF' },
-                { label: 'REGISTROS TOTALES', val: totalReg, color: C.gold },
-                { label: 'GANADORES', val: t.ganadores, color: '#f0c040' },
-                { label: 'VIERON PREMIO', val: t.vistos, color: '#60a5fa' },
-                { label: 'ACEPTARON CUPÓN', val: t.aceptados, color: '#4ade80' },
-                { label: 'PREMIO ENTREGADO', val: t.entregados, color: '#86efac' },
-              ];
-              const maxVal = Math.max(...pasos.map(p => p.val), 1);
-              return (
-                <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '20px 24px' }}>
-                  <div style={{ fontFamily: 'Cinzel,serif', fontSize: 10, letterSpacing: 3, color: C.gold, marginBottom: 20 }}>⚔️ EMBUDO COMPLETO</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '8px 32px' }}>
-                    {pasos.map((p, i) => (
-                      <div key={i} style={{ marginBottom: 4 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <span style={{ fontSize: 9, fontFamily: 'Cinzel,serif', letterSpacing: 2, color: C.muted }}>{p.label}</span>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: p.color }}>{p.val}</span>
-                        </div>
-                        <div style={{ height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${(p.val / maxVal) * 100}%`, background: p.color, borderRadius: 4, opacity: 0.85 }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
+  useEffect(() => {
+    const t = setTimeout(() => setFase(1), 1900);
+    return () => clearTimeout(t);
+  }, []);
 
-            {/* ── Últimos 50 registros ── */}
-            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
-              <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}`, fontFamily: 'Cinzel,serif', fontSize: 10, letterSpacing: 3, color: C.gold }}>
-                🧾 ÚLTIMOS 50 REGISTROS
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
-                  <thead>
-                    <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
-                      {['FECHA','NOMBRE','EMAIL','CANAL','ESTADO'].map(h => (
-                        <th key={h} style={{ padding: '10px 16px', fontFamily: 'Cinzel,serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, textAlign: 'left', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {metricas.registros.slice(0, 50).map((r, i) => {
-                      const canal = r.aliado_origen_slug
-                        ? `📡 ${r.aliado_origen_slug}`
-                        : r.utm_source
-                          ? `🌐 ${r.utm_source}`
-                          : '· directo';
-                      const canalColor = r.aliado_origen_slug ? C.gold : r.utm_source ? '#CC44FF' : C.muted;
-                      return (
-                        <tr key={i} style={{ borderBottom: `1px solid rgba(255,255,255,0.04)` }}>
-                          <td style={{ padding: '10px 16px', color: C.muted, fontSize: 11, whiteSpace: 'nowrap' }}>
-                            {new Date(r.registered_at).toLocaleDateString('es-MX', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
-                          </td>
-                          <td style={{ padding: '10px 16px', color: C.text, fontSize: 12 }}>{r.nombre}</td>
-                          <td style={{ padding: '10px 16px', color: C.muted, fontSize: 11 }}>{r.email}</td>
-                          <td style={{ padding: '10px 16px' }}>
-                            <span style={{ fontSize: 10, fontFamily: 'Cinzel,serif', letterSpacing: 1, color: canalColor }}>{canal}</span>
-                          </td>
-                          <td style={{ padding: '10px 16px' }}>
-                            <span style={{ fontSize: 9, fontFamily: 'Cinzel,serif', letterSpacing: 1, color: r.es_ganador ? '#f0c040' : C.muted }}>
-                              {r.es_ganador ? '👑 GANADOR' : '· participante'}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+  const handleTick = useCallback((spd) => {
+    if (spd < 160) sound.tick(600 + Math.random() * 600);
+  }, [sound]);
 
-          </>) : null}
-        </div>
-      )}
+  const handleFinal = useCallback(() => {
+    setTimeout(() => { sound.fanfare(); setFase(2); }, 200);
+  }, [sound]);
 
-      {/* ══ TAB: ALIADOS ══ */}
-      {tabActiva === 'aliados' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+  return (
+    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px clamp(16px,4vw,40px)', position: 'relative', overflow: 'hidden', textAlign: 'center' }}>
+      <Particles />
 
-          {/* Formulario nuevo aliado */}
-          <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: 'clamp(20px,4vw,28px)', animation: 'fadeIn .4s ease both' }}>
-            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.gold, margin: '0 0 20px' }}>
-              + NUEVO ALIADO
-            </h2>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div style={{ flex: 2, minWidth: 180 }}>
-                <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>NOMBRE DEL NEGOCIO</label>
-                <input
-                  type="text"
-                  value={formAliado.nombre}
-                  onChange={e => setFormAliado(f => ({ ...f, nombre: e.target.value, slug: slugify(e.target.value) }))}
-                  placeholder="Ej: FuerZa Box Gym"
-                  style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 12 }}
-                />
-              </div>
-              <div style={{ minWidth: 140 }}>
-                <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>SLUG (URL del QR)</label>
-                <input
-                  type="text"
-                  value={formAliado.slug}
-                  onChange={e => setFormAliado(f => ({ ...f, slug: slugify(e.target.value) }))}
-                  placeholder="fuerzabox"
-                  style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'monospace', fontSize: 12 }}
-                />
-              </div>
-              
-              <div style={{ minWidth: 130 }}>
-                <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>ROL (COMISIÓN)</label>
-                <select
-                  value={formAliado.rol}
-                  onChange={e => setFormAliado(f => ({ ...f, rol: e.target.value }))}
-                  style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 11 }}
-                >
-                  <option value="">— Sin comisión —</option>
-                  <option value="punto_aliado">Punto Aliado (0%)</option>
-                  <option value="lider">Líder</option>
-                  <option value="gerente">Gerente</option>
-                </select>
-              </div>
-              {(formAliado.rol === 'lider' || formAliado.rol === 'gerente') && (
-                <div style={{ minWidth: 90 }}>
-                  <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>% COMISIÓN</label>
-                  <input
-                    type="number" step="0.01" min="0" max="100"
-                    value={formAliado.comision_pct}
-                    onChange={e => setFormAliado(f => ({ ...f, comision_pct: e.target.value }))}
-                    placeholder="15"
-                    style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'monospace', fontSize: 12 }}
-                  />
-                </div>
-              )}
-              {formAliado.rol === 'lider' && (
-                <div style={{ minWidth: 160 }}>
-                  <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>REPORTA A GERENTE</label>
-                  <select
-                    value={formAliado.manager_aliado_id}
-                    onChange={e => setFormAliado(f => ({ ...f, manager_aliado_id: e.target.value }))}
-                    style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 11 }}
-                  >
-                    <option value="">— Ninguno —</option>
-                    {aliados.filter(a => a.rol === 'gerente').map(g => (
-                      <option key={g.id} value={g.id}>{g.nombre}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <button
-                onClick={crearAliado}
-                disabled={creandoAliado}
-                style={{ padding: '11px 24px', background: `linear-gradient(135deg,${C.gold},#9a7a00)`, border: 'none', borderRadius: 8, color: '#0a0614', fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 2, fontWeight: 900, cursor: creandoAliado ? 'not-allowed' : 'pointer', opacity: creandoAliado ? 0.6 : 1, whiteSpace: 'nowrap' }}
-              >
-                {creandoAliado ? 'CREANDO...' : '⚔️ CREAR'}
-              </button>
-            </div>
-            {errAliado && <p style={{ color: C.red, fontFamily: 'Cinzel, serif', fontSize: 10, marginTop: 10, letterSpacing: 1 }}>⚠ {errAliado}</p>}
-            {formAliado.slug && (
-              <p style={{ fontFamily: 'monospace', fontSize: 10, color: C.goldDim, marginTop: 10 }}>
-                🔗 QR apuntará a: <span style={{ color: C.gold }}>{SUPABASE_URL}/functions/v1/r/{formAliado.slug}</span>
-              </p>
-            )}
-          </div>
-
-          {/* Selector de evento global */}
-          <div style={{ background: C.card, border: `1px solid ${C.borderHi}`, borderRadius: 14, padding: '18px 24px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 3, color: C.goldDim, marginBottom: 6 }}>
-                🌐 SORTEO ACTIVO GLOBAL — todos los QR apuntan aquí
-              </div>
-              <select
-                value={eventoGlobal}
-                onChange={e => guardarEventoGlobal(e.target.value)}
-                style={{ width: '100%', padding: '10px 14px', background: '#07040f', border: `1px solid ${C.borderHi}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700 }}
-              >
-                <option value="">— Sin evento activo —</option>
-                {eventosActivos.map(ev => (
-                  <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: guardandoGlobal ? C.goldDim : C.green, letterSpacing: 2, minWidth: 80, textAlign: 'right' }}>
-              {guardandoGlobal ? '⏳ GUARDANDO...' : eventoGlobal ? '✓ ACTIVO' : '⚠ SIN EVENTO'}
+      {/* ── FASE 0: intro ── */}
+      {fase === 0 && (
+        <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 500, animation: 'revealZoom 0.9s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+          <div style={{ position: 'relative', width: 230, height: 230, margin: '0 auto 24px' }}>
+            <div style={{ position: 'absolute', inset: 0 }}><Rays size={230} speed="3s" opacity={0.28} /></div>
+            <div style={{ position: 'absolute', inset: 0 }}><Rays size={230} speed="7.5s" opacity={0.1} /></div>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Maestro size={175} animate="none" glow epic />
             </div>
           </div>
-
-          {/* Lista de aliados */}
-          {loadingAliados ? (
-            <p style={{ color: C.goldDim, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, textAlign: 'center', animation: 'pulse 1.5s ease-in-out infinite' }}>
-              CARGANDO ALIADOS...
-            </p>
-          ) : aliados.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 60, color: C.muted }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🤝</div>
-              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 2 }}>SIN ALIADOS AÚN</p>
-              <p style={{ fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>Crea el primero arriba para generar su QR permanente.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {aliados.map(aliado => {
-                const qrUrl = `${SUPABASE_URL}/functions/v1/r/${aliado.slug}`;
-                
-                return (
-                  <div key={aliado.id} style={{ background: C.card, border: `1px solid ${aliado.activo ? C.borderHi : C.border}`, borderRadius: 14, padding: '18px 22px', animation: 'fadeIn .3s ease both', display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
-
-                    {/* QR miniatura */}
-                    <div style={{ flexShrink: 0 }}>
-                      <QRCode url={qrUrl} size={80} />
-                    </div>
-
-                    {/* Info */}
-                    <div style={{ flex: 1, minWidth: 180 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                        <span style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 14, color: C.gold }}>{aliado.nombre}</span>
-                        <Badge activo={aliado.activo} />
-                      </div>
-                      <p style={{ fontFamily: 'monospace', fontSize: 10, color: C.goldDim, margin: '0 0 4px' }}>/{aliado.slug}</p>
-                      <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, margin: 0 }}>📊 {aliado.scan_count || 0} scans</p>
-                    </div>
-
-                    {/* Comisión: rol / % / gerente — editable inline */}
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', minWidth: 260 }}>
-                      <select
-                        value={aliado.rol || ''}
-                        onChange={e => actualizarComisionAliado(aliado.id, { rol: e.target.value || null })}
-                        disabled={guardandoComision === aliado.id}
-                        style={{ padding: '7px 10px', background: '#07040f', border: `1px solid ${aliado.rol ? C.borderHi : C.border}`, borderRadius: 7, color: aliado.rol ? C.text : C.muted, fontFamily: 'Cinzel, serif', fontSize: 9 }}
-                      >
-                        <option value="">— Sin comisión —</option>
-                        <option value="punto_aliado">Punto Aliado</option>
-                        <option value="lider">Líder</option>
-                        <option value="gerente">Gerente</option>
-                      </select>
-                      {(aliado.rol === 'lider' || aliado.rol === 'gerente') && (
-                        <>
-                          <input
-                            type="number" step="0.01" min="0" max="100"
-                            defaultValue={aliado.comision_pct ?? ''}
-                            onBlur={e => {
-                              const v = e.target.value === '' ? null : Number(e.target.value);
-                              if (v !== aliado.comision_pct) actualizarComisionAliado(aliado.id, { comision_pct: v });
-                            }}
-                            placeholder="%"
-                            title="% de comisión"
-                            style={{ width: 56, padding: '7px 8px', background: '#07040f', border: `1px solid ${aliado.comision_pct != null ? C.borderHi : C.border}`, borderRadius: 7, color: C.gold, fontFamily: 'monospace', fontSize: 10 }}
-                          />
-                          {aliado.rol === 'lider' && (
-                            <select
-                              value={aliado.manager_aliado_id || ''}
-                              onChange={e => actualizarComisionAliado(aliado.id, { manager_aliado_id: e.target.value || null })}
-                              disabled={guardandoComision === aliado.id}
-                              title="Reporta a gerente"
-                              style={{ padding: '7px 10px', background: '#07040f', border: `1px solid ${C.border}`, borderRadius: 7, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9 }}
-                            >
-                              <option value="">— Sin gerente —</option>
-                              {aliados.filter(a => a.rol === 'gerente' && a.id !== aliado.id).map(g => (
-                                <option key={g.id} value={g.id}>{g.nombre}</option>
-                              ))}
-                            </select>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    {/* Botones */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <button
-                        onClick={() => copiarQRAliado(aliado.slug)}
-                        style={{ padding: '7px 14px', background: copiadoAliado === aliado.slug ? 'rgba(68,255,136,0.12)' : 'rgba(212,175,55,0.08)', border: `1px solid ${copiadoAliado === aliado.slug ? 'rgba(68,255,136,0.4)' : C.border}`, borderRadius: 7, color: copiadoAliado === aliado.slug ? C.green : C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer', transition: 'all .2s' }}
-                      >
-                        {copiadoAliado === aliado.slug ? '✓ COPIADO' : '🔗 COPIAR QR'}
-                      </button>
-                      <button
-                        onClick={() => descargarQR(`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrUrl)}&bgcolor=FFFFFF&color=000000&margin=10`, `qr-${aliado.slug}-blanco.png`)}
-                        style={{ padding: '7px 14px', background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 7, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                      >
-                        ⬇ QR BLANCO
-                      </button>
-                      <button
-                        onClick={() => toggleAliado(aliado.id, aliado.activo)}
-                        style={{ padding: '7px 14px', background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 7, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                      >
-                        {aliado.activo ? 'PAUSAR' : 'ACTIVAR'}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-    {/* ══ TAB: QR FÍSICOS ══ */}
-      {tabActiva === 'qrfisicos' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-          {/* Header info */}
-          <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: '20px 24px' }}>
-            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.gold, margin: '0 0 8px' }}>
-              📦 QR FÍSICOS — TMP-001 a TMP-100
-            </h2>
-            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.muted, letterSpacing: 1, margin: 0 }}>
-              Asigna cada código físico a un aliado. El QR impreso redirige automáticamente a su página.
-            </p>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 6, color: 'rgba(255,215,0,0.6)', marginBottom: 10 }}>
+            ⚔ TEMPLO DEL PROPÓSITO ⚔
           </div>
-
-          {/* Lista */}
-          {loadingQrF ? (
-            <p style={{ color: C.goldDim, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, textAlign: 'center' }}>CARGANDO...</p>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-              {qrFisicos.map(qr => {
-                const asignado = !!qr.aliado_id;
-                const qrUrlReal = `${SUPABASE_URL}/functions/v1/r/${qr.id}`;
-                return (
-                  <div key={qr.id} style={{
-                    background: C.card,
-                    border: `1px solid ${asignado ? C.borderHi : C.border}`,
-                    borderRadius: 12, padding: '16px 18px',
-                    display: 'flex', flexDirection: 'column', gap: 10,
-                  }}>
-                    {/* ID + estado */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 14, color: C.gold }}>{qr.id}</span>
-                      <span style={{
-                        fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2,
-                        color: asignado ? C.green : C.muted,
-                        border: `1px solid ${asignado ? 'rgba(68,255,136,0.3)' : 'rgba(255,255,255,0.1)'}`,
-                        borderRadius: 20, padding: '3px 10px',
-                      }}>
-                        {asignado ? '● ASIGNADO' : '○ LIBRE'}
-                      </span>
-                    </div>
-
-                    {/* Aliado asignado o selector */}
-                    <select
-                      value={qr.aliado_id || ''}
-                      onChange={async (e) => {
-                        const aliadoId = e.target.value;
-                        const { error } = await supabase.from('qr_fisicos').update({ aliado_id: aliadoId || null }).eq('id', qr.id);
-                        if (error) { alert('Error al guardar. Intenta de nuevo.'); return; }
-                        const aliadoData = aliados.find(a => a.id === aliadoId) || null;
-                        setQrFisicos(prev => prev.map(q => q.id === qr.id ? { ...q, aliado_id: aliadoId || null, aliados: aliadoData } : q));
-                      }}
-                      style={{ width: '100%', padding: '8px 12px', background: '#07040f', border: `1px solid ${asignado ? C.borderHi : C.border}`, borderRadius: 8, color: asignado ? C.text : C.muted, fontFamily: 'Cinzel, serif', fontSize: 10 }}
-                    >
-                      <option value="">— Sin asignar —</option>
-                      {aliados.map(a => (
-                        <option key={a.id} value={a.id}>{a.nombre} (/{a.slug})</option>
-                      ))} 
-                    </select>
-
-                    {/* Botones QR */}
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        onClick={() => setQrFModal({ id: qr.id, url: qrUrlReal })}
-                        style={{ flex: 1, padding: '7px 0', background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 7, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                      >
-                        VER QR
-                      </button>
-                      <button
-                        onClick={() => descargarQR(`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrUrlReal)}&bgcolor=07040f&color=D4AF37&margin=10`, `qr-${qr.id}.png`)}
-                        style={{ flex: 1, padding: '7px 0', background: 'rgba(155,89,255,0.1)', border: '1px solid rgba(155,89,255,0.25)', borderRadius: 7, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                      >
-                        DESCARGAR
-                      </button>
-                      <button
-                        onClick={() => descargarQR(`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrUrlReal)}&bgcolor=07040f&color=FFFFFF&margin=10`, `qr-${qr.id}-blanco.png`)}
-                        style={{ flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 7, color: '#FFFFFF', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                      >
-                        BLANCO
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ══ TAB: REPORTES ══ */}
-      {tabActiva === 'reportes' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.gold, margin: 0 }}>
-              🆘 REPORTES DE USUARIOS
-            </h2>
-            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.muted, letterSpacing: 1 }}>
-              {reportes.filter(r => r.status === 'pendiente').length} pendiente(s) · {reportes.length} total
-            </span>
+          <div style={{
+            fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
+            fontSize: 'clamp(22px,6.5vw,40px)',
+            background: 'linear-gradient(180deg,#fff4a0 0%,#FFD700 45%,#b8860b 100%)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            letterSpacing: 3, lineHeight: 1.1,
+            animation: 'warpIn 0.7s ease both, textGlow 2.5s ease-in-out 0.7s infinite',
+            marginBottom: 14,
+          }}>
+            EL MOMENTO<br />HA LLEGADO
           </div>
-
-          {loadingReportes ? (
-            <p style={{ color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 11, textAlign: 'center', padding: 30 }}>Cargando…</p>
-          ) : reportes.length === 0 ? (
-            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 40, textAlign: 'center' }}>
-              <div style={{ fontSize: 28, marginBottom: 10 }}>✨</div>
-              <p style={{ color: C.muted, fontFamily: 'Crimson Text, serif', fontSize: 14, fontStyle: 'italic' }}>
-                No hay reportes por ahora.
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {reportes.map(r => {
-                const p = r.sorteo_participantes;
-                const pendiente = r.status === 'pendiente';
-                return (
-                  <div key={r.id} style={{
-                    background: C.card,
-                    border: `1.5px solid ${pendiente ? 'rgba(255,68,102,0.4)' : C.border}`,
-                    borderRadius: 14, padding: '18px 20px',
-                    display: 'flex', flexDirection: 'column', gap: 12,
-                    animation: 'fadeIn .3s ease both',
-                  }}>
-                    {/* Encabezado: estado + fecha */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                      <span style={{
-                        fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, fontWeight: 900,
-                        color: pendiente ? C.red : C.green,
-                        border: `1px solid ${pendiente ? 'rgba(255,68,102,0.35)' : 'rgba(68,255,136,0.3)'}`,
-                        borderRadius: 20, padding: '4px 12px',
-                      }}>
-                        {pendiente ? '🔴 PENDIENTE' : '🟢 ATENDIDO'}
-                      </span>
-                      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 1 }}>
-                        {new Date(r.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-
-                    {/* Correo + contexto de su registro */}
-                    <div>
-                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: C.text }}>
-                        {p?.nombre || '— Nombre no disponible —'}
-                      </div>
-                      <div style={{ fontFamily: 'monospace', fontSize: 11, color: C.goldDim, marginTop: 2 }}>
-                        {r.email}
-                      </div>
-                    </div>
-
-                    {/* Contexto de su participación, si se encontró */}
-                    {p ? (
-                      <div style={{
-                        display: 'flex', flexWrap: 'wrap', gap: 8,
-                        fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 0.5,
-                      }}>
-                        <span style={{ background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '4px 10px', color: C.gold }}>
-                          {p.sorteos?.sorteo_eventos?.nombre || 'Evento —'}
-                        </span>
-                        <span style={{ background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '4px 10px', color: C.muted }}>
-                          Ronda #{p.sorteos?.numero_ronda ?? '—'}
-                        </span>
-                        <span style={{ background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '4px 10px', color: p.es_ganador ? C.green : C.muted }}>
-                          {p.sorteos?.estado !== 'completado' ? 'Sorteo pendiente' : p.es_ganador ? `🏆 Ganó (${p.tipo_premio || 'premio'})` : 'No ganó'}
-                        </span>
-                        <span style={{ background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '4px 10px', color: p.cupon_aceptado ? C.green : C.muted }}>
-                          {p.cupon_aceptado ? 'Cupón aceptado' : 'Cupón sin aceptar'}
-                        </span>
-                      </div>
-                    ) : (
-                      <div style={{
-                        background: 'rgba(255,68,102,0.08)', border: '1px solid rgba(255,68,102,0.25)',
-                        borderRadius: 8, padding: '8px 12px',
-                        fontFamily: 'Crimson Text, serif', fontSize: 12, color: 'rgba(255,150,170,0.9)', fontStyle: 'italic',
-                      }}>
-                        ⚠ No encontramos ningún registro de sorteo con este correo — puede que nunca haya completado su registro.
-                      </div>
-                    )}
-
-                    {/* Mensaje del usuario */}
-                    <div style={{
-                      background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '12px 14px',
-                      fontFamily: 'Crimson Text, serif', fontSize: 14, color: C.text, lineHeight: 1.5,
-                    }}>
-                      "{r.mensaje}"
-                    </div>
-
-                    {/* Acciones */}
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        onClick={() => copiarAlPortapapeles(r.email)}
-                        style={{ flex: 1, padding: '9px 0', background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                      >
-                        COPIAR CORREO
-                      </button>
-                      <button
-                        onClick={() => marcarReporteAtendido(r.id, pendiente ? 'atendido' : 'pendiente')}
-                        disabled={actualizandoReporte === r.id}
-                        style={{
-                          flex: 1, padding: '9px 0', borderRadius: 8, border: 'none',
-                          cursor: actualizandoReporte === r.id ? 'not-allowed' : 'pointer',
-                          background: pendiente ? 'linear-gradient(135deg,#44ff88,#1a9a52)' : 'rgba(255,255,255,0.08)',
-                          color: pendiente ? '#07040f' : C.muted,
-                          fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, fontWeight: 900,
-                        }}
-                      >
-                        {actualizandoReporte === r.id ? '...' : pendiente ? '✓ MARCAR ATENDIDO' : '↺ REABRIR'}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ══ TAB: LTV / COMISIONES ══ */}
-      {tabActiva === 'ltv' && <LtvComisionesTab />}
-
-      {/* Modal QR físico */}
-      {qrFModal && (
-        <div onClick={() => setQrFModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(4,2,14,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 20, padding: '32px 28px', textAlign: 'center', maxWidth: 320, width: '90%' }}>
-            <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 18, color: C.gold, letterSpacing: 3, marginBottom: 16 }}>{qrFModal.id}</div>
-            <QRCode url={qrFModal.url} size={200} />
-            <p style={{ fontFamily: 'monospace', fontSize: 8, color: C.muted, marginTop: 10, wordBreak: 'break-all' }}>{qrFModal.url}</p>
-            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
-              <button
-                onClick={() => copiarAlPortapapeles(qrFModal.url)}
-                style={{ padding: '8px 16px', background: 'rgba(212,175,55,0.1)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-              >COPIAR LINK</button>
-              <button
-                onClick={() => { const a = document.createElement('a'); a.href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrFModal.url)}&bgcolor=07040f&color=D4AF37&margin=10`; a.download = `qr-${qrFModal.id}.png`; a.click(); }}
-                style={{ padding: '8px 16px', background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 8, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-              >DESCARGAR</button>
-            </div>
-
-            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.muted, marginTop: 20, marginBottom: 8 }}>VERSIÓN BLANCA</div>
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrFModal.url)}&bgcolor=07040f&color=FFFFFF&margin=10`}
-              alt="QR blanco"
-              style={{ width: 200, height: 200, borderRadius: 8 }}
-            />
-            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
-              <button
-                onClick={() => descargarQR(`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrFModal.url)}&bgcolor=07040f&color=FFFFFF&margin=10`, `qr-${qrFModal.id}-blanco.png`)}
-                style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, color: '#FFFFFF', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-              >DESCARGAR BLANCO</button>
-            </div>
-            <button onClick={() => setQrFModal(null)} style={{ marginTop: 12, background: 'none', border: 'none', color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, cursor: 'pointer', letterSpacing: 1 }}>CERRAR</button>
+          <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 16, color: C.muted, fontStyle: 'italic', lineHeight: 1.8 }}>
+            {nombres.length} guerrero{nombres.length !== 1 ? 's' : ''} compiten por la beca
           </div>
         </div>
       )}
 
-    {/* Modal QR redes */}
-      {qrModal && (
-        <div
-          onClick={() => setQrModal(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(4,2,14,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 20, padding: '32px 28px', textAlign: 'center', maxWidth: 300, width: '90%', animation: 'fadeIn .25s ease both' }}
-          >
-            <div style={{ fontSize: 28, marginBottom: 4 }}>{qrModal.icon}</div>
-            <div style={{ fontFamily: 'Cinzel,serif', fontWeight: 900, fontSize: 14, color: C.gold, letterSpacing: 2, marginBottom: 16 }}>{qrModal.label.toUpperCase()}</div>
-            <QRCode url={qrModal.url} size={180} />
-            <p style={{ fontFamily: 'monospace', fontSize: 9, color: C.muted, marginTop: 12, wordBreak: 'break-all' }}>{qrModal.url}</p>
-            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
-              <button
-                onClick={() => copiarAlPortapapeles(qrModal.url)}
-                style={{ padding: '8px 16px', background: 'rgba(212,175,55,0.1)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel,serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-              >
-                COPIAR LINK
-              </button>
-              <button
-                onClick={() => { const a = document.createElement('a'); a.href = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qrModal.url)}&bgcolor=07040f&color=D4AF37&margin=10`; a.download = `qr-${qrModal.label.toLowerCase()}.png`; a.click(); }}
-                style={{ padding: '8px 16px', background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 8, color: C.purple, fontFamily: 'Cinzel,serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-              >
-                DESCARGAR QR
-              </button>
+      {/* ── FASE 1: drum roll ── */}
+      {fase === 1 && (
+        <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 460, animation: 'phaseIn 0.5s ease both' }}>
+          <div style={{ position: 'relative', width: 190, height: 190, margin: '0 auto 24px' }}>
+            <div style={{ position: 'absolute', inset: 0 }}><Rays size={190} speed="2.2s" opacity={0.3} /></div>
+            <div style={{ position: 'absolute', inset: 0 }}><Rays size={190} speed="5.5s" opacity={0.1} /></div>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Maestro size={140} animate="none" />
             </div>
-            <button
-              onClick={() => setQrModal(null)}
-              style={{ marginTop: 12, background: 'none', border: 'none', color: C.muted, fontFamily: 'Cinzel,serif', fontSize: 9, cursor: 'pointer', letterSpacing: 1 }}
-            >
-              CERRAR
-            </button>
+          </div>
+          <div style={{
+            fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
+            fontSize: 'clamp(18px,5vw,26px)', marginBottom: 22,
+            background: `linear-gradient(135deg,${C.gold},${C.purple})`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            letterSpacing: 3, animation: 'shimmer 1.8s linear infinite', backgroundSize: '200%',
+          }}>
+            ⚡ EL DESTINO DECIDE
+          </div>
+          <SlotMachine nombres={nombres} duracion={4200} onTick={handleTick} onFinal={handleFinal} finalName={ganadorNombre} />
+          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 4, color: C.goldDim, marginTop: 22, animation: 'pulse 1.1s ease-in-out infinite' }}>
+            INVOCANDO AL ELEGIDO...
+          </p>
+        </div>
+      )}
+
+      {/* ── FASE 2: reveal ── */}
+      {fase === 2 && (
+        <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 480, animation: 'revealZoom 0.7s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+          <Confetti />
+          <div style={{ position: 'relative', width: 200, height: 200, margin: '0 auto 20px' }}>
+            <div style={{ position: 'absolute', inset: 0 }}><Rays size={200} speed="3s" opacity={0.3} /></div>
+            <div style={{ position: 'absolute', inset: 0 }}><Rays size={200} speed="8s" opacity={0.12} /></div>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Maestro size={152} />
+            </div>
+          </div>
+          <div style={{ fontSize: 'clamp(38px,9vw,56px)', marginBottom: 10 }}>👑</div>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 7, color: 'rgba(255,215,0,0.65)', marginBottom: 10 }}>
+            ✦ EL ELEGIDO ✦
+          </div>
+          <div style={{
+            fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
+            fontSize: 'clamp(26px,7.5vw,48px)',
+            background: 'linear-gradient(180deg,#fff4a0,#FFD700)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            letterSpacing: 3, lineHeight: 1.1,
+            animation: 'textGlow 2s ease-in-out infinite, warpIn 0.5s ease both',
+            marginBottom: 18,
+          }}>
+            {ganadorNombre || nombres[nombres.length - 1]}
+          </div>
+          <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 16, color: 'rgba(255,255,255,0.72)', fontStyle: 'italic', lineHeight: 1.85 }}>
+            Recibe 6 meses completos en el Templo<br />
+            <span style={{ color: C.gold, fontWeight: 600 }}>Beca completa — valor $534 USD</span>
           </div>
         </div>
       )}
     </div>
   );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+export default function SorteoPage() {
+  const { eventoId } = useParams();
+  const [searchParams] = useSearchParams();
+  const aliadoSlug  = searchParams.get('ref') || null;
+  const utmSource   = searchParams.get('utm_source') || null;
+  const utmMedium   = searchParams.get('utm_medium') || (utmSource ? 'social' : null);
+
+  const [screen, setScreenRaw] = useState(SCREEN.LOADING);
+  const screenRef    = useRef(SCREEN.LOADING);
+  const miEmailRef   = useRef('');
+  const miRegistroRef = useRef(null);
+  const setScreen = useCallback((s) => { screenRef.current = s; setScreenRaw(s); window.scrollTo({ top: 0, behavior: 'instant' }); }, []);
+  const [evento,         setEvento]         = useState(null);
+  const [rondaActual,    setRondaActual]    = useState(null);
+  const [participantes,  setParticipantes]  = useState([]);
+  const [historial,      setHistorial]      = useState([]);
+  const [totalBecas,     setTotalBecas]     = useState(0);
+  const [totalGanadores, setTotalGanadores] = useState(0);
+  const [miRegistro,     setMiRegistro]     = useState(null);
+  const [form,           setForm]           = useState({ nombre: '', email: '' });
+  const [errores,        setErrores]        = useState({});
+  const [guardando,      setGuardando]      = useState(false);
+  const [mostrarHistorial, setMostrarHistorial] = useState(false);
+  const [copiado,        setCopiado]        = useState(false);
+  const [fraseIdx,       setFraseIdx]       = useState(0);
+  const [fraseVisible,   setFraseVisible]   = useState(true);
+  const [causaElegida,   setCausaElegida]   = useState(null);
+  const [screenAnterior, setScreenAnterior] = useState(null);
+  const [mostrarConsulta,   setMostrarConsulta]   = useState(false);
+  const [mostrarReporte,    setMostrarReporte]    = useState(false);
+  const [reporteEmail,      setReporteEmail]      = useState('');
+  const [reporteMensaje,    setReporteMensaje]    = useState('');
+  const [enviandoReporte,   setEnviandoReporte]   = useState(false);
+  const [reporteEnviado,    setReporteEnviado]    = useState(false);
+  const [errReporte,        setErrReporte]        = useState('');
+
+  // refs declarados arriba junto a setScreen
+
+  // ── Inyectar CSS ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    const el = document.createElement('style');
+    el.textContent = CSS;
+    document.head.appendChild(el);
+    return () => document.head.removeChild(el);
+  }, []);
+
+  // ── Data fetchers ─────────────────────────────────────────────────────────
+  const cargarEvento = useCallback(async () => {
+    if (!eventoId) { setScreen(SCREEN.CERRADO); return; }
+    const { data, error } = await supabase
+      .from('sorteo_eventos').select('*')
+      .eq('id', eventoId).eq('activo', true).single();
+    if (error || !data) { setScreen(SCREEN.CERRADO); return; }
+    setEvento(data);
+
+    // ── Recuperar estado si el usuario ya participó y recargó la página ──────
+    const emailGuardado = localStorage.getItem(`sorteo_registered_${eventoId}`);
+    if (emailGuardado) {
+      const { data: histData } = await supabase
+        .from('sorteos')
+        .select(`id, sorteo_participantes(id, nombre, email, es_ganador, cupon_code, tipo_premio)`)
+        .eq('evento_id', eventoId)
+        .eq('estado', 'completado')
+        .order('numero_ronda', { ascending: false })
+        .limit(3);
+      if (histData) {
+        for (const ronda of histData) {
+          const yo = ronda.sorteo_participantes?.find(p => p.email === emailGuardado);
+          if (yo) {
+            const tokenGuardado = localStorage.getItem(`sorteo_token_${eventoId}`);
+            const reg = { id: yo.id, nombre: yo.nombre, email: yo.email, cuponCode: yo.cupon_code, esGanador: yo.es_ganador, tipoPremio: yo.tipo_premio, sorteoId: ronda.id, token: tokenGuardado || undefined };
+            miRegistroRef.current = reg;
+            miEmailRef.current = emailGuardado;
+            setMiRegistro(reg);
+            setScreen(yo.es_ganador ? SCREEN.GANADOR : SCREEN.PREMIO);
+            return;
+          }
+        }
+      }
+    }
+
+    setScreen(SCREEN.REGISTRO);
+  }, [eventoId]);
+
+  const cargarRonda = useCallback(async () => {
+    if (!eventoId) return null;
+    const { data } = await supabase
+  .from('sorteos').select('*')
+  .eq('evento_id', eventoId).eq('estado', 'abierto')
+  .maybeSingle();  // ← maybeSingle en vez de single
+setRondaActual(data || null);
+return data || null;
+  }, [eventoId]);
+
+  const cargarParticipantes = useCallback(async (sorteoId) => {
+    if (!sorteoId) return [];
+    const { data } = await supabase
+      .from('sorteo_participantes')
+      .select('id, nombre, email, es_ganador, cupon_code')
+      .eq('sorteo_id', sorteoId)
+      .order('registered_at', { ascending: true });
+    setParticipantes(data || []);
+    return data || [];
+  }, []);
+
+  const cargarHistorial = useCallback(async () => {
+    if (!eventoId) return;
+    const { data } = await supabase
+      .from('sorteos')
+      .select(`id, numero_ronda, cupo, sorteo_participantes(id, nombre, es_ganador)`)
+      .eq('evento_id', eventoId).eq('estado', 'completado')
+      .order('numero_ronda', { ascending: false }).limit(30);
+    setHistorial(data || []);
+    let becas = 0, total = 0;
+    (data || []).forEach(r => {
+      total += r.sorteo_participantes?.length || 0;
+      becas  += r.sorteo_participantes?.filter(p => p.es_ganador).length || 0;
+    });
+    setTotalBecas(becas);
+    setTotalGanadores(total);
+  }, [eventoId]);
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    cargarEvento();
+    cargarHistorial();
+  }, [cargarEvento, cargarHistorial]);
+
+  useEffect(() => {
+    if (screen === SCREEN.REGISTRO || screen === SCREEN.ESPERA) {
+      cargarRonda().then(r => { if (r) cargarParticipantes(r.id); });
+    }
+  }, [screen, cargarRonda, cargarParticipantes]);
+
+  // ── Realtime ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!eventoId || screen === SCREEN.LOADING || screen === SCREEN.CERRADO) return;
+    const canal = supabase
+      .channel(`evento-sorteo-${eventoId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sorteos', filter: `evento_id=eq.${eventoId}` }, () => {
+        cargarRonda().then(r => { if (r) cargarParticipantes(r.id); });
+        cargarHistorial();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sorteos', filter: `evento_id=eq.${eventoId}` }, async (payload) => {
+        if (payload.new?.estado === 'completado') {
+          cargarHistorial();
+          const partes = await cargarParticipantes(payload.new.id);
+          const cur = screenRef.current;
+
+          if (cur === SCREEN.ESPERA && miRegistroRef.current?.sorteoId === payload.new?.id) {
+            // Llamar Edge Function para crear Promotion Codes en Stripe
+            supabase.functions.invoke('sorteo-cupones', { body: { sorteo_id: payload.new.id } })
+              .catch(e => console.warn('[sorteo] cupones edge fn:', e));
+            const yo = partes.find(p => p.email === miEmailRef.current);
+            if (yo) {
+              setMiRegistro(prev => ({ ...prev, cuponCode: yo.cupon_code, esGanador: yo.es_ganador, tipoPremio: yo.tipo_premio }));
+              miRegistroRef.current = { ...miRegistroRef.current, cuponCode: yo.cupon_code, esGanador: yo.es_ganador, tipoPremio: yo.tipo_premio };
+              setScreen(SCREEN.SORTEO);
+              setTimeout(() => { setScreen(yo.es_ganador ? SCREEN.GANADOR : SCREEN.PREMIO); cargarHistorial(); }, 7500);
+            }
+          } else if (cur === SCREEN.REGISTRO || cur === SCREEN.LOADING) {
+            // Espectador — ve la animación completa y vuelve al registro
+            setScreen(SCREEN.SORTEO);
+            setTimeout(() => {
+              setScreen(SCREEN.REGISTRO);
+              cargarRonda().then(r => { if (r) cargarParticipantes(r.id); });
+            }, 7500);
+          } else if (cur === SCREEN.ESPERA) {
+            // Estaba en espera pero era de una ronda diferente (edge case)
+            cargarRonda().then(r => { if (r) cargarParticipantes(r.id); });
+          }
+          // GANADOR/PREMIO/SORTEO: no interrumpir su pantalla
+        }
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sorteo_participantes' }, () => {
+        if (miRegistroRef.current?.sorteoId) {
+          cargarParticipantes(miRegistroRef.current.sorteoId);
+        } else {
+          cargarRonda().then(r => { if (r) cargarParticipantes(r.id); });
+        }
+      })
+      .subscribe();
+    return () => supabase.removeChannel(canal);
+  }, [eventoId, cargarRonda, cargarParticipantes, cargarHistorial]);
+
+  // ── Copiar ────────────────────────────────────────────────────────────────
+  const copiarCodigo = () => {
+    if (!miRegistro?.cuponCode) return;
+    navigator.clipboard?.writeText(miRegistro.cuponCode).catch(() => {});
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2200);
+  };
+
+  // ── Registrarse ───────────────────────────────────────────────────────────
+  const registrarse = async () => {
+    const errs = {};
+    if (!form.nombre.trim()) errs.nombre = true;
+    if (!form.email.trim() || !form.email.includes('@')) errs.email = true;
+    if (Object.keys(errs).length) { setErrores(errs); return; }
+
+    // Guard de dispositivo — bloquea segundo registro desde mismo navegador
+    const deviceKey = `sorteo_registered_${eventoId}`;
+    const yaRegistradoDevice = localStorage.getItem(deviceKey);
+    if (yaRegistradoDevice && yaRegistradoDevice !== form.email.trim().toLowerCase()) {
+      setErrores({ general: 'Este dispositivo ya tiene un registro activo en este sorteo.' });
+      return;
+    }
+
+    setErrores({});
+    setGuardando(true);
+    miEmailRef.current = form.email.trim().toLowerCase();
+
+    const deviceId = localStorage.getItem('sorteo_device_id') || (() => {
+      const id = crypto.randomUUID();
+      localStorage.setItem('sorteo_device_id', id);
+      return id;
+    })();
+
+    const { data, error } = await supabase.rpc('registrar_y_sortear', {
+      p_evento_id:   eventoId,
+      p_nombre:      form.nombre.trim(),
+      p_email:       form.email.trim().toLowerCase(),
+      p_aliado_slug: aliadoSlug,
+      p_device_id:   deviceId,
+      p_utm_source:  utmSource,
+      p_utm_medium:  utmMedium,
+    });
+
+    setGuardando(false);
+
+    if (error) { setErrores({ general: 'Error al conectar. Intenta de nuevo.' }); return; }
+    if (data?.error === 'ya_registrado') {
+      // Ya está registrado — cargar su estado real y llevarlo a donde le corresponde
+      miEmailRef.current = form.email.trim().toLowerCase();
+      const ronda = await cargarRonda();
+      const sorteoId = ronda?.id;
+      if (sorteoId) {
+        const partes = await cargarParticipantes(sorteoId);
+        const yo = partes.find(p => p.email === miEmailRef.current);
+        if (yo) {
+          const tokenGuardado = localStorage.getItem(`sorteo_token_${eventoId}`);
+          const reg = {
+            id: yo.id,
+            nombre: yo.nombre,
+            email: yo.email,
+            cuponCode: yo.cupon_code,
+            esGanador: yo.es_ganador,
+            sorteoId,
+            token: tokenGuardado || undefined,
+          };
+          miRegistroRef.current = reg;
+          setMiRegistro(reg);
+          // Si el sorteo ya terminó (tiene ganador), ver animación y luego resultado
+          const yaTermino = partes.some(p => p.es_ganador);
+          if (yaTermino) {
+            setScreen(SCREEN.SORTEO);
+            setTimeout(() => {
+              setScreen(yo.es_ganador ? SCREEN.GANADOR : SCREEN.PREMIO);
+              cargarHistorial();
+            }, 7500);
+          } else {
+            // Aún en espera — regresar a sala de espera
+            setScreen(SCREEN.ESPERA);
+          }
+          return;
+        }
+      }
+      // Fallback: ronda ya completada, buscar en historial
+      const { data: histData } = await supabase
+        .from('sorteos')
+        .select(`id, sorteo_participantes(nombre, email, es_ganador, cupon_code)`)
+        .eq('evento_id', eventoId)
+        .eq('estado', 'completado')
+        .order('numero_ronda', { ascending: false })
+        .limit(5);
+      if (histData) {
+        for (const rondaHist of histData) {
+          const yo = rondaHist.sorteo_participantes?.find(p => p.email === miEmailRef.current);
+          if (yo) {
+            const reg = { id: yo.id, nombre: yo.nombre, email: yo.email, cuponCode: yo.cupon_code, esGanador: yo.es_ganador, sorteoId: null };
+            miRegistroRef.current = reg;
+            setMiRegistro(reg);
+            setScreen(SCREEN.SORTEO);
+            setTimeout(() => { setScreen(yo.es_ganador ? SCREEN.GANADOR : SCREEN.PREMIO); cargarHistorial(); }, 7500);
+            return;
+          }
+        }
+      }
+      setErrores({ general: 'Ya estás registrado en esta ronda.' });
+      return;
+    }
+
+    if (data?.status === 'registrado') {
+      localStorage.setItem(deviceKey, form.email.trim().toLowerCase());
+      const ronda = await cargarRonda();
+      const sorteoId = ronda?.id;
+      const reg = {
+        nombre: form.nombre.trim(),
+        email: form.email.trim().toLowerCase(),
+        posicion: data.posicion,
+        token: data.token,
+        sorteoId,
+      };
+      if (data.token) localStorage.setItem(`sorteo_token_${eventoId}`, data.token);
+      miRegistroRef.current = reg;
+      setMiRegistro(reg);
+      if (sorteoId) await cargarParticipantes(sorteoId);
+      setScreen(SCREEN.ESPERA);
+      return;
+    }
+
+    if (data?.status === 'sorteado') {
+      const ronda = await cargarRonda();
+      if (data.token) localStorage.setItem(`sorteo_token_${eventoId}`, data.token);
+      setMiRegistro({ id: data.participante_id, nombre: form.nombre.trim(), email: form.email.trim().toLowerCase(), cuponCode: data.codigo, esGanador: data.es_ganador, tipoPremio: data.tipo_premio, token: data.token, sorteoId: ronda?.id });
+      if (ronda) await cargarParticipantes(ronda.id);
+      setScreen(SCREEN.SORTEO);
+      // Llamar Edge Function para crear Promotion Codes en Stripe (fire & forget)
+      supabase.functions.invoke('sorteo-cupones', { body: { sorteo_id: data.sorteo_id } })
+        .catch(e => console.warn('[sorteo] cupones edge fn:', e));
+      setTimeout(() => { setScreen(data.es_ganador ? SCREEN.GANADOR : SCREEN.PREMIO); cargarHistorial(); cargarRonda().then(r => r && cargarParticipantes(r.id)); }, 7500);
+    }
+  };
+
+  // ── Enviar reporte de problema (busca su registro existente, si lo hay) ──
+  const enviarReporte = async () => {
+    const emailLimpio = reporteEmail.trim().toLowerCase();
+    const mensajeLimpio = reporteMensaje.trim();
+    if (!emailLimpio || !emailLimpio.includes('@')) {
+      setErrReporte('Escribe un correo válido.');
+      return;
+    }
+    if (!mensajeLimpio) {
+      setErrReporte('Cuéntanos brevemente cuál fue el problema.');
+      return;
+    }
+    setErrReporte('');
+    setEnviandoReporte(true);
+
+    // Buscamos si ya existe un registro suyo en el sorteo, para ligar el reporte
+    const { data: registroExistente } = await supabase
+      .from('sorteo_participantes')
+      .select('id')
+      .eq('email', emailLimpio)
+      .order('registered_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { error } = await supabase.from('sorteo_reportes').insert({
+      email: emailLimpio,
+      mensaje: mensajeLimpio,
+      sorteo_participante_id: registroExistente?.id || null,
+    });
+
+    setEnviandoReporte(false);
+
+    if (error) {
+      setErrReporte('No se pudo enviar. Intenta de nuevo en un momento.');
+      return;
+    }
+
+    setReporteEnviado(true);
+    setReporteEmail('');
+    setReporteMensaje('');
+  };
+
+  const cupoActual = participantes.length;
+  const cupoTotal  = rondaActual?.cupo || evento?.cupo_por_ronda || 10;
+  const faltantes  = Math.max(0, cupoTotal - cupoActual);
+  const lleno      = faltantes === 0;
+  const rondaNum   = rondaActual?.numero_ronda || (historial[0]?.numero_ronda || 0) + 1;
+  // ── Frases psicológicas rotantes ─────────────────────────────────────────
+  const FRASES_ESPERA = [
+    { texto: "¿Qué cambiarías primero si ganaras hoy?",          sub: "El ganador ya lo sabe." },
+    { texto: "El destino no sortea al azar.",                    sub: "Sortea al que ya decidió." },
+    { texto: "Solo uno será elegido esta ronda.",                sub: "Ese uno ya está en esta sala." },
+    { texto: "¿Qué versión de ti entraría al Templo hoy?",      sub: "Esa es la que merece ganar." },
+    { texto: "Cada segundo que esperas, otro desistió.",         sub: "Tú sigues aquí. Eso ya te distingue." },
+    { texto: "La beca no transforma. Tú ya decidiste hacerlo.", sub: "El Templo solo acelera lo inevitable." },
+    { texto: "¿Cuánto tiempo llevas postergando tu cambio?",    sub: "Hoy ese tiempo se acaba." },
+    { texto: "El Templo no busca al más suertudo.",             sub: "Busca al que llegó primero." },
+    { texto: "El que gana no es diferente a ti.",               sub: "Solo estaba listo antes." },
+    { texto: "¿Qué diría tu yo de dentro de un año?",          sub: "Mira bien esta pantalla." },
+    { texto: "El silencio antes del sorteo siempre dice algo.", sub: "Escúchalo." },
+    { texto: "Hay guerreros que esperan.",                      sub: "Y hay guerreros que ya saben que van a ganar." },
+  ];
+
+  useEffect(() => {
+    if (screen !== SCREEN.ESPERA) return undefined;
+    const ciclo = setInterval(() => {
+      setFraseVisible(false);
+      setTimeout(() => {
+        setFraseIdx(i => (i + 1) % FRASES_ESPERA.length);
+        setFraseVisible(true);
+      }, 600);
+    }, 16000);
+    return () => clearInterval(ciclo);
+  }, [screen]);
+
+  // ── PANTALLA: LOADING ─────────────────────────────────────────────────────
+  if (screen === SCREEN.LOADING) {
+    return (
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28 }}>
+        <Particles />
+        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+          <Maestro size={120} animate="slow" />
+          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 5, color: C.goldDim, marginTop: 24, animation: 'pulse 1.6s ease-in-out infinite' }}>
+            CONVOCANDO AL TEMPLO...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── PANTALLA: CERRADO ─────────────────────────────────────────────────────
+  if (screen === SCREEN.CERRADO) {
+    return (
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(24px,6vw,60px) clamp(16px,4vw,40px)' }}>
+        <Particles />
+        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: 420 }}>
+          <Maestro size={100} glow={false} animate="none" />
+          <h2 style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 'clamp(16px,4vw,22px)', color: C.gold, marginTop: 24, marginBottom: 12, letterSpacing: 2 }}>
+            SORTEO NO DISPONIBLE
+          </h2>
+          <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 15, color: C.muted, fontStyle: 'italic', lineHeight: 1.7 }}>
+            Este sorteo no está activo o el enlace no es válido.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── PANTALLA: SORTEO (animación épica) ───────────────────────────────────
+  if (screen === SCREEN.SORTEO) {
+    const nombres = participantes.length > 0 ? participantes.map(p => p.nombre) : ['Guerrero', 'Templario', 'Campeón'];
+    const ganador = participantes.find(p => p.es_ganador);
+    return <SorteoAnimacion nombres={nombres} ganadorNombre={ganador?.nombre} />;
+  }
+
+  // ── PANTALLA: GANADOR ─────────────────────────────────────────────────────
+  if (screen === SCREEN.GANADOR) {
+    return (
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'clamp(20px,5vw,60px) clamp(16px,4vw,40px)', position: 'relative', overflow: 'hidden', textAlign: 'center' }}>
+        <Particles />
+        <Confetti />
+        <Header totalBecas={totalBecas} totalGanadores={totalGanadores} rondaNum={rondaNum} eventoNombre={evento?.nombre} />
+        <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 480, marginTop: 72, animation: 'fadeUp .7s ease both' }}>
+
+          {/* Maestro con rayos épicos */}
+          <div style={{ position: 'relative', width: 200, height: 200, margin: '0 auto 24px' }}>
+            <div style={{ position: 'absolute', inset: 0 }}><Rays size={200} opacity={0.25} speed="5s" /></div>
+            <div style={{ position: 'absolute', inset: 0 }}><Rays size={200} opacity={0.12} speed="9s" /></div>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Maestro size={150} />
+            </div>
+          </div>
+
+          <div style={{ fontSize: 'clamp(36px,9vw,52px)', marginBottom: 8 }}>👑</div>
+          <h1 style={{
+            fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
+            fontSize: 'clamp(22px,6vw,34px)', marginBottom: 10, letterSpacing: 2,
+            background: `linear-gradient(135deg,${C.gold},${C.goldLight},${C.gold})`,
+            backgroundSize: '200%',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            animation: 'shimmer 2s linear infinite',
+          }}>¡ERES EL ELEGIDO!</h1>
+
+          <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 16, color: C.muted, fontStyle: 'italic', lineHeight: 1.8, marginBottom: 28 }}>
+            El Templo del Propósito te concede<br />
+            <span style={{ color: C.gold, fontWeight: 700, fontSize: 19 }}>6 meses de membresía — valor $294 USD</span>
+          </p>
+
+          {/* Código de acceso */}
+          <div style={{
+            background: 'rgba(212,175,55,0.07)', border: `1.5px solid ${C.borderHi}`,
+            borderRadius: 16, padding: 'clamp(18px,4vw,28px) clamp(16px,4vw,28px)',
+            marginBottom: 24, animation: 'pulseGlow 3s ease-in-out infinite',
+          }}>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3, color: C.goldDim, marginBottom: 12 }}>
+              TU CÓDIGO DE ACCESO — 6 MESES GRATIS
+            </p>
+            <div style={{
+              fontFamily: 'Cinzel, serif', fontWeight: 900,
+              fontSize: 'clamp(22px,6vw,32px)', color: C.gold,
+              letterSpacing: 8, marginBottom: 16,
+              animation: 'pulse 2.2s ease-in-out infinite',
+            }}>
+              {miRegistro?.cuponCode || '———'}
+            </div>
+            <button onClick={copiarCodigo} style={{
+              padding: '11px 28px', borderRadius: 10, cursor: 'pointer',
+              background: copiado ? 'rgba(68,255,136,0.12)' : 'rgba(212,175,55,0.12)',
+              border: `1px solid ${copiado ? 'rgba(68,255,136,0.4)' : C.borderHi}`,
+              color: copiado ? C.green : C.gold,
+              fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2,
+              transition: 'all .25s',
+            }}>
+              {copiado ? '✓ COPIADO' : '📋 COPIAR CÓDIGO'}
+            </button>
+          </div>
+
+          {miRegistro?.token && (
+            <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 12, color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', marginTop: -10, marginBottom: 24, textAlign: 'center' }}>
+              Tu código personal de consulta: <span style={{ color: C.purple, fontWeight: 700, letterSpacing: 2 }}>{miRegistro.token}</span><br />
+              Guárdalo — lo necesitarás para volver a ver este cupón.
+            </p>
+          )}
+
+          {/* Carta del Maestro — ritual de cierre */}
+          <div style={{
+            position: 'relative',
+            background: 'linear-gradient(160deg,rgba(255,215,0,0.07),rgba(10,5,26,0.7),rgba(255,215,0,0.05))',
+            border: '1px solid rgba(255,215,0,0.3)',
+            borderRadius: 20, padding: 'clamp(22px,5vw,32px) clamp(20px,5vw,30px)',
+            marginBottom: 26, textAlign: 'center', overflow: 'hidden',
+            animation: 'fadeUp 1.1s ease both',
+          }}>
+            {/* Líneas de luz */}
+            <div style={{ position: 'absolute', top: 0, left: '10%', right: '10%', height: '1px', background: 'linear-gradient(90deg,transparent,rgba(255,215,0,0.6),transparent)' }} />
+            <div style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: '1px', background: 'linear-gradient(90deg,transparent,rgba(204,68,255,0.3),transparent)' }} />
+
+            {/* Eyebrow */}
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 5, color: 'rgba(255,215,0,0.5)', marginBottom: 16 }}>
+              ✦ MENSAJE DEL MAESTRO ✦
+            </div>
+
+            {/* Carta */}
+            <div style={{
+              fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
+              fontSize: 'clamp(14px,3.8vw,17px)',
+              color: 'rgba(255,255,255,0.82)',
+              lineHeight: 1.85, letterSpacing: 0.3,
+              marginBottom: 18,
+            }}>
+              El Templo no sortea al azar.<br />
+              <span style={{ color: C.gold }}>Sortea al que ya estaba listo.</span>
+            </div>
+
+            {/* Divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 18px', justifyContent: 'center' }}>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255,215,0,0.15)' }} />
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: 'rgba(255,215,0,0.35)', letterSpacing: 3 }}>👑</span>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255,215,0,0.15)' }} />
+            </div>
+
+            <div style={{
+              fontFamily: 'Cinzel, serif', fontWeight: 900,
+              fontSize: 'clamp(13px,3.5vw,16px)',
+              color: C.gold, letterSpacing: 2, lineHeight: 1.5,
+              marginBottom: 6,
+            }}>
+              Bienvenido, Templario.
+            </div>
+            <div style={{
+              fontFamily: 'Crimson Text, serif', fontSize: 'clamp(12px,3.2vw,14px)',
+              color: 'rgba(255,255,255,0.45)', letterSpacing: 1, fontStyle: 'italic',
+            }}>
+              Tu transformación comienza ahora.
+            </div>
+          </div>
+
+          <a
+            href={`https://buy.stripe.com/cNifZh6dxfcmfcGgSYenS0H?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}&prefilled_email=${encodeURIComponent(miRegistro?.email || '')}&client_reference_id=${encodeURIComponent(miRegistro?.id || '')}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{
+              display: 'block', padding: '16px',
+              borderRadius: 14,
+              background: `linear-gradient(135deg,${C.gold},#9a7a00)`,
+              color: '#0a0614', fontFamily: 'Cinzel, serif',
+              fontSize: 12, letterSpacing: 3, fontWeight: 900,
+              textDecoration: 'none',
+              animation: 'btnPulse 2.5s ease-in-out infinite',
+            }}
+          >
+            ⚔️ ACTIVAR MI BECA — 6 MESES GRATIS
+          </a>
+
+          {/* ── ALIANZA PRIMER · versión ganador ── */}
+          <div style={{
+            position: 'relative', overflow: 'hidden',
+            background: 'linear-gradient(160deg,rgba(255,215,0,0.06),rgba(10,5,26,0.75),rgba(167,139,250,0.06))',
+            border: '1px solid rgba(212,175,55,0.3)',
+            borderRadius: 18,
+            padding: 'clamp(18px,4vw,26px)',
+            marginTop: 18, marginBottom: 20,
+            textAlign: 'center',
+            animation: 'fadeUp 1.4s ease both',
+          }}>
+            <div style={{ position: 'absolute', top: 0, left: '15%', right: '15%', height: '1px', background: 'linear-gradient(90deg,transparent,rgba(255,215,0,0.5),transparent)' }} />
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 4, color: 'rgba(255,215,0,0.55)', marginBottom: 12 }}>
+              ✦ TU REINADO NO TERMINA AQUÍ ✦
+            </div>
+            <div style={{
+              fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
+              fontSize: 'clamp(13px,3.8vw,16px)',
+              color: 'rgba(255,255,255,0.82)',
+              lineHeight: 1.85, marginBottom: 16,
+            }}>
+              Junto con tu beca, recibes tu{' '}
+              <span style={{ color: '#a78bfa', fontStyle: 'normal', fontWeight: 700 }}>código Alianza</span>.<br />
+              Quien lo use también entra por{' '}
+              <span style={{ color: '#a78bfa', fontWeight: 700 }}>$1</span>.<br />
+              <span style={{ color: C.gold, fontSize: '0.92em' }}>
+                Cada nivel que desbloquees suma +1 mes más, por $1.
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+              {[['⚡','Chispa'],['🔗','Nexo'],['🌊','Resonancia'],['🌐','Expansión'],['✦','Legado']].map(([emoji, label], i) => (
+                <div key={i} title={label} style={{
+                  width: 30, height: 30, borderRadius: '50%',
+                  background: 'rgba(255,215,0,0.05)',
+                  border: '1px solid rgba(212,175,55,0.22)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 13,
+                }}>
+                  {emoji}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {historial.length > 0 && <HistorialRondas historial={historial} onToggle={() => setMostrarHistorial(v => !v)} mostrar={mostrarHistorial} />}
+        </div>
+      </div>
+    );
+  }
+
+  // ── PANTALLA: PREMIO ──────────────────────────────────────────────────────
+  if (screen === SCREEN.PREMIO) {
+    return (
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'clamp(20px,5vw,60px) clamp(16px,4vw,40px)', position: 'relative', overflow: 'hidden', textAlign: 'center' }}>
+        <Particles />
+        <Header totalBecas={totalBecas} totalGanadores={totalGanadores} rondaNum={rondaNum} eventoNombre={evento?.nombre} />
+        <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 480, marginTop: 72, animation: 'fadeUp .7s ease both' }}>
+
+          <div style={{ margin: '0 auto 24px' }}>
+            <Maestro size={120} animate="slow" />
+          </div>
+
+          {/* Sello de presentación */}
+          <div style={{ fontSize: 38, marginBottom: 10 }}>⚜️</div>
+
+          {/* Reencuadre narrativo épico */}
+          <div style={{
+            position: 'relative',
+            background: 'linear-gradient(160deg,rgba(155,89,255,0.09),rgba(10,5,26,0.6),rgba(155,89,255,0.06))',
+            border: '1px solid rgba(155,89,255,0.28)',
+            borderRadius: 20, padding: 'clamp(22px,5vw,32px) clamp(20px,5vw,30px)',
+            marginBottom: 26, textAlign: 'center', overflow: 'hidden',
+            animation: 'fadeUp 0.8s ease both',
+          }}>
+            {/* Línea superior púrpura */}
+            <div style={{ position: 'absolute', top: 0, left: '12%', right: '12%', height: '1px', background: 'linear-gradient(90deg,transparent,rgba(155,89,255,0.55),transparent)' }} />
+            {/* Línea inferior dorada tenue */}
+            <div style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: '1px', background: 'linear-gradient(90deg,transparent,rgba(255,215,0,0.25),transparent)' }} />
+
+            {/* Eyebrow */}
+            <div style={{
+              fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 5,
+              color: 'rgba(155,89,255,0.65)', marginBottom: 14,
+            }}>
+              ✦ EL TEMPLO HABLA ✦
+            </div>
+
+            {/* Frase principal */}
+            <div style={{
+              fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
+              fontSize: 'clamp(15px,4.2vw,20px)',
+              background: 'linear-gradient(135deg,#e0c8ff,#CC44FF,#b090ff)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+              lineHeight: 1.4, letterSpacing: 1, marginBottom: 14,
+            }}>
+              No fuiste elegido por el azar.
+            </div>
+
+            {/* Frase secundaria — el reencuadre real */}
+            <div style={{
+              fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
+              fontSize: 'clamp(14px,3.8vw,17px)',
+              color: 'rgba(255,255,255,0.78)',
+              lineHeight: 1.75, letterSpacing: 0.3, marginBottom: 16,
+            }}>
+              Fuiste elegido por tu decisión de estar aquí.<br />
+              <span style={{ color: 'rgba(204,68,255,0.85)' }}>Eso ya te separa del 95% que nunca llegó.</span>
+            </div>
+
+            {/* Divider decorativo */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '16px 0', justifyContent: 'center' }}>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(155,89,255,0.2)' }} />
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: 'rgba(155,89,255,0.45)', letterSpacing: 3 }}>⚔</span>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(155,89,255,0.2)' }} />
+            </div>
+
+            {/* Recompensa del guerrero — frase cierre */}
+            <div style={{
+              fontFamily: 'Cinzel, serif', fontSize: 'clamp(9px,2.5vw,11px)',
+              letterSpacing: 2, color: 'rgba(255,255,255,0.45)',
+              lineHeight: 1.6,
+            }}>
+              ESTE CUPÓN ES LA RECOMPENSA DEL GUERRERO<br />
+              QUE SE PRESENTÓ SIN IMPORTAR EL RESULTADO
+            </div>
+          </div>
+
+          <h1 style={{
+            fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
+            fontSize: 'clamp(17px,4.5vw,24px)', marginBottom: 10,
+            background: `linear-gradient(135deg,${C.purple},#e0a0ff)`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            letterSpacing: 2,
+          }}>TU PASE DE GUERRERO</h1>
+
+          <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 15, color: C.muted, fontStyle: 'italic', lineHeight: 1.75, marginBottom: 24 }}>
+            Tu regalo de entrada al Templo:<br />
+            <span style={{ color: C.purple, fontWeight: 600 }}>primer mes por solo $1 USD.</span>
+          </p>
+
+          {/* Cupón */}
+          <div style={{
+            background: 'rgba(204,68,255,0.06)', border: `1.5px solid ${C.purpleDim}`,
+            borderRadius: 16, padding: 'clamp(18px,4vw,26px)', marginBottom: 24,
+            boxShadow: '0 0 40px rgba(204,68,255,0.08)',
+          }}>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3, color: 'rgba(204,68,255,0.6)', marginBottom: 12 }}>
+              TU CUPÓN ESPECIAL
+            </p>
+            <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 'clamp(20px,5.5vw,28px)', color: C.purple, letterSpacing: 7, marginBottom: 16 }}>
+              {miRegistro?.cuponCode || '—'}
+            </div>
+            <button onClick={copiarCodigo} style={{
+              padding: '11px 28px', borderRadius: 10, cursor: 'pointer',
+              background: copiado ? 'rgba(68,255,136,0.12)' : 'rgba(204,68,255,0.1)',
+              border: `1px solid ${copiado ? 'rgba(68,255,136,0.4)' : C.purpleDim}`,
+              color: copiado ? C.green : C.purple,
+              fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2,
+              transition: 'all .25s',
+            }}>
+              {copiado ? '✓ COPIADO' : '📋 COPIAR CUPÓN'}
+            </button>
+          </div>
+
+          {miRegistro?.token && (
+            <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 12, color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', marginTop: -10, marginBottom: 24, textAlign: 'center' }}>
+              Tu código personal de consulta: <span style={{ color: C.purple, fontWeight: 700, letterSpacing: 2 }}>{miRegistro.token}</span><br />
+              Guárdalo — lo necesitarás para volver a ver este cupón.
+            </p>
+          )}
+
+          <button
+            onClick={() => { setScreenAnterior(SCREEN.PREMIO); setScreen(SCREEN.CAUSA); }}
+            style={{
+              display: 'block', width: '100%', padding: '17px',
+              borderRadius: 14, border: 'none', cursor: 'pointer',
+              background: `linear-gradient(135deg,${C.purple},#6b0a8a)`,
+              color: '#fff', fontFamily: 'Cinzel, serif',
+              fontSize: 12, letterSpacing: 3, fontWeight: 900,
+              textDecoration: 'none',
+              boxShadow: '0 4px 24px rgba(204,68,255,0.35)',
+              marginBottom: 10,
+              animation: 'btnPulse 2.8s ease-in-out infinite',
+            }}
+          >
+            ⚔️ ENTRAR AL TEMPLO — PRIMER MES $1
+          </button>
+          <p style={{
+            fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
+            fontSize: 12, color: 'rgba(255,255,255,0.28)',
+            textAlign: 'center', marginBottom: 14, letterSpacing: 0.5,
+          }}>
+            El cupón ya está pre-aplicado. Solo confirma tu acceso.
+          </p>
+
+          {/* ── ALIANZA PRIMER ── */}
+          <div style={{
+            position: 'relative', overflow: 'hidden',
+            background: 'linear-gradient(160deg,rgba(167,139,250,0.08),rgba(10,5,26,0.75),rgba(167,139,250,0.05))',
+            border: '1px solid rgba(167,139,250,0.28)',
+            borderRadius: 18,
+            padding: 'clamp(18px,4vw,26px)',
+            marginTop: 6, marginBottom: 20,
+            textAlign: 'center',
+            animation: 'fadeUp 1.4s ease both',
+          }}>
+            <div style={{ position: 'absolute', top: 0, left: '15%', right: '15%', height: '1px', background: 'linear-gradient(90deg,transparent,rgba(167,139,250,0.55),transparent)' }} />
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 4, color: 'rgba(167,139,250,0.55)', marginBottom: 12 }}>
+              ✦ AL CRUZAR LA PUERTA ✦
+            </div>
+            <div style={{
+              fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
+              fontSize: 'clamp(13px,3.8vw,16px)',
+              color: 'rgba(200,185,240,0.82)',
+              lineHeight: 1.85, marginBottom: 16,
+            }}>
+              El Templo te entrega tu{' '}
+              <span style={{ color: '#a78bfa', fontStyle: 'normal', fontWeight: 700 }}>código Alianza</span>.<br />
+              Quien lo use también entra por{' '}
+              <span style={{ color: '#a78bfa', fontWeight: 700 }}>$1</span>.<br />
+              <span style={{ color: 'rgba(212,175,55,0.75)', fontSize: '0.92em' }}>
+                Por cada nivel alcanzado: +1 mes tuyo por $1.
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+              {[['⚡','Chispa'],['🔗','Nexo'],['🌊','Resonancia'],['🌐','Expansión'],['✦','Legado']].map(([emoji, label], i) => (
+                <div key={i} title={label} style={{
+                  width: 30, height: 30, borderRadius: '50%',
+                  background: 'rgba(167,139,250,0.06)',
+                  border: '1px solid rgba(167,139,250,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 13,
+                }}>
+                  {emoji}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {historial.length > 0 && <HistorialRondas historial={historial} onToggle={() => setMostrarHistorial(v => !v)} mostrar={mostrarHistorial} />}
+        </div>
+      </div>
+    );
+  }
+
+
+
+  // ── PANTALLA: CAUSA ───────────────────────────────────────────────────────
+  if (screen === SCREEN.CAUSA) {
+    const STRIPE_LINKS = {
+      becas:  `https://buy.stripe.com/9B68wP59t2pA1lQeKQenS0x?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}&client_reference_id=${encodeURIComponent(miRegistro?.id || '')}`,
+      perros: `https://buy.stripe.com/7sY9ATfO77JUe8CgSYenS0w?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}&client_reference_id=${encodeURIComponent(miRegistro?.id || '')}`,
+    };
+
+    return (
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'clamp(20px,5vw,60px) clamp(16px,4vw,40px)', position: 'relative', overflow: 'hidden', textAlign: 'center' }}>
+        <Particles />
+        <Header totalBecas={totalBecas} totalGanadores={totalGanadores} rondaNum={rondaNum} eventoNombre={evento?.nombre} />
+        <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 520, marginTop: 72, animation: 'fadeUp .7s ease both' }}>
+
+          <div style={{ fontSize: 36, marginBottom: 10 }}>⚜️</div>
+
+          <h1 style={{
+            fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
+            fontSize: 'clamp(18px,5vw,26px)', marginBottom: 10, letterSpacing: 2,
+            background: `linear-gradient(135deg,${C.purple},#fff)`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+          }}>¿A QUÉ CAUSA QUIERES DESTINAR TU DÓLAR?</h1>
+
+          <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 14, color: C.muted, fontStyle: 'italic', lineHeight: 1.7, marginBottom: 28 }}>
+            Tu decisión genera impacto real dentro y fuera del Templo.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+
+            {/* Opción: Becas */}
+            <button
+              onClick={() => setCausaElegida('becas')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
+                padding: '16px 18px', borderRadius: 16, cursor: 'pointer',
+                background: causaElegida === 'becas' ? 'rgba(212,175,55,0.12)' : 'rgba(255,255,255,0.03)',
+                border: causaElegida === 'becas' ? `1.5px solid ${C.gold}` : '1.5px solid rgba(255,255,255,0.08)',
+                transition: 'all .25s',
+              }}
+            >
+              <div style={{ fontSize: 28 }}>🎓</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 13, letterSpacing: 1, color: C.gold, marginBottom: 4 }}>
+                  BECAS TEMPLO DEL PROPÓSITO
+                </div>
+                <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+                  Tu dólar se convierte en acceso gratuito al Templo para alguien comprometido con crecer.
+                </div>
+              </div>
+              <div style={{
+                width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                border: causaElegida === 'becas' ? `6px solid ${C.gold}` : '1.5px solid rgba(255,255,255,0.25)',
+                transition: 'all .2s',
+              }} />
+            </button>
+
+            {/* Opción: Perros */}
+            <button
+              onClick={() => setCausaElegida('perros')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
+                padding: '16px 18px', borderRadius: 16, cursor: 'pointer',
+                background: causaElegida === 'perros' ? 'rgba(204,68,255,0.12)' : 'rgba(255,255,255,0.03)',
+                border: causaElegida === 'perros' ? `1.5px solid ${C.purple}` : '1.5px solid rgba(255,255,255,0.08)',
+                transition: 'all .25s',
+              }}
+            >
+              <div style={{ fontSize: 28 }}>🐾</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 13, letterSpacing: 1, color: C.purple, marginBottom: 4 }}>
+                  ALIMENTO PARA PERROS
+                </div>
+                <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+                  Cada dólar ayuda directamente a brindar alimento a perros en situación vulnerable.
+                </div>
+              </div>
+              <div style={{
+                width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                border: causaElegida === 'perros' ? `6px solid ${C.purple}` : '1.5px solid rgba(255,255,255,0.25)',
+                transition: 'all .2s',
+              }} />
+            </button>
+
+          </div>
+
+          <a
+            href={causaElegida ? STRIPE_LINKS[causaElegida] : undefined}
+            target="_blank" rel="noopener noreferrer"
+            onClick={(e) => { if (!causaElegida) e.preventDefault(); }}
+            style={{
+              display: 'block', padding: '16px',
+              borderRadius: 14,
+              background: causaElegida
+                ? `linear-gradient(135deg,${C.purple},#6b0a8a)`
+                : 'rgba(255,255,255,0.06)',
+              color: causaElegida ? '#fff' : 'rgba(255,255,255,0.3)',
+              fontFamily: 'Cinzel, serif',
+              fontSize: 12, letterSpacing: 3, fontWeight: 900,
+              textDecoration: 'none', textAlign: 'center',
+              cursor: causaElegida ? 'pointer' : 'not-allowed',
+              transition: 'all .25s',
+              animation: causaElegida ? 'btnPulse 2.5s ease-in-out infinite' : 'none',
+            }}
+          >
+            {causaElegida ? '⚔️ CONTINUAR CON MI DONACIÓN →' : 'SELECCIONA UNA CAUSA PARA CONTINUAR'}
+          </a>
+
+          <button
+            onClick={() => setScreen(SCREEN.PREMIO)}
+            style={{
+              display: 'block', margin: '18px auto 0', padding: '8px 16px',
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              fontFamily: 'Crimson Text, serif', fontStyle: 'italic', fontSize: 12,
+              color: 'rgba(255,255,255,0.35)', letterSpacing: 0.5,
+            }}
+          >
+            ← Volver
+          </button>
+
+        </div>
+      </div>
+    );
+  }
+
+  // ── PANTALLA: ESPERA ──────────────────────────────────────────────────────
+  if (screen === SCREEN.ESPERA) {
+    return (
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'clamp(20px,5vw,60px) clamp(16px,4vw,40px)', position: 'relative', overflow: 'hidden' }}>
+        <Particles />
+        <Header totalBecas={totalBecas} totalGanadores={totalGanadores} rondaNum={rondaNum} eventoNombre={evento?.nombre} />
+        <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 500, marginTop: 72, animation: 'fadeUp .6s ease both' }}>
+
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <Maestro size={110} animate="slow" />
+          </div>
+
+          <h2 style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 'clamp(18px,4.5vw,24px)', textAlign: 'center', marginBottom: 8, color: lleno ? C.gold : C.text, letterSpacing: 2, transition: 'color .4s' }}>
+            {lleno ? '⚔️ ¡CUPO COMPLETO!' : 'SALA DE ESPERA'}
+          </h2>
+
+          <p style={{ textAlign: 'center', fontFamily: 'Crimson Text, serif', fontSize: 15, color: C.muted, fontStyle: 'italic', lineHeight: 1.7, marginBottom: 24 }}>
+            {miRegistro?.nombre && <><span style={{ color: C.gold }}>{miRegistro.nombre}</span>, ya estás dentro.<br /></>}
+            {lleno ? 'El sorteo comienza en unos momentos...' : `Esperando ${faltantes} guerrero${faltantes !== 1 ? 's' : ''} más`}
+          </p>
+
+          {/* Contador grande */}
+          <div style={{
+            background: C.bgCard, border: `1.5px solid ${lleno ? C.borderHi : C.border}`,
+            borderRadius: 20, padding: 'clamp(24px,5vw,36px)', textAlign: 'center',
+            marginBottom: 20,
+            boxShadow: lleno ? `0 0 70px ${C.goldGlow}` : 'none',
+            transition: 'all .5s',
+          }}>
+            <div style={{
+              fontFamily: 'Cinzel, serif', fontWeight: 900,
+              fontSize: 'clamp(56px,14vw,90px)',
+              background: `linear-gradient(135deg,${C.gold},${C.purple})`,
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+              lineHeight: 1,
+              animation: lleno ? 'pulse 1s ease-in-out infinite' : 'none',
+            }}>
+              {cupoActual}
+            </div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, color: C.goldDim, marginTop: 4, marginBottom: 20 }}>
+              DE {cupoTotal} GUERREROS
+            </div>
+            <BarraProgreso actual={cupoActual} total={cupoTotal} />
+            <div style={{ marginTop: 20 }}>
+              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 3, color: C.goldDim, textAlign: 'center', marginBottom: 10, textTransform: 'uppercase' }}>
+                ✦ Mapa de Cuadras ✦
+              </div>
+              <MapaCuadras participantes={participantes} cupoTotal={cupoTotal} miEmail={miEmailRef.current} />
+            </div>
+          </div>
+
+          {!lleno && (
+            <>
+              {/* Oráculo — frase psicológica rotante */}
+              <div style={{
+                position: 'relative',
+                margin: '8px 0 16px',
+                padding: 'clamp(18px,4vw,28px) clamp(20px,5vw,36px)',
+                background: 'linear-gradient(135deg,rgba(155,89,255,0.08),rgba(255,215,0,0.05),rgba(155,89,255,0.06))',
+                border: '1px solid rgba(155,89,255,0.25)',
+                borderRadius: 20,
+                textAlign: 'center',
+                overflow: 'hidden',
+                transition: 'opacity 0.6s ease, transform 0.6s ease',
+                opacity: fraseVisible ? 1 : 0,
+                transform: fraseVisible ? 'translateY(0) scale(1)' : 'translateY(6px) scale(0.98)',
+              }}>
+                {/* Línea superior dorada */}
+                <div style={{ position: 'absolute', top: 0, left: '15%', right: '15%', height: '1px', background: 'linear-gradient(90deg,transparent,rgba(255,215,0,0.5),transparent)' }} />
+                {/* Línea inferior púrpura */}
+                <div style={{ position: 'absolute', bottom: 0, left: '15%', right: '15%', height: '1px', background: 'linear-gradient(90deg,transparent,rgba(155,89,255,0.4),transparent)' }} />
+
+                <div style={{
+                  fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 5,
+                  color: 'rgba(155,89,255,0.7)', marginBottom: 12,
+                }}>
+                  ✦ ORÁCULO DEL TEMPLO ✦
+                </div>
+
+                <div style={{
+                  fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
+                  fontSize: 'clamp(15px,4vw,20px)',
+                  background: 'linear-gradient(135deg,#fff4a0,#FFD700)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                  lineHeight: 1.35, letterSpacing: 1,
+                  marginBottom: 12,
+                  textShadow: 'none',
+                }}>
+                  {FRASES_ESPERA[fraseIdx].texto}
+                </div>
+
+                <div style={{
+                  fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
+                  fontSize: 'clamp(13px,3.5vw,15px)',
+                  color: 'rgba(155,89,255,0.85)',
+                  letterSpacing: 0.5, lineHeight: 1.5,
+                }}>
+                  {FRASES_ESPERA[fraseIdx].sub}
+                </div>
+              </div>
+
+              <p style={{ textAlign: 'center', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3, color: 'rgba(255,255,255,0.12)', animation: 'pulse 2.2s ease-in-out infinite' }}>
+                · ACTUALIZANDO EN TIEMPO REAL ·
+              </p>
+            </>
+          )}
+
+          {historial.length > 0 && <HistorialRondas historial={historial} onToggle={() => setMostrarHistorial(v => !v)} mostrar={mostrarHistorial} />}
+        </div>
+      </div>
+    );
+  }
+
+  // ── PANTALLA: REGISTRO ────────────────────────────────────────────────────
+  return (
+    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '0 clamp(16px,4vw,40px) clamp(40px,8vw,80px)', position: 'relative' }}>
+      <Particles />
+      <Header totalBecas={totalBecas} totalGanadores={totalGanadores} rondaNum={rondaNum} eventoNombre={evento?.nombre} />
+
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 500, marginTop: 'clamp(72px,18vw,100px)', animation: 'fadeUp .6s ease both' }}>
+
+        {/* Arco decorativo superior */}
+        <div style={{ position: 'absolute', top: -40, left: '50%', transform: 'translateX(-50%)', width: 320, height: 160, borderRadius: '160px 160px 0 0', border: `2px solid rgba(255,215,0,0.15)`, borderBottom: 'none', pointerEvents: 'none', animation: 'arcGlow 3s ease-in-out infinite' }} />
+
+        {/* Título épico */}
+        <div style={{ textAlign: 'center', marginBottom: 0, position: 'relative' }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 6, color: 'rgba(255,215,0,0.6)', marginBottom: 8 }}>
+            ✦ TEMPLO DEL PROPÓSITO ✦
+          </div>
+          <div style={{
+            fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
+            fontSize: 'clamp(22px,6vw,38px)',
+            background: `linear-gradient(180deg,#fff4a0 0%,#FFD700 40%,#b8860b 100%)`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            animation: 'textGlow 2.5s ease-in-out infinite',
+            letterSpacing: 3, lineHeight: 1.1,
+          }}>
+            {evento?.nombre || 'SORTEO ÉPICO'}
+          </div>
+        </div>
+
+        {/* Maestro grande central con templarios orbitando */}
+        <div style={{ textAlign: 'center', margin: 'clamp(24px,5vw,36px) 0 clamp(16px,4vw,24px)' }}>
+          <Maestro size={clamp(160, 200)} animate="float" glow epic />
+        </div>
+
+        {/* Ticker de prueba social — último ganador */}
+        {historial.length > 0 && (() => {
+          const ultimaRonda = historial.find(r => r.sorteo_participantes?.some(p => p.es_ganador));
+          const ultimoGanador = ultimaRonda?.sorteo_participantes?.find(p => p.es_ganador);
+          if (!ultimoGanador) return null;
+          const nombre = ultimoGanador.nombre || '';
+          const inicial = nombre.charAt(0).toUpperCase();
+          const apellido = nombre.split(' ')[1] ? nombre.split(' ')[1].charAt(0).toUpperCase() + '.' : '';
+          const nombreCorto = `${nombre.split(' ')[0]} ${apellido}`.trim();
+          return (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: 'rgba(255,215,0,0.04)',
+              border: '1px solid rgba(255,215,0,0.18)',
+              borderRadius: 50,
+              padding: '8px 16px 8px 8px',
+              marginBottom: 20,
+              animation: 'fadeUp 0.8s ease both',
+              justifyContent: 'center',
+            }}>
+              {/* Avatar inicial */}
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                background: 'linear-gradient(135deg,rgba(255,215,0,0.25),rgba(204,68,255,0.15))',
+                border: '1.5px solid rgba(255,215,0,0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'Cinzel, serif', fontWeight: 900,
+                fontSize: 11, color: C.gold,
+              }}>
+                {inicial}
+              </div>
+              {/* Texto */}
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap' }}>
+                <span style={{ color: C.goldDim }}>👑 Última beca:</span>
+                {' '}
+                <span style={{ color: C.gold, fontWeight: 700 }}>{nombreCorto}</span>
+                {' · '}
+                <span style={{ color: 'rgba(255,255,255,0.4)' }}>Ronda #{ultimaRonda.numero_ronda}</span>
+              </span>
+              {/* Punto verde pulsante */}
+              <div style={{
+                width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                background: C.green,
+                boxShadow: `0 0 8px ${C.green}`,
+                animation: 'pulse 1.8s ease-in-out infinite',
+              }} />
+            </div>
+          );
+        })()}
+
+        {/* Premio principal épico */}
+        <div style={{ marginBottom: 20, animation: 'floatBeca 3.5s ease-in-out infinite' }}>
+          <div style={{
+            background: 'linear-gradient(135deg,rgba(255,215,0,0.12),rgba(204,68,255,0.06),rgba(255,215,0,0.08))',
+            border: `1.5px solid rgba(255,215,0,0.45)`,
+            borderRadius: 20,
+            padding: 'clamp(16px,3vw,24px)',
+            boxShadow: '0 0 40px rgba(255,215,0,0.1), inset 0 0 30px rgba(255,215,0,0.04)',
+            position: 'relative', overflow: 'hidden',
+          }}>
+            {/* Línea de brillo superior */}
+            <div style={{ position: 'absolute', top: 0, left: '10%', right: '10%', height: 1, background: 'linear-gradient(90deg,transparent,rgba(255,215,0,0.8),transparent)' }} />
+
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 5, color: 'rgba(255,215,0,0.6)', textAlign: 'center', marginBottom: 6 }}>
+              ✦ PREMIO PRINCIPAL ✦
+            </div>
+            <div style={{
+              fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
+              fontSize: 'clamp(20px,5vw,28px)', color: '#FFD700',
+              letterSpacing: 2, textAlign: 'center',
+              textShadow: '0 0 30px rgba(255,215,0,0.9), 0 0 60px rgba(255,215,0,0.4)',
+              marginBottom: 4,
+            }}>
+              🏆 BECA COMPLETA
+            </div>
+            <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 14, color: 'rgba(255,215,0,0.8)', fontStyle: 'italic', textAlign: 'center', marginBottom: 16 }}>
+              6 meses de acceso total a Propotienda — valor $294 USD
+            </div>
+
+            {/* Beneficios en grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {[
+                { ico: '⚔️', txt: 'Evaluaciones semanales personalizadas' },
+                { ico: '🗺️', txt: 'Mapas del Templo y sistema guiado' },
+                { ico: '🪙', txt: 'Propocoins + Propo-Tienda desbloqueada' },
+                { ico: '👑', txt: '100 Templarios Dijeron — dinámicas VIP' },
+                { ico: '🤝', txt: 'Comunidad privada con Daniel Franco' },
+                { ico: '🤖', txt: 'Herramientas de IA exclusivas del Templo' },
+              ].map(({ ico, txt }) => (
+                <div key={txt} style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 7,
+                  background: 'rgba(255,215,0,0.05)', borderRadius: 10,
+                  padding: '8px 10px',
+                  border: '1px solid rgba(255,215,0,0.12)',
+                }}>
+                  <span style={{ fontSize: 14, lineHeight: 1.4, flexShrink: 0 }}>{ico}</span>
+                  <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: 'rgba(255,255,255,0.85)', letterSpacing: 0.5, lineHeight: 1.4 }}>{txt}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Línea de brillo inferior */}
+            <div style={{ position: 'absolute', bottom: 0, left: '10%', right: '10%', height: 1, background: 'linear-gradient(90deg,transparent,rgba(255,215,0,0.4),transparent)' }} />
+          </div>
+        </div>
+
+        {/* Cupo */}
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 10,
+            background: 'rgba(255,215,0,0.06)', border: `1px solid rgba(255,215,0,0.25)`,
+            borderRadius: 32, padding: '9px 22px',
+          }}>
+            <span style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 'clamp(22px,5.5vw,30px)', color: C.gold }}>
+              {cupoActual}
+            </span>
+            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: 'rgba(255,215,0,0.7)' }}>
+              / {cupoTotal} en esta ronda
+            </span>
+          </div>
+          <div style={{ maxWidth: 280, margin: '10px auto 0' }}>
+            <BarraProgreso actual={cupoActual} total={cupoTotal} />
+          </div>
+        </div>
+
+        {/* Card formulario */}
+        <div style={{
+          background: 'rgba(10,5,26,0.97)',
+          border: `1.5px solid rgba(255,215,0,0.2)`,
+          borderRadius: 22, padding: 'clamp(24px,5vw,38px)',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.8), 0 0 60px rgba(255,215,0,0.05)',
+        }}>
+          <h2 style={{
+            fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
+            fontSize: 'clamp(17px,4.5vw,23px)', marginBottom: 8, textAlign: 'center',
+            background: `linear-gradient(135deg,${C.gold},${C.purple})`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            letterSpacing: 2,
+          }}>
+            ENTRA AL SORTEO
+          </h2>
+          <p style={{ textAlign: 'center', fontFamily: 'Crimson Text, serif', fontSize: 15, color: C.muted, fontStyle: 'italic', lineHeight: 1.75, marginBottom: 14 }}>
+            Un guerrero gana <span style={{ color: C.gold }}>6 meses</span> gratis.<br />
+            Todos los demás reciben un cupón especial.
+          </p>
+          <p style={{ textAlign: 'center', fontFamily: 'Crimson Text, serif', fontSize: 12.5, color: 'rgba(212,175,55,0.55)', fontStyle: 'italic', lineHeight: 1.75, marginBottom: 26 }}>
+            Y tu registro ya suma a algo más grande: cada <span style={{ color: C.gold, fontStyle: 'normal' }}>6 Templarios nuevos</span>, alguien con potencial cruza la puerta sin pagar nada. Cada <span style={{ color: C.gold, fontStyle: 'normal' }}>25</span>, un costal de 20kg llega directo al plato de un perrito que hoy tiene hambre.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginBottom: 22 }}>
+            <div>
+              <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.goldDim, marginBottom: 8 }}>
+                TU NOMBRE
+              </label>
+              <input
+                type="text"
+                value={form.nombre}
+                onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && registrarse()}
+                placeholder="Nombre de guerrero"
+                autoComplete="name"
+                style={{
+                  width: '100%', background: 'rgba(255,255,255,0.04)',
+                  border: `1.5px solid ${errores.nombre ? C.red : C.border}`,
+                  borderRadius: 11, padding: '14px 17px',
+                  color: C.text, fontFamily: 'Cinzel, serif', fontSize: 12,
+                  transition: 'border-color .2s',
+                  animation: errores.nombre ? 'shake .35s ease' : 'none',
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.goldDim, marginBottom: 8 }}>
+                TU EMAIL
+              </label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && registrarse()}
+                placeholder="tu@email.com"
+                autoComplete="email"
+                style={{
+                  width: '100%', background: 'rgba(255,255,255,0.04)',
+                  border: `1.5px solid ${errores.email ? C.red : C.border}`,
+                  borderRadius: 11, padding: '14px 17px',
+                  color: C.text, fontFamily: 'Cinzel, serif', fontSize: 12,
+                  transition: 'border-color .2s',
+                  animation: errores.email ? 'shake .35s ease' : 'none',
+                }}
+              />
+            </div>
+          </div>
+
+          {errores.general && (
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.red, marginBottom: 14, textAlign: 'center', letterSpacing: 1 }}>
+              ⚠ {errores.general}
+            </p>
+          )}
+
+          <button
+            onClick={registrarse}
+            disabled={guardando}
+            style={{
+              width: '100%', padding: '16px', borderRadius: 13, border: 'none',
+              cursor: guardando ? 'not-allowed' : 'pointer',
+              background: guardando ? 'rgba(212,175,55,0.1)' : `linear-gradient(135deg,${C.gold},#9a7a00)`,
+              color: guardando ? C.gold : '#0a0614',
+              fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 3, fontWeight: 900,
+              transition: 'all .2s',
+              animation: guardando ? 'none' : 'btnPulse 2.8s ease-in-out infinite',
+            }}
+          >
+            {guardando ? 'REGISTRANDO...' : '⚔️ ENTRAR AL SORTEO'}
+          </button>
+
+          <button
+            onClick={() => setMostrarConsulta(v => !v)}
+            style={{
+              width: '100%', padding: '13px', borderRadius: 13,
+              border: `1.5px solid ${C.purpleDim}`,
+              cursor: 'pointer', marginTop: 12,
+              background: 'rgba(204,68,255,0.08)',
+              color: C.goldLight,
+              fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 1.5, fontWeight: 700,
+              transition: 'all .2s',
+            }}
+          >
+            🔍 ¿YA PARTICIPASTE? CONSULTA TU RESULTADO
+          </button>
+
+          {mostrarConsulta && (
+            <div style={{ marginTop: 16, animation: 'slideDown 0.35s ease both' }}>
+
+              {/* Recordatorio principal */}
+              <p style={{
+                fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 1, fontWeight: 700,
+                color: C.goldLight, textAlign: 'center', marginBottom: 14, lineHeight: 1.5,
+              }}>
+                📬 Tu resultado te lo enviamos por correo,<br/>al email con el que te registraste al sorteo.
+              </p>
+
+              {/* ── CAMINO 1: pasos hacia abajo ─────────────────────────── */}
+              {[
+                {
+                  icono: '📧',
+                  paso: 1,
+                  titulo: 'Revisa tu correo',
+                  texto: 'Abre la app o el sitio del correo con el que te registraste. Ahí te llegó tu resultado.',
+                },
+                {
+                  icono: '🔍',
+                  paso: 2,
+                  titulo: '¿No lo ves en Principal?',
+                  texto: 'Busca en las carpetas "Promociones" y "Spam / No deseado". A veces el Templo llega ahí primero.',
+                  mockup: 'carpetas',
+                },
+                {
+                  icono: '🎟️',
+                  paso: 3,
+                  titulo: 'Ahí está tu resultado',
+                  texto: 'Abre el correo del Templo del Propósito: ahí viene tu Pase o tu Llave con las instrucciones.',
+                },
+              ].map((p, i) => (
+                <div key={p.paso} style={{
+                  display: 'flex', gap: 12, alignItems: 'flex-start',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${C.purpleDim}`,
+                  borderRadius: 13, padding: '14px 14px',
+                  marginBottom: 10,
+                  animation: `fadeUp 0.45s ease ${i * 0.12}s both`,
+                }}>
+                  <div style={{
+                    flexShrink: 0, width: 40, height: 40, borderRadius: '50%',
+                    background: 'rgba(204,68,255,0.12)', border: `1px solid ${C.purpleDim}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 19, animation: 'iconBob 2.6s ease-in-out infinite', animationDelay: `${i * 0.2}s`,
+                  }}>
+                    {p.icono}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 900, color: C.gold, letterSpacing: 1 }}>
+                        PASO {p.paso}
+                      </span>
+                    </div>
+                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12.5, fontWeight: 700, color: C.text, letterSpacing: 0.5, marginBottom: 4 }}>
+                      {p.titulo}
+                    </div>
+                    <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 13.5, color: C.muted, fontStyle: 'italic', lineHeight: 1.45 }}>
+                      {p.texto}
+                    </div>
+
+                    {/* Mock visual de carpetas de correo (paso 2) */}
+                    {p.mockup === 'carpetas' && (
+                      <div style={{
+                        marginTop: 10, borderRadius: 9, overflow: 'hidden',
+                        border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.25)',
+                      }}>
+                        {[
+                          { nombre: 'Principal', activa: false },
+                          { nombre: 'Promociones', activa: true },
+                          { nombre: 'Spam / No deseado', activa: true },
+                        ].map((c, ci) => (
+                          <div key={c.nombre} style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '8px 10px',
+                            borderBottom: ci < 2 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                            background: c.activa ? 'rgba(255,215,0,0.06)' : 'transparent',
+                          }}>
+                            <span style={{ fontSize: 13 }}>{c.activa ? '📂' : '📥'}</span>
+                            <span style={{
+                              fontFamily: 'Crimson Text, serif', fontSize: 12.5,
+                              color: c.activa ? C.goldLight : 'rgba(255,255,255,0.45)',
+                              fontWeight: c.activa ? 700 : 400,
+                            }}>
+                              {c.nombre}
+                            </span>
+                            {c.activa && (
+                              <span style={{ marginLeft: 'auto', fontSize: 9.5, fontFamily: 'Cinzel, serif', color: C.gold, letterSpacing: 0.5 }}>
+                                ← BUSCA AQUÍ
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {/* ── CAMINO 2: buscador directo ──────────────────────────── */}
+              <div style={{
+                marginTop: 14, background: 'rgba(212,175,55,0.05)',
+                border: `1px solid rgba(212,175,55,0.3)`, borderRadius: 13, padding: '14px 14px',
+                animation: 'fadeUp 0.45s ease 0.4s both',
+              }}>
+                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 11.5, fontWeight: 700, color: C.gold, letterSpacing: 1, marginBottom: 8, textAlign: 'center' }}>
+                  🔎 ¿NO APARECE EN NINGUNA CARPETA?
+                </div>
+                <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 13.5, color: C.muted, fontStyle: 'italic', textAlign: 'center', marginBottom: 10, lineHeight: 1.45 }}>
+                  Usa el buscador de tu correo (la lupa 🔍 arriba de tu bandeja) y escribe:
+                </div>
+
+                {/* Mock visual de barra de búsqueda */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: 'rgba(0,0,0,0.3)', border: `1.5px solid ${C.purpleDim}`,
+                  borderRadius: 20, padding: '10px 15px', marginBottom: 10,
+                }}>
+                  <span style={{ fontSize: 13, opacity: 0.6 }}>🔍</span>
+                  <span style={{
+                    fontFamily: 'Cinzel, serif', fontSize: 12.5, color: C.text, letterSpacing: 0.5,
+                  }}>
+                    templo del propósito
+                  </span>
+                  <span style={{
+                    display: 'inline-block', width: 2, height: 13, background: C.goldLight,
+                    animation: 'cursorBlink 1s step-end infinite',
+                  }} />
+                </div>
+
+                <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 12.5, color: 'rgba(255,255,255,0.5)', fontStyle: 'italic', textAlign: 'center', lineHeight: 1.4 }}>
+                  Recuerda: busca siempre desde el correo con el que te registraste a este sorteo.
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: 22 }}>
+          <a href="https://templodelpropositooficial.netlify.app/" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.goldDim, textDecoration: 'none' }}>
+            ¿QUÉ ES PROPOTIENDA? →
+          </a>
+        </div>
+
+        {/* ── Bloque: reportar un problema ─────────────────────────────── */}
+        <div style={{ marginTop: 18 }}>
+          <button
+            onClick={() => { setMostrarReporte(v => !v); setErrReporte(''); }}
+            style={{
+              width: '100%', padding: '13px', borderRadius: 13,
+              border: '1.5px solid rgba(255,68,102,0.35)',
+              cursor: 'pointer',
+              background: 'rgba(255,68,102,0.06)',
+              color: 'rgba(255,150,170,0.9)',
+              fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 1.5, fontWeight: 700,
+              transition: 'all .2s',
+            }}
+          >
+            ⚠️ ¿TUVISTE UN PROBLEMA? ESCRÍBENOS
+          </button>
+
+          {mostrarReporte && (
+            <div style={{ marginTop: 14, animation: 'slideDown 0.35s ease both' }}>
+              {reporteEnviado ? (
+                <div style={{
+                  background: 'rgba(68,255,136,0.06)', border: '1px solid rgba(68,255,136,0.3)',
+                  borderRadius: 13, padding: '18px 16px', textAlign: 'center',
+                  animation: 'fadeUp 0.4s ease both',
+                }}>
+                  <div style={{ fontSize: 24, marginBottom: 8 }}>✅</div>
+                  <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 4 }}>
+                    RECIBIDO
+                  </div>
+                  <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 13, color: C.muted, fontStyle: 'italic', lineHeight: 1.4 }}>
+                    Ya nos llegó tu mensaje. Te contactaremos pronto al correo que nos diste.
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 12.5, color: C.muted, fontStyle: 'italic', textAlign: 'center', marginBottom: 10, lineHeight: 1.4 }}>
+                    Cuéntanos qué pasó. Usa el correo con el que te registraste, así podemos revisar tu caso más rápido.
+                  </p>
+                  <input
+                    type="email"
+                    value={reporteEmail}
+                    onChange={e => setReporteEmail(e.target.value)}
+                    placeholder="tu@email.com"
+                    autoComplete="email"
+                    style={{
+                      width: '100%', background: 'rgba(255,255,255,0.04)',
+                      border: '1.5px solid rgba(255,68,102,0.3)',
+                      borderRadius: 11, padding: '12px 15px', marginBottom: 8,
+                      color: C.text, fontFamily: 'Cinzel, serif', fontSize: 12,
+                    }}
+                  />
+                  <textarea
+                    value={reporteMensaje}
+                    onChange={e => setReporteMensaje(e.target.value)}
+                    placeholder="Ej: Me registré pero nunca me llegó el correo con mi resultado..."
+                    rows={3}
+                    maxLength={500}
+                    style={{
+                      width: '100%', background: 'rgba(255,255,255,0.04)',
+                      border: '1.5px solid rgba(255,68,102,0.3)',
+                      borderRadius: 11, padding: '12px 15px', marginBottom: 10,
+                      color: C.text, fontFamily: 'Crimson Text, serif', fontSize: 13,
+                      resize: 'vertical', minHeight: 70,
+                    }}
+                  />
+                  <button
+                    onClick={enviarReporte}
+                    disabled={enviandoReporte}
+                    style={{
+                      width: '100%', padding: '12px 0', borderRadius: 11, border: 'none',
+                      cursor: enviandoReporte ? 'not-allowed' : 'pointer',
+                      background: enviandoReporte ? 'rgba(255,68,102,0.15)' : 'linear-gradient(135deg,#ff4466,#a8203a)',
+                      color: '#fff',
+                      fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 1, fontWeight: 900,
+                    }}
+                  >
+                    {enviandoReporte ? 'ENVIANDO...' : 'ENVIAR REPORTE'}
+                  </button>
+                  {errReporte && (
+                    <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 12, color: C.red, marginTop: 8, textAlign: 'center', fontStyle: 'italic' }}>
+                      ⚠ {errReporte}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {historial.length > 0 && <HistorialRondas historial={historial} onToggle={() => setMostrarHistorial(v => !v)} mostrar={mostrarHistorial} />}
+      </div>
+    </div>
+  );
+}
+
+// Helper — no es clamp() de CSS, solo para tamaño del Maestro en registro
+function clamp(min, max) {
+  try {
+    const vw = window.innerWidth;
+    return Math.min(max, Math.max(min, vw * 0.32));
+  } catch { return min; }
 }
