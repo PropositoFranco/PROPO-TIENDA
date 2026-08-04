@@ -98,6 +98,9 @@ export default function SorteoAdminPage() {
   const [qrFisicos,     setQrFisicos]     = useState([]);
   const [loadingQrF,    setLoadingQrF]    = useState(false);
   const [qrFModal,      setQrFModal]      = useState(null); // { id } para descargar QR
+  const [reportes,      setReportes]      = useState([]);
+  const [loadingReportes, setLoadingReportes] = useState(false);
+  const [actualizandoReporte, setActualizandoReporte] = useState(null); // id del reporte que se está guardando
 
   useEffect(() => {
     const handler = () => {
@@ -133,6 +136,33 @@ export default function SorteoAdminPage() {
   }, []);
 
   useEffect(() => { cargarEventos(); }, [cargarEventos]);
+  useEffect(() => { cargarReportes(); }, [cargarReportes]);
+
+  // ── Cargar reportes de problemas de usuarios ─────────────────────────────────
+  const cargarReportes = useCallback(async () => {
+    setLoadingReportes(true);
+    const { data } = await supabase
+      .from('sorteo_reportes')
+      .select(`
+        id, email, mensaje, status, created_at,
+        sorteo_participantes (
+          nombre, es_ganador, tipo_premio, cupon_aceptado,
+          sorteos ( numero_ronda, estado, sorteo_eventos ( nombre ) )
+        )
+      `)
+      .order('created_at', { ascending: false });
+    setReportes(data || []);
+    setLoadingReportes(false);
+  }, []);
+
+  const marcarReporteAtendido = async (id, nuevoStatus) => {
+    setActualizandoReporte(id);
+    const { error } = await supabase.from('sorteo_reportes').update({ status: nuevoStatus }).eq('id', id);
+    setActualizandoReporte(null);
+    if (error) { alert('No se pudo actualizar. Intenta de nuevo.'); return; }
+    setReportes(prev => prev.map(r => r.id === id ? { ...r, status: nuevoStatus } : r));
+  };
+
 
   // ── Cargar rondas de un evento ───────────────────────────────────────────────
   const cargarRondas = useCallback(async (eventoId) => {
@@ -368,6 +398,7 @@ export default function SorteoAdminPage() {
             { id: 'qrfisicos', label: '📦 QR FÍSICOS' },
             { id: 'metricas',  label: '📊 MÉTRICAS' },
             { id: 'ltv',       label: '💰 LTV' },
+            { id: 'reportes',  label: `🆘 REPORTES${reportes.filter(r => r.status === 'pendiente').length > 0 ? ` (${reportes.filter(r => r.status === 'pendiente').length})` : ''}` },
           ].map(tab => (
             <button
               key={tab.id}
@@ -384,6 +415,7 @@ export default function SorteoAdminPage() {
                     setLoadingQrF(false);
                   });
                 }
+                if (tab.id === 'reportes') cargarReportes();
               }}
               style={{
                 padding: '9px 20px',
@@ -1226,6 +1258,132 @@ export default function SorteoAdminPage() {
                         style={{ flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 7, color: '#FFFFFF', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
                       >
                         BLANCO
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══ TAB: REPORTES ══ */}
+      {tabActiva === 'reportes' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.gold, margin: 0 }}>
+              🆘 REPORTES DE USUARIOS
+            </h2>
+            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.muted, letterSpacing: 1 }}>
+              {reportes.filter(r => r.status === 'pendiente').length} pendiente(s) · {reportes.length} total
+            </span>
+          </div>
+
+          {loadingReportes ? (
+            <p style={{ color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 11, textAlign: 'center', padding: 30 }}>Cargando…</p>
+          ) : reportes.length === 0 ? (
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 40, textAlign: 'center' }}>
+              <div style={{ fontSize: 28, marginBottom: 10 }}>✨</div>
+              <p style={{ color: C.muted, fontFamily: 'Crimson Text, serif', fontSize: 14, fontStyle: 'italic' }}>
+                No hay reportes por ahora.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {reportes.map(r => {
+                const p = r.sorteo_participantes;
+                const pendiente = r.status === 'pendiente';
+                return (
+                  <div key={r.id} style={{
+                    background: C.card,
+                    border: `1.5px solid ${pendiente ? 'rgba(255,68,102,0.4)' : C.border}`,
+                    borderRadius: 14, padding: '18px 20px',
+                    display: 'flex', flexDirection: 'column', gap: 12,
+                    animation: 'fadeIn .3s ease both',
+                  }}>
+                    {/* Encabezado: estado + fecha */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                      <span style={{
+                        fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, fontWeight: 900,
+                        color: pendiente ? C.red : C.green,
+                        border: `1px solid ${pendiente ? 'rgba(255,68,102,0.35)' : 'rgba(68,255,136,0.3)'}`,
+                        borderRadius: 20, padding: '4px 12px',
+                      }}>
+                        {pendiente ? '🔴 PENDIENTE' : '🟢 ATENDIDO'}
+                      </span>
+                      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 1 }}>
+                        {new Date(r.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+
+                    {/* Correo + contexto de su registro */}
+                    <div>
+                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: C.text }}>
+                        {p?.nombre || '— Nombre no disponible —'}
+                      </div>
+                      <div style={{ fontFamily: 'monospace', fontSize: 11, color: C.goldDim, marginTop: 2 }}>
+                        {r.email}
+                      </div>
+                    </div>
+
+                    {/* Contexto de su participación, si se encontró */}
+                    {p ? (
+                      <div style={{
+                        display: 'flex', flexWrap: 'wrap', gap: 8,
+                        fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 0.5,
+                      }}>
+                        <span style={{ background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '4px 10px', color: C.gold }}>
+                          {p.sorteos?.sorteo_eventos?.nombre || 'Evento —'}
+                        </span>
+                        <span style={{ background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '4px 10px', color: C.muted }}>
+                          Ronda #{p.sorteos?.numero_ronda ?? '—'}
+                        </span>
+                        <span style={{ background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '4px 10px', color: p.es_ganador ? C.green : C.muted }}>
+                          {p.sorteos?.estado !== 'completado' ? 'Sorteo pendiente' : p.es_ganador ? `🏆 Ganó (${p.tipo_premio || 'premio'})` : 'No ganó'}
+                        </span>
+                        <span style={{ background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '4px 10px', color: p.cupon_aceptado ? C.green : C.muted }}>
+                          {p.cupon_aceptado ? 'Cupón aceptado' : 'Cupón sin aceptar'}
+                        </span>
+                      </div>
+                    ) : (
+                      <div style={{
+                        background: 'rgba(255,68,102,0.08)', border: '1px solid rgba(255,68,102,0.25)',
+                        borderRadius: 8, padding: '8px 12px',
+                        fontFamily: 'Crimson Text, serif', fontSize: 12, color: 'rgba(255,150,170,0.9)', fontStyle: 'italic',
+                      }}>
+                        ⚠ No encontramos ningún registro de sorteo con este correo — puede que nunca haya completado su registro.
+                      </div>
+                    )}
+
+                    {/* Mensaje del usuario */}
+                    <div style={{
+                      background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '12px 14px',
+                      fontFamily: 'Crimson Text, serif', fontSize: 14, color: C.text, lineHeight: 1.5,
+                    }}>
+                      "{r.mensaje}"
+                    </div>
+
+                    {/* Acciones */}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => copiarAlPortapapeles(r.email)}
+                        style={{ flex: 1, padding: '9px 0', background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
+                      >
+                        COPIAR CORREO
+                      </button>
+                      <button
+                        onClick={() => marcarReporteAtendido(r.id, pendiente ? 'atendido' : 'pendiente')}
+                        disabled={actualizandoReporte === r.id}
+                        style={{
+                          flex: 1, padding: '9px 0', borderRadius: 8, border: 'none',
+                          cursor: actualizandoReporte === r.id ? 'not-allowed' : 'pointer',
+                          background: pendiente ? 'linear-gradient(135deg,#44ff88,#1a9a52)' : 'rgba(255,255,255,0.08)',
+                          color: pendiente ? '#07040f' : C.muted,
+                          fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, fontWeight: 900,
+                        }}
+                      >
+                        {actualizandoReporte === r.id ? '...' : pendiente ? '✓ MARCAR ATENDIDO' : '↺ REABRIR'}
                       </button>
                     </div>
                   </div>
