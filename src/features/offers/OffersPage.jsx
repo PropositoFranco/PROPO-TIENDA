@@ -475,7 +475,12 @@ export default function OffersPage() {
                           </span>
                         </div>
                         <button className="oc-btn"
-                          onClick={() => pkg.stripe_payment_link && window.open(pkg.stripe_payment_link, '_blank')}
+                          onClick={() => {
+  if (!pkg.stripe_payment_link) return;
+  const url = new URL(pkg.stripe_payment_link);
+  if (user?.email) url.searchParams.set('prefilled_email', user.email);
+  window.open(url.toString(), '_blank');
+}}
                           disabled={!pkg.stripe_payment_link}>
                           <span className="oc-btn-shine" />🪙 COMPRAR
                         </button>
