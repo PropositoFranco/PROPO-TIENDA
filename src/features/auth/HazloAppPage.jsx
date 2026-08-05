@@ -25,7 +25,17 @@ export default function HazloAppPage() {
   function handleContinue() {
     if (!ended || loading) return;
     setLoading(true);
-    navigate('/hub');
+    (async () => {
+      const { useAuthStore } = await import('../store/useAuthStore');
+      const { supabase } = await import('../services/supabase');
+      const user = useAuthStore.getState().user;
+      if (user?.id) {
+        await supabase.from('profiles').update({ tutorial_completed: true }).eq('id', user.id);
+        // Refrescar el profile en el store para que ProtectedRoute lo vea al instante
+        await useAuthStore.getState().loadProfile?.();
+      }
+      navigate('/hub');
+    })();
   }
 
   return (
