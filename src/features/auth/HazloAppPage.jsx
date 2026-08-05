@@ -115,7 +115,7 @@ export default function HazloAppPage() {
         }}
       >
         {loading ? 'Entrando...' : 'Entrar al Templo →'}
-      </button>
+      </button> 
 
       <p style={{
         marginTop: 12, fontSize: 11,

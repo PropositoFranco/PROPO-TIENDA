@@ -130,6 +130,18 @@ export default function RegisterPage() {
           // la cuenta y la sesión sí existan.
           if (signUpData.session) {
             useAuthStore.getState().setSession(signUpData.session);
+          } else {
+            // ── Supabase no devolvió sesión en el signUp (email ya existía
+            // o "Confirm email" activo). Forzamos login inmediato con la
+            // misma contraseña recién creada — mismo patrón que la línea
+            // ~398 de este archivo.
+            const { data: fallbackAuth, error: fallbackErr } =
+              await supabase.auth.signInWithPassword({ email, password });
+            if (fallbackErr || !fallbackAuth?.session) {
+              pushToast('Cuenta creada, pero no se pudo iniciar sesión automáticamente. Intenta iniciar sesión manualmente.');
+              return;
+            }
+            useAuthStore.getState().setSession(fallbackAuth.session);
           }
 
           const { data: accessCodeRow } = await supabase
