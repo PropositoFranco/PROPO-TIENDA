@@ -95,6 +95,17 @@ export default function RegisterPage() {
           }
         }
 
+        // ── Respaldo de atribución: si el navegador nunca visitó una URL
+        // con ?aliado=slug (por eso localStorage.pending_aliado_slug está
+        // vacío), se recupera desde la orden real del pago. No pisa nada
+        // si ya existe un slug capturado por el camino normal.
+        let aliadoSlugDesdeOrden = null;
+        if (sessionId && !localStorage.getItem('pending_aliado_slug')) {
+          const { data: slugData } = await supabase
+            .rpc('get_aliado_slug_by_session', { p_session_id: sessionId });
+          aliadoSlugDesdeOrden = slugData || null;
+        }
+
         if (!userId) {
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email,
@@ -189,7 +200,7 @@ export default function RegisterPage() {
             referral_code: triggerData?.referral_code ||
               Array.from({ length: 6 }, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random() * 36)]).join(''),
             referred_by: resolvedReferredBy,
-            aliado_slug_registro: localStorage.getItem('pending_aliado_slug') || null,
+            aliado_slug_registro: localStorage.getItem('pending_aliado_slug') || aliadoSlugDesdeOrden || null,
           }, { onConflict: 'id' });
           if (error) { pushToast('Error al guardar perfil'); return; }
           // Activar membresía si tiene pago en access_codes con su email
@@ -347,7 +358,7 @@ navigate('/bienvenido', { replace: true });
                   role: 'templario',
                   referred_by: referredBy,
                   referral_code: referralCode,
-                  aliado_slug_registro: localStorage.getItem('pending_aliado_slug') || null,
+                  aliado_slug_registro: localStorage.getItem('pending_aliado_slug') || aliadoSlugDesdeOrden || null,
                 },
             { onConflict: 'id' }
           );

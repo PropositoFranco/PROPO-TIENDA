@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function HazloAppPage() {
+  const navigate = useNavigate();
   const iframeRef         = useRef(null);
   const [ended,  setEnded]  = useState(false);
   const [loading, setLoading] = useState(false);
@@ -23,7 +25,7 @@ export default function HazloAppPage() {
   function handleContinue() {
     if (!ended || loading) return;
     setLoading(true);
-    window.location.href = `${window.location.origin}/hub`;
+    navigate('/hub');
   }
 
   return (

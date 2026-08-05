@@ -55,10 +55,25 @@ export function ProtectedRoute() {
     </div>
   );
 
-  // Si pasaron 5 seg y no llegó el profile, intentar de nuevo
+  // Si pasaron 5 seg y no llegó el profile, reintentar cargarlo —
+  // NUNCA expulsar a /login aquí: user y session ya son válidos,
+  // solo el profile está tardando (típico tras un reload en frío).
   if (!profile && profileTimeout) {
     useAuthStore.getState().loadProfile();
-    return <Navigate to="/login" replace />;
+    return (
+      <div style={{
+        position: 'fixed', inset: 0,
+        background: '#04020e',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <div style={{
+          fontFamily: 'Cinzel, serif', fontSize: '12px',
+          letterSpacing: '4px', color: 'rgba(212,175,55,0.5)',
+          animation: 'pulse 1.5s ease-in-out infinite',
+        }}>✦ CARGANDO ✦</div>
+        <style>{`@keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1} }`}</style>
+      </div>
+    );
   }
 
   // Admin siempre pasa — sin importar tutorial_completed
