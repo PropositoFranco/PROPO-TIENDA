@@ -658,6 +658,12 @@ export default function SorteoPage() {
   const utmSource   = searchParams.get('utm_source') || null;
   const utmMedium   = searchParams.get('utm_medium') || (utmSource ? 'social' : null);
 
+  useEffect(() => {
+    if (aliadoSlug) {
+      localStorage.setItem('pending_aliado_slug', aliadoSlug);
+    }
+  }, [aliadoSlug]);
+
   const [screen, setScreenRaw] = useState(SCREEN.LOADING);
   const screenRef    = useRef(SCREEN.LOADING);
   const miEmailRef   = useRef('');

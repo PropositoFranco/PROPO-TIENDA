@@ -78,6 +78,23 @@ export default function RegisterPage() {
         const { templarioName, email, password, avatar } = event.data;
         const userId = session?.user?.id;
 
+        // ── SELLO: si viene de un pago (session_id en la URL), el correo
+        // del registro DEBE coincidir con el correo real de Stripe.
+        // Validado en servidor vía RPC — no depende de que el campo se
+        // haya quedado readOnly en el navegador.
+        if (sessionId) {
+          const { data: pagoReal } = await supabase
+            .rpc('get_access_code_by_session', { p_session_id: sessionId })
+            .maybeSingle();
+          if (
+            pagoReal?.user_email &&
+            pagoReal.user_email.trim().toLowerCase() !== email.trim().toLowerCase()
+          ) {
+            pushToast('⚠️ El correo no coincide con el de tu pago. Usa el mismo correo con el que pagaste.');
+            return;
+          }
+        }
+
         if (!userId) {
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email,
