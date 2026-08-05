@@ -221,12 +221,14 @@ export default function RegisterPage() {
           if (error) { pushToast('Error al guardar perfil'); return; }
           // Activar membresía si tiene pago en access_codes con su email
 try {
-  const { data: paid } = await supabase
+  const { data: paidRows } = await supabase
     .from('access_codes')
     .select('id, amount_paid, membership_type, duration_months, includes_pack1, includes_pack2')
     .eq('user_email', email)
     .eq('is_used', false)
-    .maybeSingle();
+    .order('created_at', { ascending: false })
+    .limit(1);
+  const paid = paidRows?.[0] || null;
 
   if (paid) {
     const mType = paid.membership_type || 'base';
