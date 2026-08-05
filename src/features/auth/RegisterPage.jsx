@@ -117,32 +117,27 @@ export default function RegisterPage() {
               },
             },
           });
-          if (signUpError || !signUpData?.user) {
-            pushToast('Error al crear cuenta. Intenta de nuevo.');
-            return;
-          }
-          const newUserId = signUpData.user.id;
 
-          // ── FIX: sincronizar la sesión nueva en el store de inmediato.
-          // Sin esto, useAuthStore.user sigue en null después del registro,
-          // loadProfile() no hace nada (if (!user) return), y la primera
-          // ruta protegida que se toque (ej. /hub) expulsa a /login aunque
-          // la cuenta y la sesión sí existan.
-          if (signUpData.session) {
-            useAuthStore.getState().setSession(signUpData.session);
-          } else {
-            // ── Supabase no devolvió sesión en el signUp (email ya existía
-            // o "Confirm email" activo). Forzamos login inmediato con la
-            // misma contraseña recién creada — mismo patrón que la línea
-            // ~398 de este archivo.
+          let newUserId;
+
+          if (signUpError || !signUpData?.user) {
+            // ── Correo ya registrado (422 "User already registered") u otro
+            // error de signUp: intentamos login directo con esas credenciales
+            // en vez de tronar el flujo. Si el login falla también, ahí sí
+            // es un error real (ej. contraseña incorrecta).
             const { data: fallbackAuth, error: fallbackErr } =
               await supabase.auth.signInWithPassword({ email, password });
             if (fallbackErr || !fallbackAuth?.session) {
-              pushToast('Cuenta creada, pero no se pudo iniciar sesión automáticamente. Intenta iniciar sesión manualmente.');
+              pushToast('Ese correo ya tiene una cuenta y la contraseña no coincide. Inicia sesión manualmente o usa otro correo.');
               return;
             }
             useAuthStore.getState().setSession(fallbackAuth.session);
+            newUserId = fallbackAuth.user.id;
+          } else {
+            newUserId = signUpData.user.id;
           }
+
+          
 
           const { data: accessCodeRow } = await supabase
             .from('access_codes')
