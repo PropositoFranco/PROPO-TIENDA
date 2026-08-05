@@ -23,7 +23,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { usePlayerStore } from '../../store/usePlayerStore';
 import { supabase } from '../../services/supabase';
 // ─── Tarjeta del módulo semanal (hero) ───────────────────────────────────────
-const CurrentModuleHero = ({ module, isCompleted, onClick, isMobile }) => {
+const CurrentModuleHero = ({ module, isCompleted, onClick, isMobile, weekNumber }) => {
   const cfg = MODULE_TYPE_CONFIG[module.type];
   return (
     <Link
@@ -73,7 +73,7 @@ const CurrentModuleHero = ({ module, isCompleted, onClick, isMobile }) => {
           letterSpacing: isMobile ? '0.1em' : '0.15em',
           textTransform: 'uppercase',
           color: cfg.color,
-        }}>Módulo activo · Semana {module.week}</span>
+        }}>Módulo activo · Semana {weekNumber}</span>
       </div>
 
       {/* Icono grande — se oculta en móvil, no aporta y quita espacio al texto */}
@@ -1311,6 +1311,7 @@ const onRitualCompleto = useCallback(async () => {
             isCompleted={isCurrentCompleted}
             onClick={() => setTourStep(0)}
             isMobile={isMobile}
+            weekNumber={openedCount}
           />
         </div>
       )}
