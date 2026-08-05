@@ -3277,8 +3277,8 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
       const supabaseKey = localStorage.getItem('_sb_key');
       if (!supabaseUrl || !supabaseKey || !window.supabase) return;
       sb = window.supabase.createClient(supabaseUrl, supabaseKey, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
-      });
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+});
       const { data: { session } } = await sb.auth.getSession();
       if (!session) return;
       userId = session.user.id;
