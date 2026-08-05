@@ -123,6 +123,15 @@ export default function RegisterPage() {
           }
           const newUserId = signUpData.user.id;
 
+          // ── FIX: sincronizar la sesión nueva en el store de inmediato.
+          // Sin esto, useAuthStore.user sigue en null después del registro,
+          // loadProfile() no hace nada (if (!user) return), y la primera
+          // ruta protegida que se toque (ej. /hub) expulsa a /login aunque
+          // la cuenta y la sesión sí existan.
+          if (signUpData.session) {
+            useAuthStore.getState().setSession(signUpData.session);
+          }
+
           const { data: accessCodeRow } = await supabase
             .from('access_codes')
             .select('referral_code')
