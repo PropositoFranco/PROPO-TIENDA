@@ -528,11 +528,18 @@ nav {
 
           {/* 📜 CRÓNICAS DEL TEMPLO */}
           <div
-            onClick={() => navigate('/cronicas')}
+            onClick={() => {
+              if (hubLocked) {
+                setCronHov(true);
+                setTimeout(() => setCronHov(false), 2500);
+                return;
+              }
+              navigate('/cronicas');
+            }}
             onMouseEnter={() => setCronHov(true)}
             onMouseLeave={() => setCronHov(false)}
             style={{
-              position:'relative', cursor:'pointer',
+              position:'relative', cursor: hubLocked ? 'not-allowed' : 'pointer',
               display:'flex', alignItems:'center', justifyContent:'center',
               width: window.innerWidth < 1024 ? 34 : 48,
               height: window.innerWidth < 1024 ? 34 : 48,
@@ -544,7 +551,8 @@ nav {
               boxShadow: cronicasUnseen > 0
                 ? (cronHov ? '0 0 24px rgba(212,175,55,0.6), 0 0 48px rgba(212,175,55,0.2)' : '0 0 12px rgba(212,175,55,0.2)')
                 : 'none',
-              opacity: cronicasUnseen > 0 ? 1 : 0.42,
+              opacity: hubLocked ? 0.42 : (cronicasUnseen > 0 ? 1 : 0.42),
+              filter: hubLocked ? 'grayscale(0.6) brightness(0.6)' : 'none',
               transition:'all 0.3s ease',
             }}
           >
@@ -585,7 +593,9 @@ nav {
                 animation:'rewardTooltipIn 0.2s ease',
                 zIndex:999,
               }}>
-                ✦ Crónicas del Templo{cronicasUnseen > 0 ? ` · ${cronicasUnseen} nueva${cronicasUnseen > 1 ? 's' : ''}` : ''}
+                {hubLocked
+                  ? '📋 Contesta tu evaluación abajo para reclamar'
+                  : `✦ Crónicas del Templo${cronicasUnseen > 0 ? ` · ${cronicasUnseen} nueva${cronicasUnseen > 1 ? 's' : ''}` : ''}`}
               </div>
             )}
           </div>
@@ -593,11 +603,18 @@ nav {
           {/* 🎁 COFRE DE RECOMPENSAS */}
           {unclaimedCount > 0 && (
             <div
-              onClick={() => navigate('/profile')}
+              onClick={() => {
+                if (hubLocked) {
+                  setChestHov(true);
+                  setTimeout(() => setChestHov(false), 2500);
+                  return;
+                }
+                navigate('/profile');
+              }}
               onMouseEnter={() => setChestHov(true)}
               onMouseLeave={() => setChestHov(false)}
               style={{
-                position:'relative', cursor:'pointer',
+                position:'relative', cursor: hubLocked ? 'not-allowed' : 'pointer',
                 display:'flex', alignItems:'center', justifyContent:'center',
                 width: window.innerWidth < 1024 ? 34 : 48,
                 height: window.innerWidth < 1024 ? 34 : 48,
@@ -609,6 +626,8 @@ nav {
                 boxShadow: chestHov
                   ? '0 0 24px rgba(212,175,55,0.6), 0 0 48px rgba(212,175,55,0.2)'
                   : '0 0 12px rgba(212,175,55,0.2)',
+                filter: hubLocked ? 'grayscale(0.6) brightness(0.6)' : 'none',
+                opacity: hubLocked ? 0.55 : 1,
                 transition:'all 0.3s ease',
               }}
             >
@@ -651,7 +670,9 @@ nav {
                   animation:'rewardTooltipIn 0.2s ease',
                   zIndex:999,
                 }}>
-                  ✦ {unclaimedCount} recompensa{unclaimedCount > 1 ? 's' : ''} sin reclamar
+                  {hubLocked
+                    ? '📋 Contesta tu evaluación abajo para reclamar'
+                    : `✦ ${unclaimedCount} recompensa${unclaimedCount > 1 ? 's' : ''} sin reclamar`}
                 </div>
               )}
             </div>
@@ -673,7 +694,7 @@ nav {
 
   {/* Botón + → /offers */}
   <button
-    onClick={() => navigate('/offers')}
+    onClick={() => { if (!hubLocked) navigate('/offers'); }}
     style={{
       height: window.innerWidth < 1024 ? 34 : 44,
       width:  window.innerWidth < 1024 ? 26 : 32,
@@ -681,12 +702,14 @@ nav {
       border: '1.5px solid rgba(212,175,55,0.5)',
       borderLeft: 'none',
       borderRadius: '0 10px 10px 0',
-      cursor: 'pointer',
+      cursor: hubLocked ? 'not-allowed' : 'pointer',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       color: '#f5d06e',
       fontSize: window.innerWidth < 1024 ? 16 : 20,
       fontWeight: 700,
       lineHeight: 1,
+      opacity: hubLocked ? 0.45 : 1,
+      filter: hubLocked ? 'grayscale(0.6) brightness(0.6)' : 'none',
       transition: 'all 0.2s',
       flexShrink: 0,
     }}
