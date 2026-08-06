@@ -184,7 +184,13 @@ set({ loading: false });
         if (!error && data) {
           set({ profile: data, isAdmin: data.is_admin === true });
 
-          supabase.from('profiles').update({ last_login_date: new Date().toISOString() }).eq('id', user.id).then(() => {});
+          // Solo actualiza last_login_date si pasaron +5 min desde el último registro.
+          // Esto evita el ciclo infinito: actualizar el perfil disparaba el listener de
+          // Realtime, que volvía a llamar loadProfile(), que volvía a actualizar el perfil...
+          const lastLogin = data.last_login_date ? new Date(data.last_login_date).getTime() : 0;
+          if (Date.now() - lastLogin > 5 * 60 * 1000) {
+            supabase.from('profiles').update({ last_login_date: new Date().toISOString() }).eq('id', user.id).then(() => {});
+          }
 
           const playerStore = (await import('./usePlayerStore')).usePlayerStore.getState();
 
