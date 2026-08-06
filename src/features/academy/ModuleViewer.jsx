@@ -1746,19 +1746,8 @@ const ModuleViewer = () => {
         {nextEvalDate && <RewardBadge icon="📅" value={nextEvalDate} label="Próx. evaluación" />}
       </div>
 
-      {/* Progreso global — sticky para que no se pierda al hacer scroll en móvil */}
-      <div style={{
-        marginBottom: '2.5rem',
-        position: 'sticky',
-        top: '0.5rem',
-        zIndex: 40,
-        background: 'rgba(10,6,16,0.92)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        borderRadius: '0.75rem',
-        padding: '0.6rem 0.75rem',
-        border: '1px solid rgba(255,255,255,0.06)',
-      }}>
+      {/* Progreso global — se ve una vez arriba, no persigue el scroll */}
+      <div style={{ marginBottom: '2.5rem' }}>
         <ModuleProgressBar />
       </div>
 
