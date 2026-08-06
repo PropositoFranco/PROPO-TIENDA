@@ -1992,7 +1992,7 @@
       }
     }
   );
-  const ADMIN_PASS = 'Templo2026Admin!';
+  const ADMIN_LOGIN_URL = 'https://hdwzhwuhlrtrmhnecypm.supabase.co/functions/v1/admin-login';
 
   /* ══ BONUSES ══ */
   let _editingBonusId = null;
@@ -2065,17 +2065,28 @@
   });
   window.checkLogin = async function() {
     const val = document.getElementById('adminPass').value;
-    if (val === ADMIN_PASS) {
-      await supabaseClient.auth.signInWithPassword({
-        email: 'daff11@live.com.mx',
-        password: 'Fronton1.'
+    const err = document.getElementById('loginErr');
+    try {
+      const resp = await fetch(ADMIN_LOGIN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: val })
       });
+      const result = await resp.json();
+      if (!resp.ok || !result.token_hash) {
+        throw new Error(result.error || 'Contraseña incorrecta');
+      }
+      const { error: otpError } = await supabaseClient.auth.verifyOtp({
+        token_hash: result.token_hash,
+        type: 'magiclink'
+      });
+      if (otpError) throw otpError;
+
       sessionStorage.setItem('admin_logged', '1');
       document.getElementById('loginGate').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       window.parent.postMessage({ type: 'ready' }, '*');
-    } else {
-      const err = document.getElementById('loginErr');
+    } catch (e) {
       err.textContent = 'Contraseña incorrecta';
       setTimeout(() => { err.textContent = ''; }, 2500);
       document.getElementById('adminPass').value = '';
@@ -2083,6 +2094,7 @@
   }
 
   window.logout = async function() {
+    await supabaseClient.auth.signOut();
     sessionStorage.removeItem('admin_logged');
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('loginGate').style.display = 'flex';
@@ -2093,16 +2105,15 @@
     if (e.key === 'Enter') checkLogin();
   });
 
-  if (sessionStorage.getItem('admin_logged') === '1') {
-    supabaseClient.auth.signInWithPassword({
-      email: 'daff11@live.com.mx',
-      password: 'Fronton1.'
-    }).then(() => {
+  (async function restoreAdminSession() {
+    const { data } = await supabaseClient.auth.getSession();
+    if (data?.session) {
+      sessionStorage.setItem('admin_logged', '1');
       document.getElementById('loginGate').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       window.parent.postMessage({ type: 'ready' }, '*');
-    });
-  }
+    }
+  })();
 
   /* ══════════════════════════════════════
     TOAST
@@ -4919,6 +4930,17 @@
   function setMembershipVip(userId) {
     if (!confirm('¿Marcar como VIP permanente?')) return;
     window.parent.postMessage({ type: 'set-membership-vip', userId }, '*');
+  }
+
+  function quickDeposit(email) {
+    const amount = prompt('¿Cuántos cristales depositar a ' + email + '?');
+    if (!amount || isNaN(amount) || parseInt(amount) <= 0) return;
+    window.parent.postMessage({ type: 'deposit', email, amount: parseInt(amount) }, '*');
+  }
+
+  function revokeAccess(email) {
+    if (!confirm('¿Revocar el acceso de ' + email + '? Ya no podrá entrar a la app.')) return;
+    window.parent.postMessage({ type: 'revoke-access', email }, '*');
   }
 
   function revokeMembership(userId) {
