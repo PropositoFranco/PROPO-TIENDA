@@ -6,6 +6,7 @@ export const adminService = {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
+      .eq('is_test_user', false)
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data;
@@ -130,8 +131,8 @@ export const adminService = {
   // ── Stats ──
   getDashboardStats: async () => {
     const [users, cristales, orders, missions] = await Promise.all([
-      supabase.from('profiles').select('id').eq('is_active', true),
-      supabase.from('profiles').select('cristales'),
+      supabase.from('profiles').select('id').eq('is_active', true).eq('is_test_user', false),
+      supabase.from('profiles').select('cristales').eq('is_test_user', false),
       supabase.from('orders').select('id'),
       supabase.from('missions').select('id').eq('is_active', true),
     ]);

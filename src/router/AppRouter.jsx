@@ -9,6 +9,7 @@ import RewardClaimGate from '../features/academy/RewardClaimGate';
 import LoginPage from '../features/auth/LoginPage';
 import RegisterPage from '../features/auth/RegisterPage';
 import BienvenidoPage from '../features/auth/BienvenidoPage';
+import BeneficiosPage from '../features/auth/BeneficiosPage';
 import TutorialPage from '../features/auth/TutorialPage';
 import HazloAppPage from '../features/auth/HazloAppPage';
 import TerminosPage from '../features/offers/TerminosPage';
@@ -131,6 +132,7 @@ export default function AppRouter() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/bienvenido" element={<BienvenidoPage />} />
+          <Route path="/beneficios" element={<BeneficiosPage />} />
           <Route path="/tutorial" element={<TutorialPage />} />
         <Route path="/canjear" element={<CanjeadorPage />} />
           <Route path="/hazloapp" element={<HazloAppPage />} />

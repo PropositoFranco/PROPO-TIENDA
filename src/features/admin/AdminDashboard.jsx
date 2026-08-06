@@ -401,20 +401,20 @@ const loadKpis = async () => {
       { data: evidences7d },
       { count: totalPromoRedeemed },
     ] = await Promise.all([
-      supabase.from('profiles').select('id', { count:'exact', head:true }),
-      supabase.from('profiles').select('id', { count:'exact', head:true }).gte('last_login_date', startOfWeek.toISOString()),
-      supabase.from('profiles').select('id', { count:'exact', head:true }).gte('last_login_date', startOfDay.toISOString()),
-      supabase.from('profiles').select('id', { count:'exact', head:true }).gte('last_login_date', startOfYesterday.toISOString()).lt('last_login_date', startOfDay.toISOString()),
-      supabase.from('profiles').select('id', { count:'exact', head:true }).gte('created_at', startOfWeek.toISOString()),
-      supabase.from('profiles').select('id', { count:'exact', head:true }).gte('created_at', startOf30d.toISOString()),
-      supabase.from('profiles').select('id', { count:'exact', head:true }).gte('created_at', startOfDay.toISOString()),
-      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('membership_status', 'active'),
+      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false),
+      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false).gte('last_login_date', startOfWeek.toISOString()),
+      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false).gte('last_login_date', startOfDay.toISOString()),
+      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false).gte('last_login_date', startOfYesterday.toISOString()).lt('last_login_date', startOfDay.toISOString()),
+      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false).gte('created_at', startOfWeek.toISOString()),
+      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false).gte('created_at', startOf30d.toISOString()),
+      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false).gte('created_at', startOfDay.toISOString()),
+      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false).eq('membership_status', 'active'),
       supabase.from('user_missions').select('id', { count:'exact', head:true }).gte('completed_at', startOf7d.toISOString()),
       supabase.from('orders').select('id', { count:'exact', head:true }).gte('created_at', startOfDay.toISOString()),
       supabase.from('orders').select('id', { count:'exact', head:true }),
       supabase.from('referrals').select('id', { count:'exact', head:true }).eq('status', 'rewarded'),
-      supabase.from('profiles').select('rank').limit(300),
-      supabase.from('profiles').select('templario_name, level, xp, last_login_date').gte('last_login_date', startOfDay.toISOString()).order('xp', { ascending:false }).limit(5),
+      supabase.from('profiles').select('rank').eq('is_test_user', false).limit(300),
+      supabase.from('profiles').select('templario_name, level, xp, last_login_date').eq('is_test_user', false).gte('last_login_date', startOfDay.toISOString()).order('xp', { ascending:false }).limit(5),
       // Top compradores (productos más canjeados por usuario)
       supabase.from('orders').select('user_id').gte('created_at', startOf30d.toISOString()).limit(500),
       // Top usuarios por misiones completadas
@@ -441,6 +441,7 @@ const loadKpis = async () => {
     // Logins por día — últimos 7 días
     const { data: loginDays } = await supabase
       .from('profiles').select('last_login_date')
+      .eq('is_test_user', false)
       .gte('last_login_date', startOf7d.toISOString()).not('last_login_date', 'is', null);
     const dayBuckets = {};
     for (let i = 6; i >= 0; i--) {

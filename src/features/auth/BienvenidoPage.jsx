@@ -972,7 +972,7 @@ export default function BienvenidoPage() {
 
   const redirectUrl = refCode
     ? `${window.location.origin}/register?ref=${refCode}`
-    : `${window.location.origin}/tutorial`;
+    : `${window.location.origin}/beneficios`;
 
   const [userCode,    setUserCode]    = useState(null);
   const [codeLoading, setCodeLoading] = useState(true);
