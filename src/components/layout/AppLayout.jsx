@@ -401,13 +401,7 @@ nav {
             exit={{ x: -280 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
             className="sidebar-epic"
-            style={{
-              zIndex: 500,
-              pointerEvents: hubLocked ? 'none' : 'auto',
-              filter: hubLocked ? 'grayscale(0.55) brightness(0.5)' : 'none',
-              opacity: hubLocked ? 0.45 : 1,
-              transition: 'opacity 0.6s ease, filter 0.6s ease',
-            }}
+            style={{ zIndex: 500 }}
           >
 <style>{`
   @keyframes sweepUp {
@@ -458,7 +452,7 @@ nav {
               ✕ CERRAR MENÚ
             </button>
 
-            <nav style={{flex:1,padding:'2px 6px',display:'flex',flexDirection:'column',gap:0,justifyContent:'flex-start',overflowY:'auto'}}>
+            <nav style={{flex:1,padding:'2px 6px',display:'flex',flexDirection:'column',gap:0,justifyContent:'flex-start',overflowY:'auto',pointerEvents: hubLocked ? 'none' : 'auto',filter: hubLocked ? 'grayscale(0.55) brightness(0.5)' : 'none',opacity: hubLocked ? 0.45 : 1,transition:'opacity 0.6s ease, filter 0.6s ease'}}>
               {NAV_ITEMS.map((item) => {
                 const isActive = location.pathname === item.path;
                 const showAllianceBadge = item.path === '/profile' && allianceSpotlight;
@@ -493,7 +487,7 @@ nav {
 
         {/* Left */}
         <div style={{display:'flex',alignItems:'center',gap:14}}>
-          <button onClick={hubLocked ? undefined : toggleSidebar} style={{fontSize:20,color:'rgba(212,175,55,.7)',background:'none',border:'none',cursor: hubLocked ? 'not-allowed' : 'pointer',transition:'color .2s, opacity .6s ease, filter .6s ease',lineHeight:1,padding:'12px 16px',margin:'-12px -8px -12px -28px',borderRadius:8,minWidth:56,minHeight:68,display:'flex',alignItems:'center',justifyContent:'center',opacity: hubLocked ? 0.45 : 1, filter: hubLocked ? 'grayscale(0.55) brightness(0.5)' : 'none', pointerEvents: hubLocked ? 'none' : 'auto'}}>
+          <button onClick={toggleSidebar} style={{fontSize:20,color:'rgba(212,175,55,.7)',background:'none',border:'none',cursor:'pointer',transition:'color .2s',lineHeight:1,padding:'12px 16px',margin:'-12px -8px -12px -28px',borderRadius:8,minWidth:56,minHeight:68,display:'flex',alignItems:'center',justifyContent:'center'}}>
             {sidebarOpen ? '✕' : '☰'}
           </button>
           <div style={{display:'flex',flexDirection:'column',lineHeight:1}}>
