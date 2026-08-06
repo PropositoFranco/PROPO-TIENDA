@@ -12,19 +12,29 @@ export const adminService = {
     return data;
   },
 
-  // ✅ CORREGIDA: usa incremento atómico para evitar duplicación
+  // ✅ CORREGIDA: se quitó supabase.raw() (no existe en supabase-js) y causaba el crash
   depositCristales: async (userId, amount, reason) => {
-    // Primero, registrar transacción con un ID único para prevenir duplicados (opcional)
     const txId = `${userId}_${Date.now()}_${Math.random()}`;
-    
-    // Actualización atómica: suma directamente en la base de datos
+
+    // Leer el valor actual de cristales
+    const { data: current, error: fetchError } = await supabase
+      .from('profiles')
+      .select('cristales')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    const newTotal = (current.cristales || 0) + amount;
+
+    // Guardar el nuevo total ya calculado
     const { data, error } = await supabase
       .from('profiles')
-      .update({ cristales: supabase.raw('cristales + ?', amount) })
+      .update({ cristales: newTotal })
       .eq('id', userId)
       .select('cristales')
       .single();
-    
+
     if (error) throw error;
     
     // Opcional: guardar log de la transacción (para auditoría)

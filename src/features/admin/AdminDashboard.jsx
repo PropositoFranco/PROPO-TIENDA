@@ -477,16 +477,22 @@ const loadKpis = async () => {
 
     // Productos más vendidos
     const productCount = {};
-(productsSold || []).forEach(order => {
-  try {
-    const parsed = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-    (Array.isArray(parsed) ? parsed : []).forEach(item => {
-      const key = item.product_id?.slice(0, 8) || '?';
-      productCount[key] = (productCount[key] || 0) + 1;
+    (productsSold || []).forEach(order => {
+      try {
+        const parsed = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+        (Array.isArray(parsed) ? parsed : []).forEach(item => {
+          const key = item.product_id || '?';
+          productCount[key] = (productCount[key] || 0) + 1;
+        });
+      } catch (_) {}
     });
-  } catch (_) {}
-});
-    const topProducts = Object.entries(productCount).sort((a,b) => b[1]-a[1]).slice(0,5).map(([title,cnt]) => ({ title, cnt }));
+    const topProductIds = Object.entries(productCount).sort((a,b) => b[1]-a[1]).slice(0,5).map(([id,cnt]) => ({ id, cnt }));
+    let topProducts = topProductIds.map(p => ({ title: p.id.slice(0,8), cnt: p.cnt }));
+    if (topProductIds.length) {
+      const { data: productRows } = await supabase.from('products').select('id, name').in('id', topProductIds.map(p => p.id).filter(id => id !== '?'));
+      const pmap = {}; (productRows || []).forEach(p => { pmap[p.id] = p.name; });
+      topProducts = topProductIds.map(p => ({ title: pmap[p.id] || p.id.slice(0,8), cnt: p.cnt }));
+    }
 
     // Evidencias por día últimos 7d
     const evidenceBuckets = {};
