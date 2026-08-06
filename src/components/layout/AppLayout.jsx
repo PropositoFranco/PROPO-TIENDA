@@ -483,7 +483,7 @@ nav {
       </AnimatePresence>
 
       {/* Top Bar */}
-      <header data-topbar style={{position:'fixed',top:0,left:0,right:0,zIndex:40, display: location.pathname.startsWith('/recompensa') || location.pathname.startsWith('/cronicas') || hideHeader || (sidebarOpen && window.innerWidth < 1024) ? 'none' : 'flex', opacity: sidebarOpen && window.innerWidth < 1024 ? 0 : 1, pointerEvents: sidebarOpen && window.innerWidth < 1024 ? 'none' : 'auto',background:'linear-gradient(90deg,#060112 0%,#0f0225 50%,#080119 100%)',borderBottom:'1px solid rgba(212,175,55,.28)',boxShadow:'0 4px 30px rgba(0,0,0,.9),0 1px 0 rgba(212,175,55,.14)',padding:'0 clamp(8px,3vw,28px)',height:68,alignItems:'center',justifyContent:'space-between'}}>
+      <header data-topbar style={{position:'fixed',top:0,left:0,right:0,zIndex:40, display: location.pathname.startsWith('/recompensa') || location.pathname.startsWith('/cronicas') || (location.pathname.startsWith('/academia/') && !location.pathname.startsWith('/academia/comunidad')) || hideHeader || (sidebarOpen && window.innerWidth < 1024) ? 'none' : 'flex', opacity: sidebarOpen && window.innerWidth < 1024 ? 0 : 1, pointerEvents: sidebarOpen && window.innerWidth < 1024 ? 'none' : 'auto',background:'linear-gradient(90deg,#060112 0%,#0f0225 50%,#080119 100%)',borderBottom:'1px solid rgba(212,175,55,.28)',boxShadow:'0 4px 30px rgba(0,0,0,.9),0 1px 0 rgba(212,175,55,.14)',padding:'0 clamp(8px,3vw,28px)',height:68,alignItems:'center',justifyContent:'space-between'}}>
 
         {/* Left */}
         <div style={{display:'flex',alignItems:'center',gap:14}}>
@@ -740,7 +740,7 @@ nav {
 
       {/* Main Content */}
       <main
-  className={`flex-1 ${location.pathname === '/hub' || location.pathname.startsWith('/recompensa') || location.pathname.startsWith('/cronicas') ? 'overflow-hidden' : 'overflow-auto mt-[68px]'}`}
+  className={`flex-1 ${location.pathname === '/hub' || location.pathname.startsWith('/recompensa') || location.pathname.startsWith('/cronicas') ? 'overflow-hidden' : (location.pathname.startsWith('/academia/') && !location.pathname.startsWith('/academia/comunidad')) ? 'overflow-auto' : 'overflow-auto mt-[68px]'}`}
   style={{ 
     padding: location.pathname === '/hub' || location.pathname.startsWith('/recompensa') || location.pathname.startsWith('/cronicas') ? '0' : '40px 0 40px',
     display: location.pathname === '/admin' ? 'none' : undefined
