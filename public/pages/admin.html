@@ -802,15 +802,20 @@
         <div id="retLoading" class="an-loading">⚔️ Consultando el registro de recuperación...</div>
 
         <div id="retBody" style="display:none;">
-          <div class="an-grid" id="retStatsGrid" style="margin-bottom:16px;"></div>
+          <div class="an-grid" id="retStatsGrid" style="margin-bottom:18px;"></div>
 
-          <div class="an-panel">
-            <div class="an-panel-title">📊 Por segmento</div>
+          <div class="an-panel" style="margin-bottom:16px;">
+            <div class="an-panel-title">🔮 Qué está pasando · posibles mejoras</div>
+            <div id="retRecomendaciones"></div>
+          </div>
+
+          <div class="an-panel" style="margin-bottom:16px;">
+            <div class="an-panel-title">📊 Embudo por segmento — enviado → entregado → abierto → click → volvió</div>
             <div id="retPorSegmento"></div>
           </div>
 
-          <div class="an-panel" style="margin-top:16px;">
-            <div class="an-panel-title">🕐 Últimos envíos</div>
+          <div class="an-panel">
+            <div class="an-panel-title">🕐 Últimos envíos — qué hizo cada templario</div>
             <div id="retRecientes" class="an-scroll"></div>
           </div>
         </div>
@@ -2760,6 +2765,22 @@
     protocol_unlocked: '🔓 Protocolo desbloqueado',
   };
 
+  function _retRecoIcon(msg) {
+    if (msg.includes('rebote')) return '⚠️';
+    if (msg.includes('apertura')) return '📬';
+    if (msg.includes('click') || msg.includes('botón')) return '🖱️';
+    if (msg.includes('recuper')) return '🔁';
+    return '🔮';
+  }
+
+  const _retFunnelBadges = {
+    rebotado:  '<span style="background:rgba(239,68,68,.14);border:1px solid rgba(239,68,68,.4);border-radius:20px;padding:3px 11px;font-family:\'Cinzel\',serif;font-size:8px;color:#f87171;letter-spacing:1px;">⚠️ REBOTADO</span>',
+    click:     '<span style="background:rgba(74,222,128,.14);border:1px solid rgba(74,222,128,.4);border-radius:20px;padding:3px 11px;font-family:\'Cinzel\',serif;font-size:8px;color:#4ade80;letter-spacing:1px;">🖱️ CLICK</span>',
+    abierto:   '<span style="background:rgba(96,165,250,.14);border:1px solid rgba(96,165,250,.4);border-radius:20px;padding:3px 11px;font-family:\'Cinzel\',serif;font-size:8px;color:#60a5fa;letter-spacing:1px;">👁️ ABIERTO</span>',
+    entregado: '<span style="background:rgba(200,170,240,.14);border:1px solid rgba(200,170,240,.35);border-radius:20px;padding:3px 11px;font-family:\'Cinzel\',serif;font-size:8px;color:rgba(220,210,255,.75);letter-spacing:1px;">📬 ENTREGADO</span>',
+    enviado:   '<span style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:3px 11px;font-family:\'Cinzel\',serif;font-size:8px;color:rgba(255,255,255,.45);letter-spacing:1px;">📤 ENVIADO</span>',
+  };
+
   async function loadRetentionStats() {
     document.getElementById('retLoading').style.display = 'block';
     document.getElementById('retBody').style.display = 'none';
@@ -2774,34 +2795,61 @@
     document.getElementById('retLoading').style.display = 'none';
     document.getElementById('retBody').style.display = 'block';
 
-    const totalEnviados = data.total_enviados || 0;
-    const totalRecuperados = data.total_recuperados || 0;
-    const tasaGlobal = totalEnviados ? Math.round((totalRecuperados / totalEnviados) * 100) : 0;
-
+    const k = data.kpis || {};
     document.getElementById('retStatsGrid').innerHTML = `
-      <div class="an-panel"><div class="an-panel-title">📬 Total enviados</div><div style="font-size:28px;color:#93c5fd;font-family:'Cinzel',serif;">${totalEnviados}</div></div>
-      <div class="an-panel"><div class="an-panel-title">✅ Recuperados</div><div style="font-size:28px;color:#4ade80;font-family:'Cinzel',serif;">${totalRecuperados}</div></div>
-      <div class="an-panel"><div class="an-panel-title">📈 Tasa de recuperación</div><div style="font-size:28px;color:#ffe066;font-family:'Cinzel',serif;">${tasaGlobal}%</div></div>
+      <div class="an-panel"><div class="an-panel-title">📤 Enviados</div><div style="font-size:26px;color:#93c5fd;font-family:'Cinzel',serif;">${k.total_enviados ?? 0}</div></div>
+      <div class="an-panel"><div class="an-panel-title">📬 Entregados</div><div style="font-size:26px;color:#c8b6ff;font-family:'Cinzel',serif;">${k.total_entregados ?? 0}</div><div style="font-size:9px;color:var(--text-faint);margin-top:2px;">${k.tasa_entrega_pct ?? 0}% de lo enviado</div></div>
+      <div class="an-panel"><div class="an-panel-title">👁️ Abiertos</div><div style="font-size:26px;color:#60a5fa;font-family:'Cinzel',serif;">${k.total_abiertos ?? 0}</div><div style="font-size:9px;color:var(--text-faint);margin-top:2px;">${k.tasa_apertura_pct ?? 0}% de lo entregado</div></div>
+      <div class="an-panel"><div class="an-panel-title">🖱️ Clicks</div><div style="font-size:26px;color:#4ade80;font-family:'Cinzel',serif;">${k.total_clicks ?? 0}</div><div style="font-size:9px;color:var(--text-faint);margin-top:2px;">${k.tasa_click_pct ?? 0}% de lo abierto</div></div>
+      <div class="an-panel"><div class="an-panel-title">⚠️ Rebotados</div><div style="font-size:26px;color:${(k.tasa_rebote_pct ?? 0) > 10 ? '#f87171' : '#fca5a5'};font-family:'Cinzel',serif;">${k.total_rebotados ?? 0}</div><div style="font-size:9px;color:var(--text-faint);margin-top:2px;">${k.tasa_rebote_pct ?? 0}% del total</div></div>
+      <div class="an-panel"><div class="an-panel-title">🔁 Volvieron a entrar</div><div style="font-size:26px;color:#ffe066;font-family:'Cinzel',serif;">${k.total_recuperados ?? 0}</div><div style="font-size:9px;color:var(--text-faint);margin-top:2px;">tras recibir el correo</div></div>
     `;
+
+    const recos = data.recomendaciones || [];
+    document.getElementById('retRecomendaciones').innerHTML = recos.length ? recos.map(msg => `
+      <div class="an-reco">
+        <span class="an-reco-icon">${_retRecoIcon(msg)}</span>
+        <span class="an-reco-text">${msg}</span>
+      </div>`).join('') : '<div class="an-empty">Todavía no hay suficientes envíos para sacar patrones. Vuelve cuando haya más volumen.</div>';
 
     const porSegmento = data.por_segmento || [];
     document.getElementById('retPorSegmento').innerHTML = porSegmento.length ? porSegmento.map(s => {
-      const tasa = s.enviados ? Math.round((s.volvieron / s.enviados) * 100) : 0;
+      const etapas = [
+        { label: '📤 Enviados',   value: s.enviados,   pct: 100 },
+        { label: '📬 Entregados', value: s.entregados, pct: s.enviados ? Math.round(s.entregados / s.enviados * 100) : 0 },
+        { label: '👁️ Abiertos',   value: s.abiertos,   pct: s.enviados ? Math.round(s.abiertos / s.enviados * 100) : 0 },
+        { label: '🖱️ Clicks',     value: s.clicks,     pct: s.enviados ? Math.round(s.clicks / s.enviados * 100) : 0 },
+        { label: '🔁 Volvieron',  value: s.volvieron,  pct: s.enviados ? Math.round(s.volvieron / s.enviados * 100) : 0 },
+      ];
       return `
-        <div class="tz-bar-row">
-          <div class="tz-bar-label">${_retSegmentLabels[s.segment] || s.segment}</div>
-          <div class="tz-bar-track"><div class="tz-bar-fill" style="width:${Math.max(4, tasa)}%;"></div></div>
-          <div class="tz-bar-value">${s.volvieron}/${s.enviados} (${tasa}%)</div>
+        <div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.07);">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
+            <div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:1.5px;color:#93c5fd;">${_retSegmentLabels[s.segment] || s.segment}</div>
+            ${s.rebotados > 0 ? `<div style="font-size:9.5px;color:#f87171;font-family:'Cinzel',serif;">⚠️ ${s.rebotados} rebotado(s)</div>` : ''}
+          </div>
+          ${etapas.map(e => `
+            <div class="tz-bar-row">
+              <div class="tz-bar-label">${e.label}</div>
+              <div class="tz-bar-track"><div class="tz-bar-fill" style="width:${Math.max(e.value ? 3 : 0, e.pct)}%;"></div></div>
+              <div class="tz-bar-value">${e.value ?? 0} (${e.pct}%)</div>
+            </div>`).join('')}
         </div>`;
     }).join('') : '<div class="an-empty">Sin datos todavía.</div>';
 
     const recientes = data.recientes || [];
     document.getElementById('retRecientes').innerHTML = recientes.length ? recientes.map(r => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;">
-        <div style="color:rgba(220,210,255,.85);">${_anEsc(r.nombre)}<br/><span style="color:rgba(147,197,253,.7);font-size:10px;">${_retSegmentLabels[r.segment] || r.segment}</span></div>
-        <div style="text-align:right;color:rgba(255,255,255,.5);font-size:10px;">
-          ${new Date(r.sent_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}<br/>
-          ${r.volvio ? '<span style="color:#4ade80;">✅ volvió</span>' : '<span style="color:rgba(255,255,255,.4);">— sin volver</span>'}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;gap:10px;">
+        <div style="color:rgba(220,210,255,.85);min-width:0;">
+          ${_anEsc(r.nombre)}<br/>
+          <span style="color:rgba(147,197,253,.7);font-size:10px;">${_retSegmentLabels[r.segment] || r.segment}</span>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="margin-bottom:4px;">${_retFunnelBadges[r.estado_funnel] || _retFunnelBadges.enviado}</div>
+          <div style="color:rgba(255,255,255,.45);font-size:9.5px;">
+            👁️ ${r.open_count ?? 0} · 🖱️ ${r.click_count ?? 0} ·
+            ${r.volvio ? '<span style="color:#4ade80;">✅ entró</span>' : '<span style="color:rgba(255,255,255,.35);">sin entrar</span>'}
+          </div>
+          <div style="color:rgba(255,255,255,.35);font-size:9px;margin-top:2px;">${new Date(r.sent_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}</div>
         </div>
       </div>`).join('') : '<div class="an-empty">Sin envíos todavía.</div>';
   }
