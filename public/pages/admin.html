@@ -790,6 +790,32 @@
         </div>
       </div>
 
+      <!-- 🔔 RETENCIÓN — EMAILS AUTOMÁTICOS — acceso centrado -->
+      <div class="analytics-toggle-wrap">
+        <button class="tz-toggle-btn" id="retToggleBtn" onclick="toggleRetencion()">
+          🔔 RETENCIÓN — EMAILS AUTOMÁTICOS <span class="atb-arrow">▼</span>
+        </button>
+      </div>
+      <div class="section section-trazabilidad" id="retSection" style="display:none;">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:linear-gradient(90deg,rgba(96,165,250,.14) 0%,transparent 100%);border-left:3px solid #60a5fa;border-radius:10px;margin-bottom:20px;"><div style="width:38px;height:38px;background:rgba(96,165,250,.14);border:1px solid rgba(96,165,250,.4);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🔔</div><div><div style="font-family:'Cinzel Decorative',serif;font-size:12px;letter-spacing:3px;color:#93c5fd;">RETENCIÓN — EMAILS AUTOMÁTICOS</div><div style="font-size:11px;color:rgba(96,165,250,.85);margin-top:3px;font-family:'Cinzel',serif;letter-spacing:1px;">SEGMENTOS · ENVIADOS · RECUPERACIÓN</div></div></div>
+
+        <div id="retLoading" class="an-loading">⚔️ Consultando el registro de recuperación...</div>
+
+        <div id="retBody" style="display:none;">
+          <div class="an-grid" id="retStatsGrid" style="margin-bottom:16px;"></div>
+
+          <div class="an-panel">
+            <div class="an-panel-title">📊 Por segmento</div>
+            <div id="retPorSegmento"></div>
+          </div>
+
+          <div class="an-panel" style="margin-top:16px;">
+            <div class="an-panel-title">🕐 Últimos envíos</div>
+            <div id="retRecientes" class="an-scroll"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- 🚦 PROCESO COMPLETO DEL USUARIO — acceso centrado -->
       <div class="analytics-toggle-wrap">
         <button class="pu-toggle-btn" id="puToggleBtn" onclick="toggleProcesoUsuario()">
@@ -2710,6 +2736,74 @@
       _tzLoaded = true;
       loadAllianceAnalytics();
     }
+  }
+
+  let _retOpen = false, _retLoaded = false;
+
+  function toggleRetencion() {
+    const sec = document.getElementById('retSection');
+    const btn = document.getElementById('retToggleBtn');
+    _retOpen = !_retOpen;
+    sec.style.display = _retOpen ? 'block' : 'none';
+    btn.classList.toggle('open', _retOpen);
+    if (_retOpen && !_retLoaded) {
+      _retLoaded = true;
+      loadRetentionStats();
+    }
+  }
+
+  const _retSegmentLabels = {
+    inactive_3d: '⏳ Inactivo 3 días',
+    inactive_7d: '🔥 Inactivo 7 días',
+    inactive_14d: '🕯️ Inactivo 14+ días',
+    tutorial_incomplete: '🗺️ Tutorial sin terminar',
+    protocol_unlocked: '🔓 Protocolo desbloqueado',
+  };
+
+  async function loadRetentionStats() {
+    document.getElementById('retLoading').style.display = 'block';
+    document.getElementById('retBody').style.display = 'none';
+
+    const { data, error } = await supabaseClient.rpc('admin_get_retention_stats');
+
+    if (error) {
+      document.getElementById('retLoading').textContent = '⚠ No se pudo consultar: ' + error.message;
+      return;
+    }
+
+    document.getElementById('retLoading').style.display = 'none';
+    document.getElementById('retBody').style.display = 'block';
+
+    const totalEnviados = data.total_enviados || 0;
+    const totalRecuperados = data.total_recuperados || 0;
+    const tasaGlobal = totalEnviados ? Math.round((totalRecuperados / totalEnviados) * 100) : 0;
+
+    document.getElementById('retStatsGrid').innerHTML = `
+      <div class="an-panel"><div class="an-panel-title">📬 Total enviados</div><div style="font-size:28px;color:#93c5fd;font-family:'Cinzel',serif;">${totalEnviados}</div></div>
+      <div class="an-panel"><div class="an-panel-title">✅ Recuperados</div><div style="font-size:28px;color:#4ade80;font-family:'Cinzel',serif;">${totalRecuperados}</div></div>
+      <div class="an-panel"><div class="an-panel-title">📈 Tasa de recuperación</div><div style="font-size:28px;color:#ffe066;font-family:'Cinzel',serif;">${tasaGlobal}%</div></div>
+    `;
+
+    const porSegmento = data.por_segmento || [];
+    document.getElementById('retPorSegmento').innerHTML = porSegmento.length ? porSegmento.map(s => {
+      const tasa = s.enviados ? Math.round((s.volvieron / s.enviados) * 100) : 0;
+      return `
+        <div class="tz-bar-row">
+          <div class="tz-bar-label">${_retSegmentLabels[s.segment] || s.segment}</div>
+          <div class="tz-bar-track"><div class="tz-bar-fill" style="width:${Math.max(4, tasa)}%;"></div></div>
+          <div class="tz-bar-value">${s.volvieron}/${s.enviados} (${tasa}%)</div>
+        </div>`;
+    }).join('') : '<div class="an-empty">Sin datos todavía.</div>';
+
+    const recientes = data.recientes || [];
+    document.getElementById('retRecientes').innerHTML = recientes.length ? recientes.map(r => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;">
+        <div style="color:rgba(220,210,255,.85);">${_anEsc(r.nombre)}<br/><span style="color:rgba(147,197,253,.7);font-size:10px;">${_retSegmentLabels[r.segment] || r.segment}</span></div>
+        <div style="text-align:right;color:rgba(255,255,255,.5);font-size:10px;">
+          ${new Date(r.sent_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}<br/>
+          ${r.volvio ? '<span style="color:#4ade80;">✅ volvió</span>' : '<span style="color:rgba(255,255,255,.4);">— sin volver</span>'}
+        </div>
+      </div>`).join('') : '<div class="an-empty">Sin envíos todavía.</div>';
   }
 
   function _tzBars(items) {
