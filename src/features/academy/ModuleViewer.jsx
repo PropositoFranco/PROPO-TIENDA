@@ -1332,8 +1332,7 @@ const VideoPlayerWithFullscreen = ({ accent, vid, started, setStarted }) => {
   );
 };
 
-const VideoPlayer = ({ cfg, videoId }) => {
-  const [started, setStarted] = useState(false);
+const VideoPlayer = ({ cfg, videoId, started, setStarted }) => {
   const accent = cfg?.color || '#C084FC';
   const vid = videoId || '5ef5c7ee-78c0-4025-a846-f1cef76352eb';
   return (
@@ -1409,6 +1408,9 @@ const QuickNav = ({ feedTourActive = false, onFeedTourClick } = {}) => {
   );
 };
 
+// Segundos que debe "absorber" la enseñanza antes de poder desbloquear el ejercicio
+const UNLOCK_DURATION = 25;
+
 // ─── Tour guiado de 3 pasos: progreso → ejercicio → sellar ────────────────────
 const TOUR_MODULO_STEPS = [
   {
@@ -1417,8 +1419,8 @@ const TOUR_MODULO_STEPS = [
     mode: 'passive',
   },
   {
-    title: '📜 El Ejercicio',
-    text: 'Este es tu ejercicio de esta semana. Tócalo para desbloquearlo — no puedes avanzar sin completarlo.',
+    title: '🎬 Absorbe la Enseñanza',
+    text: 'Mientras ves el video, este anillo se va llenando. Cuando se complete, toca el botón para desbloquear tu ejercicio.',
     mode: 'action',
   },
   {
@@ -1500,6 +1502,9 @@ const ModuleViewer = () => {
   const module = ACADEMY_MODULES.find(m => m.slug === slug);
   const isCompleted = completedModules.includes(slug);
   const [exerciseUnlocked, setExerciseUnlocked] = useState(isCompleted);
+  const [videoStarted, setVideoStarted] = useState(isCompleted);
+  const [videoConfirmed, setVideoConfirmed] = useState(isCompleted);
+  const [unlockSeconds, setUnlockSeconds] = useState(isCompleted ? UNLOCK_DURATION : 0);
   const markedRef = useRef(false);
 
   useEffect(() => {
@@ -1587,20 +1592,29 @@ const ModuleViewer = () => {
     return () => clearTimeout(t);
   }, [protocoloLoading, feedTourLoading, feedTourSeen, isCompleted, slug]);
 
-  // Detecta cuando el usuario llega de verdad, con scroll, a la zona del ejercicio
+  // Cuando el usuario le da play al video de verdad, avanza el tour al paso 2
+  // (apuntando al botón "Ya vi el video"), no antes.
   const exerciseGateRef = useRef(null);
   useEffect(() => {
-    if (tourStep !== 1 || !exerciseGateRef.current) return;
-    const el = exerciseGateRef.current;
-    const obs = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setTourStep(2);
-        obs.disconnect();
-      }
-    }, { threshold: 0.4 });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [tourStep]);
+    if (tourStep !== 1 || !videoStarted) return;
+    const t = setTimeout(() => setTourStep(2), 500);
+    return () => clearTimeout(t);
+  }, [tourStep, videoStarted]);
+
+  // Anillo de "sellado del conocimiento": avanza solo mientras el video corre
+  useEffect(() => {
+    if (!videoStarted || videoConfirmed) return;
+    const t = setInterval(() => {
+      setUnlockSeconds(s => {
+        if (s >= UNLOCK_DURATION - 1) { clearInterval(t); return UNLOCK_DURATION; }
+        return s + 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [videoStarted, videoConfirmed]);
+
+  const unlockPct = Math.min(100, Math.round((unlockSeconds / UNLOCK_DURATION) * 100));
+  const canConfirmVideo = unlockSeconds >= UNLOCK_DURATION;
 
   useEffect(() => {
     if (!markedRef.current && module && user && hasAccess) {
@@ -1732,8 +1746,19 @@ const ModuleViewer = () => {
         {nextEvalDate && <RewardBadge icon="📅" value={nextEvalDate} label="Próx. evaluación" />}
       </div>
 
-      {/* Progreso global */}
-      <div style={{ marginBottom: '2.5rem' }}>
+      {/* Progreso global — sticky para que no se pierda al hacer scroll en móvil */}
+      <div style={{
+        marginBottom: '2.5rem',
+        position: 'sticky',
+        top: '0.5rem',
+        zIndex: 40,
+        background: 'rgba(10,6,16,0.92)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        borderRadius: '0.75rem',
+        padding: '0.6rem 0.75rem',
+        border: '1px solid rgba(255,255,255,0.06)',
+      }}>
         <ModuleProgressBar />
       </div>
 
@@ -1745,17 +1770,83 @@ const ModuleViewer = () => {
       )}
 
       {/* Video + Contexto — libres de explorar, el tour no bloquea nada aquí */}
-      <VideoPlayer cfg={cfg} videoId={module.videoId} />
+      <VideoPlayer cfg={cfg} videoId={module.videoId} started={videoStarted} setStarted={setVideoStarted} />
       {module.context && <ModuleContext context={module.context} cfg={cfg} type={module.type} />}
 
-      {/* ── Ejercicio Semanal: bloqueado hasta que le piquen para revelarlo ── */}
       {tourStep === 2 && (
         <TourGuiaModulo step={2} accent={cfg.color} />
       )}
 
-      {!exerciseUnlocked ? (
+      {/* ── Anillo de sellado: obliga a "absorber" el video antes de seguir ── */}
+      {!videoConfirmed && (
         <button
           ref={exerciseGateRef}
+          disabled={!canConfirmVideo}
+          onClick={() => {
+            setVideoConfirmed(true);
+            if (tourStep === 1 || tourStep === 2) setTourStep(3);
+          }}
+          style={{
+            width: '100%',
+            marginBottom: '1rem',
+            border: `1px solid ${canConfirmVideo ? cfg.color + '77' : 'rgba(255,255,255,0.12)'}`,
+            borderRadius: '0.875rem',
+            padding: '1.1rem 1.25rem',
+            background: canConfirmVideo ? `linear-gradient(135deg, ${cfg.color}22 0%, transparent 100%)` : 'rgba(255,255,255,0.03)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem',
+            cursor: canConfirmVideo ? 'pointer' : 'not-allowed',
+            fontFamily: '"Cinzel", serif',
+            fontSize: 'clamp(0.72rem, 1.9vw, 0.82rem)',
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+            color: canConfirmVideo ? cfg.color : 'rgba(255,255,255,0.4)',
+            boxShadow: (tourStep === 2 && canConfirmVideo) ? `0 0 0 3px ${cfg.color}, 0 0 40px ${cfg.color}66` : 'none',
+            animation: (tourStep === 2 && canConfirmVideo) ? 'exerciseGatePulse 1.6s ease-in-out infinite' : 'none',
+            transition: 'all 0.3s',
+          }}
+        >
+          <style>{`@keyframes exerciseGatePulse { 0%,100%{ box-shadow: 0 0 0 3px ${cfg.color}, 0 0 40px ${cfg.color}66; } 50%{ box-shadow: 0 0 0 3px ${cfg.color}, 0 0 60px ${cfg.color}aa; } }`}</style>
+
+          {/* Anillo de progreso — se llena mientras "absorbes" el video */}
+          <svg width="26" height="26" viewBox="0 0 36 36" style={{ flexShrink: 0 }}>
+            <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="3" />
+            <circle
+              cx="18" cy="18" r="15.5" fill="none"
+              stroke={canConfirmVideo ? '#10B981' : cfg.color}
+              strokeWidth="3" strokeLinecap="round"
+              strokeDasharray={2 * Math.PI * 15.5}
+              strokeDashoffset={2 * Math.PI * 15.5 * (1 - unlockPct / 100)}
+              transform="rotate(-90 18 18)"
+              style={{ transition: 'stroke-dashoffset 1s linear' }}
+            />
+          </svg>
+
+          {!videoStarted
+            ? '🔒 Da play al video de arriba'
+            : canConfirmVideo
+              ? '✅ Ya vi el video — Desbloquear ejercicio'
+              : `Absorbiendo la enseñanza… ${UNLOCK_DURATION - unlockSeconds}s`}
+        </button>
+      )}
+
+      {/* ── Ejercicio Semanal: bloqueado hasta sellar el video, luego bloqueado hasta que le piquen para revelarlo ── */}
+      {!videoConfirmed ? (
+        <div style={{
+          width: '100%', marginBottom: '2rem',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderLeft: '4px solid rgba(255,255,255,0.15)',
+          borderRadius: '0.875rem', padding: '1.25rem 1.5rem',
+          background: 'rgba(255,255,255,0.02)',
+          display: 'flex', alignItems: 'center', gap: '0.875rem',
+          opacity: 0.6,
+        }}>
+          <div style={{ flexShrink: 0, width: '2.75rem', height: '2.75rem', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>🔒</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: '0 0 0.2rem 0', fontFamily: '"Cinzel", serif', fontSize: 'clamp(0.7rem, 1.8vw, 0.8rem)', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Tu ejercicio de esta semana</p>
+            <p style={{ margin: 0, fontFamily: '"Crimson Text", serif', fontSize: 'clamp(0.9rem, 2.5vw, 1rem)', color: 'rgba(255,255,255,0.35)', lineHeight: 1.4 }}>Se desbloquea cuando termines de ver el video de arriba.</p>
+          </div>
+        </div>
+      ) : !exerciseUnlocked ? (
+        <button
           onClick={() => {
             setExerciseUnlocked(true);
             if (tourStep === 1 || tourStep === 2) setTourStep(3);
