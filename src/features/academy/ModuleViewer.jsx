@@ -1762,11 +1762,9 @@ const ModuleViewer = () => {
         <ModuleProgressBar />
       </div>
 
-      {/* Guía flotante del paso 1 — no bloquea nada, solo acompaña mientras exploran */}
+      {/* Guía del paso 1 — aparece una sola vez, arriba del video, NO sigue el scroll ni lo tapa */}
       {tourStep === 1 && (
-        <div style={{ position: 'sticky', top: '0.75rem', zIndex: 50 }}>
-          <TourGuiaModulo step={1} accent={cfg.color} />
-        </div>
+        <TourGuiaModulo step={1} accent={cfg.color} />
       )}
 
       {/* Video + Contexto — libres de explorar, el tour no bloquea nada aquí */}
