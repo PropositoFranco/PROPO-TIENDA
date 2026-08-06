@@ -62,7 +62,7 @@ export const useAuthStore = create(
     await supabase.auth.getSession();
 
   if (!freshSession || sessionError) {
-    await supabase.auth.signOut().catch(() => {});
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
     set({ user: null, profile: null, session: null, loading: false });
     return;
   }
@@ -85,7 +85,7 @@ set({ loading: false });
         if (error || !data?.session) {
           const { data: refreshData } = await supabase.auth.refreshSession().catch(() => ({ data: null }));
           if (!refreshData?.session) {
-            await supabase.auth.signOut().catch(() => {});
+            await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
             set({ user: null, profile: null, session: null, loading: false });
             return;
           }
@@ -147,7 +147,7 @@ set({ loading: false });
     if (refreshed?.session) {
       set({ session: refreshed.session, user: refreshed.session.user });
     } else {
-      await supabase.auth.signOut().catch(() => {});
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
       set({ user: null, profile: null, session: null, loading: false });
       return;
     }
