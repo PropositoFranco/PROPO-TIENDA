@@ -2106,12 +2106,20 @@
   });
 
   (async function restoreAdminSession() {
+    // 🔒 Solo restaura el panel si ESTA pestaña ya pasó por checkLogin()
+    // con la contraseña de admin. Sin esta bandera, tener sesión de
+    // Supabase (aunque sea de una cuenta normal logueada en la tienda)
+    // ya NO es suficiente para entrar directo al panel.
+    const passedGate = sessionStorage.getItem('admin_logged') === '1';
+    if (!passedGate) return;
+
     const { data } = await supabaseClient.auth.getSession();
     if (data?.session) {
-      sessionStorage.setItem('admin_logged', '1');
       document.getElementById('loginGate').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       window.parent.postMessage({ type: 'ready' }, '*');
+    } else {
+      sessionStorage.removeItem('admin_logged');
     }
   })();
 
