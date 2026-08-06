@@ -1777,6 +1777,7 @@ function _protocoloVigente() {
 
 function setHubLocked(locked) {
   document.body.classList.toggle('hub-locked', !!locked);
+  window.parent.postMessage({ type: 'hub-locked', data: { locked: !!locked } }, '*');
 }
 
 // ══ EMPUJONCITO: si el hub está bloqueado y pican fuera de #continue-bar ══
