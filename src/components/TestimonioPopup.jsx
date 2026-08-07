@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/useAuthStore';
 
 const font = { title: '"Cinzel", serif', body: '"Crimson Text", serif' };
 
-const STORAGE_KEY = '_testimonio_popup';
+const STORAGE_KEY = '_testimonio_popup_v2';
 
 export default function TestimonioPopup() {
   const user = useAuthStore(s => s.user);
