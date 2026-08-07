@@ -36,6 +36,13 @@ export default function TestimonioPopup() {
     setVisible(false);
   };
 
+  useEffect(() => {
+    if (!visible) return;
+    const onKeyDown = (e) => { if (e.key === 'Escape') snooze(); };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [visible]);
+
   const handleEnviar = async () => {
     if (texto.trim().length < 20) return;
     setSending(true);
@@ -56,11 +63,14 @@ export default function TestimonioPopup() {
   if (!visible) return null;
 
   return (
-    <div style={{
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) snooze(); }}
+      style={{
       position:'fixed', inset:0, zIndex:99999,
       background:'rgba(2,1,10,.85)', backdropFilter:'blur(12px)',
       display:'flex', alignItems:'center', justifyContent:'center',
-      padding:'1rem', animation:'twIn .4s cubic-bezier(.16,1,.3,1)',
+      padding:'1rem', overflowY:'auto', WebkitOverflowScrolling:'touch',
+      animation:'twIn .4s cubic-bezier(.16,1,.3,1)',
     }}>
       <style>{`
         @keyframes twIn { from{opacity:0;transform:scale(.94) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
@@ -79,7 +89,8 @@ export default function TestimonioPopup() {
       `}</style>
 
       <div style={{
-        maxWidth:'420px', width:'100%',
+        maxWidth:'420px', width:'100%', maxHeight:'calc(100vh - 2rem)',
+        overflowY:'auto', margin:'auto',
         background:'radial-gradient(ellipse at top,rgba(192,132,252,.12) 0%,rgba(4,2,14,.97) 70%)',
         border:'1.5px solid rgba(192,132,252,.35)', borderRadius:'1.5rem',
         padding:'clamp(1.5rem,5vw,2.25rem)', textAlign:'center',
