@@ -313,6 +313,12 @@ const [kpiLoading,     setKpiLoading]     = useState(false);
 const [revenueData,    setRevenueData]    = useState(null);
 const [kpiLastUpdated, setKpiLastUpdated] = useState(null);
 
+// ── Testimonios ─────────────────────────────────────────────────────────────
+const [showTestimonios,    setShowTestimonios]    = useState(false);
+const [testimoniosData,    setTestimoniosData]    = useState([]);
+const [testimoniosLoading, setTestimoniosLoading] = useState(false);
+const [testimoniosFilter,  setTestimoniosFilter]  = useState('pendientes'); // pendientes | aprobados | todos
+
 // ── Sistema / Mantenimiento ────────────────────────────────────────────────
 const [showSistema,        setShowSistema]        = useState(false);
 const [mantConfig,         setMantConfig]         = useState({ active: false, message: 'Optimizando para una mejor experiencia.' });
@@ -366,6 +372,47 @@ const saveMantAnnouncement = async () => {
   await supabase.from('app_config').update({ value: mantAnnouncement }).eq('key', 'announcement');
   setMantSaving(false);
   pushToast(mantAnnouncement.active ? '📢 Anuncio publicado' : '📢 Anuncio desactivado');
+};
+
+// ── Testimonios: carga y acciones ──────────────────────────────────────────
+const loadTestimonios = async () => {
+  setTestimoniosLoading(true);
+  const { supabase } = await import('../../services/supabase.js');
+  let query = supabase
+    .from('testimonios')
+    .select('id, user_id, nombre, rol, texto, estrellas, aprobado, created_at')
+    .order('created_at', { ascending: false });
+  if (testimoniosFilter === 'pendientes') query = query.eq('aprobado', false);
+  if (testimoniosFilter === 'aprobados')  query = query.eq('aprobado', true);
+  const { data, error } = await query;
+  if (error) { pushToast('❌ ' + error.message); setTestimoniosLoading(false); return; }
+  setTestimoniosData(data || []);
+  setTestimoniosLoading(false);
+};
+
+const approveTestimonio = async (id) => {
+  const { supabase } = await import('../../services/supabase.js');
+  const { error } = await supabase.from('testimonios').update({ aprobado: true }).eq('id', id);
+  if (error) { pushToast('❌ ' + error.message); return; }
+  pushToast('✅ Testimonio aprobado');
+  loadTestimonios();
+};
+
+const unapproveTestimonio = async (id) => {
+  const { supabase } = await import('../../services/supabase.js');
+  const { error } = await supabase.from('testimonios').update({ aprobado: false }).eq('id', id);
+  if (error) { pushToast('❌ ' + error.message); return; }
+  pushToast('↩️ Regresado a pendientes');
+  loadTestimonios();
+};
+
+const rejectTestimonio = async (id) => {
+  if (!window.confirm('¿Eliminar este testimonio permanentemente? No se puede deshacer.')) return;
+  const { supabase } = await import('../../services/supabase.js');
+  const { error } = await supabase.from('testimonios').delete().eq('id', id);
+  if (error) { pushToast('❌ ' + error.message); return; }
+  pushToast('🗑️ Testimonio eliminado');
+  loadTestimonios();
 };
 
 const loadKpis = async () => {
@@ -1048,6 +1095,20 @@ const loadTeam = async () => {
   document.addEventListener('mousedown', handler);
   return () => document.removeEventListener('mousedown', handler);
 }, [showKpis]);
+
+useEffect(() => {
+  if (!showTestimonios) return;
+  const handler = (e) => {
+    if (!e.target.closest('[data-testimonios-panel]')) setShowTestimonios(false);
+  };
+  document.addEventListener('mousedown', handler);
+  return () => document.removeEventListener('mousedown', handler);
+}, [showTestimonios]);
+
+useEffect(() => {
+  if (!showTestimonios) return;
+  loadTestimonios();
+}, [testimoniosFilter]);
 
 // ── Auto-carga KPIs al entrar y refresca cada 60s ──
   useEffect(() => {
@@ -3274,6 +3335,30 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
             cursor:'pointer', letterSpacing:1, whiteSpace:'nowrap',
             display:'flex', alignItems:'center', gap:5,
           }}>🏷️ CATEGORÍAS</button>
+          {/* ── TESTIMONIOS BUTTON ── */}
+          <button onClick={() => { setShowTestimonios(v => !v); loadTestimonios(); }} style={{
+            background: showTestimonios
+              ? 'linear-gradient(135deg,#C084FC,#7c3aed)'
+              : 'linear-gradient(135deg,rgba(192,132,252,0.15),rgba(192,132,252,0.05))',
+            color: showTestimonios ? '#0a0614' : '#C084FC',
+            padding:'clamp(5px,1.5vw,9px) clamp(8px,2vw,16px)',
+            borderRadius:8, fontWeight:900, fontSize:'clamp(8px,2vw,11px)',
+            border:`1px solid rgba(192,132,252,${showTestimonios ? '0.8' : '0.35'})`,
+            boxShadow: showTestimonios ? '0 3px 16px rgba(192,132,252,0.5)' : '0 0 0 transparent',
+            cursor:'pointer', letterSpacing:1, whiteSpace:'nowrap',
+            display:'flex', alignItems:'center', gap:5,
+            transition:'all 0.2s',
+          }}>
+            {testimoniosLoading ? '⟳' : '📜'} TESTIMONIOS
+            {testimoniosData.filter(t => !t.aprobado).length > 0 && testimoniosFilter === 'pendientes' && (
+              <span style={{
+                background: showTestimonios ? 'rgba(0,0,0,0.2)' : 'rgba(239,68,68,0.25)',
+                color: showTestimonios ? '#0a0614' : '#EF4444',
+                borderRadius:8, padding:'0 5px', fontSize:8,
+              }}>{testimoniosData.filter(t => !t.aprobado).length} nuevos</span>
+            )}
+          </button>
+
           {/* ── KPI BUTTON ── */}
           <button onClick={() => { setShowKpis(v => !v); loadKpis(); }} style={{
             background: showKpis
@@ -3595,6 +3680,113 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
             </div>,
             document.body
           )}
+
+          {/* ── TESTIMONIOS MODAL FULLSCREEN ── */}
+          {showTestimonios && createPortal(
+            <div style={{
+              position:'fixed', inset:0, zIndex:99999,
+              background:'rgba(0,0,0,0.88)', backdropFilter:'blur(10px)',
+              display:'flex', alignItems:'flex-start', justifyContent:'center',
+              paddingTop:24, overflowY:'auto',
+            }} onClick={() => setShowTestimonios(false)}>
+              <div data-testimonios-panel style={{
+                background:'linear-gradient(135deg,#0d0a1a,#0a0614)',
+                border:'1.5px solid rgba(192,132,252,0.4)',
+                borderRadius:18, padding:'1.5rem',
+                width:'min(700px,96vw)', marginBottom:24,
+                boxShadow:'0 0 80px rgba(192,132,252,0.15)',
+                display:'flex', flexDirection:'column', gap:'1rem',
+              }} onClick={e => e.stopPropagation()}>
+
+                {/* Header */}
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <div>
+                    <p style={{ margin:0, fontFamily:'Cinzel,serif', fontWeight:900, color:'#C084FC', fontSize:16, letterSpacing:3 }}>📜 TESTIMONIOS DEL TEMPLO</p>
+                    <p style={{ margin:0, fontFamily:'Cinzel,serif', fontSize:10, color:'rgba(255,255,255,0.4)', marginTop:2 }}>
+                      {testimoniosData.length} {testimoniosFilter === 'pendientes' ? 'pendientes' : testimoniosFilter === 'aprobados' ? 'aprobados' : 'en total'}
+                    </p>
+                  </div>
+                  <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                    <button onClick={() => loadTestimonios()} style={{ background:'rgba(192,132,252,0.12)', border:'1px solid rgba(192,132,252,0.35)', borderRadius:8, color:'#C084FC', fontFamily:'Cinzel,serif', fontSize:9, fontWeight:700, cursor:'pointer', padding:'0.35rem 0.75rem' }}>↺ ACTUALIZAR</button>
+                    <button onClick={() => setShowTestimonios(false)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.4)', fontSize:22, cursor:'pointer', lineHeight:1 }}>✕</button>
+                  </div>
+                </div>
+
+                {/* Filtros */}
+                <div style={{ display:'flex', gap:6 }}>
+                  {[
+                    { key:'pendientes', label:'⏳ Pendientes' },
+                    { key:'aprobados',  label:'✅ Aprobados' },
+                    { key:'todos',      label:'📋 Todos' },
+                  ].map(f => (
+                    <button key={f.key} onClick={() => setTestimoniosFilter(f.key)} style={{
+                      flex:1, padding:'0.5rem', borderRadius:8, cursor:'pointer',
+                      background: testimoniosFilter === f.key ? 'linear-gradient(135deg,#C084FC,#7c3aed)' : 'rgba(255,255,255,0.05)',
+                      color: testimoniosFilter === f.key ? '#0a0614' : 'rgba(255,255,255,0.5)',
+                      border:`1px solid ${testimoniosFilter === f.key ? 'rgba(192,132,252,0.6)' : 'rgba(255,255,255,0.1)'}`,
+                      fontFamily:'Cinzel,serif', fontSize:10, fontWeight:700, letterSpacing:1,
+                    }}>{f.label}</button>
+                  ))}
+                </div>
+
+                {/* Lista */}
+                {testimoniosLoading ? (
+                  <p style={{ color:'rgba(192,132,252,0.5)', fontFamily:'Cinzel,serif', fontSize:11, textAlign:'center', padding:'3rem', letterSpacing:3 }}>CARGANDO…</p>
+                ) : testimoniosData.length === 0 ? (
+                  <p style={{ color:'rgba(255,255,255,0.3)', fontFamily:'Cinzel,serif', fontSize:11, textAlign:'center', padding:'2rem' }}>Nada por aquí</p>
+                ) : (
+                  <div style={{ display:'flex', flexDirection:'column', gap:10, maxHeight:'55vh', overflowY:'auto' }}>
+                    {testimoniosData.map(t => (
+                      <div key={t.id} style={{
+                        background:'rgba(18,10,38,0.95)', border:`1px solid ${t.aprobado ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.07)'}`,
+                        borderRadius:12, padding:'1rem', display:'flex', flexDirection:'column', gap:8,
+                      }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+                          <div>
+                            <p style={{ margin:0, fontFamily:'Cinzel,serif', fontWeight:900, fontSize:12, color:'#fff' }}>{t.nombre}</p>
+                            <p style={{ margin:0, fontFamily:'Cinzel,serif', fontSize:9, color:'rgba(255,255,255,0.4)', marginTop:1 }}>{t.rol}</p>
+                          </div>
+                          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                            <span style={{ color:'#F5C518', fontSize:12 }}>{'★'.repeat(t.estrellas)}{'☆'.repeat(5 - t.estrellas)}</span>
+                            {t.aprobado && <span style={{ fontSize:8, fontFamily:'Cinzel,serif', color:'#4ade80', background:'rgba(74,222,128,0.12)', borderRadius:6, padding:'2px 6px' }}>APROBADO</span>}
+                          </div>
+                        </div>
+                        <p style={{ margin:0, fontFamily:'Crimson Text,serif', fontSize:13, color:'rgba(255,255,255,0.8)', lineHeight:1.5 }}>"{t.texto}"</p>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:2 }}>
+                          <span style={{ fontFamily:'Cinzel,serif', fontSize:8, color:'rgba(255,255,255,0.3)' }}>
+                            {new Date(t.created_at).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' })}
+                          </span>
+                          <div style={{ display:'flex', gap:6 }}>
+                            {!t.aprobado && (
+                              <button onClick={() => approveTestimonio(t.id)} style={{
+                                background:'linear-gradient(135deg,#4ADE80,#16a34a)', color:'#0a0614',
+                                border:'1px solid rgba(74,222,128,0.5)', borderRadius:6, padding:'0.35rem 0.7rem',
+                                fontFamily:'Cinzel,serif', fontSize:9, fontWeight:900, cursor:'pointer',
+                              }}>✅ APROBAR</button>
+                            )}
+                            {t.aprobado && (
+                              <button onClick={() => unapproveTestimonio(t.id)} style={{
+                                background:'rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.6)',
+                                border:'1px solid rgba(255,255,255,0.15)', borderRadius:6, padding:'0.35rem 0.7rem',
+                                fontFamily:'Cinzel,serif', fontSize:9, fontWeight:700, cursor:'pointer',
+                              }}>↩️ QUITAR</button>
+                            )}
+                            <button onClick={() => rejectTestimonio(t.id)} style={{
+                              background:'rgba(239,68,68,0.12)', color:'#EF4444',
+                              border:'1px solid rgba(239,68,68,0.35)', borderRadius:6, padding:'0.35rem 0.7rem',
+                              fontFamily:'Cinzel,serif', fontSize:9, fontWeight:900, cursor:'pointer',
+                            }}>🗑️ ELIMINAR</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>,
+            document.body
+          )}
+
           <button onClick={() => { setShowTeam(true); loadTeam(); }} style={{
             background:'linear-gradient(135deg,#10B981,#065f46)', color:'#fff',
             padding:'clamp(5px,1.5vw,9px) clamp(8px,2vw,16px)',
