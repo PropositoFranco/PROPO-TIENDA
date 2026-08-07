@@ -1742,9 +1742,8 @@ answered_qids_week: G.answered_qids_week || 0,
   }, { onConflict: 'id' });
   if (error) console.error('[saveLB]', error.message);
   if (!error && _rankChannel && CURRENT_USER) _rankChannel.send({ type: 'broadcast', event: 'score_update', payload: { id: CURRENT_USER.id, name: G.name || 'Templario', pts: G.pts ?? 0 } });
-  const store = usePlayerStore.getState();
-  const diff = G.pts - store.cristales;
-  if (diff !== 0) await store.addCristales(diff);
+  // Los puntos del juego son solo para el ranking — los PropoCoins
+  // reales solo se entregan al cerrar semana/mes vía deliver_pending_prizes.
 }
 
 async function upsertPlayer(name, pts, streak, correct, av, email = '', gender = 'm', charVariant = 0, dailyAttempts = {}) {
@@ -5175,8 +5174,7 @@ useEffect(() => {
         .single();
       if (player && player.char_name) {
         G.name = player.char_name;
-        const storeCristales = usePlayerStore.getState().cristales;
-G.pts = Math.max(player.points ?? 0, storeCristales);
+        G.pts = player.points ?? 0;
         G.maxStreak = player.streak ?? 0;
         G.correct = player.correct ?? 0;
         G.level = player.level ?? 1;

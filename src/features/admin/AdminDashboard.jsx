@@ -319,6 +319,47 @@ const [testimoniosData,    setTestimoniosData]    = useState([]);
 const [testimoniosLoading, setTestimoniosLoading] = useState(false);
 const [testimoniosFilter,  setTestimoniosFilter]  = useState('pendientes'); // pendientes | aprobados | todos
 
+// ── Plantillas de respuesta ──────────────────────────────────────────────────
+const [showPlantillas, setShowPlantillas] = useState(false);
+const [copiedPlantilla, setCopiedPlantilla] = useState(null);
+
+const PLANTILLAS_RESPUESTA = [
+  {
+    id: 'cercana',
+    label: '💛 Cercana y personal',
+    asunto: 'Re: Sigues siendo miembro fundador — y te seguimos esperando',
+    texto: `Hola [nombre],
+
+Gracias por contestar — en serio, no es un bot leyendo esto, soy yo (Daniel, fundador del Templo).
+
+Cuéntame qué pasó: ¿algo del sistema no te funcionó, se te complicó el tiempo, o simplemente se te fue el impulso? Sea lo que sea, tu progreso sigue exactamente donde lo dejaste — nivel, racha, todo intacto.
+
+Si quieres, dime en dos líneas qué te trabó y te ayudo yo mismo a resolverlo. Si es cosa de tiempo, también lo entiendo — solo dime y ajustamos juntos qué te sirve.
+
+Aquí sigo, atento a tu respuesta.
+
+— Daniel Franco
+Fundador, Templo del Propósito`,
+  },
+  {
+    id: 'directa',
+    label: '⚡ Directa con solución',
+    asunto: 'Re: Sigues siendo miembro fundador — y te seguimos esperando',
+    texto: `Hola [nombre],
+
+Gracias por escribir. Te leo directo y te ayudo a resolverlo hoy.
+
+Para ubicarme rápido: ¿qué fue lo que te detuvo? Puede ser algo técnico (login, alguna pantalla que no cargó), algo de contenido que no te quedó claro, o simplemente que la semana se complicó.
+
+Dime cuál es y en el mismo día te regreso con la solución o con los siguientes pasos concretos para retomar — sin que tengas que empezar de cero, porque nada se perdió.
+
+Quedo pendiente de tu respuesta.
+
+— Daniel Franco
+Fundador, Templo del Propósito`,
+  },
+];
+
 // ── Sistema / Mantenimiento ────────────────────────────────────────────────
 const [showSistema,        setShowSistema]        = useState(false);
 const [mantConfig,         setMantConfig]         = useState({ active: false, message: 'Optimizando para una mejor experiencia.' });
@@ -3359,6 +3400,21 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
             )}
           </button>
 
+          {/* ── PLANTILLAS BUTTON ── */}
+          <button onClick={() => setShowPlantillas(v => !v)} style={{
+            background: showPlantillas
+              ? 'linear-gradient(135deg,#60A5FA,#2563eb)'
+              : 'linear-gradient(135deg,rgba(96,165,250,0.15),rgba(96,165,250,0.05))',
+            color: showPlantillas ? '#0a0614' : '#60A5FA',
+            padding:'clamp(5px,1.5vw,9px) clamp(8px,2vw,16px)',
+            borderRadius:8, fontWeight:900, fontSize:'clamp(8px,2vw,11px)',
+            border:`1px solid rgba(96,165,250,${showPlantillas ? '0.8' : '0.35'})`,
+            boxShadow: showPlantillas ? '0 3px 16px rgba(96,165,250,0.5)' : '0 0 0 transparent',
+            cursor:'pointer', letterSpacing:1, whiteSpace:'nowrap',
+            display:'flex', alignItems:'center', gap:5,
+            transition:'all 0.2s',
+          }}>📋 PLANTILLAS</button>
+
           {/* ── KPI BUTTON ── */}
           <button onClick={() => { setShowKpis(v => !v); loadKpis(); }} style={{
             background: showKpis
@@ -3782,6 +3838,73 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
                     ))}
                   </div>
                 )}
+              </div>
+            </div>,
+            document.body
+          )}
+
+          {/* ── PLANTILLAS MODAL FULLSCREEN ── */}
+          {showPlantillas && createPortal(
+            <div style={{
+              position:'fixed', inset:0, zIndex:99999,
+              background:'rgba(0,0,0,0.88)', backdropFilter:'blur(10px)',
+              display:'flex', alignItems:'flex-start', justifyContent:'center',
+              paddingTop:24, overflowY:'auto',
+            }} onClick={() => setShowPlantillas(false)}>
+              <div style={{
+                background:'linear-gradient(135deg,#0d0a1a,#0a0614)',
+                border:'1.5px solid rgba(96,165,250,0.4)',
+                borderRadius:18, padding:'1.5rem',
+                width:'min(650px,96vw)', marginBottom:24,
+                boxShadow:'0 0 80px rgba(96,165,250,0.15)',
+                display:'flex', flexDirection:'column', gap:'1rem',
+              }} onClick={e => e.stopPropagation()}>
+
+                {/* Header */}
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <div>
+                    <p style={{ margin:0, fontFamily:'Cinzel,serif', fontWeight:900, color:'#60A5FA', fontSize:16, letterSpacing:3 }}>📋 PLANTILLAS DE RESPUESTA</p>
+                    <p style={{ margin:0, fontFamily:'Cinzel,serif', fontSize:10, color:'rgba(255,255,255,0.4)', marginTop:2 }}>
+                      Para cuando un Templario conteste un correo de retención
+                    </p>
+                  </div>
+                  <button onClick={() => setShowPlantillas(false)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.4)', fontSize:22, cursor:'pointer', lineHeight:1 }}>✕</button>
+                </div>
+
+                {/* Lista de plantillas */}
+                <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                  {PLANTILLAS_RESPUESTA.map(p => (
+                    <div key={p.id} style={{
+                      background:'rgba(18,10,38,0.95)', border:'1px solid rgba(255,255,255,0.07)',
+                      borderRadius:12, padding:'1rem', display:'flex', flexDirection:'column', gap:8,
+                    }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                        <p style={{ margin:0, fontFamily:'Cinzel,serif', fontWeight:900, fontSize:12, color:'#fff' }}>{p.label}</p>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(p.texto);
+                            setCopiedPlantilla(p.id);
+                            setTimeout(() => setCopiedPlantilla(prev => prev === p.id ? null : prev), 2000);
+                          }}
+                          style={{
+                            background: copiedPlantilla === p.id ? 'linear-gradient(135deg,#4ADE80,#16a34a)' : 'linear-gradient(135deg,#60A5FA,#2563eb)',
+                            color:'#0a0614', border:'none', borderRadius:6, padding:'0.4rem 0.8rem',
+                            fontFamily:'Cinzel,serif', fontSize:9, fontWeight:900, cursor:'pointer',
+                            display:'flex', alignItems:'center', gap:4,
+                          }}
+                        >{copiedPlantilla === p.id ? '✅ COPIADO' : '📋 COPIAR'}</button>
+                      </div>
+                      <p style={{ margin:0, fontFamily:'Cinzel,serif', fontSize:9, color:'rgba(255,255,255,0.35)' }}>
+                        Asunto: {p.asunto}
+                      </p>
+                      <p style={{
+                        margin:0, fontFamily:'Crimson Text,serif', fontSize:12, color:'rgba(255,255,255,0.7)',
+                        lineHeight:1.5, whiteSpace:'pre-wrap', maxHeight:120, overflowY:'auto',
+                        background:'rgba(0,0,0,0.3)', borderRadius:8, padding:'0.6rem 0.8rem',
+                      }}>{p.texto}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>,
             document.body
