@@ -310,6 +310,7 @@ const [showReports,         setShowReports]         = useState(false);
 const [showKpis,       setShowKpis]       = useState(false);
 const [kpiData,        setKpiData]        = useState(null);
 const [kpiLoading,     setKpiLoading]     = useState(false);
+const [revenueData,    setRevenueData]    = useState(null);
 const [kpiLastUpdated, setKpiLastUpdated] = useState(null);
 
 // ── Sistema / Mantenimiento ────────────────────────────────────────────────
@@ -428,6 +429,11 @@ const loadKpis = async () => {
       // Códigos promo canjeados
       supabase.from('orders').select('id', { count:'exact', head:true }).not('promo_code', 'is', null),
     ]);
+
+    // ── Panel de Ingresos (dinero real) ──
+    const { data: revenueKpis, error: revenueErr } = await supabase.rpc('admin_get_revenue_kpis');
+    if (revenueErr) console.error('[revenue] Error cargando KPIs de ingresos:', revenueErr);
+    setRevenueData(revenueKpis || null);
 
     const dropAlert = (activeYesterday || 0) > 0
       ? Math.round(((activeToday || 0) - (activeYesterday || 0)) / (activeYesterday || 1) * 100)
@@ -3327,6 +3333,31 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
                   <p style={{ color:'rgba(245,200,70,0.5)', fontFamily:'Cinzel,serif', fontSize:11, textAlign:'center', padding:'3rem', letterSpacing:3 }}>CARGANDO MÉTRICAS…</p>
                 ) : kpiData ? (
                   <>
+                    {/* ── Fila 0: 💰 Ingresos (dinero real) ── */}
+                    {revenueData && (
+                      <div style={{ background:'linear-gradient(135deg,rgba(212,175,55,0.08),rgba(124,58,237,0.05))', border:'1px solid rgba(212,175,55,0.25)', borderRadius:12, padding:'1rem', display:'flex', flexDirection:'column', gap:10 }}>
+                        <p style={{ margin:0, fontFamily:'Cinzel,serif', fontWeight:900, fontSize:11, letterSpacing:2, color:'#f5c842', textTransform:'uppercase' }}>💰 Ingresos — dinero real</p>
+                        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
+                          {[
+                            { label:'INGRESO TOTAL', val:`$${(Number(revenueData.historico_pre_ltv.bruto_usd)+Number(revenueData.desde_motor_transacciones.bruto_usd)).toFixed(2)}`, color:'#f5c842', icon:'💰', sub:'histórico + en vivo' },
+                            { label:'NETO (MOTOR EN VIVO)', val:`$${Number(revenueData.desde_motor_transacciones.neto_usd).toFixed(2)}`, color:'#4ade80', icon:'💵', sub:'tras comisión Stripe' },
+                            { label:'MRR ESTIMADO', val: revenueData.mrr_usd != null ? `$${Number(revenueData.mrr_usd).toFixed(2)}` : 'Pendiente', color: revenueData.mrr_usd != null ? '#c084fc' : 'rgba(255,255,255,0.35)', icon:'📅', sub: revenueData.mrr_usd != null ? 'mensual recurrente' : revenueData.mrr_nota },
+                            { label:'COMISIÓN STRIPE', val:`$${Number(revenueData.desde_motor_transacciones.fee_stripe_usd).toFixed(2)}`, color:'#60a5fa', icon:'🏦', sub:`${revenueData.desde_motor_transacciones.num_transacciones} transacciones en vivo` },
+                          ].map(it => (
+                            <div key={it.label} style={{ background:'rgba(18,10,38,0.95)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:10, padding:'0.85rem', display:'flex', flexDirection:'column', gap:3 }}>
+                              <span style={{ fontSize:17 }}>{it.icon}</span>
+                              <span style={{ fontFamily:'Cinzel,serif', fontSize:20, fontWeight:900, color:it.color, lineHeight:1 }}>{it.val}</span>
+                              <span style={{ fontFamily:'Cinzel,serif', fontSize:7.5, letterSpacing:1.5, color:'rgba(255,255,255,0.4)', textTransform:'uppercase' }}>{it.label}</span>
+                              {it.sub && <span style={{ fontFamily:'Cinzel,serif', fontSize:8, color:'rgba(255,255,255,0.35)', marginTop:1 }}>{it.sub}</span>}
+                            </div>
+                          ))}
+                        </div>
+                        <p style={{ margin:0, fontFamily:'Cinzel,serif', fontSize:8, color:'rgba(255,255,255,0.3)' }}>
+                          Histórico ${Number(revenueData.historico_pre_ltv.bruto_usd).toFixed(2)} ({revenueData.historico_pre_ltv.num_transacciones} transacciones, 16 may–hoy) · {revenueData.membresias_activas} membresías activas
+                        </p>
+                      </div>
+                    )}
+
                     {/* ── Fila 1: KPIs grandes ── */}
                     <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
                       {[
