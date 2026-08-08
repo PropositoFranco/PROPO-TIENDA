@@ -521,7 +521,7 @@ export default function AliadoDisplayPage() {
               fontFamily: 'Crimson Text, serif', fontSize: 'clamp(11px,1.6vw,14px)',
               color: C.muted, fontStyle: 'italic', marginTop: 4,
             }}>
-              en el Templo del Propósito · valor $534 USD
+              en el Templo del Propósito · valor $294 USD
             </div>
             <div style={{
               fontFamily: 'Cinzel, serif', fontSize: 'clamp(8px,1.1vw,10px)',

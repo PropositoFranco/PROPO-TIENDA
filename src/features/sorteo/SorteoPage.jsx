@@ -89,7 +89,44 @@ const CSS = `
   @keyframes heartbeat  { 0%,100%{transform:scale(1)} 14%{transform:scale(1.06)} 28%{transform:scale(1)} 42%{transform:scale(1.03)} }
   @keyframes iconBob    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
   @keyframes cursorBlink{ 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* ── Tarjetas de Territorio volteables (mismo mecanismo que la landing) ── */
+  .terr-card { perspective: 900px; cursor: pointer; }
+  .terr-flip-inner {
+    position: relative; width: 100%; height: 100%; min-height: 108px;
+    transform-style: preserve-3d;
+    transition: transform 0.65s cubic-bezier(.4,0,.2,1);
+  }
+  .terr-card.flipped .terr-flip-inner { transform: rotateY(180deg); }
+  .terr-flip-front, .terr-flip-back {
+    position: absolute; inset: 0;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border-radius: 12px; padding: 10px 6px; text-align: center;
+  }
+  .terr-flip-back { transform: rotateY(180deg); overflow: hidden; }
+  .terr-orb {
+    position: relative; width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 17px;
+    animation: orbFloat 3s ease-in-out infinite; margin-bottom: 6px;
+  }
+  .terr-orb::after {
+    content: ''; position: absolute; top: 14%; left: 18%; width: 30%; height: 22%;
+    border-radius: 50%; background: rgba(255,255,255,0.45); filter: blur(2px);
+  }
+  @keyframes orbFloat { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-3px) scale(1.04)} }
 `;
+
+const TERR_ORB = {
+  Cuerpo:         'radial-gradient(circle at 35% 30%,#ff9a9a 0%,#e63946 45%,#9b1c1c 100%)',
+  Mente:          'radial-gradient(circle at 35% 30%,#a5d4ff 0%,#1971c2 45%,#0d3a70 100%)',
+  Emociones:      'radial-gradient(circle at 35% 30%,#ffb3d9 0%,#e91e8c 45%,#8b0050 100%)',
+  Relaciones:     'radial-gradient(circle at 35% 30%,#b7e4c7 0%,#2d9a5f 45%,#144d2f 100%)',
+  Riqueza:        'radial-gradient(circle at 35% 30%,#ffe8a1 0%,#e88c2e 45%,#7a4000 100%)',
+  Vocación:       'radial-gradient(circle at 35% 30%,#e0b8ff 0%,#7b2fbe 45%,#3c0070 100%)',
+  Espiritualidad: 'radial-gradient(circle at 35% 30%,#a0ffe8 0%,#0a9396 45%,#013d40 100%)',
+  Ocio:           'radial-gradient(circle at 35% 30%,#ffd7b0 0%,#e76f51 45%,#7a2d10 100%)',
+};
 
 // ── Fondo épico: estrellas + nebulosa + partículas ─────────────────────────────
 function Particles() {
@@ -499,6 +536,22 @@ function HistorialRondas({ historial, mostrar, onToggle }) {
   );
 }
 
+function BadgePerrito() {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      background: 'rgba(204,68,255,0.05)', border: '1px solid rgba(204,68,255,0.18)',
+      borderRadius: 12, padding: '10px 14px', marginTop: 14, marginBottom: 6,
+      textAlign: 'left',
+    }}>
+      <span style={{ fontSize: 18, flexShrink: 0 }}>🐾</span>
+      <span style={{ fontFamily: 'Crimson Text, serif', fontStyle: 'italic', fontSize: 12, color: 'rgba(200,185,240,0.75)', lineHeight: 1.5 }}>
+        Cada 25 registros, el Templo dona un costal de comida para un perrito en situación vulnerable.
+      </span>
+    </div>
+  );
+}
+
 // ── Motor de sonido (Web Audio API — sin dependencias externas) ────────────────
 function useSoundEngine() {
   const ctxRef = useRef(null);
@@ -642,7 +695,7 @@ function SorteoAnimacion({ nombres, ganadorNombre }) {
           </div>
           <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 16, color: 'rgba(255,255,255,0.72)', fontStyle: 'italic', lineHeight: 1.85 }}>
             Recibe 6 meses completos en el Templo<br />
-            <span style={{ color: C.gold, fontWeight: 600 }}>Beca completa — valor $534 USD</span>
+            <span style={{ color: C.gold, fontWeight: 600 }}>Beca completa — valor $294 USD</span>
           </div>
         </div>
       )}
@@ -685,6 +738,14 @@ export default function SorteoPage() {
   const [fraseVisible,   setFraseVisible]   = useState(true);
   const [causaElegida,   setCausaElegida]   = useState(null);
   const [screenAnterior, setScreenAnterior] = useState(null);
+  const [videoActivado,     setVideoActivado]     = useState(false);
+  const [videoPausado,      setVideoPausado]      = useState(false);
+  const [videoTiempo,       setVideoTiempo]       = useState({ actual: 0, duracion: 0 });
+  const [videoSilenciado,   setVideoSilenciado]   = useState(false);
+  const [videoVolumen,      setVideoVolumen]      = useState(1);
+  const [terrVolteadas,     setTerrVolteadas]     = useState({});
+  const videoIframeRef = useRef(null);
+  const videoPlayerRef = useRef(null);
   const [mostrarConsulta,   setMostrarConsulta]   = useState(false);
   const [mostrarReporte,    setMostrarReporte]    = useState(false);
   const [reporteEmail,      setReporteEmail]      = useState('');
@@ -1257,26 +1318,12 @@ return data || null;
             }}>
               Junto con tu beca, recibes tu{' '}
               <span style={{ color: '#a78bfa', fontStyle: 'normal', fontWeight: 700 }}>código Alianza</span>.<br />
-              Quien lo use también entra por{' '}
-              <span style={{ color: '#a78bfa', fontWeight: 700 }}>$1</span>.<br />
-              <span style={{ color: C.gold, fontSize: '0.92em' }}>
-                Cada nivel que desbloquees suma +1 mes más, por $1.
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
-              {[['⚡','Chispa'],['🔗','Nexo'],['🌊','Resonancia'],['🌐','Expansión'],['✦','Legado']].map(([emoji, label], i) => (
-                <div key={i} title={label} style={{
-                  width: 30, height: 30, borderRadius: '50%',
-                  background: 'rgba(255,215,0,0.05)',
-                  border: '1px solid rgba(212,175,55,0.22)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 13,
-                }}>
-                  {emoji}
-                </div>
-              ))}
+              Compártelo — quien lo use también entra al Templo por{' '}
+              <span style={{ color: '#a78bfa', fontWeight: 700 }}>$1</span>.
             </div>
           </div>
+
+          <BadgePerrito />
 
           {historial.length > 0 && <HistorialRondas historial={historial} onToggle={() => setMostrarHistorial(v => !v)} mostrar={mostrarHistorial} />}
         </div>
@@ -1286,6 +1333,10 @@ return data || null;
 
   // ── PANTALLA: PREMIO ──────────────────────────────────────────────────────
   if (screen === SCREEN.PREMIO) {
+    const STRIPE_LINKS_PREMIO = {
+      becas:  `https://buy.stripe.com/9B68wP59t2pA1lQeKQenS0x?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}&client_reference_id=${encodeURIComponent(miRegistro?.id || '')}`,
+      perros: `https://buy.stripe.com/7sY9ATfO77JUe8CgSYenS0w?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}&client_reference_id=${encodeURIComponent(miRegistro?.id || '')}`,
+    };
     return (
       <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'clamp(20px,5vw,60px) clamp(16px,4vw,40px)', position: 'relative', overflow: 'hidden', textAlign: 'center' }}>
         <Particles />
@@ -1405,22 +1456,92 @@ return data || null;
             </p>
           )}
 
-          <button
-            onClick={() => { setScreenAnterior(SCREEN.PREMIO); setScreen(SCREEN.CAUSA); }}
+          {/* ── CAUSA — fusionada aquí mismo, sin salto de pantalla ── */}
+          <p style={{
+            fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3,
+            color: 'rgba(204,68,255,0.55)', marginBottom: 14, textAlign: 'center',
+          }}>
+            ¿A QUÉ CAUSA QUIERES DESTINAR TU DÓLAR?
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 18 }}>
+            {/* Opción: Becas */}
+            <button
+              onClick={() => setCausaElegida('becas')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
+                padding: '14px 16px', borderRadius: 16, cursor: 'pointer',
+                background: causaElegida === 'becas' ? 'rgba(212,175,55,0.12)' : 'rgba(255,255,255,0.03)',
+                border: causaElegida === 'becas' ? `1.5px solid ${C.gold}` : '1.5px solid rgba(255,255,255,0.08)',
+                transition: 'all .25s',
+              }}
+            >
+              <div style={{ fontSize: 26 }}>🎓</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 12, letterSpacing: 1, color: C.gold, marginBottom: 4 }}>
+                  ACCESO GRATUITO PARA OTRO GUERRERO
+                </div>
+                <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+                  Tu dólar se convierte en acceso gratuito al Templo para alguien comprometido con crecer.
+                </div>
+              </div>
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                border: causaElegida === 'becas' ? `6px solid ${C.gold}` : '1.5px solid rgba(255,255,255,0.25)',
+                transition: 'all .2s',
+              }} />
+            </button>
+
+            {/* Opción: Perros */}
+            <button
+              onClick={() => setCausaElegida('perros')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
+                padding: '14px 16px', borderRadius: 16, cursor: 'pointer',
+                background: causaElegida === 'perros' ? 'rgba(204,68,255,0.12)' : 'rgba(255,255,255,0.03)',
+                border: causaElegida === 'perros' ? `1.5px solid ${C.purple}` : '1.5px solid rgba(255,255,255,0.08)',
+                transition: 'all .25s',
+              }}
+            >
+              <div style={{ fontSize: 26 }}>🐾</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 12, letterSpacing: 1, color: C.purple, marginBottom: 4 }}>
+                  ALIMENTO PARA PERROS
+                </div>
+                <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+                  Cada dólar ayuda directamente a brindar alimento a perros en situación vulnerable.
+                </div>
+              </div>
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                border: causaElegida === 'perros' ? `6px solid ${C.purple}` : '1.5px solid rgba(255,255,255,0.25)',
+                transition: 'all .2s',
+              }} />
+            </button>
+          </div>
+
+          <a
+            href={causaElegida ? STRIPE_LINKS_PREMIO[causaElegida] : undefined}
+            target="_blank" rel="noopener noreferrer"
+            onClick={(e) => { if (!causaElegida) e.preventDefault(); }}
             style={{
               display: 'block', width: '100%', padding: '17px',
-              borderRadius: 14, border: 'none', cursor: 'pointer',
-              background: `linear-gradient(135deg,${C.purple},#6b0a8a)`,
-              color: '#fff', fontFamily: 'Cinzel, serif',
+              borderRadius: 14, border: 'none', cursor: causaElegida ? 'pointer' : 'not-allowed',
+              background: causaElegida
+                ? `linear-gradient(135deg,${C.purple},#6b0a8a)`
+                : 'rgba(255,255,255,0.06)',
+              color: causaElegida ? '#fff' : 'rgba(255,255,255,0.3)',
+              fontFamily: 'Cinzel, serif',
               fontSize: 12, letterSpacing: 3, fontWeight: 900,
-              textDecoration: 'none',
-              boxShadow: '0 4px 24px rgba(204,68,255,0.35)',
+              textDecoration: 'none', textAlign: 'center',
+              boxShadow: causaElegida ? '0 4px 24px rgba(204,68,255,0.35)' : 'none',
               marginBottom: 10,
-              animation: 'btnPulse 2.8s ease-in-out infinite',
+              animation: causaElegida ? 'btnPulse 2.8s ease-in-out infinite' : 'none',
+              transition: 'all .25s',
             }}
           >
-            ⚔️ ENTRAR AL TEMPLO — PRIMER MES $1
-          </button>
+            {causaElegida ? '⚔️ ENTRAR AL TEMPLO — PRIMER MES $1' : 'SELECCIONA UNA CAUSA PARA CONTINUAR'}
+          </a>
           <p style={{
             fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
             fontSize: 12, color: 'rgba(255,255,255,0.28)',
@@ -1452,26 +1573,12 @@ return data || null;
             }}>
               El Templo te entrega tu{' '}
               <span style={{ color: '#a78bfa', fontStyle: 'normal', fontWeight: 700 }}>código Alianza</span>.<br />
-              Quien lo use también entra por{' '}
-              <span style={{ color: '#a78bfa', fontWeight: 700 }}>$1</span>.<br />
-              <span style={{ color: 'rgba(212,175,55,0.75)', fontSize: '0.92em' }}>
-                Por cada nivel alcanzado: +1 mes tuyo por $1.
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
-              {[['⚡','Chispa'],['🔗','Nexo'],['🌊','Resonancia'],['🌐','Expansión'],['✦','Legado']].map(([emoji, label], i) => (
-                <div key={i} title={label} style={{
-                  width: 30, height: 30, borderRadius: '50%',
-                  background: 'rgba(167,139,250,0.06)',
-                  border: '1px solid rgba(167,139,250,0.2)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 13,
-                }}>
-                  {emoji}
-                </div>
-              ))}
+              Compártelo — quien lo use también entra por{' '}
+              <span style={{ color: '#a78bfa', fontWeight: 700 }}>$1</span>.
             </div>
           </div>
+
+          <BadgePerrito />
 
           {historial.length > 0 && <HistorialRondas historial={historial} onToggle={() => setMostrarHistorial(v => !v)} mostrar={mostrarHistorial} />}
         </div>
@@ -1479,130 +1586,6 @@ return data || null;
     );
   }
 
-
-
-  // ── PANTALLA: CAUSA ───────────────────────────────────────────────────────
-  if (screen === SCREEN.CAUSA) {
-    const STRIPE_LINKS = {
-      becas:  `https://buy.stripe.com/9B68wP59t2pA1lQeKQenS0x?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}&client_reference_id=${encodeURIComponent(miRegistro?.id || '')}`,
-      perros: `https://buy.stripe.com/7sY9ATfO77JUe8CgSYenS0w?prefilled_promo_code=${encodeURIComponent(miRegistro?.cuponCode || '')}&client_reference_id=${encodeURIComponent(miRegistro?.id || '')}`,
-    };
-
-    return (
-      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'clamp(20px,5vw,60px) clamp(16px,4vw,40px)', position: 'relative', overflow: 'hidden', textAlign: 'center' }}>
-        <Particles />
-        <Header totalBecas={totalBecas} totalGanadores={totalGanadores} rondaNum={rondaNum} eventoNombre={evento?.nombre} />
-        <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 520, marginTop: 72, animation: 'fadeUp .7s ease both' }}>
-
-          <div style={{ fontSize: 36, marginBottom: 10 }}>⚜️</div>
-
-          <h1 style={{
-            fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
-            fontSize: 'clamp(18px,5vw,26px)', marginBottom: 10, letterSpacing: 2,
-            background: `linear-gradient(135deg,${C.purple},#fff)`,
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-          }}>¿A QUÉ CAUSA QUIERES DESTINAR TU DÓLAR?</h1>
-
-          <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 14, color: C.muted, fontStyle: 'italic', lineHeight: 1.7, marginBottom: 28 }}>
-            Tu decisión genera impacto real dentro y fuera del Templo.
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
-
-            {/* Opción: Becas */}
-            <button
-              onClick={() => setCausaElegida('becas')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
-                padding: '16px 18px', borderRadius: 16, cursor: 'pointer',
-                background: causaElegida === 'becas' ? 'rgba(212,175,55,0.12)' : 'rgba(255,255,255,0.03)',
-                border: causaElegida === 'becas' ? `1.5px solid ${C.gold}` : '1.5px solid rgba(255,255,255,0.08)',
-                transition: 'all .25s',
-              }}
-            >
-              <div style={{ fontSize: 28 }}>🎓</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 13, letterSpacing: 1, color: C.gold, marginBottom: 4 }}>
-                  BECAS TEMPLO DEL PROPÓSITO
-                </div>
-                <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
-                  Tu dólar se convierte en acceso gratuito al Templo para alguien comprometido con crecer.
-                </div>
-              </div>
-              <div style={{
-                width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                border: causaElegida === 'becas' ? `6px solid ${C.gold}` : '1.5px solid rgba(255,255,255,0.25)',
-                transition: 'all .2s',
-              }} />
-            </button>
-
-            {/* Opción: Perros */}
-            <button
-              onClick={() => setCausaElegida('perros')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
-                padding: '16px 18px', borderRadius: 16, cursor: 'pointer',
-                background: causaElegida === 'perros' ? 'rgba(204,68,255,0.12)' : 'rgba(255,255,255,0.03)',
-                border: causaElegida === 'perros' ? `1.5px solid ${C.purple}` : '1.5px solid rgba(255,255,255,0.08)',
-                transition: 'all .25s',
-              }}
-            >
-              <div style={{ fontSize: 28 }}>🐾</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 13, letterSpacing: 1, color: C.purple, marginBottom: 4 }}>
-                  ALIMENTO PARA PERROS
-                </div>
-                <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
-                  Cada dólar ayuda directamente a brindar alimento a perros en situación vulnerable.
-                </div>
-              </div>
-              <div style={{
-                width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                border: causaElegida === 'perros' ? `6px solid ${C.purple}` : '1.5px solid rgba(255,255,255,0.25)',
-                transition: 'all .2s',
-              }} />
-            </button>
-
-          </div>
-
-          <a
-            href={causaElegida ? STRIPE_LINKS[causaElegida] : undefined}
-            target="_blank" rel="noopener noreferrer"
-            onClick={(e) => { if (!causaElegida) e.preventDefault(); }}
-            style={{
-              display: 'block', padding: '16px',
-              borderRadius: 14,
-              background: causaElegida
-                ? `linear-gradient(135deg,${C.purple},#6b0a8a)`
-                : 'rgba(255,255,255,0.06)',
-              color: causaElegida ? '#fff' : 'rgba(255,255,255,0.3)',
-              fontFamily: 'Cinzel, serif',
-              fontSize: 12, letterSpacing: 3, fontWeight: 900,
-              textDecoration: 'none', textAlign: 'center',
-              cursor: causaElegida ? 'pointer' : 'not-allowed',
-              transition: 'all .25s',
-              animation: causaElegida ? 'btnPulse 2.5s ease-in-out infinite' : 'none',
-            }}
-          >
-            {causaElegida ? '⚔️ CONTINUAR CON MI DONACIÓN →' : 'SELECCIONA UNA CAUSA PARA CONTINUAR'}
-          </a>
-
-          <button
-            onClick={() => setScreen(SCREEN.PREMIO)}
-            style={{
-              display: 'block', margin: '18px auto 0', padding: '8px 16px',
-              background: 'transparent', border: 'none', cursor: 'pointer',
-              fontFamily: 'Crimson Text, serif', fontStyle: 'italic', fontSize: 12,
-              color: 'rgba(255,255,255,0.35)', letterSpacing: 0.5,
-            }}
-          >
-            ← Volver
-          </button>
-
-        </div>
-      </div>
-    );
-  }
 
   // ── PANTALLA: ESPERA ──────────────────────────────────────────────────────
   if (screen === SCREEN.ESPERA) {
@@ -1711,6 +1694,8 @@ return data || null;
             </>
           )}
 
+          <BadgePerrito />
+
           {historial.length > 0 && <HistorialRondas historial={historial} onToggle={() => setMostrarHistorial(v => !v)} mostrar={mostrarHistorial} />}
         </div>
       </div>
@@ -1799,6 +1784,189 @@ return data || null;
             </div>
           );
         })()}
+
+        {/* ── Encabezado épico sobre el video ── */}
+        <div style={{ textAlign: 'center', marginBottom: 12 }}>
+          <div style={{
+            fontFamily: 'Cinzel Decorative, serif', fontWeight: 900,
+            fontSize: 'clamp(14px,3.8vw,18px)', lineHeight: 1.35, letterSpacing: 1,
+            background: `linear-gradient(135deg,${C.gold},${C.goldLight},${C.gold})`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+          }}>
+            El sistema de transformación personal<br />más completo que existe.
+          </div>
+        </div>
+
+        {/* ── Conoce al Templo — video real de la landing, tap-to-play, controles propios ── */}
+        <div style={{
+          position: 'relative', marginBottom: 20, borderRadius: 18,
+          overflow: 'hidden', border: `1.5px solid ${C.border}`,
+          aspectRatio: '16/9', background: '#000',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+        }}>
+          {videoActivado ? (
+            <>
+              <iframe
+                ref={videoIframeRef}
+                src="https://player.vimeo.com/video/1169454393?autoplay=1&controls=0&title=0&byline=0&portrait=0&badge=0&app_id=58479"
+                style={{ width: '100%', height: '100%', border: 'none', display: 'block', pointerEvents: 'none' }}
+                allow="autoplay; fullscreen; picture-in-picture"
+                title="Templo del Propósito"
+                onLoad={() => {
+                  const setupPlayer = () => {
+                    if (!videoIframeRef.current) return;
+                    const player = new window.Vimeo.Player(videoIframeRef.current);
+                    videoPlayerRef.current = player;
+                    player.getDuration().then(d => setVideoTiempo(t => ({ ...t, duracion: d })));
+                    player.on('timeupdate', data => setVideoTiempo({ actual: data.seconds, duracion: data.duration }));
+                    player.on('ended', () => setVideoPausado(true));
+                  };
+                  if (window.Vimeo) { setupPlayer(); return; }
+                  const s = document.createElement('script');
+                  s.src = 'https://player.vimeo.com/api/player.js';
+                  s.onload = setupPlayer;
+                  document.body.appendChild(s);
+                }}
+              />
+
+              {/* ── Barra de control propia — play/pausa, tiempo restante, silenciar, volumen ── */}
+              <div style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 4,
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '8px 12px',
+                background: 'linear-gradient(0deg,rgba(0,0,0,0.75),transparent)',
+              }}>
+                <button
+                  onClick={() => {
+                    if (!videoPlayerRef.current) return;
+                    if (videoPausado) { videoPlayerRef.current.play(); setVideoPausado(false); }
+                    else { videoPlayerRef.current.pause(); setVideoPausado(true); }
+                  }}
+                  style={{
+                    width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                    background: 'rgba(0,0,0,0.55)', border: '1.5px solid rgba(255,255,255,0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: '#fff', fontSize: 12,
+                  }}
+                >
+                  {videoPausado ? '▶' : '⏸'}
+                </button>
+
+                <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: 'rgba(255,255,255,0.75)', letterSpacing: 0.5, flexShrink: 0 }}>
+                  -{formatTiempo(Math.max(0, videoTiempo.duracion - videoTiempo.actual))}
+                </span>
+
+                <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: 2, background: C.gold,
+                    width: videoTiempo.duracion ? `${(videoTiempo.actual / videoTiempo.duracion) * 100}%` : '0%',
+                    transition: 'width .2s linear',
+                  }} />
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (!videoPlayerRef.current) return;
+                    videoPlayerRef.current.setMuted(!videoSilenciado);
+                    setVideoSilenciado(v => !v);
+                  }}
+                  style={{
+                    width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                    background: 'transparent', border: 'none', cursor: 'pointer',
+                    color: '#fff', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  {videoSilenciado ? '🔇' : '🔊'}
+                </button>
+
+                <input
+                  type="range" min="0" max="1" step="0.05"
+                  value={videoSilenciado ? 0 : videoVolumen}
+                  onChange={e => {
+                    const v = parseFloat(e.target.value);
+                    setVideoVolumen(v);
+                    setVideoSilenciado(v === 0);
+                    if (videoPlayerRef.current) { videoPlayerRef.current.setVolume(v); videoPlayerRef.current.setMuted(v === 0); }
+                  }}
+                  style={{ width: 46, accentColor: C.gold, flexShrink: 0 }}
+                />
+              </div>
+            </>
+          ) : (
+            <button
+              onClick={() => setVideoActivado(true)}
+              style={{
+                width: '100%', height: '100%', border: 'none', cursor: 'pointer',
+                background: 'linear-gradient(160deg,rgba(255,215,0,0.1),rgba(10,5,26,0.9))',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+              }}
+            >
+              <div style={{
+                width: 56, height: 56, borderRadius: '50%',
+                background: 'rgba(255,215,0,0.15)', border: `1.5px solid ${C.borderHi}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                animation: 'btnPulse 2.5s ease-in-out infinite',
+              }}>
+                <div style={{ width: 0, height: 0, borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: `16px solid ${C.gold}`, marginLeft: 4 }} />
+              </div>
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: C.goldLight }}>
+                ⚔️ CONOCE EL TEMPLO EN SOLO 3 MIN
+              </span>
+            </button>
+          )}
+        </div>
+
+        {/* ── 8 Territorios — mismas tarjetas volteables de la landing, adaptadas al tema oscuro ── */}
+        <div style={{
+          marginBottom: 20, padding: 'clamp(16px,3.5vw,22px)',
+          background: 'rgba(255,255,255,0.02)',
+          border: `1px solid ${C.border}`,
+          borderRadius: 18,
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: 14 }}>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 4, color: C.goldDim, marginBottom: 4 }}>
+              ✦ LA GRAN IDEA ✦
+            </div>
+            <div style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 'clamp(13px,3.5vw,16px)', color: C.goldLight, letterSpacing: 1 }}>
+              Tu vida está hecha de 8 territorios
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            {[
+              ['💪', 'Cuerpo', 'Energía, salud, movimiento y vitalidad física.'],
+              ['🧠', 'Mente', 'Claridad, enfoque, aprendizaje y fortaleza mental.'],
+              ['❤️', 'Emociones', 'Regulación emocional, paz interior y autoconciencia.'],
+              ['🤝', 'Relaciones', 'Vínculos, comunidad, amor y pertenencia.'],
+              ['💰', 'Riqueza', 'Finanzas, abundancia y relación con el dinero.'],
+              ['🎯', 'Vocación', 'Propósito, trabajo significativo y contribución.'],
+              ['✨', 'Espiritualidad', 'Trascendencia, fe, sentido y conexión profunda.'],
+              ['🎲', 'Ocio', 'Descanso, creatividad, juego y disfrute genuino.'],
+            ].map(([ico, nombre, desc]) => {
+              const volteada = !!terrVolteadas[nombre];
+              return (
+                <div
+                  key={nombre}
+                  className={`terr-card${volteada ? ' flipped' : ''}`}
+                  onClick={() => setTerrVolteadas(v => ({ ...v, [nombre]: !v[nombre] }))}
+                >
+                  <div className="terr-flip-inner">
+                    <div className="terr-flip-front" style={{ background: 'rgba(255,215,0,0.03)', border: '1px solid rgba(255,215,0,0.1)' }}>
+                      <span style={{ fontSize: 18, marginBottom: 4 }}>{ico}</span>
+                      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 7.5, letterSpacing: 0.5, color: 'rgba(255,255,255,0.7)', lineHeight: 1.2 }}>{nombre}</span>
+                    </div>
+                    <div className="terr-flip-back" style={{ background: '#0a0614', border: '1px solid rgba(255,215,0,0.25)' }}>
+                      <div className="terr-orb" style={{ background: TERR_ORB[nombre] }}>{ico}</div>
+                      <span style={{ fontFamily: 'Crimson Text, serif', fontStyle: 'italic', fontSize: 7, color: 'rgba(255,255,255,0.75)', lineHeight: 1.3, padding: '0 2px' }}>{desc}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ fontFamily: 'Crimson Text, serif', fontSize: 11.5, color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', textAlign: 'center', marginTop: 12, lineHeight: 1.5 }}>
+            Cuando uno se debilita, todos los demás lo sienten.<br />El Templo te ayuda a ver cuál necesita atención ahora.
+          </div>
+        </div>
 
         {/* Premio principal épico */}
         <div style={{ marginBottom: 20, animation: 'floatBeca 3.5s ease-in-out infinite' }}>
@@ -1891,12 +2059,9 @@ return data || null;
           }}>
             ENTRA AL SORTEO
           </h2>
-          <p style={{ textAlign: 'center', fontFamily: 'Crimson Text, serif', fontSize: 15, color: C.muted, fontStyle: 'italic', lineHeight: 1.75, marginBottom: 14 }}>
+          <p style={{ textAlign: 'center', fontFamily: 'Crimson Text, serif', fontSize: 15, color: C.muted, fontStyle: 'italic', lineHeight: 1.75, marginBottom: 20 }}>
             Un guerrero gana <span style={{ color: C.gold }}>6 meses</span> gratis.<br />
             Todos los demás reciben un cupón especial.
-          </p>
-          <p style={{ textAlign: 'center', fontFamily: 'Crimson Text, serif', fontSize: 12.5, color: 'rgba(212,175,55,0.55)', fontStyle: 'italic', lineHeight: 1.75, marginBottom: 26 }}>
-            Y tu registro ya suma a algo más grande: cada <span style={{ color: C.gold, fontStyle: 'normal' }}>6 Templarios nuevos</span>, alguien con potencial cruza la puerta sin pagar nada. Cada <span style={{ color: C.gold, fontStyle: 'normal' }}>25</span>, un costal de 20kg llega directo al plato de un perrito que hoy tiene hambre.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginBottom: 22 }}>
@@ -2120,12 +2285,6 @@ return data || null;
           )}
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 22 }}>
-          <a href="https://templodelpropositooficial.netlify.app/" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.goldDim, textDecoration: 'none' }}>
-            ¿QUÉ ES PROPOTIENDA? →
-          </a>
-        </div>
-
         {/* ── Bloque: reportar un problema ─────────────────────────────── */}
         <div style={{ marginTop: 18 }}>
           <button
@@ -2227,4 +2386,12 @@ function clamp(min, max) {
     const vw = window.innerWidth;
     return Math.min(max, Math.max(min, vw * 0.32));
   } catch { return min; }
+}
+
+// Helper — convierte segundos a formato mm:ss para el contador del video
+function formatTiempo(segundos) {
+  if (!segundos || !isFinite(segundos) || segundos < 0) return '0:00';
+  const mins = Math.floor(segundos / 60);
+  const secs = Math.floor(segundos % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
