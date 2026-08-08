@@ -1109,10 +1109,12 @@ return data || null;
   ];
 
   useEffect(() => {
-    const onFsChange = () => setVideoPantallaCompleta(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onFsChange);
-    return () => document.removeEventListener('fullscreenchange', onFsChange);
-  }, []);
+    // Pantalla completa hecha con CSS (no con la Fullscreen API nativa): iOS Safari no
+    // soporta requestFullscreen() en un <div>, solo en <video> directo, así que ahí fallaba
+    // en silencio. Con este método el video se agranda a toda la pantalla en todos los celulares.
+    document.body.style.overflow = videoPantallaCompleta ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [videoPantallaCompleta]);
 
   useEffect(() => {
     if (screen !== SCREEN.ESPERA) return undefined;
@@ -1809,7 +1811,12 @@ return data || null;
         {/* ── Conoce al Templo — video real de la landing, tap-to-play, controles propios ── */}
         <div
           ref={videoContainerRef}
-          style={{
+          style={videoPantallaCompleta ? {
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            width: '100vw', height: '100vh', zIndex: 9999,
+            borderRadius: 0, border: 'none', background: '#000',
+            aspectRatio: 'auto',
+          } : {
             position: 'relative', marginBottom: 20, borderRadius: 18,
             overflow: 'hidden', border: `1.5px solid ${C.border}`,
             aspectRatio: '16/9', background: '#000',
@@ -1913,14 +1920,7 @@ return data || null;
                 />
 
                 <button
-                  onClick={() => {
-                    if (!videoContainerRef.current) return;
-                    if (document.fullscreenElement) {
-                      document.exitFullscreen?.();
-                    } else {
-                      videoContainerRef.current.requestFullscreen?.();
-                    }
-                  }}
+                  onClick={() => setVideoPantallaCompleta(v => !v)}
                   style={{
                     width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
                     background: 'transparent', border: 'none', cursor: 'pointer',
