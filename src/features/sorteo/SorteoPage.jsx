@@ -746,6 +746,8 @@ export default function SorteoPage() {
   const [terrVolteadas,     setTerrVolteadas]     = useState({});
   const videoIframeRef = useRef(null);
   const videoPlayerRef = useRef(null);
+  const videoContainerRef = useRef(null);
+  const [videoPantallaCompleta, setVideoPantallaCompleta] = useState(false);
   const [mostrarConsulta,   setMostrarConsulta]   = useState(false);
   const [mostrarReporte,    setMostrarReporte]    = useState(false);
   const [reporteEmail,      setReporteEmail]      = useState('');
@@ -1104,6 +1106,12 @@ return data || null;
     { texto: "El silencio antes del sorteo siempre dice algo.", sub: "Escúchalo." },
     { texto: "Hay guerreros que esperan.",                      sub: "Y hay guerreros que ya saben que van a ganar." },
   ];
+
+  useEffect(() => {
+    const onFsChange = () => setVideoPantallaCompleta(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
 
   useEffect(() => {
     if (screen !== SCREEN.ESPERA) return undefined;
@@ -1798,12 +1806,15 @@ return data || null;
         </div>
 
         {/* ── Conoce al Templo — video real de la landing, tap-to-play, controles propios ── */}
-        <div style={{
-          position: 'relative', marginBottom: 20, borderRadius: 18,
-          overflow: 'hidden', border: `1.5px solid ${C.border}`,
-          aspectRatio: '16/9', background: '#000',
-          boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
-        }}>
+        <div
+          ref={videoContainerRef}
+          style={{
+            position: 'relative', marginBottom: 20, borderRadius: 18,
+            overflow: 'hidden', border: `1.5px solid ${C.border}`,
+            aspectRatio: '16/9', background: '#000',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+          }}
+        >
           {videoActivado ? (
             <>
               <iframe
@@ -1890,6 +1901,25 @@ return data || null;
                   }}
                   style={{ width: 46, accentColor: C.gold, flexShrink: 0 }}
                 />
+
+                <button
+                  onClick={() => {
+                    if (!videoContainerRef.current) return;
+                    if (document.fullscreenElement) {
+                      document.exitFullscreen?.();
+                    } else {
+                      videoContainerRef.current.requestFullscreen?.();
+                    }
+                  }}
+                  style={{
+                    width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                    background: 'transparent', border: 'none', cursor: 'pointer',
+                    color: '#fff', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  title={videoPantallaCompleta ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                >
+                  {videoPantallaCompleta ? '⤡' : '⛶'}
+                </button>
               </div>
             </>
           ) : (
