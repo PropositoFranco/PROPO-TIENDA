@@ -747,6 +747,7 @@ export default function SorteoPage() {
   const videoIframeRef = useRef(null);
   const videoPlayerRef = useRef(null);
   const videoContainerRef = useRef(null);
+  const videoPlayPendienteRef = useRef(false);
   const [videoPantallaCompleta, setVideoPantallaCompleta] = useState(false);
   const [mostrarConsulta,   setMostrarConsulta]   = useState(false);
   const [mostrarReporte,    setMostrarReporte]    = useState(false);
@@ -1815,31 +1816,40 @@ return data || null;
             boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
           }}
         >
+          {/* El iframe se monta desde el inicio (sin autoplay) para que el player ya esté listo
+              cuando el usuario toque play — así el play() corre dentro del mismo tap y el
+              navegador en móvil deja pasar el audio, en vez de silenciarlo como con autoplay por URL. */}
+          <iframe
+            ref={videoIframeRef}
+            src="https://player.vimeo.com/video/1169454393?autoplay=0&controls=0&title=0&byline=0&portrait=0&badge=0&app_id=58479"
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block', pointerEvents: 'none' }}
+            allow="autoplay; fullscreen; picture-in-picture"
+            title="Templo del Propósito"
+            onLoad={() => {
+              const setupPlayer = () => {
+                if (!videoIframeRef.current) return;
+                const player = new window.Vimeo.Player(videoIframeRef.current);
+                videoPlayerRef.current = player;
+                player.getDuration().then(d => setVideoTiempo(t => ({ ...t, duracion: d })));
+                player.on('timeupdate', data => setVideoTiempo({ actual: data.seconds, duracion: data.duration }));
+                player.on('ended', () => setVideoPausado(true));
+                if (videoPlayPendienteRef.current) {
+                  videoPlayPendienteRef.current = false;
+                  player.setMuted(false);
+                  player.setVolume(1);
+                  player.play();
+                }
+              };
+              if (window.Vimeo) { setupPlayer(); return; }
+              const s = document.createElement('script');
+              s.src = 'https://player.vimeo.com/api/player.js';
+              s.onload = setupPlayer;
+              document.body.appendChild(s);
+            }}
+          />
+
           {videoActivado ? (
             <>
-              <iframe
-                ref={videoIframeRef}
-                src="https://player.vimeo.com/video/1169454393?autoplay=1&controls=0&title=0&byline=0&portrait=0&badge=0&app_id=58479"
-                style={{ width: '100%', height: '100%', border: 'none', display: 'block', pointerEvents: 'none' }}
-                allow="autoplay; fullscreen; picture-in-picture"
-                title="Templo del Propósito"
-                onLoad={() => {
-                  const setupPlayer = () => {
-                    if (!videoIframeRef.current) return;
-                    const player = new window.Vimeo.Player(videoIframeRef.current);
-                    videoPlayerRef.current = player;
-                    player.getDuration().then(d => setVideoTiempo(t => ({ ...t, duracion: d })));
-                    player.on('timeupdate', data => setVideoTiempo({ actual: data.seconds, duracion: data.duration }));
-                    player.on('ended', () => setVideoPausado(true));
-                  };
-                  if (window.Vimeo) { setupPlayer(); return; }
-                  const s = document.createElement('script');
-                  s.src = 'https://player.vimeo.com/api/player.js';
-                  s.onload = setupPlayer;
-                  document.body.appendChild(s);
-                }}
-              />
-
               {/* ── Barra de control propia — play/pausa, tiempo restante, silenciar, volumen ── */}
               <div style={{
                 position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 4,
@@ -1924,8 +1934,20 @@ return data || null;
             </>
           ) : (
             <button
-              onClick={() => setVideoActivado(true)}
+              onClick={() => {
+                setVideoActivado(true);
+                setVideoPausado(false);
+                setVideoSilenciado(false);
+                if (videoPlayerRef.current) {
+                  videoPlayerRef.current.setMuted(false);
+                  videoPlayerRef.current.setVolume(1);
+                  videoPlayerRef.current.play();
+                } else {
+                  videoPlayPendienteRef.current = true;
+                }
+              }}
               style={{
+                position: 'absolute', inset: 0, zIndex: 3,
                 width: '100%', height: '100%', border: 'none', cursor: 'pointer',
                 background: 'linear-gradient(160deg,rgba(255,215,0,0.1),rgba(10,5,26,0.9))',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
