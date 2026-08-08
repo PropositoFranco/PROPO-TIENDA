@@ -749,6 +749,17 @@ export default function SorteoPage() {
   const videoContainerRef = useRef(null);
   const videoPlayPendienteRef = useRef(false);
   const [videoPantallaCompleta, setVideoPantallaCompleta] = useState(false);
+  const [videoDims, setVideoDims] = useState(null);
+  const [videoEscalaFS, setVideoEscalaFS] = useState(1);
+  const toggleVideoPantallaCompleta = () => {
+    if (!videoPantallaCompleta && videoContainerRef.current) {
+      const rect = videoContainerRef.current.getBoundingClientRect();
+      const dims = videoDims || { width: rect.width, height: rect.height };
+      if (!videoDims) setVideoDims(dims);
+      setVideoEscalaFS(Math.min(window.innerWidth / dims.width, window.innerHeight / dims.height));
+    }
+    setVideoPantallaCompleta(v => !v);
+  };
   const [entradaRegistroLista, setEntradaRegistroLista] = useState(false);
   const [mostrarConsulta,   setMostrarConsulta]   = useState(false);
   const [mostrarReporte,    setMostrarReporte]    = useState(false);
@@ -1716,18 +1727,28 @@ return data || null;
 
   // ── PANTALLA: REGISTRO ────────────────────────────────────────────────────
   const videoBloque = (
-    <div
+    <>
+      {videoPantallaCompleta && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#000', zIndex: 9998 }} />
+      )}
+      <div
       ref={videoContainerRef}
-      style={videoPantallaCompleta ? {
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        width: '100vw', height: '100vh', zIndex: 9999,
-        borderRadius: 0, border: 'none', background: '#000',
-        aspectRatio: 'auto', marginBottom: 0,
-      } : {
-        position: 'relative', marginBottom: 20, borderRadius: 18,
-        overflow: 'hidden', border: `1.5px solid ${C.border}`,
-        aspectRatio: '16/9', background: '#000',
-        boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+      style={{
+        position: videoPantallaCompleta ? 'fixed' : 'relative',
+        top: videoPantallaCompleta ? '50%' : undefined,
+        left: videoPantallaCompleta ? '50%' : undefined,
+        transform: videoPantallaCompleta ? `translate(-50%, -50%) scale(${videoEscalaFS})` : 'none',
+        transformOrigin: 'center center',
+        zIndex: videoPantallaCompleta ? 9999 : undefined,
+        width: videoDims ? `${videoDims.width}px` : '100%',
+        height: videoDims ? `${videoDims.height}px` : undefined,
+        aspectRatio: videoDims ? undefined : '16/9',
+        marginBottom: videoPantallaCompleta ? 0 : 20,
+        borderRadius: videoPantallaCompleta ? 0 : 18,
+        overflow: 'hidden',
+        border: videoPantallaCompleta ? 'none' : `1.5px solid ${C.border}`,
+        background: '#000',
+        boxShadow: videoPantallaCompleta ? 'none' : '0 12px 40px rgba(0,0,0,0.5)',
       }}
     >
       {/* El iframe se monta desde el inicio (sin autoplay) para que el player ya esté listo
@@ -1747,6 +1768,8 @@ return data || null;
             player.getDuration().then(d => setVideoTiempo(t => ({ ...t, duracion: d })));
             player.on('timeupdate', data => setVideoTiempo({ actual: data.seconds, duracion: data.duration }));
             player.on('ended', () => setVideoPausado(true));
+            player.on('play', () => setVideoPausado(false));
+            player.on('pause', () => setVideoPausado(true));
             if (videoPlayPendienteRef.current) {
               videoPlayPendienteRef.current = false;
               player.setMuted(false);
@@ -1774,8 +1797,8 @@ return data || null;
             <button
               onClick={() => {
                 if (!videoPlayerRef.current) return;
-                if (videoPausado) { videoPlayerRef.current.play(); setVideoPausado(false); }
-                else { videoPlayerRef.current.pause(); setVideoPausado(true); }
+                if (videoPausado) { videoPlayerRef.current.play(); }
+                else { videoPlayerRef.current.pause(); }
               }}
               style={{
                 width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
@@ -1827,7 +1850,7 @@ return data || null;
             />
 
             <button
-              onClick={() => setVideoPantallaCompleta(v => !v)}
+              onClick={toggleVideoPantallaCompleta}
               style={{
                 width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
                 background: 'transparent', border: 'none', cursor: 'pointer',
@@ -1873,7 +1896,8 @@ return data || null;
           </span>
         </button>
       )}
-    </div>
+      </div>
+    </>
   );
 
   return (
