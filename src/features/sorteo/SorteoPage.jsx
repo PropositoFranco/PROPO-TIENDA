@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
 
@@ -1714,6 +1715,167 @@ return data || null;
   }
 
   // ── PANTALLA: REGISTRO ────────────────────────────────────────────────────
+  const videoBloque = (
+    <div
+      ref={videoContainerRef}
+      style={videoPantallaCompleta ? {
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        width: '100vw', height: '100vh', zIndex: 9999,
+        borderRadius: 0, border: 'none', background: '#000',
+        aspectRatio: 'auto', marginBottom: 0,
+      } : {
+        position: 'relative', marginBottom: 20, borderRadius: 18,
+        overflow: 'hidden', border: `1.5px solid ${C.border}`,
+        aspectRatio: '16/9', background: '#000',
+        boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+      }}
+    >
+      {/* El iframe se monta desde el inicio (sin autoplay) para que el player ya esté listo
+          cuando el usuario toque play — así el play() corre dentro del mismo tap y el
+          navegador en móvil deja pasar el audio, en vez de silenciarlo como con autoplay por URL. */}
+      <iframe
+        ref={videoIframeRef}
+        src="https://player.vimeo.com/video/1169454393?autoplay=0&controls=0&title=0&byline=0&portrait=0&badge=0&app_id=58479"
+        style={{ width: '100%', height: '100%', border: 'none', display: 'block', pointerEvents: 'none' }}
+        allow="autoplay; fullscreen; picture-in-picture"
+        title="Templo del Propósito"
+        onLoad={() => {
+          const setupPlayer = () => {
+            if (!videoIframeRef.current) return;
+            const player = new window.Vimeo.Player(videoIframeRef.current);
+            videoPlayerRef.current = player;
+            player.getDuration().then(d => setVideoTiempo(t => ({ ...t, duracion: d })));
+            player.on('timeupdate', data => setVideoTiempo({ actual: data.seconds, duracion: data.duration }));
+            player.on('ended', () => setVideoPausado(true));
+            if (videoPlayPendienteRef.current) {
+              videoPlayPendienteRef.current = false;
+              player.setMuted(false);
+              player.setVolume(1);
+              player.play();
+            }
+          };
+          if (window.Vimeo) { setupPlayer(); return; }
+          const s = document.createElement('script');
+          s.src = 'https://player.vimeo.com/api/player.js';
+          s.onload = setupPlayer;
+          document.body.appendChild(s);
+        }}
+      />
+
+      {videoActivado ? (
+        <>
+          {/* ── Barra de control propia — play/pausa, tiempo restante, silenciar, volumen ── */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 4,
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '8px 12px',
+            background: 'linear-gradient(0deg,rgba(0,0,0,0.75),transparent)',
+          }}>
+            <button
+              onClick={() => {
+                if (!videoPlayerRef.current) return;
+                if (videoPausado) { videoPlayerRef.current.play(); setVideoPausado(false); }
+                else { videoPlayerRef.current.pause(); setVideoPausado(true); }
+              }}
+              style={{
+                width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                background: 'rgba(0,0,0,0.55)', border: '1.5px solid rgba(255,255,255,0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: '#fff', fontSize: 12,
+              }}
+            >
+              {videoPausado ? '▶' : '⏸'}
+            </button>
+
+            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: 'rgba(255,255,255,0.75)', letterSpacing: 0.5, flexShrink: 0 }}>
+              -{formatTiempo(Math.max(0, videoTiempo.duracion - videoTiempo.actual))}
+            </span>
+
+            <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: 2, background: C.gold,
+                width: videoTiempo.duracion ? `${(videoTiempo.actual / videoTiempo.duracion) * 100}%` : '0%',
+                transition: 'width .2s linear',
+              }} />
+            </div>
+
+            <button
+              onClick={() => {
+                if (!videoPlayerRef.current) return;
+                videoPlayerRef.current.setMuted(!videoSilenciado);
+                setVideoSilenciado(v => !v);
+              }}
+              style={{
+                width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                color: '#fff', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              {videoSilenciado ? '🔇' : '🔊'}
+            </button>
+
+            <input
+              type="range" min="0" max="1" step="0.05"
+              value={videoSilenciado ? 0 : videoVolumen}
+              onChange={e => {
+                const v = parseFloat(e.target.value);
+                setVideoVolumen(v);
+                setVideoSilenciado(v === 0);
+                if (videoPlayerRef.current) { videoPlayerRef.current.setVolume(v); videoPlayerRef.current.setMuted(v === 0); }
+              }}
+              style={{ width: 46, accentColor: C.gold, flexShrink: 0 }}
+            />
+
+            <button
+              onClick={() => setVideoPantallaCompleta(v => !v)}
+              style={{
+                width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                color: '#fff', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+              title={videoPantallaCompleta ? 'Salir de pantalla completa' : 'Pantalla completa'}
+            >
+              {videoPantallaCompleta ? '⤡' : '⛶'}
+            </button>
+          </div>
+        </>
+      ) : (
+        <button
+          onClick={() => {
+            setVideoActivado(true);
+            setVideoPausado(false);
+            setVideoSilenciado(false);
+            if (videoPlayerRef.current) {
+              videoPlayerRef.current.setMuted(false);
+              videoPlayerRef.current.setVolume(1);
+              videoPlayerRef.current.play();
+            } else {
+              videoPlayPendienteRef.current = true;
+            }
+          }}
+          style={{
+            position: 'absolute', inset: 0, zIndex: 3,
+            width: '100%', height: '100%', border: 'none', cursor: 'pointer',
+            background: 'linear-gradient(160deg,rgba(255,215,0,0.1),rgba(10,5,26,0.9))',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+          }}
+        >
+          <div style={{
+            width: 56, height: 56, borderRadius: '50%',
+            background: 'rgba(255,215,0,0.15)', border: `1.5px solid ${C.borderHi}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'btnPulse 2.5s ease-in-out infinite',
+          }}>
+            <div style={{ width: 0, height: 0, borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: `16px solid ${C.gold}`, marginLeft: 4 }} />
+          </div>
+          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: C.goldLight }}>
+            ⚔️ CONOCE EL TEMPLO EN SOLO 3 MIN
+          </span>
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '0 clamp(16px,4vw,40px) clamp(40px,8vw,80px)', position: 'relative' }}>
       <Particles />
@@ -1808,165 +1970,7 @@ return data || null;
           </div>
         </div>
 
-        {/* ── Conoce al Templo — video real de la landing, tap-to-play, controles propios ── */}
-        <div
-          ref={videoContainerRef}
-          style={videoPantallaCompleta ? {
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            width: '100vw', height: '100vh', zIndex: 9999,
-            borderRadius: 0, border: 'none', background: '#000',
-            aspectRatio: 'auto',
-          } : {
-            position: 'relative', marginBottom: 20, borderRadius: 18,
-            overflow: 'hidden', border: `1.5px solid ${C.border}`,
-            aspectRatio: '16/9', background: '#000',
-            boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
-          }}
-        >
-          {/* El iframe se monta desde el inicio (sin autoplay) para que el player ya esté listo
-              cuando el usuario toque play — así el play() corre dentro del mismo tap y el
-              navegador en móvil deja pasar el audio, en vez de silenciarlo como con autoplay por URL. */}
-          <iframe
-            ref={videoIframeRef}
-            src="https://player.vimeo.com/video/1169454393?autoplay=0&controls=0&title=0&byline=0&portrait=0&badge=0&app_id=58479"
-            style={{ width: '100%', height: '100%', border: 'none', display: 'block', pointerEvents: 'none' }}
-            allow="autoplay; fullscreen; picture-in-picture"
-            title="Templo del Propósito"
-            onLoad={() => {
-              const setupPlayer = () => {
-                if (!videoIframeRef.current) return;
-                const player = new window.Vimeo.Player(videoIframeRef.current);
-                videoPlayerRef.current = player;
-                player.getDuration().then(d => setVideoTiempo(t => ({ ...t, duracion: d })));
-                player.on('timeupdate', data => setVideoTiempo({ actual: data.seconds, duracion: data.duration }));
-                player.on('ended', () => setVideoPausado(true));
-                if (videoPlayPendienteRef.current) {
-                  videoPlayPendienteRef.current = false;
-                  player.setMuted(false);
-                  player.setVolume(1);
-                  player.play();
-                }
-              };
-              if (window.Vimeo) { setupPlayer(); return; }
-              const s = document.createElement('script');
-              s.src = 'https://player.vimeo.com/api/player.js';
-              s.onload = setupPlayer;
-              document.body.appendChild(s);
-            }}
-          />
-
-          {videoActivado ? (
-            <>
-              {/* ── Barra de control propia — play/pausa, tiempo restante, silenciar, volumen ── */}
-              <div style={{
-                position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 4,
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '8px 12px',
-                background: 'linear-gradient(0deg,rgba(0,0,0,0.75),transparent)',
-              }}>
-                <button
-                  onClick={() => {
-                    if (!videoPlayerRef.current) return;
-                    if (videoPausado) { videoPlayerRef.current.play(); setVideoPausado(false); }
-                    else { videoPlayerRef.current.pause(); setVideoPausado(true); }
-                  }}
-                  style={{
-                    width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                    background: 'rgba(0,0,0,0.55)', border: '1.5px solid rgba(255,255,255,0.3)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', color: '#fff', fontSize: 12,
-                  }}
-                >
-                  {videoPausado ? '▶' : '⏸'}
-                </button>
-
-                <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: 'rgba(255,255,255,0.75)', letterSpacing: 0.5, flexShrink: 0 }}>
-                  -{formatTiempo(Math.max(0, videoTiempo.duracion - videoTiempo.actual))}
-                </span>
-
-                <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', borderRadius: 2, background: C.gold,
-                    width: videoTiempo.duracion ? `${(videoTiempo.actual / videoTiempo.duracion) * 100}%` : '0%',
-                    transition: 'width .2s linear',
-                  }} />
-                </div>
-
-                <button
-                  onClick={() => {
-                    if (!videoPlayerRef.current) return;
-                    videoPlayerRef.current.setMuted(!videoSilenciado);
-                    setVideoSilenciado(v => !v);
-                  }}
-                  style={{
-                    width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-                    background: 'transparent', border: 'none', cursor: 'pointer',
-                    color: '#fff', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                >
-                  {videoSilenciado ? '🔇' : '🔊'}
-                </button>
-
-                <input
-                  type="range" min="0" max="1" step="0.05"
-                  value={videoSilenciado ? 0 : videoVolumen}
-                  onChange={e => {
-                    const v = parseFloat(e.target.value);
-                    setVideoVolumen(v);
-                    setVideoSilenciado(v === 0);
-                    if (videoPlayerRef.current) { videoPlayerRef.current.setVolume(v); videoPlayerRef.current.setMuted(v === 0); }
-                  }}
-                  style={{ width: 46, accentColor: C.gold, flexShrink: 0 }}
-                />
-
-                <button
-                  onClick={() => setVideoPantallaCompleta(v => !v)}
-                  style={{
-                    width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-                    background: 'transparent', border: 'none', cursor: 'pointer',
-                    color: '#fff', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                  title={videoPantallaCompleta ? 'Salir de pantalla completa' : 'Pantalla completa'}
-                >
-                  {videoPantallaCompleta ? '⤡' : '⛶'}
-                </button>
-              </div>
-            </>
-          ) : (
-            <button
-              onClick={() => {
-                setVideoActivado(true);
-                setVideoPausado(false);
-                setVideoSilenciado(false);
-                if (videoPlayerRef.current) {
-                  videoPlayerRef.current.setMuted(false);
-                  videoPlayerRef.current.setVolume(1);
-                  videoPlayerRef.current.play();
-                } else {
-                  videoPlayPendienteRef.current = true;
-                }
-              }}
-              style={{
-                position: 'absolute', inset: 0, zIndex: 3,
-                width: '100%', height: '100%', border: 'none', cursor: 'pointer',
-                background: 'linear-gradient(160deg,rgba(255,215,0,0.1),rgba(10,5,26,0.9))',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
-              }}
-            >
-              <div style={{
-                width: 56, height: 56, borderRadius: '50%',
-                background: 'rgba(255,215,0,0.15)', border: `1.5px solid ${C.borderHi}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                animation: 'btnPulse 2.5s ease-in-out infinite',
-              }}>
-                <div style={{ width: 0, height: 0, borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: `16px solid ${C.gold}`, marginLeft: 4 }} />
-              </div>
-              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: C.goldLight }}>
-                ⚔️ CONOCE EL TEMPLO EN SOLO 3 MIN
-              </span>
-            </button>
-          )}
-        </div>
+        {videoPantallaCompleta ? createPortal(videoBloque, document.body) : videoBloque}
 
         {/* ── 8 Territorios — mismas tarjetas volteables de la landing, adaptadas al tema oscuro ── */}
         <div style={{
