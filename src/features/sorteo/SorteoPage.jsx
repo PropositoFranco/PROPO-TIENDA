@@ -5,7 +5,6 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
 
@@ -750,6 +749,7 @@ export default function SorteoPage() {
   const videoContainerRef = useRef(null);
   const videoPlayPendienteRef = useRef(false);
   const [videoPantallaCompleta, setVideoPantallaCompleta] = useState(false);
+  const [entradaRegistroLista, setEntradaRegistroLista] = useState(false);
   const [mostrarConsulta,   setMostrarConsulta]   = useState(false);
   const [mostrarReporte,    setMostrarReporte]    = useState(false);
   const [reporteEmail,      setReporteEmail]      = useState('');
@@ -1881,7 +1881,14 @@ return data || null;
       <Particles />
       <Header totalBecas={totalBecas} totalGanadores={totalGanadores} rondaNum={rondaNum} eventoNombre={evento?.nombre} />
 
-      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 500, marginTop: 'clamp(72px,18vw,100px)', animation: 'fadeUp .6s ease both' }}>
+      <div
+        style={{
+          position: 'relative', zIndex: 1, width: '100%', maxWidth: 500,
+          marginTop: 'clamp(72px,18vw,100px)',
+          ...(entradaRegistroLista ? {} : { animation: 'fadeUp .6s ease both' }),
+        }}
+        onAnimationEnd={() => setEntradaRegistroLista(true)}
+      >
 
         {/* Arco decorativo superior */}
         <div style={{ position: 'absolute', top: -40, left: '50%', transform: 'translateX(-50%)', width: 320, height: 160, borderRadius: '160px 160px 0 0', border: `2px solid rgba(255,215,0,0.15)`, borderBottom: 'none', pointerEvents: 'none', animation: 'arcGlow 3s ease-in-out infinite' }} />
@@ -1970,7 +1977,7 @@ return data || null;
           </div>
         </div>
 
-        {videoPantallaCompleta ? createPortal(videoBloque, document.body) : videoBloque}
+        {videoBloque}
 
         {/* ── 8 Territorios — mismas tarjetas volteables de la landing, adaptadas al tema oscuro ── */}
         <div style={{
