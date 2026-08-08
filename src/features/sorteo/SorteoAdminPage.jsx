@@ -1100,10 +1100,23 @@ export default function SorteoAdminPage() {
                     {/* Info */}
                     <div style={{ flex: 1, minWidth: 180 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                        <span style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 14, color: C.gold }}>{aliado.nombre}</span>
+                        <input
+                          defaultValue={aliado.nombre}
+                          onBlur={e => {
+                            const v = e.target.value.trim();
+                            if (v && v !== aliado.nombre) actualizarComisionAliado(aliado.id, { nombre: v });
+                          }}
+                          title="Nombre real de referencia — solo visual, no afecta el QR ni las comisiones"
+                          style={{ background: 'transparent', border: 'none', borderBottom: `1px dashed ${C.border}`, fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 14, color: C.gold, padding: '2px 0', minWidth: 90 }}
+                        />
                         <Badge activo={aliado.activo} />
                       </div>
                       <p style={{ fontFamily: 'monospace', fontSize: 10, color: C.goldDim, margin: '0 0 4px' }}>/{aliado.slug}</p>
+                      {aliado.rol === 'lider' && aliado.manager_aliado_id && (
+                        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.purple, margin: '0 0 4px' }}>
+                          👤 Gerente: {aliados.find(a => a.id === aliado.manager_aliado_id)?.nombre || '—'}
+                        </p>
+                      )}
                       <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, margin: 0 }}>📊 {aliado.scan_count || 0} scans</p>
                     </div>
 
