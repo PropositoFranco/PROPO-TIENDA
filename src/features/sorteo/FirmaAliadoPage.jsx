@@ -43,20 +43,27 @@ const CSS = `
 // ── Texto del acuerdo ───────────────────────────────────────────────────────────
 // NOTA: este es un texto base — mándame el definitivo y lo actualizo en un minuto.
 const ACUERDO_TEXTO = `
-Al firmar este documento, confirmo que acepto representar a Templo del Propósito
-como Líder Aliado, promoviendo la plataforma con las personas de mi comunidad y
-compartiendo mi código QR personal con cada pedido o interacción.
+Hoy no firmas un contrato. Sellas tu lugar entre los primeros.
 
-Entiendo que por cada persona que se registre con mi código y realice una compra,
-recibiré una comisión del 15% sobre el monto de esa compra, pagada conforme a los
-términos vigentes de la plataforma.
+Al aceptar, te conviertes en Líder Fundador del Templo del Propósito — uno de los
+pocos que abren camino antes que nadie más lo haga. Portas tu insignia con
+autoridad: representas al Templo ante tu comunidad, y cada vez que entregas tu
+código QR, no entregas solo un pedido — entregas una puerta real hacia la
+transformación de alguien.
 
-Me comprometo a representar a Templo del Propósito con honestidad, sin hacer
-promesas que la plataforma no respalde, y a usar el material (tarjeta, QR, guion)
-únicamente de la forma en que se me indicó.
+Por cada persona que cruce esa puerta con tu código y decida invertir en sí
+misma, el Templo reconoce tu labor con el 15% de comisión sobre esa compra, de
+forma continua, conforme a los términos vigentes de la plataforma.
 
-Ambas partes pueden dar por terminado este acuerdo en cualquier momento, sin
-necesidad de justificación, avisando con antelación razonable.
+Portas este rol con verdad: sin prometer lo que el Templo no respalda, usando el
+material que se te confía (tarjeta, QR, guion) exactamente como se te enseñó, y
+hablando siempre con honestidad a quien tienes enfrente.
+
+Este pacto no encadena a nadie: cualquiera de las dos partes puede cerrarlo en el
+momento que decida, sin necesidad de justificarlo, avisando con tiempo razonable.
+
+Leí este pacto completo, y hoy elijo firmarlo como Líder Fundador del Templo del
+Propósito.
 `.trim();
 
 export default function FirmaAliadoPage() {
@@ -211,7 +218,7 @@ export default function FirmaAliadoPage() {
             TEMPLO DEL PROPÓSITO
           </div>
           <h1 style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 'clamp(18px,4vw,24px)', color: C.gold, margin: 0 }}>
-            Acuerdo de Líder Aliado
+            Pacto de Investidura
           </h1>
         </div>
 
@@ -337,7 +344,7 @@ export default function FirmaAliadoPage() {
           <div style={{ textAlign: 'center', padding: '10px 0', animation: 'sealPop .5s ease both' }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>✦</div>
             <p style={{ color: C.gold, fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 16, letterSpacing: 1 }}>
-              Quedaste sellado como Líder Aliado
+              Quedaste sellado como Líder Fundador
             </p>
             <p style={{ color: C.muted, fontFamily: 'Crimson Text, serif', fontSize: 13, marginTop: 12, lineHeight: 1.6 }}>
               Gracias, {nombre.split(' ')[0]}. Tu acuerdo quedó registrado. Ya puedes cerrar esta pantalla —
