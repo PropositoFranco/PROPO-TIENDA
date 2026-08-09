@@ -121,3 +121,28 @@ export function AdminRoute() {
   if (!isAdmin) return <Navigate to="/hub" replace />;
   return <Outlet />;
 }
+
+export function SorteosAdminRoute() {
+  const { loading, user, profile } = useAuthStore();
+
+  if (!loading && !user) return <Navigate to="/login" replace />;
+
+  if (loading || !profile) return (
+    <div style={{
+      position: 'fixed', inset: 0,
+      background: '#04020e',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div style={{
+        fontFamily: 'Cinzel, serif', fontSize: '12px',
+        letterSpacing: '4px', color: 'rgba(212,175,55,0.5)',
+        animation: 'pulse 1.5s ease-in-out infinite',
+      }}>✦ CARGANDO ✦</div>
+      <style>{`@keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1} }`}</style>
+    </div>
+  );
+
+  const puedeEntrar = profile.is_admin === true || profile.is_sorteos_admin === true;
+  if (!puedeEntrar) return <Navigate to="/hub" replace />;
+  return <Outlet />;
+}

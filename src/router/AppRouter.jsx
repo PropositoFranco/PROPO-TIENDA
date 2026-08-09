@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState, lazy, Suspense } from 'react';
-import { ProtectedRoute, AdminRoute } from './ProtectedRoute';
+import { ProtectedRoute, AdminRoute, SorteosAdminRoute } from './ProtectedRoute';
 import { useAuthStore } from '../store/useAuthStore';
 import AppLayout from '../components/layout/AppLayout';
 import MembershipGuard from './MembershipGuard';
@@ -143,9 +143,12 @@ export default function AppRouter() {
           <Route path="/aliado/:slug/display" element={<AliadoDisplayPage />} />
           <Route path="/aliados" element={<MuroDeAliados />} />
 
+          <Route element={<SorteosAdminRoute />}>
+            <Route path="/admin/sorteos" element={<SorteoAdminPage />} />
+          </Route>
+
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/sorteos" element={<SorteoAdminPage />} />
             <Route path="/admin/level-rewards" element={<LevelRewardsAdmin />} />
             <Route path="/admin/referral-config" element={<ReferralConfigPage />} />
             <Route path="/admin/ranking-prizes" element={<RankingPrizesAdmin />} />

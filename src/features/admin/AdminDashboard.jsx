@@ -686,6 +686,7 @@ const [reportFilter,        setReportFilter]        = useState('pendiente');
     { key: 'usuarios_mod',    icon: '👥', label: 'Gestionar usuarios',    desc: 'Ver y moderar miembros' },
     { key: 'codigos_write',   icon: '🎟️', label: 'Códigos promo',        desc: 'Generar y gestionar códigos' },
     { key: 'finanzas_read',   icon: '📊', label: 'Ver finanzas',          desc: 'Estadísticas y métricas' },
+    { key: 'sorteos_admin',   icon: '🎁', label: 'Admin de Sorteos',      desc: 'Eventos, reportes y aliados de /admin/sorteos' },
     { key: 'super_admin',     icon: '👑', label: 'Super Admin',           desc: 'Acceso total — solo para ti' },
   ];
 
@@ -1115,7 +1116,7 @@ const loadTeam = async () => {
     setTeamLoading(true);
     const { supabase } = await import('../../services/supabase.js');
     const [{ data: profiles }, { data: perms }] = await Promise.all([
-      supabase.from('profiles').select('id, templario_name, email, is_admin').order('templario_name'),
+      supabase.from('profiles').select('id, templario_name, email, is_admin, is_sorteos_admin').order('templario_name'),
       supabase.from('team_permissions').select('user_id, permission'),
     ]);
     setTeamUsers(profiles || []);
@@ -1218,6 +1219,10 @@ useEffect(() => {
     if (perm === 'super_admin') {
       await supabase.from('profiles').update({ is_admin: !has }).eq('id', userId);
       setTeamUsers(prev => prev.map(u => u.id === userId ? { ...u, is_admin: !has } : u));
+    }
+    if (perm === 'sorteos_admin') {
+      await supabase.from('profiles').update({ is_sorteos_admin: !has }).eq('id', userId);
+      setTeamUsers(prev => prev.map(u => u.id === userId ? { ...u, is_sorteos_admin: !has } : u));
     }
     const userName = teamUsers.find(u => u.id === userId)?.templario_name || userId;
     const permLabel = PERMS.find(p => p.key === perm)?.label || perm;
