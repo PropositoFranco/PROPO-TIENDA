@@ -102,6 +102,13 @@ export default function SorteoAdminPage() {
   const [loadingReportes, setLoadingReportes] = useState(false);
   const [actualizandoReporte, setActualizandoReporte] = useState(null); // id del reporte que se está guardando
 
+  // ── FIRMAS (acuerdos digitales de líderes/gerentes) ──────────────────────────
+  const [firmas,        setFirmas]        = useState([]);
+  const [loadingFirmas, setLoadingFirmas]  = useState(false);
+  const [generandoFirma,setGenerandoFirma] = useState(null); // aliado_id en proceso
+  const [copiadoFirma,  setCopiadoFirma]   = useState('');
+  const [firmaImgModal, setFirmaImgModal]  = useState(null); // { src, nombre } para ver la firma en grande
+
   useEffect(() => {
     const handler = () => {
       setQrModal({ url: window.__qrModalUrl, label: window.__qrModalLabel, icon: window.__qrModalIcon });
@@ -360,6 +367,52 @@ export default function SorteoAdminPage() {
 
   useEffect(() => { cargarMasterStats(); }, [cargarMasterStats]);
 
+  // ── FIRMAS: cargar acuerdos ────────────────────────────────────────────────────
+  const cargarFirmas = useCallback(async () => {
+    setLoadingFirmas(true);
+    const { data } = await supabase
+      .from('firmas_aliados')
+      .select('id, aliado_id, token, nombre_firmante, firma_data, fecha_firma, created_at, aliados(nombre, rol, slug)')
+      .order('created_at', { ascending: false });
+    setFirmas(data || []);
+    setLoadingFirmas(false);
+  }, []);
+
+  // ── FIRMAS: generar (o reusar) el link de firma para un aliado ────────────────
+  const generarToken = () => {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    return Array.from(bytes, b => b.toString(36)).join('').slice(0, 20);
+  };
+
+  const generarLinkFirma = async (aliadoId) => {
+    setGenerandoFirma(aliadoId);
+
+    // Si ya existe una firma (pendiente o firmada) para este aliado, reusar ese link.
+    const existente = firmas.find(f => f.aliado_id === aliadoId);
+    let token = existente?.token;
+
+    if (!token) {
+      token = generarToken();
+      const { data, error } = await supabase
+        .from('firmas_aliados')
+        .insert({ aliado_id: aliadoId, token })
+        .select('id, aliado_id, token, nombre_firmante, firma_data, fecha_firma, created_at, aliados(nombre, rol, slug)')
+        .single();
+      if (error) {
+        setGenerandoFirma(null);
+        alert('No se pudo generar el link. Intenta de nuevo.');
+        return;
+      }
+      setFirmas(prev => [data, ...prev]);
+    }
+
+    const link = `${BASE_URL}/firma/${token}`;
+    copiarAlPortapapeles(link);
+    setCopiadoFirma(aliadoId);
+    setTimeout(() => setCopiadoFirma(''), 2500);
+    setGenerandoFirma(null);
+  };
+
   // ── Estadísticas de un evento ─────────────────────────────────────────────────
   const statsEvento = (eventoId) => {
     const rs = rondas[eventoId] || [];
@@ -397,6 +450,7 @@ export default function SorteoAdminPage() {
             { id: 'sorteos',   label: '🎲 SORTEOS' },
             { id: 'aliados',   label: '🤝 ALIADOS' },
             { id: 'qrfisicos', label: '📦 QR FÍSICOS' },
+            { id: 'firmas',    label: '✍️ FIRMAS' },
             { id: 'metricas',  label: '📊 MÉTRICAS' },
             { id: 'ltv',       label: '💰 LTV' },
             { id: 'reportes',  label: `🆘 REPORTES${reportes.filter(r => r.status === 'pendiente').length > 0 ? ` (${reportes.filter(r => r.status === 'pendiente').length})` : ''}` },
@@ -415,6 +469,10 @@ export default function SorteoAdminPage() {
                     if (als) setAliados(als);
                     setLoadingQrF(false);
                   });
+                }
+                if (tab.id === 'firmas') {
+                  cargarFirmas();
+                  if (aliados.length === 0) cargarAliados();
                 }
                 if (tab.id === 'reportes') cargarReportes();
               }}
@@ -1405,6 +1463,124 @@ export default function SorteoAdminPage() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ══ TAB: FIRMAS (acuerdos digitales de líderes/gerentes) ══ */}
+      {tabActiva === 'firmas' && (
+        <div style={{ animation: 'fadeIn .4s ease both' }}>
+          <p style={{ color: C.muted, fontSize: 13, fontStyle: 'italic', marginBottom: 24 }}>
+            Genera el link de firma para un líder o gerente, mándaselo por WhatsApp, y aquí ves si ya lo firmó.
+          </p>
+
+          {/* Lista de aliados para generar/copiar su link */}
+          <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: 'clamp(18px,4vw,24px)', marginBottom: 28 }}>
+            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: C.gold, margin: '0 0 16px' }}>
+              GENERAR LINK POR ALIADO
+            </h2>
+            {loadingAliados ? (
+              <p style={{ color: C.muted, fontSize: 12 }}>Cargando aliados...</p>
+            ) : aliados.length === 0 ? (
+              <p style={{ color: C.muted, fontSize: 12 }}>No hay aliados creados todavía — ve a la tab 🤝 ALIADOS.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {aliados.map(a => {
+                  const firma = firmas.find(f => f.aliado_id === a.id);
+                  const firmado = !!firma?.fecha_firma;
+                  return (
+                    <div key={a.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                      background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', flexWrap: 'wrap',
+                    }}>
+                      <div>
+                        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: C.text, fontWeight: 700 }}>{a.nombre}</div>
+                        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted, marginTop: 2 }}>
+                          {(a.rol || 'sin rol').toUpperCase()} · @{a.slug}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {firma && (
+                          <span style={{
+                            fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, padding: '4px 9px', borderRadius: 20,
+                            color: firmado ? C.green : C.gold,
+                            border: `1px solid ${firmado ? 'rgba(68,255,136,0.3)' : 'rgba(212,175,55,0.3)'}`,
+                          }}>
+                            {firmado ? `✓ FIRMADO ${new Date(firma.fecha_firma).toLocaleDateString('es-MX')}` : '⏳ PENDIENTE'}
+                          </span>
+                        )}
+                        <button
+                          onClick={() => generarLinkFirma(a.id)}
+                          disabled={generandoFirma === a.id}
+                          style={{
+                            padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                            background: firmado ? 'rgba(255,255,255,0.08)' : `linear-gradient(135deg,${C.gold},#9a7a00)`,
+                            color: firmado ? C.muted : '#0a0614',
+                            fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, fontWeight: 900,
+                          }}
+                        >
+                          {generandoFirma === a.id ? '...' : copiadoFirma === a.id ? '✓ COPIADO' : firma ? '🔗 COPIAR LINK' : '✍️ GENERAR LINK'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Historial de firmas */}
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 'clamp(18px,4vw,24px)' }}>
+            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: C.gold, margin: '0 0 16px' }}>
+              HISTORIAL DE ACUERDOS
+            </h2>
+            {loadingFirmas ? (
+              <p style={{ color: C.muted, fontSize: 12 }}>Cargando...</p>
+            ) : firmas.length === 0 ? (
+              <p style={{ color: C.muted, fontSize: 12 }}>Todavía no se ha generado ningún link de firma.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {firmas.map(f => (
+                  <div key={f.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                    background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '10px 14px', flexWrap: 'wrap',
+                  }}>
+                    <div>
+                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: C.text }}>
+                        {f.aliados?.nombre || '—'}
+                        {f.nombre_firmante && f.nombre_firmante !== f.aliados?.nombre && (
+                          <span style={{ color: C.muted, fontSize: 10 }}> (firmó como "{f.nombre_firmante}")</span>
+                        )}
+                      </div>
+                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted, marginTop: 2 }}>
+                        {f.fecha_firma
+                          ? `FIRMADO EL ${new Date(f.fecha_firma).toLocaleString('es-MX')}`
+                          : `LINK GENERADO EL ${new Date(f.created_at).toLocaleDateString('es-MX')} · SIN FIRMAR`}
+                      </div>
+                    </div>
+                    {f.firma_data && (
+                      <button
+                        onClick={() => setFirmaImgModal({ src: f.firma_data, nombre: f.aliados?.nombre || f.nombre_firmante })}
+                        style={{ padding: '6px 12px', background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 8, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
+                      >
+                        👁 VER FIRMA
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal ver imagen de firma */}
+      {firmaImgModal && (
+        <div onClick={() => setFirmaImgModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(4,2,14,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fdfaf2', border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: 20, textAlign: 'center', maxWidth: 340, width: '90%' }}>
+            <img src={firmaImgModal.src} alt="Firma" style={{ width: '100%', borderRadius: 8 }} />
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1, color: '#1a1030', marginTop: 10 }}>{firmaImgModal.nombre}</div>
+            <button onClick={() => setFirmaImgModal(null)} style={{ marginTop: 12, background: 'none', border: 'none', color: '#6b5a3f', fontFamily: 'Cinzel, serif', fontSize: 9, cursor: 'pointer', letterSpacing: 1 }}>CERRAR</button>
+          </div>
         </div>
       )}
 
