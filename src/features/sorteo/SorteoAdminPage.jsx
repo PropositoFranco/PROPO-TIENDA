@@ -437,7 +437,10 @@ export default function SorteoAdminPage() {
       setAliados(prev => prev.map(a => a.id === aliado.id ? { ...a, codigo_acceso: codigo } : a));
     }
 
-    copiarAlPortapapeles(codigo);
+    const rolLabel = aliado.rol === 'gerente' ? 'gerente' : 'líder';
+    const mensaje = `¡Hola, ${aliado.nombre}! Ya está listo tu acceso de ${rolLabel} en el Templo del Propósito.\n\nEntra aquí: ${BASE_URL}/lider\nTu código: ${codigo}\n\nGuárdalo, es tuyo — no lo compartas con nadie.`;
+
+    copiarAlPortapapeles(mensaje);
     setCopiadoCodigo(aliado.id);
     setTimeout(() => setCopiadoCodigo(''), 2500);
     setGenerandoCodigo(null);
@@ -1563,8 +1566,11 @@ export default function SorteoAdminPage() {
             <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: C.gold, margin: '0 0 16px' }}>
               CÓDIGO DE ACCESO A /LIDER
             </h2>
-            <p style={{ color: C.muted, fontSize: 11, fontStyle: 'italic', margin: '0 0 16px' }}>
-              Genera el código una sola vez por persona y mándaselo tú mismo por WhatsApp.
+            <p style={{ color: C.muted, fontSize: 11, fontStyle: 'italic', margin: '0 0 4px' }}>
+              Genera el código una sola vez por persona. El botón copia el link + código listos para pegar en WhatsApp.
+            </p>
+            <p style={{ color: C.gold, fontSize: 11, fontFamily: "'Courier New', monospace", margin: '0 0 16px' }}>
+              {BASE_URL}/lider
             </p>
             {(() => {
               const equipo = aliados.filter(a => a.rol === 'lider' || a.rol === 'gerente');
@@ -1594,7 +1600,7 @@ export default function SorteoAdminPage() {
                           fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, fontWeight: 900,
                         }}
                       >
-                        {generandoCodigo === a.id ? '...' : copiadoCodigo === a.id ? '✓ COPIADO' : a.codigo_acceso ? '📋 COPIAR CÓDIGO' : '🔑 GENERAR CÓDIGO'}
+                        {generandoCodigo === a.id ? '...' : copiadoCodigo === a.id ? '✓ COPIADO' : a.codigo_acceso ? '📋 COPIAR MENSAJE' : '🔑 GENERAR Y COPIAR'}
                       </button>
                     </div>
                   ))}
