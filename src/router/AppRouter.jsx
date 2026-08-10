@@ -46,6 +46,7 @@ const SorteoAdminPage = lazy(() => import('../features/sorteo/SorteoAdminPage'))
 const SorteoPage        = lazy(() => import('../features/sorteo/SorteoPage'));
 const AliadoDisplayPage = lazy(() => import('../features/sorteo/aliado-display-page'));
 const FirmaAliadoPage = lazy(() => import('../features/sorteo/FirmaAliadoPage'));
+const LiderDashboardPage = lazy(() => import('../features/lideres/LiderDashboardPage'));
 const MuroDeAliados = lazy(() => import('../features/aliados/MuroDeAliados'));
 const AdminMapaPage = lazy(() => import('../features/admin/AdminMapaPage'));
 
@@ -143,6 +144,7 @@ export default function AppRouter() {
           <Route path="/sorteo" element={<SorteoRedirect />} />
           <Route path="/aliado/:slug/display" element={<AliadoDisplayPage />} />
           <Route path="/firma/:token" element={<FirmaAliadoPage />} />
+          <Route path="/lider" element={<LiderDashboardPage />} />
           <Route path="/aliados" element={<MuroDeAliados />} />
 
           <Route element={<SorteosAdminRoute />}>

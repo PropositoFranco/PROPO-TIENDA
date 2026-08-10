@@ -108,6 +108,8 @@ export default function SorteoAdminPage() {
   const [generandoFirma,setGenerandoFirma] = useState(null); // aliado_id en proceso
   const [copiadoFirma,  setCopiadoFirma]   = useState('');
   const [firmaImgModal, setFirmaImgModal]  = useState(null); // { src, nombre } para ver la firma en grande
+  const [generandoCodigo, setGenerandoCodigo] = useState(null); // aliado_id en proceso
+  const [copiadoCodigo,   setCopiadoCodigo]   = useState('');
 
   useEffect(() => {
     const handler = () => {
@@ -411,6 +413,34 @@ export default function SorteoAdminPage() {
     setCopiadoFirma(aliadoId);
     setTimeout(() => setCopiadoFirma(''), 2500);
     setGenerandoFirma(null);
+  };
+
+  // ── CÓDIGO DE ACCESO: generar (o reusar) el codigo_acceso de un líder/gerente ──
+  const generarCodigoAcceso = async (aliado) => {
+    setGenerandoCodigo(aliado.id);
+    let codigo = aliado.codigo_acceso;
+
+    if (!codigo) {
+      const prefijo = aliado.rol === 'gerente' ? 'GER' : 'LIDER';
+      const bloque = () => {
+        const bytes = crypto.getRandomValues(new Uint8Array(6));
+        return Array.from(bytes, b => b.toString(36)).join('').toUpperCase().slice(0, 4);
+      };
+      codigo = `${prefijo}-${bloque()}-${bloque()}`;
+
+      const { error } = await supabase.from('aliados').update({ codigo_acceso: codigo }).eq('id', aliado.id);
+      if (error) {
+        setGenerandoCodigo(null);
+        alert('No se pudo generar el código. Intenta de nuevo.');
+        return;
+      }
+      setAliados(prev => prev.map(a => a.id === aliado.id ? { ...a, codigo_acceso: codigo } : a));
+    }
+
+    copiarAlPortapapeles(codigo);
+    setCopiadoCodigo(aliado.id);
+    setTimeout(() => setCopiadoCodigo(''), 2500);
+    setGenerandoCodigo(null);
   };
 
   // ── Estadísticas de un evento ─────────────────────────────────────────────────
@@ -1526,6 +1556,51 @@ export default function SorteoAdminPage() {
                 })}
               </div>
             )}
+          </div>
+
+          {/* Código de acceso al dashboard /lider — solo líderes y gerentes */}
+          <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: 'clamp(18px,4vw,24px)', marginBottom: 28 }}>
+            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: C.gold, margin: '0 0 16px' }}>
+              CÓDIGO DE ACCESO A /LIDER
+            </h2>
+            <p style={{ color: C.muted, fontSize: 11, fontStyle: 'italic', margin: '0 0 16px' }}>
+              Genera el código una sola vez por persona y mándaselo tú mismo por WhatsApp.
+            </p>
+            {(() => {
+              const equipo = aliados.filter(a => a.rol === 'lider' || a.rol === 'gerente');
+              if (loadingAliados) return <p style={{ color: C.muted, fontSize: 12 }}>Cargando aliados...</p>;
+              if (equipo.length === 0) return <p style={{ color: C.muted, fontSize: 12 }}>No hay líderes ni gerentes creados todavía.</p>;
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {equipo.map(a => (
+                    <div key={a.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                      background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', flexWrap: 'wrap',
+                    }}>
+                      <div>
+                        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: C.text, fontWeight: 700 }}>{a.nombre}</div>
+                        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted, marginTop: 2 }}>
+                          {a.rol.toUpperCase()} · @{a.slug}
+                          {a.codigo_acceso && <span style={{ color: C.gold }}> · {a.codigo_acceso}</span>}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => generarCodigoAcceso(a)}
+                        disabled={generandoCodigo === a.id}
+                        style={{
+                          padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                          background: a.codigo_acceso ? 'rgba(255,255,255,0.08)' : `linear-gradient(135deg,${C.gold},#9a7a00)`,
+                          color: a.codigo_acceso ? C.muted : '#0a0614',
+                          fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, fontWeight: 900,
+                        }}
+                      >
+                        {generandoCodigo === a.id ? '...' : copiadoCodigo === a.id ? '✓ COPIADO' : a.codigo_acceso ? '📋 COPIAR CÓDIGO' : '🔑 GENERAR CÓDIGO'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Historial de firmas */}
