@@ -49,7 +49,7 @@ const FirmaAliadoPage = lazy(() => import('../features/sorteo/FirmaAliadoPage'))
 const LiderDashboardPage = lazy(() => import('../features/lideres/LiderDashboardPage'));
 const MuroDeAliados = lazy(() => import('../features/aliados/MuroDeAliados'));
 const AdminMapaPage = lazy(() => import('../features/admin/AdminMapaPage'));
-const FinanzasAdminPage = lazy(() => import('../features/admin/FinanzasAdminPage'));
+const FinanzasAdminPage = lazy(() => import('../features/sorteo/FinanzasAdminPage'));
 
 function SorteoRedirect() {
   const [destino, setDestino] = useState(null);
