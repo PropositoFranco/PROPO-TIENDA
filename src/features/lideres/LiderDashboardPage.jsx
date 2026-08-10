@@ -36,6 +36,7 @@ const C = {
 };
 
 const NIVEL_COLOR = { base: C.muted, constante: C.green, solido: C.purple, elite: C.gold };
+const SIGUIENTE_COMISION = { constante: 17, solido: 19, elite: 21 };
 
 // ── CSS Global — mismas keyframes que ya usas en SorteoPage.jsx ──────────────
 const CSS = `
@@ -252,9 +253,8 @@ function BarraProgreso({ actual, faltan, color }) {
 }
 
 // ── Pantalla 2: el dashboard ───────────────────────────────────────────────────
-function PantallaDashboard({ data, onSalir }) {
+function PantallaDashboard({ data }) {
   const { lider, historial } = data;
-  const [copiado, setCopiado] = useState(false);
   const semanaActual = historial?.[0];
   const colorNivel = NIVEL_COLOR[lider.nivelActual] ?? C.gold;
 
@@ -280,32 +280,42 @@ function PantallaDashboard({ data, onSalir }) {
 
           {/* Tarjeta principal: nivel y comisión */}
           <div style={{
-            background: `linear-gradient(160deg, ${C.bgCard}, #1a0033)`,
+            background: `linear-gradient(160deg, rgba(255,215,0,0.06), ${C.bgCard} 40%, #1a0033)`,
             border: `1.5px solid ${C.borderHi}`, borderRadius: 22, padding: '30px 24px',
             textAlign: 'center', marginBottom: 18, animation: 'fadeUp 0.6s ease 0.1s both',
-            boxShadow: `0 0 50px rgba(255,215,0,0.08)`,
+            boxShadow: `0 0 60px rgba(255,215,0,0.14)`,
           }}>
             <div style={{
               display: 'inline-block', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2,
               color: colorNivel, border: `1px solid ${colorNivel}`, borderRadius: 20, padding: '5px 16px', marginBottom: 16,
+              background: `${colorNivel}18`,
             }}>
               NIVEL {lider.nivelLabel.toUpperCase()}
             </div>
             <div style={{
-              fontFamily: "'Cinzel Decorative', serif", fontWeight: 900, fontSize: 50, color: C.gold, lineHeight: 1,
+              fontFamily: "'Cinzel Decorative', serif", fontWeight: 900, fontSize: 54, color: C.gold, lineHeight: 1,
               animation: 'textGlow 3.5s ease-in-out infinite',
             }}>
               {lider.comisionActual}%
             </div>
-            <div style={{ fontFamily: "'Crimson Text', serif", fontStyle: 'italic', fontSize: 13, color: C.muted, marginTop: 8 }}>
-              de comisión sobre lo que consumen tus referidos
+            <div style={{ fontFamily: "'Crimson Text', serif", fontStyle: 'italic', fontSize: 13.5, color: C.text, marginTop: 8 }}>
+              de por vida de todo lo que compre cada persona que entró con tu código
             </div>
 
             {lider.siguienteNivel ? (
-              <div style={{ marginTop: 24, textAlign: 'left' }}>
+              <div style={{ marginTop: 26, textAlign: 'left' }}>
+                <div style={{
+                  fontFamily: "'Crimson Text', serif", fontSize: 13, color: C.text, marginBottom: 12,
+                  background: 'rgba(255,215,0,0.06)', border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px',
+                }}>
+                  Te faltan <strong style={{ color: colorNivel }}>{lider.semanasFaltantes} {lider.semanasFaltantes === 1 ? 'semana' : 'semanas'}</strong> metiendo
+                  al menos <strong style={{ color: colorNivel }}>1 persona nueva</strong> para subir a{' '}
+                  <strong style={{ color: colorNivel }}>{lider.siguienteNivelLabel}</strong> y ganar{' '}
+                  <strong style={{ color: colorNivel }}>{SIGUIENTE_COMISION[lider.siguienteNivel] ?? ''}%</strong>.
+                </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 0.5, color: C.muted, marginBottom: 8 }}>
                   <span>RACHA: {lider.semanasConsecutivas} SEM.</span>
-                  <span>FALTAN {lider.semanasFaltantes} PARA {lider.siguienteNivelLabel.toUpperCase()}</span>
+                  <span>{lider.semanasFaltantes} PARA {lider.siguienteNivelLabel.toUpperCase()}</span>
                 </div>
                 <BarraProgreso actual={lider.semanasConsecutivas} faltan={lider.semanasFaltantes} color={colorNivel} />
               </div>
@@ -336,39 +346,21 @@ function PantallaDashboard({ data, onSalir }) {
             Esta semana · se actualiza solo, no tienes que anotar nada
           </div>
 
-          {/* Tu link */}
+          {/* Cómo ganas — reemplaza el link (inútil aquí, ya reparte QR físico) */}
           <div style={{
             background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 18, padding: '20px 20px', marginBottom: 22,
             animation: 'fadeUp 0.6s ease 0.3s both',
           }}>
             <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2.5, color: C.goldDim, marginBottom: 12 }}>
-              TU LINK
+              CÓMO GANAS
             </div>
-            <div style={{
-              fontFamily: "'Courier New', monospace", fontSize: 11, color: C.text, wordBreak: 'break-all',
-              background: 'rgba(0,0,0,0.35)', borderRadius: 11, padding: '11px 13px', marginBottom: 12,
-              border: `1px solid rgba(255,215,0,0.1)`,
-            }}>
-              {lider.linkReferido}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontFamily: "'Crimson Text', serif", fontSize: 13, color: C.muted, lineHeight: 1.5 }}>
+              <div>🎟️ <span style={{ color: C.text }}>Entregas tu QR</span> a alguien nuevo.</div>
+              <div>💳 <span style={{ color: C.text }}>Esa persona compra</span> algo en el Templo.</div>
+              <div>💰 <span style={{ color: C.text }}>Ganas {lider.comisionActual}%</span> de esa compra, de por vida, cada vez que vuelva a comprar.</div>
+              <div>📈 <span style={{ color: C.text }}>Metes al menos 1 persona nueva cada semana</span> → tu % sube solo.</div>
             </div>
-            <button
-              onClick={() => { copiar(lider.linkReferido); setCopiado(true); setTimeout(() => setCopiado(false), 2000); }}
-              style={{
-                width: '100%', padding: '13px 0', borderRadius: 11, border: `1px solid ${C.border}`,
-                background: 'rgba(255,215,0,0.08)', color: C.gold, fontFamily: 'Cinzel, serif',
-                fontSize: 11, letterSpacing: 1.5, cursor: 'pointer',
-              }}
-            >
-              {copiado ? '✓ COPIADO' : '📋 COPIAR Y COMPARTIR'}
-            </button>
           </div>
-
-          <button
-            onClick={onSalir}
-            style={{ display: 'block', margin: '0 auto', background: 'none', border: 'none', color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1.5, cursor: 'pointer' }}
-          >
-            CAMBIAR DE CÓDIGO
-          </button>
         </div>
       </div>
     </div>
@@ -376,7 +368,7 @@ function PantallaDashboard({ data, onSalir }) {
 }
 
 // ── Pantalla 2b: el dashboard de GERENTE — rollup de su equipo, no racha ──────
-function PantallaDashboardGerente({ data, onSalir }) {
+function PantallaDashboardGerente({ data }) {
   const { gerente, equipo } = data;
   const [copiado, setCopiado] = useState(false);
   const fmt = (n) => `$${Math.round(Number(n) || 0)}`;
@@ -508,13 +500,6 @@ function PantallaDashboardGerente({ data, onSalir }) {
               {copiado ? '✓ COPIADO' : '📋 COPIAR Y COMPARTIR'}
             </button>
           </div>
-
-          <button
-            onClick={onSalir}
-            style={{ display: 'block', margin: '0 auto', background: 'none', border: 'none', color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1.5, cursor: 'pointer' }}
-          >
-            CAMBIAR DE CÓDIGO
-          </button>
         </div>
       </div>
     </div>
@@ -573,8 +558,8 @@ export default function LiderDashboardPage() {
 
   if (data) {
     return data.rol === 'gerente'
-      ? <PantallaDashboardGerente data={data} onSalir={salir} />
-      : <PantallaDashboard data={data} onSalir={salir} />;
+      ? <PantallaDashboardGerente data={data} />
+      : <PantallaDashboard data={data} />;
   }
   return (
     <PantallaCodigo
