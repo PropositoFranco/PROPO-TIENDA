@@ -54,6 +54,7 @@ const CSS = `
   @keyframes textGlow   { 0%,100%{text-shadow:0 0 20px rgba(255,215,0,0.4)} 50%{text-shadow:0 0 60px rgba(255,215,0,1),0 0 100px rgba(255,215,0,0.4)} }
   @keyframes twinkle    { 0%,100%{opacity:var(--min,0.12);transform:scale(1)} 50%{opacity:1;transform:scale(1.6)} }
   @keyframes orbFloat   { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-6px) scale(1.04)} }
+  @keyframes raysRotate { to{transform:rotate(360deg)} }
   @keyframes barFill    { from{width:0%} to{width:var(--target-w)} }
   @keyframes shake      { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)} }
   ::-webkit-scrollbar { width: 3px; }
@@ -93,25 +94,78 @@ function copiar(texto) {
   navigator.clipboard?.writeText(texto).catch(() => {});
 }
 
-// ── Sello dorado central — Maestro Templario, servido desde public/assets ────
-function Sello({ size = 76 }) {
+// ── Rayos giratorios detrás del sello (mismo patrón que aliado-display-page.jsx) ─
+function Rays({ size = 200, speed = '5s', opacity = 0.22 }) {
+  const rays = Array.from({ length: 12 }, (_, i) => ({
+    angle: i * 30,
+    len:   size * (0.42 + (i % 3) * 0.1),
+    w:     1.2 + (i % 4) * 0.6,
+  }));
+  return (
+    <svg
+      width={size} height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      style={{ position: 'absolute', inset: 0, opacity, animation: `raysRotate ${speed} linear infinite` }}
+    >
+      {rays.map((r, i) => {
+        const cx = size / 2, cy = size / 2;
+        const rad = (r.angle * Math.PI) / 180;
+        return (
+          <line key={i}
+            x1={cx} y1={cy}
+            x2={cx + Math.cos(rad) * r.len}
+            y2={cy + Math.sin(rad) * r.len}
+            stroke={C.gold} strokeWidth={r.w} strokeOpacity={0.65 + (i % 3) * 0.1}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+// ── Sello central — Maestro Templario, servido desde public/assets ──────────
+function Sello({ size = 96 }) {
   const [imgOk, setImgOk] = useState(true);
   return (
     <div style={{
-      width: size, height: size, borderRadius: '50%', margin: '0 auto',
-      background: 'radial-gradient(circle at 35% 30%, #fff4a0 0%, #FFD700 40%, #b8860b 100%)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.42,
-      animation: 'orbFloat 3.4s ease-in-out infinite, pulseGlow 3.4s ease-in-out infinite',
-      overflow: 'hidden',
+      position: 'relative', width: size, height: size, margin: '0 auto',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
+      {/* Rayos dorados girando detrás, dos capas a distinta velocidad */}
+      <div style={{ position: 'absolute', inset: -size * 0.35, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Rays size={size * 1.7} speed="7s" opacity={0.22} />
+      </div>
+      <div style={{ position: 'absolute', inset: -size * 0.35, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Rays size={size * 1.7} speed="16s" opacity={0.1} />
+      </div>
+      {/* Halo de luz pulsante detrás del personaje */}
+      <div style={{
+        position: 'absolute', width: size * 0.92, height: size * 0.92, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(255,215,0,0.35) 0%, transparent 72%)',
+        animation: 'pulseGlow 3.4s ease-in-out infinite', zIndex: 0,
+      }} />
       {imgOk ? (
         <img
           src="/assets/maestro_templario.png"
           alt="Maestro Templario"
           onError={() => setImgOk(false)}
-          style={{ width: '82%', height: '82%', objectFit: 'contain' }}
+          style={{
+            width: '86%', height: '86%', objectFit: 'contain', position: 'relative', zIndex: 1,
+            filter: 'drop-shadow(0 0 18px rgba(255,215,0,0.65)) drop-shadow(0 0 36px rgba(255,215,0,0.3))',
+            animation: 'orbFloat 3.4s ease-in-out infinite',
+          }}
         />
-      ) : '🔑'}
+      ) : (
+        <div style={{
+          position: 'relative', zIndex: 1, width: '100%', height: '100%', borderRadius: '50%',
+          background: 'radial-gradient(circle at 35% 30%, #fff4a0 0%, #FFD700 40%, #b8860b 100%)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.42,
+          animation: 'orbFloat 3.4s ease-in-out infinite',
+          boxShadow: '0 0 30px rgba(255,215,0,0.5)',
+        }}>
+          🔑
+        </div>
+      )}
     </div>
   );
 }
@@ -215,7 +269,7 @@ function PantallaDashboard({ data, onSalir }) {
             <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 4, color: C.goldDim, marginBottom: 10 }}>
               TEMPLO DEL PROPÓSITO · LÍDERES
             </div>
-            <Sello size={58} />
+            <Sello size={78} />
             <h1 style={{
               fontFamily: "'Cinzel Decorative', serif", fontWeight: 900, fontSize: 20, color: C.text,
               margin: '14px 0 0', textShadow: '0 0 20px rgba(255,215,0,0.25)',
@@ -338,7 +392,7 @@ function PantallaDashboardGerente({ data, onSalir }) {
             <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 4, color: C.goldDim, marginBottom: 10 }}>
               TEMPLO DEL PROPÓSITO · GERENTE
             </div>
-            <Sello size={58} />
+            <Sello size={78} />
             <h1 style={{
               fontFamily: "'Cinzel Decorative', serif", fontWeight: 900, fontSize: 20, color: C.text,
               margin: '14px 0 0', textShadow: '0 0 20px rgba(255,215,0,0.25)',
