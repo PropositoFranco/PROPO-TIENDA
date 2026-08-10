@@ -517,8 +517,11 @@ export default function LiderDashboardPage() {
     setData(null);
   };
 
-  if (data?.rol === 'gerente') return <PantallaDashboardGerente data={data} onSalir={salir} />;
-  if (data) return <PantallaDashboard data={data} onSalir={salir} />;
+  if (data) {
+    return data.rol === 'gerente'
+      ? <PantallaDashboardGerente data={data} onSalir={salir} />
+      : <PantallaDashboard data={data} onSalir={salir} />;
+  }
   return (
     <PantallaCodigo
       onEntrar={(val) => { const c = val.trim().toUpperCase(); if (c) consultar(c); }}
