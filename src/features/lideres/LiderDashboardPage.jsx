@@ -38,6 +38,17 @@ const C = {
 const NIVEL_COLOR = { base: C.muted, constante: C.green, solido: C.purple, elite: C.gold };
 const SIGUIENTE_COMISION = { constante: 17, solido: 19, elite: 21 };
 
+// ── Misiones — cada nivel es una misión con nombre, no una cuota seca ────────
+const MISION = {
+  constante: { icono: '🗡️', nombre: 'Primera Sangre',  desc: 'Consigue 3 personas nuevas en UNA semana.' },
+  solido:    { icono: '🛡️', nombre: 'El Guardián',     desc: 'Sostén 3 personas/semana durante 4 semanas seguidas.' },
+  elite:     { icono: '👑', nombre: 'El Elegido',       desc: 'Sostén 3 personas/semana durante 8 semanas seguidas.' },
+};
+const BONO_INFO = {
+  golpe_relampago: { icono: '🔥', nombre: 'Golpe Relámpago', desc: 'Metiste 5+ personas en un solo día. Racha doble.' },
+  semana_hierro:   { icono: '⚡', nombre: 'Semana de Hierro', desc: 'Metiste 6+ personas en la semana. Racha doble.' },
+};
+
 // ── CSS Global — mismas keyframes que ya usas en SorteoPage.jsx ──────────────
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
@@ -302,16 +313,41 @@ function PantallaDashboard({ data }) {
               de por vida de todo lo que compre cada persona que entró con tu código
             </div>
 
-            {lider.siguienteNivel ? (
+            {lider.bonoUltimaSemana && BONO_INFO[lider.bonoUltimaSemana.motivo] && (
+              <div style={{
+                marginTop: 22, textAlign: 'center', fontFamily: "'Crimson Text', serif", fontSize: 13, color: C.gold,
+                background: 'rgba(255,215,0,0.1)', border: `1px solid ${C.borderHi}`, borderRadius: 12, padding: '10px 14px',
+                animation: 'pulseGlow 2.4s ease-in-out infinite',
+              }}>
+                {BONO_INFO[lider.bonoUltimaSemana.motivo].icono}{' '}
+                <strong>{BONO_INFO[lider.bonoUltimaSemana.motivo].nombre}</strong> — {BONO_INFO[lider.bonoUltimaSemana.motivo].desc}
+              </div>
+            )}
+
+            {lider.bonoMicroTotal > 0 && (
+              <div style={{
+                marginTop: 22, textAlign: 'center', fontFamily: "'Crimson Text', serif", fontSize: 12.5, color: C.gold,
+                background: 'rgba(255,215,0,0.08)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 12px',
+              }}>
+                ⭐ Traes <strong>+{lider.bonoMicroTotal}%</strong> extra de micro-retos, ya sumado a tu {lider.comisionActual}%.
+              </div>
+            )}
+
+            {lider.siguienteNivel && MISION[lider.siguienteNivel] ? (
               <div style={{ marginTop: 26, textAlign: 'left' }}>
                 <div style={{
                   fontFamily: "'Crimson Text', serif", fontSize: 13, color: C.text, marginBottom: 12,
-                  background: 'rgba(255,215,0,0.06)', border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px',
+                  background: 'rgba(255,215,0,0.06)', border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 16px',
                 }}>
-                  Te faltan <strong style={{ color: colorNivel }}>{lider.semanasFaltantes} {lider.semanasFaltantes === 1 ? 'semana' : 'semanas'}</strong> metiendo
-                  al menos <strong style={{ color: colorNivel }}>1 persona nueva</strong> para subir a{' '}
-                  <strong style={{ color: colorNivel }}>{lider.siguienteNivelLabel}</strong> y ganar{' '}
+                  <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13, color: colorNivel, marginBottom: 6 }}>
+                    {MISION[lider.siguienteNivel].icono} MISIÓN: {MISION[lider.siguienteNivel].nombre.toUpperCase()}
+                  </div>
+                  {MISION[lider.siguienteNivel].desc} Al completarla subes a{' '}
+                  <strong style={{ color: colorNivel }}>{lider.siguienteNivelLabel}</strong> y ganas{' '}
                   <strong style={{ color: colorNivel }}>{SIGUIENTE_COMISION[lider.siguienteNivel] ?? ''}%</strong>.
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}`, fontSize: 12, color: C.muted }}>
+                    {BONO_INFO.golpe_relampago.icono} <strong style={{ color: C.text }}>Bonus:</strong> mete 5 en un solo día, o 6 en la semana, y esta misión avanza doble.
+                  </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 0.5, color: C.muted, marginBottom: 8 }}>
                   <span>RACHA: {lider.semanasConsecutivas} SEM.</span>
@@ -325,6 +361,45 @@ function PantallaDashboard({ data }) {
               </div>
             )}
           </div>
+
+          {/* Micro-retos — logros chiquitos dentro de la misión principal, premio real */}
+          {lider.microRetos?.length > 0 && (
+            <div style={{
+              background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 18, padding: '18px 20px', marginBottom: 18,
+              animation: 'fadeUp 0.6s ease 0.15s both',
+            }}>
+              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2.5, color: C.goldDim, marginBottom: 4 }}>
+                MICRO-RETOS
+              </div>
+              <div style={{ fontFamily: "'Crimson Text', serif", fontStyle: 'italic', fontSize: 11.5, color: C.muted, marginBottom: 14 }}>
+                Además de tu misión, estos se ganan solos y se quedan para siempre.
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {lider.microRetos.map(mr => (
+                  <div key={mr.key}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <span style={{ fontSize: 16, opacity: mr.logrado ? 1 : 0.55 }}>{mr.logrado ? '✅' : mr.icono}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 11.5,
+                          color: mr.logrado ? C.gold : C.text,
+                        }}>
+                          {mr.nombre} <span style={{ color: C.green, fontWeight: 400 }}>+{mr.bonoPct}%</span>
+                        </div>
+                        <div style={{ fontFamily: "'Crimson Text', serif", fontStyle: 'italic', fontSize: 11, color: C.muted }}>
+                          {mr.descripcion}
+                        </div>
+                      </div>
+                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: mr.logrado ? C.gold : C.muted, whiteSpace: 'nowrap' }}>
+                        {mr.logrado ? 'LOGRADO' : `${mr.progreso}/${mr.meta}`}
+                      </div>
+                    </div>
+                    {!mr.logrado && <BarraProgreso actual={mr.progreso} faltan={Math.max(mr.meta - mr.progreso, 0)} color={C.purple} />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Esta semana */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 8, animation: 'fadeUp 0.6s ease 0.2s both' }}>
@@ -358,7 +433,8 @@ function PantallaDashboard({ data }) {
               <div>🎟️ <span style={{ color: C.text }}>Entregas tu QR</span> a alguien nuevo.</div>
               <div>💳 <span style={{ color: C.text }}>Esa persona compra</span> algo en el Templo.</div>
               <div>💰 <span style={{ color: C.text }}>Ganas {lider.comisionActual}%</span> de esa compra, de por vida, cada vez que vuelva a comprar.</div>
-              <div>📈 <span style={{ color: C.text }}>Metes al menos 1 persona nueva cada semana</span> → tu % sube solo.</div>
+              <div>📈 <span style={{ color: C.text }}>Metes al menos 3 personas nuevas en la semana</span> → tu racha sube y tu % sube con ella.</div>
+              <div>🎯 <span style={{ color: C.text }}>Arriba tienes micro-retos</span> — cosas chicas que se ganan solas y te dan % extra para siempre.</div>
             </div>
           </div>
         </div>
