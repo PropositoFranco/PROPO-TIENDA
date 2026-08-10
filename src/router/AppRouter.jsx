@@ -49,6 +49,7 @@ const FirmaAliadoPage = lazy(() => import('../features/sorteo/FirmaAliadoPage'))
 const LiderDashboardPage = lazy(() => import('../features/lideres/LiderDashboardPage'));
 const MuroDeAliados = lazy(() => import('../features/aliados/MuroDeAliados'));
 const AdminMapaPage = lazy(() => import('../features/admin/AdminMapaPage'));
+const FinanzasAdminPage = lazy(() => import('../features/admin/FinanzasAdminPage'));
 
 function SorteoRedirect() {
   const [destino, setDestino] = useState(null);
@@ -162,6 +163,7 @@ export default function AppRouter() {
             <Route path="/admin/vip-level-rewards" element={<VipLevelRewardsAdmin />} />
             <Route path="/admin/aliados" element={<MuroDeAliados adminMode />} />
             <Route path="/admin/mapa" element={<AdminMapaPage />} />
+            <Route path="/admin/finanzas" element={<FinanzasAdminPage />} />
           </Route>
 
           <Route path="/" element={<ProtectedRoute />}>
