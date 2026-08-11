@@ -96,9 +96,10 @@ useEffect(() => {
     const isVip = useAuthStore.getState().isVip?.() ?? false;
     const uid = frameRef.current ? user?.id : null;
     if (uid && isVip) {
-      supabase.from('vip_ruleta_wins').select('id').eq('user_id', uid)
+      supabase.from('vip_ruleta_wins').select('id, source').eq('user_id', uid)
         .then(({ data }) => {
-          const spins = Math.max(0, level - (data?.length ?? 0));
+          const used = (data ?? []).filter(d => d.source === 'vip_level').length;
+          const spins = Math.max(0, level - used);
           sendToFrame('vipSpins', spins);
         });
     } else {
@@ -226,9 +227,10 @@ useEffect(() => {
       // Re-mandar vipSpins después de badges para que no se pisen
       const isVip2 = useAuthStore.getState().isVip?.() ?? false;
       if (user?.id && isVip2) {
-        supabase.from('vip_ruleta_wins').select('id').eq('user_id', user.id)
+        supabase.from('vip_ruleta_wins').select('id, source').eq('user_id', user.id)
           .then(({ data }) => {
-            const spins = Math.max(0, level - (data?.length ?? 0));
+            const used = (data ?? []).filter(d => d.source === 'vip_level').length;
+            const spins = Math.max(0, level - used);
             sendToFrame('vipSpins', spins);
           });
       }
@@ -254,10 +256,10 @@ useEffect(() => {
     if (!isVip) { sendToFrame('vipSpins', 0); return; }
     supabase
       .from('vip_ruleta_wins')
-      .select('id')
+      .select('id, source')
       .eq('user_id', user.id)
       .then(({ data }) => {
-        const used = data?.length ?? 0;
+        const used = (data ?? []).filter(d => d.source === 'vip_level').length;
         const spins = Math.max(0, level - used);
         sendToFrame('vipSpins', spins);
       });
@@ -275,8 +277,10 @@ useEffect(() => {
         }
         navigate(`/${path}`);
       }
-      if (type === 'oraculo-modal') {
-        setOraculoOpen(!!data?.open);
+      if (type === 'streak-reward-claimed') {
+        const { addXP, addCristales } = usePlayerStore.getState();
+        if (data?.xp)    addXP(data.xp);
+        if (data?.coins) addCristales(data.coins);
       }
     };
     window.addEventListener('message', handleMessage);

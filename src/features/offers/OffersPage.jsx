@@ -267,8 +267,14 @@ export default function OffersPage() {
   const loadProfile = useAuthStore(s => s.loadProfile);
   const sidebarOpen = useUIStore(s => s.sidebarOpen);
 
-  const bonusOffers = offers.filter(o => o.min_level && o.min_level > 0);
-  const gridOffers  = offers.filter(o => !o.min_level || o.min_level === 0);
+  // Gatilla ofertas detrás del primer logro real (xp > 0) — mismo criterio
+  // que ya usa hub.html para revelar la Propo-Tienda. Config vive en
+  // special_offers.requires_first_win, no hardcodeado por título.
+  const hasFirstWin  = (profile?.xp ?? 0) > 0;
+  const visibleOffers = offers.filter(o => !o.requires_first_win || hasFirstWin);
+
+  const bonusOffers = visibleOffers.filter(o => o.min_level && o.min_level > 0);
+  const gridOffers  = visibleOffers.filter(o => !o.min_level || o.min_level === 0);
 
   useEffect(() => {
     getActiveOffers(profile?.created_at || user?.created_at)
@@ -354,6 +360,9 @@ export default function OffersPage() {
                       {o.image_url && <img src={o.image_url} alt={o.title} className="op-bonus-img" />}
                       <div className="op-bonus-info">
                         <span className="op-bonus-title">{o.title}</span>
+                        {o.min_level > 0 && (profile?.level ?? 1) < o.min_level && (
+                          <span className="op-bonus-reco">🎖 Nivel {o.min_level} recomendado</span>
+                        )}
                         <span className="op-bonus-price" style={{ color: r.color }}>${o.price} <em>USD</em></span>
                       </div>
                       {(() => {
@@ -910,6 +919,11 @@ const CSS = `
 }
 .op-bonus-price em {
   font-size: 9px; font-weight: 600; opacity: .7; font-style: normal;
+}
+.op-bonus-reco {
+  font-size: 8.5px; font-weight: 700; letter-spacing: .4px;
+  color: #ffd76a; opacity: .85;
+  text-shadow: 0 0 8px rgba(255,215,106,0.5);
 }
 .op-bonus-btn {
   flex-shrink: 0;

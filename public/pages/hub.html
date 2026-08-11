@@ -946,6 +946,13 @@ body.perf-low .nav-ranking::after { animation:none !important; opacity:0 !import
   position:fixed; top:250px; left:20px; z-index:1000;
 }
 .special-offer:hover { border-color:rgba(212,175,55,0.7); box-shadow:0 0 15px rgba(212,175,55,0.25); }
+
+/* Día 0: oculta la Propo-Tienda hasta que el usuario complete su primer logro real (xp > 0) */
+.special-offer.offer-locked-newbie {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+}
 .offer-chest { font-size:clamp(24px,3vw,36px); flex-shrink:0; animation:chestShake 3s ease-in-out infinite; }
 @keyframes chestShake {
   0%,90%,100% { transform:rotate(0); }
@@ -1546,7 +1553,8 @@ body.hub-locked .maestro-bubble { display: flex; }
   </nav>
 
   <!-- Oferta especial (PC) -->
-  <div class="special-offer" onclick="goTo('offers')">
+  <!-- Empieza oculta: se revela en JS cuando el jugador completa su primera misión real (xp > 0) -->
+  <div class="special-offer offer-locked-newbie" onclick="goTo('offers')">
     <div class="offer-chest">🪙</div>
     <div class="offer-info">
       <div class="offer-title">OFERTAS ESPECIALES</div>
@@ -1635,9 +1643,16 @@ window.addEventListener('message', (event) => {
     _userNombre = data?.templario_name || data?.nombre || data?.name || '';
     _userEmail = data?.email || data?.user_email || '';
     _userId = data?.user_id || data?.id || '';
+    // Battle pass de racha: dispara el chequeo de hitos día 15/30
+    if (window.__checkStreakMilestones) window.__checkStreakMilestones(data?.streak_days, data);
   }
 
   if (type === 'player') {
+    // Revela la Propo-Tienda solo después del primer logro real (xp > 0).
+    // Antes de eso, día 0 se queda limpio: solo onboarding + primera misión.
+    const offerEl = document.querySelector('.special-offer');
+    if (offerEl && data?.xp > 0) offerEl.classList.remove('offer-locked-newbie');
+
     const elNombre = document.getElementById('user-name');
     if (elNombre && data?.templarioName) elNombre.textContent = data.templarioName;
     const elNivel = document.querySelector('.level-badge');
@@ -2662,6 +2677,12 @@ window.addEventListener('resize', scaleScene);
   border:1px solid var(--gold-dim); display:flex; align-items:center; justify-content:center;
   font-size:24px; box-shadow:0 0 16px rgba(212,175,55,0.35);">🧭</button>
 
+<div id="streak-modal" style="display:none;position:fixed;inset:0;z-index:999998;background:rgba(2,0,12,0.95);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px;">
+  <div id="streak-modal-card" style="position:relative;max-width:360px;width:100%;border-radius:24px;padding:28px 22px;text-align:center;background:linear-gradient(155deg,rgba(212,175,55,0.1) 0%,rgba(8,3,26,0.99) 55%,rgba(2,0,12,1) 100%);border:1.5px solid rgba(212,175,55,0.7);box-shadow:0 0 80px rgba(212,175,55,0.35),0 0 160px rgba(124,58,237,0.2);">
+    <div id="streak-modal-body"></div>
+  </div>
+</div>
+
 <div id="oraculo-modal" style="
   position:fixed; top:0; left:0; right:0; bottom:0;
   width:100vw; height:100vh; height:100dvh;
@@ -3293,6 +3314,153 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
   }
 
   initOraculo();
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════
+     BATTLE PASS DE RACHA — hitos día 15 y día 30
+     Self-contenido: crea su propio cliente Supabase (mismo patrón
+     que El Oráculo), lee streak_days del mensaje 'profile' que ya
+     manda React, y escribe en vip_ruleta_wins (source='streak_dayNN')
+     + user_streak_claims. El XP/Coins los aplica React (addXP/
+     addCristales) al recibir 'streak-reward-claimed' — así el nivel
+     y rango se recalculan bien si el premio cruza un umbral.
+     ══════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+  let sb2 = null, uid2 = null;
+  let milestones = [];      // [{id, day, title, description, icon_emoji}]
+  let claimedIds = new Set();
+  let currentStreak = 0;
+  let pendingMilestone = null;
+
+  // ⚠️ Debe reflejar los MISMOS IDs que PRIZES en VipRuleta.jsx.
+  // Si agregas/quitas un premio allá, actualiza también aquí — están
+  // duplicados a propósito porque hub.html es HTML plano (no puede
+  // importar el componente React).
+  const SPRIZES = [
+    { id:'nanobanana',  name:'NanoBanana²',          icon:'🍌', color:'#facc15', type:'tool', value:'$49 USD' },
+    { id:'xp100_a',     name:'+100 XP & +100 Coins', icon:'⭐', color:'#a855f7', type:'both', amount:100, coinAmount:100 },
+    { id:'claude',      name:'Claude Showcase',      icon:'⚡', color:'#38bdf8', type:'tool', value:'$39 USD' },
+    { id:'coins100_a',  name:'+100 XP & +100 Coins', icon:'🪙', color:'#d4af37', type:'both', amount:100, coinAmount:100 },
+    { id:'perplexity',  name:'Perplexity Viral',     icon:'🔮', color:'#8b5cf6', type:'tool', value:'$29 USD' },
+    { id:'xp100_b',     name:'+100 XP & +100 Coins', icon:'⭐', color:'#a855f7', type:'both', amount:100, coinAmount:100 },
+    { id:'supabase',    name:'Supabase + Claude AI', icon:'💎', color:'#06b6d4', type:'tool', value:'$59 USD' },
+    { id:'coins100_b',  name:'+100 XP & +100 Coins', icon:'🪙', color:'#d4af37', type:'both', amount:100, coinAmount:100 },
+  ];
+
+  async function initStreakSb() {
+    if (sb2) return sb2;
+    try {
+      const url = localStorage.getItem('_sb_url');
+      const key = localStorage.getItem('_sb_key');
+      if (!url || !key || !window.supabase) return null;
+      sb2 = window.supabase.createClient(url, key, { auth:{ persistSession:false, autoRefreshToken:false, detectSessionInUrl:false } });
+      const { data: { session } } = await sb2.auth.getSession();
+      if (!session) { sb2 = null; return null; }
+      uid2 = session.user.id;
+      return sb2;
+    } catch (e) { console.error('Streak battle pass: init falló', e); return null; }
+  }
+
+  async function loadMilestonesAndClaims() {
+    const client = await initStreakSb();
+    if (!client || !uid2) return;
+    const [{ data: ms }, { data: cl }] = await Promise.all([
+      client.from('streak_milestones').select('id, day, title, description, icon_emoji').eq('is_active', true).order('day'),
+      client.from('user_streak_claims').select('milestone_id').eq('user_id', uid2),
+    ]);
+    milestones = ms || [];
+    claimedIds = new Set((cl || []).map(c => c.milestone_id));
+    maybeShowModal();
+  }
+
+  function maybeShowModal() {
+    if (pendingMilestone) return; // ya hay uno mostrándose / pendiente de reclamar
+    const next = milestones
+      .filter(m => currentStreak >= m.day && !claimedIds.has(m.id))
+      .sort((a,b) => a.day - b.day)[0];
+    if (next) { pendingMilestone = next; renderChest(next); }
+  }
+
+  function renderChest(m) {
+    const modal = document.getElementById('streak-modal');
+    const body  = document.getElementById('streak-modal-body');
+    body.innerHTML = `
+      <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:rgba(212,175,55,0.6);margin-bottom:6px;">⚔ HITO DE RACHA · DÍA ${m.day}</div>
+      <div style="font-family:'Cinzel',serif;font-size:20px;font-weight:900;background:linear-gradient(135deg,#ffe87a,#d4af37,#fde68a);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:sbpGold 4s linear infinite;margin-bottom:10px;">${m.title || ('Racha de ' + m.day + ' días')}</div>
+      <div id="streak-chest" style="font-size:64px;margin:18px 0;cursor:pointer;animation:sbpChestPulse 1.8s ease-in-out infinite;filter:drop-shadow(0 0 24px rgba(212,175,55,0.7));">${m.icon_emoji || '🎁'}</div>
+      <div style="font-family:'Raleway',sans-serif;font-size:12px;color:rgba(200,185,240,0.6);margin-bottom:18px;line-height:1.5;">${m.description || 'Una tirada de la Ruleta VIP te espera.'}</div>
+      <button id="streak-open-btn" style="padding:12px 28px;border-radius:100px;background:linear-gradient(135deg,#4c1d95,#7c3aed 50%,#d4af37);border:none;color:#fff;font-family:'Cinzel',serif;font-weight:900;font-size:11px;letter-spacing:2px;cursor:pointer;box-shadow:0 0 30px rgba(212,175,55,0.5);">✦ TOCAR PARA ABRIR</button>
+    `;
+    modal.style.display = 'flex';
+    document.getElementById('streak-open-btn').addEventListener('click', () => claimReward(m));
+  }
+
+  async function claimReward(m) {
+    const btn = document.getElementById('streak-open-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⟳ ABRIENDO...'; }
+    const client = await initStreakSb();
+    if (!client || !uid2) return;
+
+    // Premios ya ganados (TODAS las fuentes) — nunca repetir
+    const { data: wins } = await client.from('vip_ruleta_wins').select('prize_id').eq('user_id', uid2);
+    const wonIds = new Set((wins || []).map(w => w.prize_id));
+    const pool = SPRIZES.filter(p => !wonIds.has(p.id));
+    const prize = (pool.length ? pool : SPRIZES)[Math.floor(Math.random() * (pool.length ? pool.length : SPRIZES.length))];
+
+    const source = 'streak_day' + m.day;
+    await client.from('vip_ruleta_wins').insert({
+      user_id: uid2, prize_id: prize.id, prize_name: prize.name, prize_type: prize.type,
+      file_name: prize.file || null, xp_amount: prize.amount || 0, coin_amount: prize.coinAmount || 0,
+      source,
+    });
+    await client.from('user_streak_claims').insert({
+      user_id: uid2, milestone_id: m.id, streak_days_at_claim: currentStreak,
+    });
+
+    claimedIds.add(m.id);
+    // React recibe esto y aplica XP/Coins vía addXP/addCristales (usePlayerStore),
+    // así el nivel y rango se recalculan bien si el premio cruza un umbral.
+    window.parent.postMessage({ type:'streak-reward-claimed', data:{ day:m.day, prizeId:prize.id, xp:prize.amount||0, coins:prize.coinAmount||0 } }, '*');
+    renderWin(prize);
+  }
+
+  function renderWin(prize) {
+    const body = document.getElementById('streak-modal-body');
+    body.innerHTML = `
+      <div style="font-size:64px;margin-bottom:12px;animation:sbpUnlock .6s cubic-bezier(.34,1.3,.64,1);filter:drop-shadow(0 0 24px ${prize.color});">${prize.icon}</div>
+      <div style="display:inline-block;padding:4px 16px;border-radius:100px;background:${prize.color}22;border:1px solid ${prize.color};color:${prize.color};font-family:'Cinzel',serif;font-size:8px;letter-spacing:3px;margin-bottom:14px;">${prize.type === 'tool' ? '💎 HERRAMIENTA EXCLUSIVA VIP' : '✦ PREMIO GANADO'}</div>
+      <h2 style="font-family:'Cinzel',serif;font-size:20px;font-weight:900;color:${prize.color};margin-bottom:8px;">✦ ${prize.name} ✦</h2>
+      ${prize.type === 'tool'
+        ? `<div style="font-family:'Cinzel',serif;font-size:8px;color:#4ade80;margin-bottom:18px;">💰 Valor de mercado: ${prize.value}</div>`
+        : `<div style="font-family:'Cinzel',serif;font-size:24px;font-weight:900;color:${prize.color};margin-bottom:18px;">+${prize.amount} XP · +${prize.coinAmount} Coins</div>`}
+      <button id="streak-close-btn" style="padding:12px 24px;border-radius:100px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);color:#fff;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;cursor:pointer;">
+        ${prize.type === 'tool' ? 'VER EN MI PERFIL →' : 'CONTINUAR'}
+      </button>
+    `;
+    document.getElementById('streak-close-btn').addEventListener('click', () => {
+      document.getElementById('streak-modal').style.display = 'none';
+      pendingMilestone = null;
+      if (prize.type === 'tool') window.parent.postMessage({ type:'navigate', data:'profile' }, '*');
+      maybeShowModal(); // por si el otro hito (15 o 30) también está listo
+    });
+  }
+
+  // Llamado desde el handler de 'profile' en el listener principal de mensajes
+  window.__checkStreakMilestones = function(streakDays) {
+    currentStreak = streakDays || 0;
+    if (!milestones.length) loadMilestonesAndClaims();
+    else maybeShowModal();
+  };
+
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes sbpGold       { 0%{background-position:200% center} 100%{background-position:0% center} }
+    @keyframes sbpChestPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+    @keyframes sbpUnlock     { 0%{transform:scale(.3) rotate(-20deg);opacity:0} 60%{transform:scale(1.2) rotate(5deg)} 100%{transform:scale(1) rotate(0);opacity:1} }
+  `;
+  document.head.appendChild(style);
 })();
 </script>
 </body>

@@ -243,11 +243,11 @@ const [loadingWins, setLoadingWins] = useState(true);           // tiros usados
       return;
     }
     setLoadingWins(true);
-    supabase.from('vip_ruleta_wins').select('id, prize_id, prize_name, prize_type, file_name, created_at')
+    supabase.from('vip_ruleta_wins').select('id, prize_id, prize_name, prize_type, file_name, created_at, source')
       .eq('user_id', userId).order('created_at', { ascending: false })
       .then(({ data }) => {
         if (data) {
-          setSpinsUsed(data.length);
+          setSpinsUsed(data.filter(d => d.source === 'vip_level').length);
           setWonPrizes(data);
         }
         setLoadingWins(false);
