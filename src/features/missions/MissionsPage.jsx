@@ -704,8 +704,8 @@ function PropoPassModal({ onClose }) {
   const [hovUno, setHovUno] = useState(false);
   const [hovTres, setHovTres] = useState(false);
   return (
-    <div onClick={onClose} style={{position:'fixed',inset:0,zIndex:99999,background:'rgba(1,5,18,0.9)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}>
-      <div onClick={e=>e.stopPropagation()} style={{position:'relative',width:'100%',maxWidth:'430px',borderRadius:'22px',background:'linear-gradient(160deg,#04091f 0%,#070d28 45%,#030814 100%)',border:'1.5px solid rgba(201,168,76,0.65)',boxShadow:'0 0 80px rgba(201,168,76,0.18)',fontFamily:"'Cinzel',Georgia,serif",overflow:'hidden'}}>
+    <div onClick={onClose} style={{position:'fixed',inset:0,zIndex:99999,background:'rgba(1,5,18,0.9)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'20px',paddingTop:'max(20px, env(safe-area-inset-top, 20px))',paddingBottom:'max(20px, env(safe-area-inset-bottom, 20px))',overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
+      <div onClick={e=>e.stopPropagation()} style={{position:'relative',width:'100%',maxWidth:'430px',borderRadius:'22px',background:'linear-gradient(160deg,#04091f 0%,#070d28 45%,#030814 100%)',border:'1.5px solid rgba(201,168,76,0.65)',boxShadow:'0 0 80px rgba(201,168,76,0.18)',fontFamily:"'Cinzel',Georgia,serif",overflow:'hidden',margin:'auto'}}>
         <button onClick={onClose} style={{position:'absolute',top:14,right:14,zIndex:10,width:30,height:30,borderRadius:'50%',background:'rgba(201,168,76,0.1)',border:'1px solid rgba(201,168,76,0.35)',color:'rgba(201,168,76,0.7)',fontSize:14,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit'}}>✕</button>
         <div style={{padding:'36px 26px 30px'}}>
           <div style={{textAlign:'center',marginBottom:22}}>

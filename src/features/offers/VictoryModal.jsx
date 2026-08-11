@@ -327,8 +327,12 @@ const CSS = `
   position: fixed; inset: 0; z-index: 99997;
   background: rgba(3,1,18,0.88);
   backdrop-filter: blur(12px);
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: flex-start; justify-content: center;
   padding: 20px;
+  padding-top: max(20px, env(safe-area-inset-top, 20px));
+  padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   transition: opacity .5s ease;
 }
 .vm-overlay--enter { animation: vm-fade-in .3s ease both; }
@@ -358,6 +362,7 @@ const CSS = `
   padding: 36px 32px 32px;
   text-align: center;
   overflow: hidden;
+  margin: auto;
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--vc) 15%, transparent),
     0 0 60px color-mix(in srgb, var(--vg) 60%, transparent),

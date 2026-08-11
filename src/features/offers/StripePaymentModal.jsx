@@ -257,8 +257,12 @@ export default function StripePaymentModal({ offer, userId, onSuccess, onClose, 
         position: 'fixed', inset: 0, zIndex: 9999,
         background: 'rgba(3,1,18,0.85)',
         backdropFilter: 'blur(8px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         padding: '20px',
+        paddingTop: 'max(20px, env(safe-area-inset-top, 20px))',
+        paddingBottom: 'max(20px, env(safe-area-inset-bottom, 20px))',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
       }}
     >
       <div
@@ -271,6 +275,7 @@ export default function StripePaymentModal({ offer, userId, onSuccess, onClose, 
           padding: '28px',
           position: 'relative',
           boxShadow: '0 0 60px rgba(180,79,255,0.2), 0 24px 80px rgba(0,0,0,0.8)',
+          margin: 'auto',
         }}
       >
         {/* Botón cerrar */}
