@@ -370,6 +370,8 @@
   .rm-node2.depth-0 .tn-icon{font-size:26px;}
   .rm-node2.depth-0 .tn-title{font-size:13px;letter-spacing:1.5px;}
   .rm-node2.depth-1{border-color:rgba(245,208,110,.65);}
+  .rm-node2.money-node{width:198px;flex-basis:198px;border-color:#86efac;border-width:1.5px;background:linear-gradient(150deg,rgba(20,40,25,.97),rgba(7,16,10,.99));}
+  .rm-node2.money-node .tn-icon{font-size:20px;}
   .rm-node2.depth-3{width:150px;flex-basis:150px;padding:0 0 10px;overflow:hidden;}
   .rm-node2 .tn-icon{font-size:17px;line-height:1;margin-bottom:5px;}
   .rm-node2 .tn-title{font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.5px;color:#f0e8ff;line-height:1.35;}
@@ -3361,6 +3363,9 @@
         <div class="rm-card-foot">${priceHtml}</div>
         ${dayLogic ? `<div class="rm-card-real">📅 ${dayLogic}</div>` : ''}
         ${!o.is_active ? `<div class="rm-card-real" style="color:#fca5a5;">⛔ Inactiva ahora mismo</div>` : ''}
+        ${o._rmSales ? (o._rmSales.n > 0
+            ? `<div class="rm-card-real" style="color:#86efac;">🔥 ${o._rmSales.n} venta(s) real(es) confirmada(s) · ${_rmMoney(o._rmSales.total)}</div>`
+            : `<div class="rm-card-real" style="color:#fca5a5;">❌ 0 ventas registradas en user_purchased_offers</div>`) : ''}
       </div>
     </div>`;
   }
@@ -3390,17 +3395,18 @@
     try {
       const [
         offersRes, coinsRes, productsRes,
-        sorteoRes, membershipsRes, codesRes, arsenalRes, ordersRes, transRes
+        sorteoRes, membershipsRes, codesRes, arsenalRes, ordersRes, transRes, purchOffersRes
       ] = await Promise.all([
         supabaseClient.from('special_offers').select('*').order('sort_order'),
         supabaseClient.from('propocoin_packages').select('*').order('sort_order'),
         supabaseClient.from('products').select('id,name,category,price_cristales,is_free_onboarding,is_active'),
         supabaseClient.from('sorteo_participantes').select('tipo_premio, cupon_aceptado, cupon_redimido'),
-        supabaseClient.from('memberships').select('plan, status, current_week'),
-        supabaseClient.from('access_codes').select('membership_type, amount_paid').not('membership_type','is',null),
+        supabaseClient.from('memberships').select('plan, status, current_week, created_at'),
+        supabaseClient.from('access_codes').select('membership_type, amount_paid, is_used, used_by'),
         supabaseClient.from('arsenal_purchases').select('plan, amount_paid, is_test'),
         supabaseClient.from('orders').select('cause, amount').not('cause','is',null),
-        supabaseClient.from('transacciones').select('tipo, monto_bruto')
+        supabaseClient.from('transacciones').select('tipo, monto_bruto'),
+        supabaseClient.from('user_purchased_offers').select('offer_id, offer_title, amount_paid, purchased_at')
       ]);
 
       const offers = offersRes.data || [];
@@ -3412,6 +3418,7 @@
       const arsenal = arsenalRes.data || [];
       const orders = ordersRes.data || [];
       const trans = transRes.data || [];
+      const purchOffers = purchOffersRes.data || [];
 
       // ── Agregaciones reales ──
       const premioCount = {};
@@ -3421,6 +3428,15 @@
       memberships.forEach(m => { const k = m.plan || '—'; planCount[k] = (planCount[k]||0)+1; });
       const maxWeek = memberships.length ? Math.max(...memberships.map(m => m.current_week||0)) : 0;
 
+      // ── Detección de siembra masiva (backfill/seed) en memberships: si la mayoría de las filas
+      //    comparten el mismo created_at exacto, no son altas reales de usuarios sino un script único ──
+      const membCreatedGroups = {};
+      memberships.forEach(m => { const k = m.created_at || '—'; membCreatedGroups[k] = (membCreatedGroups[k]||0)+1; });
+      const membSeedEntry = Object.entries(membCreatedGroups).sort((a,b)=>b[1]-a[1])[0] || ['—',0];
+      const membSeedCount = membSeedEntry[1];
+      const membSeedDate = membSeedEntry[0];
+      const membSeedDetected = memberships.length > 0 && (membSeedCount / memberships.length) >= 0.5 && membSeedCount > 1;
+
       const codeTypeAgg = {};
       codes.forEach(c => {
         const k = c.membership_type || '—';
@@ -3428,6 +3444,21 @@
         codeTypeAgg[k].n++;
         codeTypeAgg[k].total += (c.amount_paid||0)/100;
       });
+
+      // ── Códigos con pago real confirmado (amount_paid>0) y cuántos de verdad se volvieron usuario ──
+      const codesReal = codes.filter(c => (c.amount_paid||0) > 0);
+      const codesUsadas = codesReal.filter(c => c.is_used);
+      const codesUsuariosReales = new Set(codesReal.map(c => c.used_by).filter(Boolean)).size;
+
+      // ── Ventas reales de special_offers (Oferta fuerte / Permanentes / Arsenal si acaso) ──
+      const purchOffersAgg = {};
+      purchOffers.forEach(p => {
+        const k = (p.offer_title || p.offer_id || '—').trim();
+        if (!purchOffersAgg[k]) purchOffersAgg[k] = { n:0, total:0 };
+        purchOffersAgg[k].n++;
+        purchOffersAgg[k].total += Number(p.amount_paid||0);
+      });
+      const totPurchOffers = purchOffers.reduce((s,p) => s + Number(p.amount_paid||0), 0);
 
       const arsenalReal = arsenal.filter(a => !a.is_test);
       const arsenalTest = arsenal.filter(a => a.is_test);
@@ -3453,40 +3484,58 @@
       const dayLogicOffers = offers.filter(o => !!o.offer_return_day || !!o.expires_after_days);
       const permanentOffers = offers.filter(o => !(o.min_level>0) && !o.offer_return_day && !o.expires_after_days);
 
+      // Adjuntamos a cada oferta (y paquete de coins) sus ventas reales de user_purchased_offers, buscando por título
+      const _attachSales = (o) => { o._rmSales = purchOffersAgg[(o.title||'').trim()] || { n:0, total:0 }; return o; };
+      arsenalOffers.forEach(_attachSales);
+      dayLogicOffers.forEach(_attachSales);
+      permanentOffers.forEach(_attachSales);
+
       const productsByCat = {};
       products.forEach(p => { const k = p.category || 'otros'; (productsByCat[k] = productsByCat[k]||[]).push(p); });
 
       // ── Totales confirmados por fuente ($) — base real para "punto fuerte" ──
-      const totCodes = codes.reduce((s,c) => s + (c.amount_paid||0)/100, 0);
+      const totCodes = codesReal.reduce((s,c) => s + (c.amount_paid||0)/100, 0);
       const totOrdersCausa = orders.reduce((s,o) => s + (o.amount||0)/100, 0);
       const totArsenalConMonto = arsenalReal.filter(a=>a.amount_paid!=null).reduce((s,a)=>s+Number(a.amount_paid||0),0);
       const arsenalSinMonto = arsenalReal.filter(a=>a.amount_paid==null).length;
       const totTrans = trans.reduce((s,t)=>s+Number(t.monto_bruto||0),0);
 
       const fuentes = [
-        { label:'💳 Membresías (access_codes)', total: totCodes, n: codes.length },
+        { label:'💳 Membresías (access_codes pagados)', total: totCodes, n: codesReal.length },
         { label:'🐾 Landing causa (orders)', total: totOrdersCausa, n: orders.length },
-        { label:'⚔️ Arsenal RPG (arsenal_purchases)', total: totArsenalConMonto, n: arsenal.length, warn: arsenalSinMonto>0 },
+        { label:'⚔️ Arsenal RPG (arsenal_purchases)', total: totArsenalConMonto, n: arsenalReal.length, warn: arsenalReal.length===0 },
+        { label:'🔥 Ofertas especiales (user_purchased_offers)', total: totPurchOffers, n: purchOffers.length, warn: purchOffers.length===0 },
       ].sort((a,b) => b.total - a.total);
+      const totalIngresoReal = fuentes.reduce((s,f) => s + f.total, 0);
       const puntoFuerte = fuentes.find(f => f.total > 0) || fuentes[0];
 
       let html = '';
 
-      // ── PANEL: PUNTO FUERTE REAL + HUECOS DETECTADOS ──
+      // ── PANEL: DÓNDE SE VENDE MÁS (ranking real) + HUECOS DETECTADOS ──
+      const medals = ['🥇','🥈','🥉','4️⃣'];
+      const rankingRows = fuentes.map((f,i) => `
+        <div class="rm-stat-pill" style="${f.total===puntoFuerte.total && f.total>0 ? 'border-color:#f5d06e;' : ''}">
+          <div class="v">${medals[i]||'▫️'} ${_rmMoney(f.total)}</div>
+          <div class="l">${_rmEsc(f.label)} · ${f.n} ${f.n===1?'transacción':'transacciones'}${f.warn?' · <span style="color:#fca5a5;">0 reales</span>':''}</div>
+        </div>`).join('');
       html += `
       <div class="rm-branch open">
         <div class="rm-branch-head" onclick="toggleRmBranch(this)">
-          <div class="rm-branch-key">🔮</div>
+          <div class="rm-branch-key">💰</div>
           <div>
-            <div class="rm-branch-title">PUNTO FUERTE REAL HOY + HUECOS DETECTADOS</div>
+            <div class="rm-branch-title">DÓNDE SE VENDE MÁS — RANKING REAL HOY</div>
             <div class="rm-branch-sub">Calculado en vivo sobre tus propias tablas — no es opinión</div>
           </div>
+          <div class="rm-branch-meta">${_rmMoney(totalIngresoReal)} total</div>
           <div class="rm-branch-arrow">▼</div>
         </div>
         <div class="rm-branch-body">
-          <div class="rm-branch-note">💰 <b>Fuente con más dinero confirmado hoy:</b> ${_rmEsc(puntoFuerte.label)} — <b>${_rmMoney(puntoFuerte.total)}</b> en ${puntoFuerte.n} transacciones. (Comparado: ${fuentes.map(f=>`${_rmEsc(f.label)} ${_rmMoney(f.total)}`).join(' · ')})</div>
-          <div class="rm-branch-note" style="color:#86efac;">✅ <b>Ya sellado:</b> Arsenal RPG tiene <b>${arsenalReal.length}</b> compra(s) real(es) confirmada(s) (cero por ahora — ninguna venta real todavía) y <b>${arsenalTest.length}</b> marcadas como prueba interna (<code>is_test=true</code>), excluidas del cálculo de ingresos. El webhook ya captura <code>amount_paid</code> en cada compra nueva — este hueco de trazabilidad quedó resuelto el ${new Date().toLocaleDateString('es-MX')}.</div>
-          ${trans.length <= 2 ? `<div class="rm-pending">⚠️ <b>Hueco de trazabilidad:</b> tu tabla "maestra" <code>transacciones</code> (la que calcula comisiones de aliados) solo tiene <b>${trans.length}</b> fila(s), mientras que <code>access_codes</code>+<code>orders</code>+<code>arsenal_purchases</code> juntas suman <b>${codes.length + orders.length + arsenal.length}</b> movimientos reales. Si <code>transacciones</code> no se está poblando en cada cobro, las comisiones de tus aliados (<code>comisiones</code>) se están calculando sobre una base incompleta.</div>` : ''}
+          <div class="rm-branch-note">💰 <b>Fuente con más dinero confirmado hoy:</b> ${_rmEsc(puntoFuerte.label)} — <b>${_rmMoney(puntoFuerte.total)}</b> en ${puntoFuerte.n} transacciones.</div>
+          <div class="rm-stat-row">${rankingRows}</div>
+          ${membSeedDetected ? `<div class="rm-pending">⚠️ <b>OJO — esto NO es un hueco de ingreso, es un dato inflado:</b> de las <b>${memberships.length}</b> filas en <code>memberships</code>, <b>${membSeedCount}</b> comparten el <b>mismo timestamp exacto</b> (${new Date(membSeedDate).toLocaleString('es-MX')}) — es una carga masiva (backfill/seed), no ${membSeedCount} altas reales de usuarios el mismo día. Ninguna de esas filas tiene un pago asociado. El número real de gente que <b>pagó y se registró</b> con un código de membresía es <b>${codesUsuariosReales}</b> (de ${codesReal.length} códigos pagados, ${codesUsadas.length} ya canjeados). No borré ni toqué <code>memberships</code> — solo te aviso para que no tomes decisiones de negocio sobre el "39" pensando que son usuarios reales.</div>` : ''}
+          <div class="rm-branch-note" style="color:#86efac;">✅ <b>Ya sellado:</b> Arsenal RPG tiene <b>${arsenalReal.length}</b> compra(s) real(es) confirmada(s) y <b>${arsenalTest.length}</b> marcadas como prueba interna (<code>is_test=true</code>), excluidas del cálculo de ingresos.</div>
+          ${purchOffers.length===0 ? `<div class="rm-pending">⚠️ <b>Cero ventas registradas nunca</b> en <code>user_purchased_offers</code> — ni la Oferta Fuerte de día, ni las Permanentes, ni Arsenal (vía este ledger) tienen una sola compra confirmada ahí. Si el checkout de <code>special_offers</code> sí está cobrando por Stripe pero no está escribiendo en esta tabla, es un hueco de trazabilidad real que vale la pena revisar en el webhook — si nunca se ha vendido nada de ahí, entonces es un hueco de conversión, no de trazabilidad.</div>` : ''}
+          ${trans.length <= 2 ? `<div class="rm-pending">⚠️ <b>Hueco de trazabilidad:</b> tu tabla "maestra" <code>transacciones</code> (la que calcula comisiones de aliados) solo tiene <b>${trans.length}</b> fila(s), mientras que <code>access_codes</code>+<code>orders</code>+<code>arsenal_purchases</code> juntas suman <b>${codesReal.length + orders.length + arsenal.length}</b> movimientos reales. Si <code>transacciones</code> no se está poblando en cada cobro, las comisiones de tus aliados (<code>comisiones</code>) se están calculando sobre una base incompleta.</div>` : ''}
           <div class="rm-branch-note">📸 <b>Huecos de imagen:</b> ${arsenalOffers.filter(o=>!o.image_url).length} de ${arsenalOffers.length} ofertas Arsenal RPG no tienen <code>image_url</code> — están vendiendo sin foto en la tienda real.</div>
         </div>
       </div>`;
@@ -3521,9 +3570,13 @@
         <div class="rm-stat-pill"><div class="v">${_rmMoney(v.total)}</div><div class="l">${_rmEsc(k)} · ${v.n} códigos</div></div>
       `).join('');
       html += _rmBranchOpen(2, '💳', 'MEMBRESÍA — SEMANA 1 A 26 (≈6 MESES)',
-        'memberships.current_week tiene tope real de 26 semanas', `semana más avanzada real: ${maxWeek}/26`, false, `
+        'memberships.current_week tiene tope real de 26 semanas', `${codesUsuariosReales} compradores reales`, membSeedDetected, `
         <div class="rm-branch-note">La membresía real corre por <b>semanas (1–26)</b>, tope confirmado en el esquema de la tabla — coincide con tu "hasta el mes 6".</div>
-        <div class="rm-stat-row">${planRows}</div>
+        <div class="rm-stat-row">
+          <div class="rm-stat-pill" style="border-color:#86efac;"><div class="v">${codesUsuariosReales}</div><div class="l">✅ compradores reales (pagó + se registró)</div></div>
+          ${planRows}
+        </div>
+        ${membSeedDetected ? `<div class="rm-pending" style="margin-top:8px;">⚠️ Las <b>${membSeedCount}</b> filas de arriba en "Plan" vienen de <code>memberships</code>, y <b>${membSeedCount}</b> de ellas se crearon en el <b>mismo instante</b> (${new Date(membSeedDate).toLocaleString('es-MX')}) — es un backfill/seed, no ${membSeedCount} altas reales. Úsalo solo para ver en qué semana va cada quien, no como conteo de usuarios de pago.</div>` : ''}
         <div class="rm-branch-note" style="margin-top:10px;">Tipos de acceso reales emitidos vía <code>access_codes</code> (ingreso confirmado):</div>
         <div class="rm-stat-row">${codeRows || '<div class="rm-branch-note">Sin códigos con monto registrado.</div>'}</div>
       `);
@@ -3624,7 +3677,10 @@
         premioCount, causaAgg, planCount, maxWeek, codeTypeAgg,
         arsenalOffers, dayLogicOffers, permanentOffers, coins, productsByCat, products,
         arsenal, arsenalReal, arsenalTest, arsenalAgg, arsenalSinMonto, orders, codes, trans,
-        totCodes, totOrdersCausa, totArsenalConMonto, totTrans, fuentes, puntoFuerte
+        totCodes, totOrdersCausa, totArsenalConMonto, totTrans, fuentes, puntoFuerte, totalIngresoReal,
+        purchOffers, purchOffersAgg, totPurchOffers,
+        codesReal, codesUsadas, codesUsuariosReales,
+        membSeedDetected, membSeedCount, membSeedDate
       };
 
       bodyEl.innerHTML = html;
@@ -3673,10 +3729,16 @@
     const priceHtml = o.original_price && Number(o.original_price) > Number(o.price)
       ? `<s style="color:var(--text-faint);font-weight:400;margin-right:4px;">${_rmMoney(o.original_price)}</s>${_rmMoney(o.price)}`
       : _rmMoney(o.price);
+    const salesHtml = o._rmSales
+      ? (o._rmSales.n > 0
+          ? `<div class="tn-ok">🔥 ${o._rmSales.n} venta(s) · ${_rmMoney(o._rmSales.total)}</div>`
+          : `<div class="tn-warn">❌ 0 ventas reales</div>`)
+      : '';
     return `${img}<div class="tn-body">
         <div class="tn-title">${_rmEsc(o.title)}</div>
         <div class="tn-meta">${priceHtml}</div>
         ${!o.is_active ? '<div class="tn-warn">⛔ inactiva</div>' : ''}
+        ${salesHtml}
       </div>`;
   }
 
@@ -3706,9 +3768,18 @@
     const root = _rmAddNode('root', null, 0, _rmNodeInner('🏛️', 'RUTA DEL TEMPLARIO', 'entrada → membresía → mes 6', 'todo en vivo desde Supabase'));
 
     // Generación 1
+    const medals = ['🥇','🥈','🥉','4️⃣'];
+    const rankingList = d.fuentes.map((f,i) => `
+      <div style="display:flex;justify-content:space-between;gap:6px;font-size:9px;padding:2px 0;border-top:1px solid rgba(255,255,255,.06);">
+        <span style="color:var(--text-faint);">${medals[i]||'▫️'} ${_rmEsc(f.label.replace(/\s*\(.*?\)/,''))}</span>
+        <span style="color:${f.total>0?'#86efac':'#fca5a5'};font-weight:700;">${_rmMoney(f.total)}</span>
+      </div>`).join('');
+    const money = _rmAddNode('money', root, 1, _rmNodeInner('💰', 'DÓNDE SE VENDE MÁS', _rmMoney(d.totalIngresoReal) + ' total real', 'ranking en vivo, no catálogo',
+      `<div style="margin-top:4px;">${rankingList}</div>`), 'money-node');
     const scan = _rmAddNode('scan', root, 1, _rmNodeInner('🎯', 'ESCANEO / SORTEO', `${premioCupon+premioBeca+premioSin} registros`, 'sorteo_participantes.tipo_premio'));
     const causa = _rmAddNode('causa', root, 1, _rmNodeInner('🐾', 'LANDING ALIANZA-CAUSA', `${d.orders.length} órdenes`, 'orders.cause · $20/pago real'));
-    const memb = _rmAddNode('memb', root, 1, _rmNodeInner('💳', 'MEMBRESÍA · SEM 1–26', `sem. más avanzada: ${d.maxWeek}/26`, 'memberships (~6 meses)'));
+    const membWarn = d.membSeedDetected ? `<div class="tn-warn">⚠️ ${d.membSeedCount} filas son backfill (mismo instante), no altas reales</div>` : '';
+    const memb = _rmAddNode('memb', root, 1, _rmNodeInner('💳', 'MEMBRESÍA · SEM 1–26', `${d.codesUsuariosReales} compradores reales`, `tabla memberships: ${d.maxWeek}/26 sem. avanzada`, membWarn));
     const finBeca = _rmAddNode('fin', root, 1, _rmNodeInner('🏁', 'FIN DE BECA · MES 6', 'semana 26', 'retención ~$3/mes',
       '<div class="tn-warn">⚠️ oferta de retención NO existe aún en Supabase</div>'));
 
@@ -3725,7 +3796,8 @@
     } else { _rmAddNode('causa-empty', causa, 2, _rmNodeInner('—','Sin datos','','')); }
 
     // Generación 2 — hijos de Membresía (5 sub-ramas + planes)
-    Object.entries(d.planCount).forEach(([k,n], i) => _rmAddNode(`plan-${i}`, memb, 2, _rmNodeInner('📋', `Plan "${_rmEsc(k)}"`, `${n} usuarios`, '')));
+    _rmAddNode('memb-real', memb, 2, _rmNodeInner('✅', 'Compradores reales', `${d.codesUsuariosReales} usuarios`, 'pagó + se registró (access_codes)'));
+    Object.entries(d.planCount).forEach(([k,n], i) => _rmAddNode(`plan-${i}`, memb, 2, _rmNodeInner('📋', `Plan "${_rmEsc(k)}" (tabla)`, `${n} filas`, d.membSeedDetected ? 'incluye backfill, no todas son altas reales' : '')));
     const ofertaFuerte = _rmAddNode('ofertafuerte', memb, 2, _rmNodeInner('🔥', 'OFERTA FUERTE · DÍA REAL', `${d.dayLogicOffers.length} oferta(s)`, 'offer_return_day / expires_after_days'));
     const arsenalWarn = d.arsenalTest.length > 0 ? `<div class="tn-ok">✅ sellado: ${d.arsenalTest.length} prueba excluidas</div>` : '';
     const arsenal = _rmAddNode('arsenal', memb, 2, _rmNodeInner('⚔️', 'ARSENAL RPG · NIVEL 3+', `${d.arsenalReal.length} reales · ${d.arsenalTest.length} prueba`, '$8 Base / $2 Élite — NO cristales', arsenalWarn));
