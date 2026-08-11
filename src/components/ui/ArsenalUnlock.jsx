@@ -30,7 +30,7 @@ const CSS = `
 @keyframes au-rays-spin { from{transform:rotate(0deg)}to{transform:rotate(360deg)} }
 @keyframes au-orb-pulse { 0%,100%{opacity:.15;transform:scale(1)}50%{opacity:.28;transform:scale(1.12)} }
 @keyframes au-skip-in { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
-.au-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(2,0,12,0.97);backdrop-filter:blur(18px) saturate(1.3);animation:au-fadein .45s ease both;font-family:'Cinzel',serif;padding:20px;}
+.au-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-start;justify-content:center;background:rgba(2,0,12,0.97);backdrop-filter:blur(18px) saturate(1.3);animation:au-fadein .45s ease both;font-family:'Cinzel',serif;padding:20px;padding-top:max(20px, env(safe-area-inset-top, 20px));padding-bottom:max(20px, env(safe-area-inset-bottom, 20px));overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .au-overlay.au-out{animation:au-fadeout .4s ease both;pointer-events:none;}
 .au-rays-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none;z-index:1;}
 .au-rays-disk{width:1000px;height:1000px;animation:au-rays-spin 22s linear infinite;opacity:.07;}
@@ -42,7 +42,7 @@ const CSS = `
 .au-glow-ring:nth-child(2).on{animation-delay:.28s;border-color:rgba(180,79,255,.5);}
 .au-glow-ring:nth-child(3).on{animation-delay:.56s;}
 .au-glow-ring:nth-child(4).on{animation-delay:.84s;border-color:rgba(180,79,255,.4);}
-.au-card{position:relative;z-index:10;max-width:480px;width:100%;background:linear-gradient(160deg,rgba(22,12,40,.98),rgba(10,6,20,.99));border:1px solid rgba(212,175,55,.3);border-radius:24px;padding:44px 40px 36px;text-align:center;box-shadow:0 0 0 1px rgba(212,175,55,.08),0 0 60px rgba(212,175,55,.1),0 0 120px rgba(180,79,255,.06),inset 0 1px 0 rgba(212,175,55,.12);animation:au-rise .6s cubic-bezier(.22,1,.36,1) .15s both;}
+.au-card{position:relative;z-index:10;max-width:480px;width:100%;margin:auto;background:linear-gradient(160deg,rgba(22,12,40,.98),rgba(10,6,20,.99));border:1px solid rgba(212,175,55,.3);border-radius:24px;padding:44px 40px 36px;text-align:center;box-shadow:0 0 0 1px rgba(212,175,55,.08),0 0 60px rgba(212,175,55,.1),0 0 120px rgba(180,79,255,.06),inset 0 1px 0 rgba(212,175,55,.12);animation:au-rise .6s cubic-bezier(.22,1,.36,1) .15s both;}
 .au-card::before{content:'';position:absolute;top:0;left:10%;right:10%;height:1px;background:linear-gradient(to right,transparent,rgba(212,175,55,.6),transparent);}
 .au-eyebrow{font-size:9px;letter-spacing:7px;color:rgba(255,215,0,.55);text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:24px;animation:au-rise .5s ease .3s both;opacity:0;}
 .au-eyebrow-line{height:1px;width:40px;background:linear-gradient(to right,transparent,rgba(212,175,55,.45));}

@@ -344,49 +344,51 @@
   .rm-connector{display:flex;justify-content:center;padding:2px 0;color:rgba(245,208,110,.35);
     font-size:16px;}
 
-  /* ═══ VISTA ÁRBOL — mapa mental / organigrama con llaves ═══ */
-  .rm-view-switch{display:flex;gap:8px;justify-content:center;margin-bottom:20px;}
+  /* ═══ VISTA ÁRBOL — organigrama real, líneas dibujadas por JS (SVG), sin cortes ═══ */
+  .rm-view-switch{display:flex;gap:8px;justify-content:center;margin-bottom:6px;}
   .rm-view-btn{background:rgba(10,5,24,.7);border:1.5px solid rgba(245,208,110,.3);color:var(--text-faint);
     font-family:'Cinzel',serif;font-size:10px;letter-spacing:1.5px;padding:9px 20px;border-radius:8px;
     cursor:pointer;transition:.2s;}
   .rm-view-btn:hover{border-color:#f5d06e;color:#f5d06e;}
   .rm-view-btn.active{background:rgba(245,208,110,.14);border-color:#f5d06e;color:#f5d06e;font-weight:700;}
+  .rm-tree-hint{text-align:center;font-family:'Nunito',sans-serif;font-size:10px;color:var(--text-faint);
+    margin-bottom:18px;letter-spacing:.3px;}
+  .rm-tree-hint b{color:#f5d06e;}
 
-  .rm-tree-scroll{overflow-x:auto;padding:30px 10px 20px;}
-  .rm-tree, .rm-tree ul{display:table;table-layout:fixed;margin:0 auto;padding:0;list-style:none;}
-  .rm-tree{padding-left:0;}
-  .rm-tree ul{position:relative;}
-  .rm-tree li{display:table-cell;vertical-align:top;position:relative;padding:36px 10px 0;text-align:center;}
-  .rm-tree li::before,.rm-tree li::after{content:'';position:absolute;top:0;right:50%;
-    border-top:1.5px solid rgba(245,208,110,.4);width:50%;height:36px;}
-  .rm-tree li::after{right:auto;left:50%;border-left:1.5px solid rgba(245,208,110,.4);}
-  .rm-tree li:only-child::after,.rm-tree li:only-child::before{display:none;}
-  .rm-tree li:only-child{padding-top:0;}
-  .rm-tree li:first-child::before,.rm-tree li:last-child::after{border:0 none;}
-  .rm-tree li:last-child::before{border-right:1.5px solid rgba(245,208,110,.4);border-radius:0 6px 0 0;}
-  .rm-tree li:first-child::after{border-radius:6px 0 0 0;}
-  .rm-tree ul::before{content:'';position:absolute;top:0;left:50%;margin-left:-.75px;
-    border-left:1.5px solid rgba(245,208,110,.4);width:0;height:36px;}
-  .rm-tree li>.rm-tnode-wrap{display:inline-block;}
+  .rm-tree2-scroll{overflow-x:auto;overflow-y:hidden;padding:10px 30px 30px;}
+  .rm-tree2{position:relative;min-width:100%;width:max-content;margin:0 auto;}
+  .rm-tree2-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:0;}
+  .rm-gen{display:flex;gap:22px;justify-content:center;position:relative;z-index:1;margin-bottom:64px;}
+  .rm-gen[data-depth="0"]{margin-bottom:64px;}
 
-  .rm-tnode{display:inline-block;min-width:150px;max-width:210px;background:linear-gradient(150deg,rgba(20,10,40,.96),rgba(8,4,18,.98));
-    border:1.5px solid rgba(245,208,110,.4);border-radius:12px;padding:12px 14px;text-align:left;
-    box-shadow:0 6px 18px rgba(0,0,0,.45);position:relative;}
-  .rm-tnode.root{border-color:#f5d06e;background:linear-gradient(150deg,rgba(60,35,10,.5),rgba(8,4,18,.98));min-width:190px;}
-  .rm-tnode.branch{border-color:rgba(245,208,110,.55);}
-  .rm-tnode .tn-icon{font-size:18px;line-height:1;margin-bottom:4px;}
-  .rm-tnode .tn-title{font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.6px;color:#f0e8ff;line-height:1.3;}
-  .rm-tnode .tn-meta{font-size:9px;color:#f5d06e;font-family:'Nunito',sans-serif;font-weight:800;margin-top:4px;}
-  .rm-tnode .tn-sub{font-size:9px;color:var(--text-faint);font-family:'Crimson Text',serif;margin-top:3px;line-height:1.4;}
-  .rm-tnode .tn-warn{font-size:8.5px;color:#fca5a5;font-family:'Nunito',sans-serif;font-weight:700;margin-top:5px;
+  .rm-node2{width:172px;flex:0 0 172px;background:linear-gradient(150deg,rgba(20,10,40,.97),rgba(7,3,16,.99));
+    border:1.5px solid rgba(245,208,110,.4);border-radius:12px;padding:12px 13px;text-align:left;
+    box-shadow:0 6px 20px rgba(0,0,0,.5);transition:.2s;}
+  .rm-node2:hover{border-color:#f5d06e;box-shadow:0 8px 26px rgba(0,0,0,.6),0 0 0 1px rgba(245,208,110,.2);transform:translateY(-2px);}
+  .rm-node2.depth-0{width:210px;flex-basis:210px;border-color:#f5d06e;border-width:2px;
+    background:linear-gradient(150deg,rgba(70,42,10,.55),rgba(7,3,16,.99));padding:16px 18px;}
+  .rm-node2.depth-0 .tn-icon{font-size:26px;}
+  .rm-node2.depth-0 .tn-title{font-size:13px;letter-spacing:1.5px;}
+  .rm-node2.depth-1{border-color:rgba(245,208,110,.65);}
+  .rm-node2.depth-3{width:150px;flex-basis:150px;padding:0 0 10px;overflow:hidden;}
+  .rm-node2 .tn-icon{font-size:17px;line-height:1;margin-bottom:5px;}
+  .rm-node2 .tn-title{font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.5px;color:#f0e8ff;line-height:1.35;}
+  .rm-node2 .tn-meta{font-size:9.5px;color:#f5d06e;font-family:'Nunito',sans-serif;font-weight:800;margin-top:5px;}
+  .rm-node2 .tn-sub{font-size:9px;color:var(--text-faint);font-family:'Crimson Text',serif;margin-top:3px;line-height:1.4;}
+  .rm-node2 .tn-warn{font-size:8.5px;color:#fca5a5;font-family:'Nunito',sans-serif;font-weight:700;margin-top:6px;
     background:rgba(239,68,68,.1);border-radius:5px;padding:3px 6px;}
-  .rm-tnode .tn-ok{font-size:8.5px;color:#86efac;font-family:'Nunito',sans-serif;font-weight:700;margin-top:5px;}
-  .rm-tnode-mini-img{width:100%;height:60px;object-fit:cover;border-radius:7px;margin-bottom:6px;background:rgba(255,255,255,.03);}
-  .rm-tnode-mini-noimg{width:100%;height:60px;border-radius:7px;margin-bottom:6px;display:flex;align-items:center;
-    justify-content:center;font-size:7.5px;color:#fca5a5;text-align:center;background:rgba(239,68,68,.06);
-    border:1px dashed rgba(239,68,68,.3);font-family:'Nunito',sans-serif;font-weight:700;letter-spacing:.3px;padding:4px;}
-  @media(max-width:768px){.rm-tnode{min-width:120px;max-width:150px;padding:9px 10px;}
-    .rm-tnode .tn-title{font-size:9.5px;} .rm-tree li{padding:28px 6px 0;}}
+  .rm-node2 .tn-ok{font-size:8.5px;color:#86efac;font-family:'Nunito',sans-serif;font-weight:700;margin-top:6px;}
+  .rm-node2.depth-3 .tn-body{padding:10px 12px 0;}
+  .rm-node2-mini-img{width:100%;height:64px;object-fit:cover;display:block;background:rgba(255,255,255,.03);}
+  .rm-node2-mini-noimg{width:100%;height:64px;display:flex;align-items:center;justify-content:center;
+    font-size:7.5px;color:#fca5a5;text-align:center;background:rgba(239,68,68,.06);
+    border-bottom:1px dashed rgba(239,68,68,.3);font-family:'Nunito',sans-serif;font-weight:700;letter-spacing:.3px;padding:4px;}
+  .rm-gen-label{position:absolute;left:-4px;top:-22px;font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;
+    color:rgba(245,208,110,.4);text-transform:uppercase;}
+
+  @media(max-width:768px){.rm-node2{width:140px;flex-basis:140px;padding:10px 11px;}
+    .rm-node2.depth-0{width:170px;flex-basis:170px;} .rm-node2.depth-3{width:126px;flex-basis:126px;}
+    .rm-node2 .tn-title{font-size:9.5px;} .rm-gen{gap:16px;margin-bottom:52px;}}
 
   .an-loading{text-align:center;padding:30px 0;font-family:'Cinzel',serif;font-size:11px;
     letter-spacing:2px;color:var(--text-faint);}
@@ -3647,6 +3649,7 @@
       listEl.style.display = 'none';
       btnTree.classList.add('active');
       btnList.classList.remove('active');
+      requestAnimationFrame(() => requestAnimationFrame(_rmDrawConnectors));
     } else {
       treeEl.style.display = 'none';
       listEl.style.display = 'block';
@@ -3654,113 +3657,152 @@
       btnList.classList.add('active');
     }
   }
+  window.addEventListener('resize', () => {
+    clearTimeout(window._rmResizeT);
+    window._rmResizeT = setTimeout(() => {
+      const treeEl = document.getElementById('rmBodyTree');
+      if (treeEl && treeEl.style.display !== 'none') _rmDrawConnectors();
+    }, 150);
+  });
 
   // Mini-tarjeta compacta para nodos hoja del árbol (con foto real o aviso si falta)
   function _rmMiniCard(o) {
     const img = o.image_url
-      ? `<img class="rm-tnode-mini-img" src="${_rmEsc(o.image_url)}" alt="${_rmEsc(o.title)}" loading="lazy" onerror="this.outerHTML='<div class=&quot;rm-tnode-mini-noimg&quot;>SIN FOTO</div>'">`
-      : `<div class="rm-tnode-mini-noimg">SIN FOTO EN SUPABASE</div>`;
+      ? `<img class="rm-node2-mini-img" src="${_rmEsc(o.image_url)}" alt="${_rmEsc(o.title)}" loading="lazy" onerror="this.outerHTML='<div class=&quot;rm-node2-mini-noimg&quot;>SIN FOTO</div>'">`
+      : `<div class="rm-node2-mini-noimg">SIN FOTO EN SUPABASE</div>`;
     const priceHtml = o.original_price && Number(o.original_price) > Number(o.price)
       ? `<s style="color:var(--text-faint);font-weight:400;margin-right:4px;">${_rmMoney(o.original_price)}</s>${_rmMoney(o.price)}`
       : _rmMoney(o.price);
-    return `
-      <div class="rm-tnode branch">
-        ${img}
+    return `${img}<div class="tn-body">
         <div class="tn-title">${_rmEsc(o.title)}</div>
         <div class="tn-meta">${priceHtml}</div>
         ${!o.is_active ? '<div class="tn-warn">⛔ inactiva</div>' : ''}
       </div>`;
   }
 
-  function _rmNode(cls, icon, title, meta, sub, extra) {
+  function _rmNodeInner(icon, title, meta, sub, extra) {
     return `
-      <div class="rm-tnode ${cls}">
-        <div class="tn-icon">${icon}</div>
-        <div class="tn-title">${title}</div>
-        ${meta ? `<div class="tn-meta">${meta}</div>` : ''}
-        ${sub ? `<div class="tn-sub">${sub}</div>` : ''}
-        ${extra || ''}
-      </div>`;
+      <div class="tn-icon">${icon}</div>
+      <div class="tn-title">${title}</div>
+      ${meta ? `<div class="tn-meta">${meta}</div>` : ''}
+      ${sub ? `<div class="tn-sub">${sub}</div>` : ''}
+      ${extra || ''}`;
   }
 
-  function _rmLeaf(nodeHtml) {
-    return `<li><div class="rm-tnode-wrap">${nodeHtml}</div></li>`;
+  // ── Árbol como lista plana de nodos {id, parent, depth, html} — se agrupan por generación y las
+  //    líneas se calculan en JS con getBoundingClientRect, así nunca se desalinean con contenido real.
+  let _rmNodes = [];
+  function _rmAddNode(id, parent, depth, innerHtml, extraClass) {
+    _rmNodes.push({ id, parent, depth, innerHtml, extraClass: extraClass || '' });
+    return id;
   }
 
-  function _rmBranchLi(nodeHtml, childrenUl) {
-    return `<li><div class="rm-tnode-wrap">${nodeHtml}</div>${childrenUl ? `<ul>${childrenUl}</ul>` : ''}</li>`;
-  }
-
-  // Construye el árbol completo tipo organigrama (mapa mental por llaves), con fotos reales
   function buildRoadmapTree(d) {
+    _rmNodes = [];
     const premioCupon = d.premioCount['primer_mes_1usd'] || 0;
     const premioBeca = d.premioCount['beca_6meses'] || 0;
     const premioSin = d.premioCount['sin_premio'] || 0;
 
-    // Rama 1: Escaneo/Sorteo
-    const scanNode = _rmNode('branch', '🎯', 'ESCANEO / SORTEO', `${d.premioCount ? (premioCupon+premioBeca+premioSin) : 0} registros`, 'sorteo_participantes.tipo_premio');
-    const scanChildren =
-      _rmLeaf(_rmNode('leaf', '🎟️', 'Cupón mes 1', `${premioCupon} usuarios`, '$1 primer mes')) +
-      _rmLeaf(_rmNode('leaf', '🎓', 'Beca 6 meses', `${premioBeca} usuarios`, 'gratis 26 semanas')) +
-      _rmLeaf(_rmNode('leaf', '⚪', 'Sin premio', `${premioSin} usuarios`, ''));
+    const root = _rmAddNode('root', null, 0, _rmNodeInner('🏛️', 'RUTA DEL TEMPLARIO', 'entrada → membresía → mes 6', 'todo en vivo desde Supabase'));
 
-    // Rama 2: Landing causa
+    // Generación 1
+    const scan = _rmAddNode('scan', root, 1, _rmNodeInner('🎯', 'ESCANEO / SORTEO', `${premioCupon+premioBeca+premioSin} registros`, 'sorteo_participantes.tipo_premio'));
+    const causa = _rmAddNode('causa', root, 1, _rmNodeInner('🐾', 'LANDING ALIANZA-CAUSA', `${d.orders.length} órdenes`, 'orders.cause · $20/pago real'));
+    const memb = _rmAddNode('memb', root, 1, _rmNodeInner('💳', 'MEMBRESÍA · SEM 1–26', `sem. más avanzada: ${d.maxWeek}/26`, 'memberships (~6 meses)'));
+    const finBeca = _rmAddNode('fin', root, 1, _rmNodeInner('🏁', 'FIN DE BECA · MES 6', 'semana 26', 'retención ~$3/mes',
+      '<div class="tn-warn">⚠️ oferta de retención NO existe aún en Supabase</div>'));
+
+    // Generación 2 — hijos de Escaneo
+    _rmAddNode('scan-cupon', scan, 2, _rmNodeInner('🎟️', 'Cupón mes 1', `${premioCupon} usuarios`, '$1 primer mes'));
+    _rmAddNode('scan-beca', scan, 2, _rmNodeInner('🎓', 'Beca 6 meses', `${premioBeca} usuarios`, 'gratis 26 semanas'));
+    _rmAddNode('scan-sin', scan, 2, _rmNodeInner('⚪', 'Sin premio', `${premioSin} usuarios`, ''));
+
+    // Generación 2 — hijos de Causa
     const causaEntries = Object.entries(d.causaAgg);
-    const causaNode = _rmNode('branch', '🐾', 'LANDING ALIANZA-CAUSA', `${d.orders.length} órdenes`, 'orders.cause · $20/pago real');
-    const causaChildren = causaEntries.map(([k,v]) => _rmLeaf(_rmNode('leaf', k==='becas'?'🎓':k==='perros'?'🐶':'💰', k==='becas'?'Becas':k==='perros'?'Perros':k, _rmMoney(v.total), `${v.n} pagos`))).join('') || _rmLeaf(_rmNode('leaf','—','Sin datos','',''));
+    if (causaEntries.length) {
+      causaEntries.forEach(([k,v], i) => _rmAddNode(`causa-${i}`, causa, 2,
+        _rmNodeInner(k==='becas'?'🎓':k==='perros'?'🐶':'💰', k==='becas'?'Becas':k==='perros'?'Perros':k, _rmMoney(v.total), `${v.n} pagos`)));
+    } else { _rmAddNode('causa-empty', causa, 2, _rmNodeInner('—','Sin datos','','')); }
 
-    // Rama 3: Membresía + sub-ramas
-    const membNode = _rmNode('branch', '💳', 'MEMBRESÍA · SEM 1–26', `sem. más avanzada: ${d.maxWeek}/26`, 'memberships (~6 meses)');
-    const planRows = Object.entries(d.planCount).map(([k,n]) => _rmLeaf(_rmNode('leaf','📋',`Plan "${_rmEsc(k)}"`,`${n} usuarios`,''))).join('');
+    // Generación 2 — hijos de Membresía (5 sub-ramas + planes)
+    Object.entries(d.planCount).forEach(([k,n], i) => _rmAddNode(`plan-${i}`, memb, 2, _rmNodeInner('📋', `Plan "${_rmEsc(k)}"`, `${n} usuarios`, '')));
+    const ofertaFuerte = _rmAddNode('ofertafuerte', memb, 2, _rmNodeInner('🔥', 'OFERTA FUERTE · DÍA REAL', `${d.dayLogicOffers.length} oferta(s)`, 'offer_return_day / expires_after_days'));
+    const arsenalWarn = d.arsenalTest.length > 0 ? `<div class="tn-ok">✅ sellado: ${d.arsenalTest.length} prueba excluidas</div>` : '';
+    const arsenal = _rmAddNode('arsenal', memb, 2, _rmNodeInner('⚔️', 'ARSENAL RPG · NIVEL 3+', `${d.arsenalReal.length} reales · ${d.arsenalTest.length} prueba`, '$8 Base / $2 Élite — NO cristales', arsenalWarn));
+    const perm = _rmAddNode('perm', memb, 2, _rmNodeInner('🛍️', 'OFERTAS PERMANENTES', `${d.permanentOffers.length} activas`, 'visibles desde nivel 0'));
+    const coinNode = _rmAddNode('coins', memb, 2, _rmNodeInner('🪙', 'PROPOCOINS', `${d.coins.length} paquetes`, 'moneda del juego, compra con $'));
+    const temple = _rmAddNode('temple', memb, 2, _rmNodeInner('🏛️', 'TEMPLO STORE', `${d.products.length} productos`, 'se canjea con cristales, no $'));
 
-    const ofertaFuerteChildren = d.dayLogicOffers.length
-      ? d.dayLogicOffers.map(o => _rmLeaf(_rmMiniCard(o))).join('')
-      : _rmLeaf(_rmNode('leaf','—','Sin oferta con día','',''));
-    const ofertaFuerteNode = _rmNode('branch','🔥','OFERTA FUERTE · DÍA REAL', `${d.dayLogicOffers.length} oferta(s)`, 'offer_return_day / expires_after_days');
+    // Generación 3 — tarjetas reales con foto
+    (d.dayLogicOffers.length ? d.dayLogicOffers : []).forEach((o,i) => _rmAddNode(`of-${i}`, ofertaFuerte, 3, _rmMiniCard(o), 'depth-3'));
+    if (!d.dayLogicOffers.length) _rmAddNode('of-empty', ofertaFuerte, 3, _rmNodeInner('—','Sin oferta con día','',''));
 
-    const arsenalChildren = d.arsenalOffers.length
-      ? d.arsenalOffers.map(o => _rmLeaf(_rmMiniCard(o))).join('')
-      : _rmLeaf(_rmNode('leaf','—','Sin ofertas','',''));
-    const arsenalWarn = d.arsenalTest.length > 0 ? `<div class="tn-ok">✅ sellado: ${d.arsenalTest.length} de prueba excluidas</div>` : '';
-    const arsenalNode = _rmNode('branch','⚔️','ARSENAL RPG · NIVEL 3+', `${d.arsenalReal.length} reales · ${d.arsenalTest.length} prueba`, '$8 Base / $2 Élite — NO cristales', arsenalWarn);
+    (d.arsenalOffers.length ? d.arsenalOffers : []).forEach((o,i) => _rmAddNode(`ar-${i}`, arsenal, 3, _rmMiniCard(o), 'depth-3'));
+    if (!d.arsenalOffers.length) _rmAddNode('ar-empty', arsenal, 3, _rmNodeInner('—','Sin ofertas','',''));
 
-    const permChildren = d.permanentOffers.length
-      ? d.permanentOffers.map(o => _rmLeaf(_rmMiniCard(o))).join('')
-      : _rmLeaf(_rmNode('leaf','—','Sin ofertas','',''));
-    const permNode = _rmNode('branch','🛍️','OFERTAS PERMANENTES', `${d.permanentOffers.length} activas`, 'visibles desde nivel 0');
+    (d.permanentOffers.length ? d.permanentOffers : []).forEach((o,i) => _rmAddNode(`pm-${i}`, perm, 3, _rmMiniCard(o), 'depth-3'));
+    if (!d.permanentOffers.length) _rmAddNode('pm-empty', perm, 3, _rmNodeInner('—','Sin ofertas','',''));
 
-    const coinChildren = d.coins.length
-      ? d.coins.map(c => _rmLeaf(_rmMiniCard({title:c.title, price:c.price, original_price:c.original_price, image_url:c.image_url, is_active:c.is_active}))).join('')
-      : _rmLeaf(_rmNode('leaf','—','Sin paquetes','',''));
-    const coinNode = _rmNode('branch','🪙','PROPOCOINS', `${d.coins.length} paquetes`, 'moneda del juego, compra con $');
+    (d.coins.length ? d.coins : []).forEach((c,i) => _rmAddNode(`co-${i}`, coinNode, 3,
+      _rmMiniCard({title:c.title, price:c.price, original_price:c.original_price, image_url:c.image_url, is_active:c.is_active}), 'depth-3'));
+    if (!d.coins.length) _rmAddNode('co-empty', coinNode, 3, _rmNodeInner('—','Sin paquetes','',''));
 
-    const templeChildren = Object.entries(d.productsByCat).map(([cat, items]) => {
-      const freeCount = items.filter(i => i.is_free_onboarding).length;
-      return _rmLeaf(_rmNode('leaf','🏛️',_rmEsc(cat), `${items.length} ítems`, freeCount ? `${freeCount} gratis onboarding` : `${items[0]?.price_cristales ?? 0} cristales c/u`));
-    }).join('') || _rmLeaf(_rmNode('leaf','—','Sin productos','',''));
-    const templeNode = _rmNode('branch','🏛️','TEMPLO STORE', `${d.products.length} productos`, 'se canjea con cristales, no $');
+    const templeCats = Object.entries(d.productsByCat);
+    templeCats.forEach(([cat, items], i) => {
+      const freeCount = items.filter(it => it.is_free_onboarding).length;
+      _rmAddNode(`te-${i}`, temple, 3, _rmNodeInner('🏛️', _rmEsc(cat), `${items.length} ítems`, freeCount ? `${freeCount} gratis onboarding` : `${items[0]?.price_cristales ?? 0} cristales c/u`));
+    });
+    if (!templeCats.length) _rmAddNode('te-empty', temple, 3, _rmNodeInner('—','Sin productos','',''));
 
-    const membChildren = planRows +
-      _rmBranchLi(ofertaFuerteNode, ofertaFuerteChildren) +
-      _rmBranchLi(arsenalNode, arsenalChildren) +
-      _rmBranchLi(permNode, permChildren) +
-      _rmBranchLi(coinNode, coinChildren) +
-      _rmBranchLi(templeNode, templeChildren);
+    // ── Render por generaciones ──
+    const maxDepth = Math.max(...(_rmNodes.map(n => n.depth)));
+    let genHtml = '';
+    for (let depthLv = 0; depthLv <= maxDepth; depthLv++) {
+      const nodesAtDepth = _rmNodes.filter(n => n.depth === depthLv);
+      const cells = nodesAtDepth.map(n =>
+        `<div class="rm-node2 depth-${depthLv} ${n.extraClass}" id="rmn-${n.id}" data-parent="${n.parent || ''}">${n.innerHtml}</div>`
+      ).join('');
+      genHtml += `<div class="rm-gen" data-depth="${depthLv}">${cells}</div>`;
+    }
 
-    // Rama 4: Fin de beca
-    const finNode = _rmNode('branch', '🏁', 'FIN DE BECA · MES 6', 'semana 26', 'retención ~$3/mes',
-      '<div class="tn-warn">⚠️ oferta de retención NO existe aún en Supabase</div>');
-
-    const rootChildren =
-      _rmBranchLi(scanNode, scanChildren) +
-      _rmBranchLi(causaNode, causaChildren) +
-      _rmBranchLi(membNode, membChildren) +
-      _rmLeaf(finNode);
-
-    const rootNode = _rmNode('root', '🏛️', 'RUTA DEL TEMPLARIO', 'entrada → membresía → mes 6', 'todo en vivo desde Supabase');
-
-    return `<div class="rm-tree-scroll"><ul class="rm-tree">${_rmBranchLi(rootNode, rootChildren)}</ul></div>`;
+    return `<div class="rm-tree-hint">👆 desliza <b>horizontal</b> para ver todas las ramas · cada nivel es una generación real conectada por línea</div>
+      <div class="rm-tree2-scroll" id="rmTreeScroll"><div class="rm-tree2" id="rmTree2">
+        <svg class="rm-tree2-svg" id="rmTreeSvg"></svg>
+        ${genHtml}
+      </div></div>`;
   }
+
+  // Dibuja las líneas conectoras reales (codo a 90°) midiendo la posición exacta de cada caja ya renderizada
+  function _rmDrawConnectors() {
+    const container = document.getElementById('rmTree2');
+    const svg = document.getElementById('rmTreeSvg');
+    if (!container || !svg || !_rmNodes.length) return;
+    const cRect = container.getBoundingClientRect();
+    svg.setAttribute('width', container.scrollWidth);
+    svg.setAttribute('height', container.scrollHeight);
+    svg.setAttribute('viewBox', `0 0 ${container.scrollWidth} ${container.scrollHeight}`);
+
+    let paths = '';
+    _rmNodes.forEach(n => {
+      if (!n.parent) return;
+      const childEl = document.getElementById(`rmn-${n.id}`);
+      const parentEl = document.getElementById(`rmn-${n.parent}`);
+      if (!childEl || !parentEl) return;
+      const cr = childEl.getBoundingClientRect();
+      const pr = parentEl.getBoundingClientRect();
+      const px = pr.left + pr.width/2 - cRect.left;
+      const py = pr.bottom - cRect.top;
+      const cx = cr.left + cr.width/2 - cRect.left;
+      const cy = cr.top - cRect.top;
+      const midY = py + (cy - py) / 2;
+      paths += `<path d="M ${px} ${py} V ${midY} H ${cx} V ${cy}" fill="none" stroke="rgba(245,208,110,.4)" stroke-width="1.6" />`;
+      paths += `<circle cx="${px}" cy="${py}" r="2.5" fill="rgba(245,208,110,.7)" />`;
+      paths += `<circle cx="${cx}" cy="${cy}" r="2.5" fill="rgba(245,208,110,.7)" />`;
+    });
+    svg.innerHTML = paths;
+  }
+
+
 
   function _puDiasSinEntrar(r) {
     return r.last_login_date ? Math.floor((Date.now() - new Date(r.last_login_date + 'T00:00:00').getTime()) / 86400000) : null;
