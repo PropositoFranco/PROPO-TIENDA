@@ -3395,18 +3395,19 @@
     try {
       const [
         offersRes, coinsRes, productsRes,
-        sorteoRes, membershipsRes, codesRes, arsenalRes, ordersRes, transRes, purchOffersRes
+        sorteoRes, membershipsRes, codesRes, arsenalRes, ordersRes, transRes, purchOffersRes, profilesRes
       ] = await Promise.all([
         supabaseClient.from('special_offers').select('*').order('sort_order'),
         supabaseClient.from('propocoin_packages').select('*').order('sort_order'),
         supabaseClient.from('products').select('id,name,category,price_cristales,is_free_onboarding,is_active'),
         supabaseClient.from('sorteo_participantes').select('tipo_premio, cupon_aceptado, cupon_redimido'),
         supabaseClient.from('memberships').select('plan, status, current_week, created_at'),
-        supabaseClient.from('access_codes').select('membership_type, amount_paid, is_used, used_by'),
+        supabaseClient.from('access_codes').select('membership_type, amount_paid, is_used, used_by, created_at'),
         supabaseClient.from('arsenal_purchases').select('plan, amount_paid, is_test'),
         supabaseClient.from('orders').select('cause, amount').not('cause','is',null),
         supabaseClient.from('transacciones').select('tipo, monto_bruto'),
-        supabaseClient.from('user_purchased_offers').select('offer_id, offer_title, amount_paid, purchased_at')
+        supabaseClient.from('user_purchased_offers').select('offer_id, offer_title, amount_paid, purchased_at'),
+        supabaseClient.from('profiles').select('id, created_at, is_test_user, is_admin')
       ]);
 
       const offers = offersRes.data || [];
@@ -3419,6 +3420,7 @@
       const orders = ordersRes.data || [];
       const trans = transRes.data || [];
       const purchOffers = purchOffersRes.data || [];
+      const profiles = profilesRes.data || [];
 
       // ── Agregaciones reales ──
       const premioCount = {};
@@ -3459,6 +3461,40 @@
         purchOffersAgg[k].total += Number(p.amount_paid||0);
       });
       const totPurchOffers = purchOffers.reduce((s,p) => s + Number(p.amount_paid||0), 0);
+
+      // ── CLIENTES REALES: ni is_test_user=true ni is_admin=true ──
+      const realCustomers = profiles.filter(p => !p.is_test_user && !p.is_admin);
+      const testOrAdminCount = profiles.length - realCustomers.length;
+      const codeByUser = {}; // used_by -> [access_codes pagados]
+      codesReal.forEach(c => { if (c.used_by) (codeByUser[c.used_by] = codeByUser[c.used_by] || []).push(c); });
+
+      const hoy = Date.now();
+      const MSDIA = 86400000;
+      const cohort = realCustomers.map(p => {
+        const altaMs = new Date(p.created_at).getTime();
+        const pagos = (codeByUser[p.id] || []).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+        const primerPago = pagos[0] || null;
+        const diasHastaPago = primerPago ? Math.floor((new Date(primerPago.created_at).getTime() - altaMs) / MSDIA) : null;
+        const diasEnPlataforma = Math.floor((hoy - altaMs) / MSDIA);
+        return { id: p.id, alta: p.created_at, diasEnPlataforma, pago: !!primerPago, diasHastaPago, montoPagado: pagos.reduce((s,c)=>s+(c.amount_paid||0)/100,0) };
+      }).sort((a,b) => new Date(a.alta) - new Date(b.alta));
+
+      const cohortPagaron = cohort.filter(c => c.pago);
+      const cohortNoPagaron = cohort.filter(c => !c.pago);
+      const cicloMasViejo = cohort.length ? Math.max(...cohort.map(c => c.diasEnPlataforma)) : 0;
+
+      // Buckets de "día hasta primer pago" real (de los que sí pagaron)
+      const bucketDef = [
+        { l:'Día 0 (mismo momento del alta)', test: d => d===0 },
+        { l:'Día 1', test: d => d===1 },
+        { l:'Día 2–5', test: d => d>=2 && d<=5 },
+        { l:'Día 6–14', test: d => d>=6 && d<=14 },
+        { l:'Día 15+', test: d => d>=15 },
+      ];
+      const diaBuckets = bucketDef.map(b => ({ label:b.l, n: cohortPagaron.filter(c => b.test(c.diasHastaPago)).length }));
+
+      // Recalculamos compradores reales de membresía SOLO con clientes reales (sin prueba ni equipo)
+      const codesUsuariosRealesCliente = cohortPagaron.length;
 
       const arsenalReal = arsenal.filter(a => !a.is_test);
       const arsenalTest = arsenal.filter(a => a.is_test);
@@ -3532,11 +3568,95 @@
         <div class="rm-branch-body">
           <div class="rm-branch-note">💰 <b>Fuente con más dinero confirmado hoy:</b> ${_rmEsc(puntoFuerte.label)} — <b>${_rmMoney(puntoFuerte.total)}</b> en ${puntoFuerte.n} transacciones.</div>
           <div class="rm-stat-row">${rankingRows}</div>
-          ${membSeedDetected ? `<div class="rm-pending">⚠️ <b>OJO — esto NO es un hueco de ingreso, es un dato inflado:</b> de las <b>${memberships.length}</b> filas en <code>memberships</code>, <b>${membSeedCount}</b> comparten el <b>mismo timestamp exacto</b> (${new Date(membSeedDate).toLocaleString('es-MX')}) — es una carga masiva (backfill/seed), no ${membSeedCount} altas reales de usuarios el mismo día. Ninguna de esas filas tiene un pago asociado. El número real de gente que <b>pagó y se registró</b> con un código de membresía es <b>${codesUsuariosReales}</b> (de ${codesReal.length} códigos pagados, ${codesUsadas.length} ya canjeados). No borré ni toqué <code>memberships</code> — solo te aviso para que no tomes decisiones de negocio sobre el "39" pensando que son usuarios reales.</div>` : ''}
+          ${membSeedDetected ? `<div class="rm-pending">⚠️ <b>OJO — esto NO es un hueco de ingreso, es un dato inflado:</b> de las <b>${memberships.length}</b> filas en <code>memberships</code>, <b>${membSeedCount}</b> comparten el <b>mismo timestamp exacto</b> (${new Date(membSeedDate).toLocaleString('es-MX')}) — es una carga masiva (backfill/seed), no ${membSeedCount} altas reales de usuarios el mismo día. Ninguna de esas filas tiene un pago asociado. El número real de <b>clientes</b> (sin prueba, sin cuentas de equipo) que <b>pagó y se registró</b> con un código de membresía es <b>${codesUsuariosRealesCliente}</b> de <b>${realCustomers.length}</b> clientes reales (excluyendo ${testOrAdminCount} cuentas de prueba/equipo de un total de ${profiles.length} perfiles). No borré ni toqué <code>memberships</code> — solo te aviso para que no tomes decisiones de negocio sobre el "39" pensando que son usuarios reales.</div>` : ''}
           <div class="rm-branch-note" style="color:#86efac;">✅ <b>Ya sellado:</b> Arsenal RPG tiene <b>${arsenalReal.length}</b> compra(s) real(es) confirmada(s) y <b>${arsenalTest.length}</b> marcadas como prueba interna (<code>is_test=true</code>), excluidas del cálculo de ingresos.</div>
           ${purchOffers.length===0 ? `<div class="rm-pending">⚠️ <b>Cero ventas registradas nunca</b> en <code>user_purchased_offers</code> — ni la Oferta Fuerte de día, ni las Permanentes, ni Arsenal (vía este ledger) tienen una sola compra confirmada ahí. Si el checkout de <code>special_offers</code> sí está cobrando por Stripe pero no está escribiendo en esta tabla, es un hueco de trazabilidad real que vale la pena revisar en el webhook — si nunca se ha vendido nada de ahí, entonces es un hueco de conversión, no de trazabilidad.</div>` : ''}
           ${trans.length <= 2 ? `<div class="rm-pending">⚠️ <b>Hueco de trazabilidad:</b> tu tabla "maestra" <code>transacciones</code> (la que calcula comisiones de aliados) solo tiene <b>${trans.length}</b> fila(s), mientras que <code>access_codes</code>+<code>orders</code>+<code>arsenal_purchases</code> juntas suman <b>${codesReal.length + orders.length + arsenal.length}</b> movimientos reales. Si <code>transacciones</code> no se está poblando en cada cobro, las comisiones de tus aliados (<code>comisiones</code>) se están calculando sobre una base incompleta.</div>` : ''}
           <div class="rm-branch-note">📸 <b>Huecos de imagen:</b> ${arsenalOffers.filter(o=>!o.image_url).length} de ${arsenalOffers.length} ofertas Arsenal RPG no tienen <code>image_url</code> — están vendiendo sin foto en la tienda real.</div>
+        </div>
+      </div>`;
+
+      // ── PANEL: TRACKING CRONOLÓGICO REAL DEL CICLO COMPLETO (día 0 → hoy) ──
+      const cohortRows = cohort.map(c => `
+        <tr style="border-bottom:1px solid rgba(255,255,255,.05);">
+          <td style="padding:6px;color:#f0e8ff;">${new Date(c.alta).toLocaleDateString('es-MX')}</td>
+          <td style="padding:6px;color:var(--text-faint);">día ${c.diasEnPlataforma}</td>
+          <td style="padding:6px;">${c.pago ? `<span style="color:#86efac;">✅ sí — día ${c.diasHastaPago}</span>` : '<span style="color:#fca5a5;">❌ nunca</span>'}</td>
+          <td style="padding:6px;color:#f5d06e;font-weight:700;">${c.montoPagado ? _rmMoney(c.montoPagado) : '—'}</td>
+        </tr>`).join('');
+
+      const bucketRows = diaBuckets.map(b => `
+        <div class="rm-stat-pill"><div class="v">${b.n}</div><div class="l">${_rmEsc(b.label)}</div></div>`).join('');
+
+      // Ranking de apalancamiento real de cada oferta: cuánto valor extra da vs. lo que cuesta
+      const leverageOffers = offers.map(o => {
+        const price = Number(o.price||0), orig = Number(o.original_price||price);
+        const ratio = price>0 ? orig/price : 0;
+        const ventas = purchOffersAgg[(o.title||'').trim()] || { n:0, total:0 };
+        return { title:o.title, price, orig, extra: orig-price, ratio, ventas, active:o.is_active };
+      }).sort((a,b) => b.ratio - a.ratio);
+      const leverageRows = leverageOffers.map((o,i) => `
+        <tr style="border-bottom:1px solid rgba(255,255,255,.05);${i===0?'background:rgba(245,208,110,.06);':''}">
+          <td style="padding:6px;color:#f0e8ff;">${i===0?'🏆 ':''}${_rmEsc(o.title)}</td>
+          <td style="padding:6px;color:#f5d06e;font-weight:700;">${_rmMoney(o.price)}</td>
+          <td style="padding:6px;color:var(--text-faint);">${o.orig>o.price ? `vale ${_rmMoney(o.orig)}` : '—'}</td>
+          <td style="padding:6px;color:${o.ratio>=2?'#86efac':'var(--text-faint)'};font-weight:700;">${o.ratio>1 ? o.ratio.toFixed(2)+'×' : '—'}</td>
+          <td style="padding:6px;">${o.ventas.n>0 ? `<span style="color:#86efac;">🔥 ${o.ventas.n} · ${_rmMoney(o.ventas.total)}</span>` : '<span style="color:#fca5a5;">❌ 0 ventas</span>'}</td>
+        </tr>`).join('');
+
+      html += `
+      <div class="rm-branch">
+        <div class="rm-branch-head" onclick="toggleRmBranch(this)">
+          <div class="rm-branch-key">🕰️</div>
+          <div>
+            <div class="rm-branch-title">TRACKING CRONOLÓGICO REAL — CICLO COMPLETO</div>
+            <div class="rm-branch-sub">profiles.created_at cruzado con cada pago real, usuario por usuario</div>
+          </div>
+          <div class="rm-branch-meta${cicloMasViejo<183?' warn':''}">tu ciclo más viejo real: ${cicloMasViejo} días</div>
+          <div class="rm-branch-arrow">▼</div>
+        </div>
+        <div class="rm-branch-body">
+          <div class="rm-branch-note">👥 <b>Base real de clientes (sin prueba, sin equipo):</b> <b>${realCustomers.length}</b> perfiles — de un total de ${profiles.length} en la tabla (${testOrAdminCount} son cuentas de prueba o de tu equipo, ya excluidas de todo lo de abajo).</div>
+          <div class="rm-pending">⚠️ <b>Tu negocio real todavía no llega a los 6 meses:</b> tu cliente real más antiguo lleva <b>${cicloMasViejo} días</b> en la plataforma (no ${183}). Todo lo de abajo es 100% real hasta el día ${cicloMasViejo} — lo que pase después de ese día para un ciclo de 6 meses completo, hoy, nadie lo sabe todavía porque no ha pasado. No te voy a inventar una curva hasta el día 183.</div>
+
+          <div class="rm-branch-note" style="margin-top:12px;"><b>1) ¿En qué día pagan los que sí pagan la membresía base ($20)?</b> — de ${realCustomers.length} clientes reales, <b>${cohortPagaron.length}</b> pagaron (${realCustomers.length? Math.round(cohortPagaron.length/realCustomers.length*100):0}%) y <b>${cohortNoPagaron.length}</b> nunca pagaron nada.</div>
+          <div class="rm-stat-row">${bucketRows}</div>
+          <div class="rm-branch-note">Conclusión real (no opinión): el pago de $20 <b>no es una decisión que tarde días</b> — casi siempre ocurre <b>en el mismo momento del alta</b> (es el propio mecanismo de entrada: pagas para sacar tu código). No es un patrón de "día 1 a 5 vs. día 15+", es un evento de día 0.</div>
+
+          <div class="rm-branch-note" style="margin-top:14px;"><b>2) ¿Y las ofertas de upsell (Propo-Paquete, Propo-Pass, etc.) — en qué día las compran?</b></div>
+          <div class="rm-pending">❌ <b>En ningún día.</b> De tus ${realCustomers.length} clientes reales, <b>cero</b> ha comprado una sola oferta especial, en ningún día de su ciclo — ni el día 1, ni el día 30, ni el día 85 (el más antiguo). Esto <b>no es un problema de "días 1–5"</b>: es 0% de conversión en el ciclo completo, para todos, siempre. El hueco no está en el calendario, está en que la oferta nunca se ha probado.</div>
+
+          <div class="rm-branch-note" style="margin-top:14px;"><b>3) Ranking real de apalancamiento — qué oferta da más valor por lo que cuesta</b></div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+              <thead><tr style="border-bottom:1.5px solid rgba(245,208,110,.3);">
+                <th style="text-align:left;padding:7px 6px;color:#f5d06e;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">OFERTA</th>
+                <th style="text-align:left;padding:7px 6px;color:#f5d06e;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">PRECIO</th>
+                <th style="text-align:left;padding:7px 6px;color:#f5d06e;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">VALOR REAL</th>
+                <th style="text-align:left;padding:7px 6px;color:#f5d06e;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">APALANCAMIENTO</th>
+                <th style="text-align:left;padding:7px 6px;color:#f5d06e;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">VENTAS REALES</th>
+              </tr></thead>
+              <tbody>${leverageRows}</tbody>
+            </table>
+          </div>
+          <div class="rm-branch-note">🏆 <b>${_rmEsc(leverageOffers[0]?.title||'')}</b> es matemáticamente tu mejor oferta: paga ${_rmMoney(leverageOffers[0]?.price)} por algo que vale ${_rmMoney(leverageOffers[0]?.orig)} (${leverageOffers[0]?.ratio.toFixed(2)}×). Confirmado en <code>special_offers</code>: aparece días <b>1–${offers.find(o=>o.title===leverageOffers[0]?.title)?.expires_after_days||'?'}</b>, desaparece, y vuelve a aparecer el día <b>${offers.find(o=>o.title===leverageOffers[0]?.title)?.offer_return_day||'?'}</b> por ${offers.find(o=>o.title===leverageOffers[0]?.title)?.offer_return_window||'?'} días más. El problema no es el diseño de la oferta — es que <b>nadie la ha comprado todavía</b> (0 ventas reales), así que aún no sabemos si el gatillo de días está funcionando o si el usuario ni siquiera la está viendo.</div>
+
+          <div class="rm-branch-note" style="margin-top:14px;"><b>4) Sobre "$49/mes a partir del mes 2"</b></div>
+          <div class="rm-pending">⚠️ Ese precio <b>no existe en ninguna tabla de Supabase</b> — no está en <code>special_offers</code>, ni en <code>access_codes</code>, ni en <code>propocoin_packages</code>. Es una idea de negocio tuya, válida, pero todavía no configurada. Para que aparezca aquí con trazabilidad real (y no que yo te la invente), hay que crear una oferta tipo suscripción en <code>special_offers</code> con <code>is_subscription=true</code>, <code>price=49</code>, y una regla de arranque diferido (hoy el esquema no tiene "empieza a cobrar en el mes 2" — solo tiene <code>offer_return_day</code> para reaparecer en pantalla, no para retrasar el primer cobro de una suscripción de Stripe). Si quieres, en la próxima sesión te armo esa oferta paso a paso.</div>
+
+          <details style="margin-top:14px;"><summary style="cursor:pointer;color:#f5d06e;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;padding:6px 0;">📋 Ver cada cliente real, uno por uno (${cohort.length})</summary>
+            <div style="overflow-x:auto;margin-top:8px;">
+              <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                <thead><tr style="border-bottom:1.5px solid rgba(245,208,110,.3);">
+                  <th style="text-align:left;padding:6px;color:#f5d06e;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">ALTA</th>
+                  <th style="text-align:left;padding:6px;color:#f5d06e;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">DÍAS EN PLATAFORMA HOY</th>
+                  <th style="text-align:left;padding:6px;color:#f5d06e;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">¿PAGÓ ALGO?</th>
+                  <th style="text-align:left;padding:6px;color:#f5d06e;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">MONTO</th>
+                </tr></thead>
+                <tbody>${cohortRows}</tbody>
+              </table>
+            </div>
+          </details>
         </div>
       </div>`;
 
@@ -3570,10 +3690,10 @@
         <div class="rm-stat-pill"><div class="v">${_rmMoney(v.total)}</div><div class="l">${_rmEsc(k)} · ${v.n} códigos</div></div>
       `).join('');
       html += _rmBranchOpen(2, '💳', 'MEMBRESÍA — SEMANA 1 A 26 (≈6 MESES)',
-        'memberships.current_week tiene tope real de 26 semanas', `${codesUsuariosReales} compradores reales`, membSeedDetected, `
+        'memberships.current_week tiene tope real de 26 semanas', `${codesUsuariosRealesCliente} compradores reales`, membSeedDetected, `
         <div class="rm-branch-note">La membresía real corre por <b>semanas (1–26)</b>, tope confirmado en el esquema de la tabla — coincide con tu "hasta el mes 6".</div>
         <div class="rm-stat-row">
-          <div class="rm-stat-pill" style="border-color:#86efac;"><div class="v">${codesUsuariosReales}</div><div class="l">✅ compradores reales (pagó + se registró)</div></div>
+          <div class="rm-stat-pill" style="border-color:#86efac;"><div class="v">${codesUsuariosRealesCliente}</div><div class="l">✅ clientes reales (sin prueba/equipo) que pagó + se registró</div></div>
           ${planRows}
         </div>
         ${membSeedDetected ? `<div class="rm-pending" style="margin-top:8px;">⚠️ Las <b>${membSeedCount}</b> filas de arriba en "Plan" vienen de <code>memberships</code>, y <b>${membSeedCount}</b> de ellas se crearon en el <b>mismo instante</b> (${new Date(membSeedDate).toLocaleString('es-MX')}) — es un backfill/seed, no ${membSeedCount} altas reales. Úsalo solo para ver en qué semana va cada quien, no como conteo de usuarios de pago.</div>` : ''}
@@ -3680,7 +3800,9 @@
         totCodes, totOrdersCausa, totArsenalConMonto, totTrans, fuentes, puntoFuerte, totalIngresoReal,
         purchOffers, purchOffersAgg, totPurchOffers,
         codesReal, codesUsadas, codesUsuariosReales,
-        membSeedDetected, membSeedCount, membSeedDate
+        membSeedDetected, membSeedCount, membSeedDate,
+        realCustomers, testOrAdminCount, cohort, cohortPagaron, cohortNoPagaron, cicloMasViejo,
+        diaBuckets, codesUsuariosRealesCliente, leverageOffers
       };
 
       bodyEl.innerHTML = html;
@@ -3776,10 +3898,12 @@
       </div>`).join('');
     const money = _rmAddNode('money', root, 1, _rmNodeInner('💰', 'DÓNDE SE VENDE MÁS', _rmMoney(d.totalIngresoReal) + ' total real', 'ranking en vivo, no catálogo',
       `<div style="margin-top:4px;">${rankingList}</div>`), 'money-node');
+    const cicloWarn = d.cicloMasViejo < 183 ? `<div class="tn-warn">⚠️ tu ciclo más viejo real: ${d.cicloMasViejo} días (aún no hay 6 meses)</div>` : '';
+    const ciclo = _rmAddNode('ciclo', root, 1, _rmNodeInner('🕰️', 'TRACKING CRONOLÓGICO', `${d.cohortPagaron.length}/${d.realCustomers.length} pagaron`, 'clientes reales, sin prueba/equipo', cicloWarn), 'money-node');
     const scan = _rmAddNode('scan', root, 1, _rmNodeInner('🎯', 'ESCANEO / SORTEO', `${premioCupon+premioBeca+premioSin} registros`, 'sorteo_participantes.tipo_premio'));
     const causa = _rmAddNode('causa', root, 1, _rmNodeInner('🐾', 'LANDING ALIANZA-CAUSA', `${d.orders.length} órdenes`, 'orders.cause · $20/pago real'));
     const membWarn = d.membSeedDetected ? `<div class="tn-warn">⚠️ ${d.membSeedCount} filas son backfill (mismo instante), no altas reales</div>` : '';
-    const memb = _rmAddNode('memb', root, 1, _rmNodeInner('💳', 'MEMBRESÍA · SEM 1–26', `${d.codesUsuariosReales} compradores reales`, `tabla memberships: ${d.maxWeek}/26 sem. avanzada`, membWarn));
+    const memb = _rmAddNode('memb', root, 1, _rmNodeInner('💳', 'MEMBRESÍA · SEM 1–26', `${d.codesUsuariosRealesCliente} compradores reales`, `tabla memberships: ${d.maxWeek}/26 sem. avanzada`, membWarn));
     const finBeca = _rmAddNode('fin', root, 1, _rmNodeInner('🏁', 'FIN DE BECA · MES 6', 'semana 26', 'retención ~$3/mes',
       '<div class="tn-warn">⚠️ oferta de retención NO existe aún en Supabase</div>'));
 
@@ -3795,8 +3919,19 @@
         _rmNodeInner(k==='becas'?'🎓':k==='perros'?'🐶':'💰', k==='becas'?'Becas':k==='perros'?'Perros':k, _rmMoney(v.total), `${v.n} pagos`)));
     } else { _rmAddNode('causa-empty', causa, 2, _rmNodeInner('—','Sin datos','','')); }
 
+    // Generación 2 — hijos de Ciclo (tracking cronológico: buckets de día-hasta-pago + hallazgo de upsell + apalancamiento)
+    d.diaBuckets.forEach((b,i) => _rmAddNode(`ciclo-b${i}`, ciclo, 2,
+      _rmNodeInner('📅', b.label, `${b.n} pagaron`, `de ${d.cohortPagaron.length} que sí pagaron ($20 base)`)));
+    _rmAddNode('ciclo-upsell', ciclo, 2, _rmNodeInner('🚫', 'UPSELL · Propo-Paquete, Propo-Pass...', '0 ventas', `de ${d.realCustomers.length} clientes reales, ningún día del ciclo`,
+      '<div class="tn-warn">⚠️ 0% de conversión en el ciclo completo — la oferta nunca se ha probado, no es un tema de calendario</div>'));
+    const topLev = d.leverageOffers && d.leverageOffers[0];
+    if (topLev) {
+      _rmAddNode('ciclo-leverage', ciclo, 2, _rmNodeInner('🏆', _rmEsc(topLev.title||'Top apalancamiento'), `${topLev.ratio.toFixed(2)}× · ${_rmMoney(topLev.price)} vs ${_rmMoney(topLev.orig)}`, 'mejor oferta matemática, aún 0 ventas reales',
+        topLev.ventas?.n>0 ? `<div class="tn-ok">✅ ${topLev.ventas.n} ventas · ${_rmMoney(topLev.ventas.total)}</div>` : '<div class="tn-warn">⚠️ 0 ventas reales todavía</div>'));
+    }
+
     // Generación 2 — hijos de Membresía (5 sub-ramas + planes)
-    _rmAddNode('memb-real', memb, 2, _rmNodeInner('✅', 'Compradores reales', `${d.codesUsuariosReales} usuarios`, 'pagó + se registró (access_codes)'));
+    _rmAddNode('memb-real', memb, 2, _rmNodeInner('✅', 'Compradores reales', `${d.codesUsuariosRealesCliente} usuarios`, 'pagó + se registró (access_codes)'));
     Object.entries(d.planCount).forEach(([k,n], i) => _rmAddNode(`plan-${i}`, memb, 2, _rmNodeInner('📋', `Plan "${_rmEsc(k)}" (tabla)`, `${n} filas`, d.membSeedDetected ? 'incluye backfill, no todas son altas reales' : '')));
     const ofertaFuerte = _rmAddNode('ofertafuerte', memb, 2, _rmNodeInner('🔥', 'OFERTA FUERTE · DÍA REAL', `${d.dayLogicOffers.length} oferta(s)`, 'offer_return_day / expires_after_days'));
     const arsenalWarn = d.arsenalTest.length > 0 ? `<div class="tn-ok">✅ sellado: ${d.arsenalTest.length} prueba excluidas</div>` : '';

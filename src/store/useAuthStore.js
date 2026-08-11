@@ -55,6 +55,7 @@ export const useAuthStore = create(
         set({ session, user: session?.user ?? null, loading: false }),
 
       _realtimeChannel: null,
+      _streakCheckedToday: null, // evita doble disparo de handle_daily_streak por carrera con Realtime
 
       initAuth: async () => {
         if (get().user && get().session) {
@@ -184,12 +185,22 @@ set({ loading: false });
         if (!error && data) {
           set({ profile: data, isAdmin: data.is_admin === true });
 
-          // Solo actualiza last_login_date si pasaron +5 min desde el último registro.
-          // Esto evita el ciclo infinito: actualizar el perfil disparaba el listener de
-          // Realtime, que volvía a llamar loadProfile(), que volvía a actualizar el perfil...
-          const lastLogin = data.last_login_date ? new Date(data.last_login_date).getTime() : 0;
-          if (Date.now() - lastLogin > 5 * 60 * 1000) {
-            supabase.from('profiles').update({ last_login_date: new Date().toISOString() }).eq('id', user.id).then(() => {});
+          // Streak real: UNA sola fuente de verdad para last_login_date.
+          // Antes esta línea escribía la fecha directo, lo que le ganaba la carrera
+          // a handle_daily_streak() y la racha NUNCA podía comparar contra "ayer".
+          // Ahora se delega siempre a la misma RPC que usa MissionsPage, y solo se
+          // dispara una vez por día calendario (México) — mismo espíritu del throttle
+          // anterior, pero ahora sin pisarle la lógica a la racha.
+          // OJO: last_login_date es tipo `date` puro en Postgres (sin hora).
+          // Llega del cliente ya como "YYYY-MM-DD" (fecha México, la puso la propia RPC).
+          // NO se debe reconstruir con `new Date(...)`: JS interpreta un string
+          // date-only como medianoche UTC, y al convertirlo a hora México se recorre
+          // un día hacia atrás. Comparamos el string tal cual llega, sin reparsear.
+          const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });
+          const lastLoginDay = data.last_login_date ?? null;
+          if (lastLoginDay !== today && get()._streakCheckedToday !== today) {
+            set({ _streakCheckedToday: today }); // se marca ANTES de esperar respuesta, cierra la ventana de carrera
+            supabase.rpc('handle_daily_streak', { p_user_id: user.id }).then(() => {});
           }
 
           const playerStore = (await import('./usePlayerStore')).usePlayerStore.getState();
