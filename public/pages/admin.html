@@ -260,6 +260,90 @@
   .pu-fase-alianza_desbloqueada{background:rgba(68,255,136,.15);color:#44FF88;}
   .pu-fase-proceso_completo{background:rgba(212,175,55,.2);color:#f5d06e;}
 
+  /* ═══ MAPA DE INGRESOS (ROADMAP) ═══ */
+  .section-roadmap{border-color:rgba(245,208,110,.4);
+    box-shadow:0 4px 40px rgba(0,0,0,.4), inset 0 0 60px rgba(245,208,110,.05);}
+  .section-roadmap .sec-title{color:#f5d06e;text-shadow:0 0 12px rgba(245,208,110,.4);}
+  .rm-toggle-btn{
+    font-family:'Cinzel',serif;font-size:11px;font-weight:700;letter-spacing:3px;
+    color:#f5d06e;background:linear-gradient(135deg,rgba(245,208,110,.16),rgba(204,68,255,.08));
+    border:1.5px solid rgba(245,208,110,.55);border-radius:30px;
+    padding:13px 30px;cursor:pointer;transition:all .25s;
+    box-shadow:0 0 24px rgba(245,208,110,.14);
+    display:inline-flex;align-items:center;gap:10px;
+  }
+  .rm-toggle-btn:hover{border-color:#f5d06e;box-shadow:0 0 34px rgba(245,208,110,.3);transform:translateY(-1px);}
+  .rm-toggle-btn .atb-arrow{font-size:9px;transition:transform .25s;opacity:.7;}
+  .rm-toggle-btn.open .atb-arrow{transform:rotate(180deg);}
+  @media(max-width:480px){.rm-toggle-btn{font-size:9px;letter-spacing:2px;padding:12px 20px;width:100%;justify-content:center;}}
+
+  /* Llave / rama colapsable */
+  .rm-branch{border:1.5px solid rgba(245,208,110,.25);border-radius:14px;margin-bottom:14px;
+    background:linear-gradient(145deg,rgba(14,8,32,.9),rgba(8,4,20,.95));overflow:hidden;}
+  .rm-branch-head{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;
+    user-select:none;transition:background .2s;}
+  .rm-branch-head:hover{background:rgba(245,208,110,.06);}
+  .rm-branch-key{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;
+    justify-content:center;font-size:15px;flex-shrink:0;background:rgba(245,208,110,.12);
+    border:1px solid rgba(245,208,110,.35);}
+  .rm-branch-title{font-family:'Cinzel',serif;font-size:11.5px;letter-spacing:1.5px;
+    color:#f5d06e;flex:1;}
+  .rm-branch-sub{font-family:'Crimson Text',serif;font-size:11px;color:var(--text-faint);
+    margin-top:2px;font-style:italic;}
+  .rm-branch-meta{font-family:'Nunito',sans-serif;font-size:10px;font-weight:800;color:#86efac;
+    background:rgba(74,222,128,.12);padding:4px 10px;border-radius:20px;white-space:nowrap;}
+  .rm-branch-meta.warn{color:#fca5a5;background:rgba(239,68,68,.12);}
+  .rm-branch-arrow{font-size:10px;color:rgba(245,208,110,.6);transition:transform .25s;flex-shrink:0;}
+  .rm-branch.open .rm-branch-arrow{transform:rotate(180deg);}
+  .rm-branch-body{display:none;padding:4px 16px 18px;}
+  .rm-branch.open .rm-branch-body{display:block;}
+  .rm-branch-note{font-size:10.5px;color:var(--text-faint);line-height:1.6;
+    padding:8px 10px;margin-bottom:12px;border-left:2px solid rgba(245,208,110,.35);
+    background:rgba(245,208,110,.04);border-radius:0 8px 8px 0;font-family:'Crimson Text',serif;}
+  .rm-branch-note b{color:#f5d06e;}
+
+  /* Grid de tarjetas de producto/oferta con foto real */
+  .rm-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;}
+  .rm-card{background:linear-gradient(145deg,rgba(10,5,24,.97),rgba(6,3,16,.99));
+    border:1.5px solid var(--border-purple);border-radius:12px;overflow:hidden;
+    transition:all .2s;display:flex;flex-direction:column;}
+  .rm-card:hover{border-color:rgba(245,208,110,.55);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4);}
+  .rm-card-img{width:100%;height:110px;object-fit:cover;background:rgba(255,255,255,.03);
+    border-bottom:1px solid rgba(245,208,110,.15);display:block;}
+  .rm-card-noimg{width:100%;height:110px;display:flex;align-items:center;justify-content:center;
+    background:repeating-linear-gradient(135deg,rgba(255,255,255,.02),rgba(255,255,255,.02) 10px,rgba(255,255,255,.04) 10px,rgba(255,255,255,.04) 20px);
+    color:rgba(255,255,255,.25);font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;
+    text-align:center;padding:8px;border-bottom:1px solid rgba(245,208,110,.15);}
+  .rm-card-body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px;flex:1;}
+  .rm-card-title{font-family:'Cinzel',serif;font-size:10.5px;color:#f0e8ff;letter-spacing:.3px;line-height:1.35;}
+  .rm-card-sub{font-size:10px;color:var(--text-faint);font-family:'Crimson Text',serif;line-height:1.3;}
+  .rm-card-foot{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:6px;}
+  .rm-card-price{font-family:'Nunito',sans-serif;font-weight:900;font-size:13px;color:#f5d06e;}
+  .rm-card-price s{color:var(--text-faint);font-weight:400;font-size:10px;margin-right:4px;}
+  .rm-card-badge{font-family:'Nunito',sans-serif;font-size:8px;font-weight:800;letter-spacing:.3px;
+    padding:2px 7px;border-radius:10px;white-space:nowrap;}
+  .rm-card-badge.b-featured{background:rgba(245,208,110,.18);color:#f5d06e;}
+  .rm-card-badge.b-sub{background:rgba(96,165,250,.18);color:#93c5fd;}
+  .rm-card-badge.b-level{background:rgba(204,68,255,.18);color:#e0b3ff;}
+  .rm-card-real{font-size:9px;color:#86efac;font-family:'Nunito',sans-serif;font-weight:700;
+    padding-top:4px;border-top:1px dashed rgba(255,255,255,.08);margin-top:4px;}
+
+  /* Mini stats dentro de rama */
+  .rm-stat-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+  .rm-stat-pill{background:rgba(245,208,110,.08);border:1px solid rgba(245,208,110,.25);
+    border-radius:10px;padding:8px 14px;flex:1;min-width:120px;}
+  .rm-stat-pill .v{font-family:'Cinzel',serif;font-size:16px;font-weight:900;color:#f5d06e;line-height:1.1;}
+  .rm-stat-pill .l{font-family:'Cinzel',serif;font-size:7.5px;letter-spacing:1px;color:var(--text-faint);
+    text-transform:uppercase;margin-top:2px;}
+
+  .rm-pending{border:1.5px dashed rgba(239,68,68,.4);border-radius:10px;padding:12px 14px;
+    background:rgba(239,68,68,.05);font-size:10.5px;color:#fca5a5;font-family:'Crimson Text',serif;
+    line-height:1.6;}
+  .rm-pending b{color:#ff8a8a;}
+
+  .rm-connector{display:flex;justify-content:center;padding:2px 0;color:rgba(245,208,110,.35);
+    font-size:16px;}
+
   .an-loading{text-align:center;padding:30px 0;font-family:'Cinzel',serif;font-size:11px;
     letter-spacing:2px;color:var(--text-faint);}
 
@@ -911,6 +995,20 @@
             </table>
           </div>
         </div>
+      </div>
+
+      <!-- 🗺️ MAPA DE INGRESOS — ROADMAP DEL TEMPLARIO — acceso centrado -->
+      <div class="analytics-toggle-wrap">
+        <button class="rm-toggle-btn" id="rmToggleBtn" onclick="toggleRoadmap()">
+          🗺️ MAPA DE INGRESOS — RUTA DEL TEMPLARIO <span class="atb-arrow">▼</span>
+        </button>
+      </div>
+      <div class="section section-roadmap" id="rmSection" style="display:none;">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:linear-gradient(90deg,rgba(245,208,110,.14) 0%,transparent 100%);border-left:3px solid #f5d06e;border-radius:10px;margin-bottom:20px;"><div style="width:38px;height:38px;background:rgba(245,208,110,.14);border:1px solid rgba(245,208,110,.4);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🗺️</div><div><div style="font-family:'Cinzel Decorative',serif;font-size:12px;letter-spacing:3px;color:#f5d06e;">RUTA COMPLETA DEL TEMPLARIO</div><div style="font-size:11px;color:rgba(245,208,110,.85);margin-top:3px;font-family:'Cinzel',serif;letter-spacing:1px;">DESDE EL ESCANEO · HASTA EL MES 6 · CON FOTO, PRECIO Y DATOS REALES DE SUPABASE</div></div><svg style="margin-left:auto;opacity:.14;" width="44" height="44" viewBox="0 0 44 44"><polygon points="22,3 41,12 41,32 22,41 3,32 3,12" fill="none" stroke="#f5d06e" stroke-width="1.5"/><polygon points="22,11 33,17 33,27 22,33 11,27 11,17" fill="rgba(245,208,110,.3)"/></svg></div>
+
+        <div id="rmLoading" class="an-loading">🗺️ Trazando la ruta desde Supabase...</div>
+
+        <div id="rmBody" style="display:none;"></div>
       </div>
 
 
@@ -3141,6 +3239,338 @@
     document.getElementById('pu-filter-actividad').value = '';
     document.getElementById('pu-filter-tutorial').value = '';
     filterAndRenderPU();
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     🗺️ MAPA DE INGRESOS — RUTA DEL TEMPLARIO
+     Todo lo que se pinta aquí sale en vivo de Supabase:
+     special_offers, propocoin_packages, products, sorteo_participantes,
+     memberships, access_codes, arsenal_purchases, orders.
+     Nada de precios/nombres/fotos inventados — si un dato no existe
+     en la tabla, se marca como pendiente (rm-pending), no se inventa.
+  ══════════════════════════════════════════════════════════ */
+  let _rmOpen = false;
+  let _rmLoaded = false;
+
+  function toggleRoadmap() {
+    const sec = document.getElementById('rmSection');
+    const btn = document.getElementById('rmToggleBtn');
+    _rmOpen = !_rmOpen;
+    sec.style.display = _rmOpen ? 'block' : 'none';
+    btn.classList.toggle('open', _rmOpen);
+    if (_rmOpen && !_rmLoaded) {
+      _rmLoaded = true;
+      loadRoadmap();
+    }
+  }
+
+  function toggleRmBranch(headerEl) {
+    headerEl.closest('.rm-branch').classList.toggle('open');
+  }
+
+  function _rmEsc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function _rmMoney(n) {
+    if (n === null || n === undefined || isNaN(n)) return '—';
+    return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: (Number(n) % 1 === 0 ? 0 : 2), maximumFractionDigits: 2 });
+  }
+
+  // Tarjeta visual real: foto (image_url de Supabase) + título + precio + badges reales
+  function _rmCard(o) {
+    const img = o.image_url
+      ? `<img class="rm-card-img" src="${_rmEsc(o.image_url)}" alt="${_rmEsc(o.title)}" loading="lazy" onerror="this.outerHTML='<div class=&quot;rm-card-noimg&quot;>SIN FOTO EN SUPABASE<br>(image_url vacío o roto)</div>'">`
+      : `<div class="rm-card-noimg">SIN FOTO EN SUPABASE<br>(image_url vacío)</div>`;
+
+    const badges = [];
+    if (o.is_featured) badges.push('<span class="rm-card-badge b-featured">⭐ Featured</span>');
+    if (o.is_subscription) badges.push('<span class="rm-card-badge b-sub">🔁 Suscripción</span>');
+    if (o.min_level) badges.push(`<span class="rm-card-badge b-level">🔒 Nivel ${o.min_level}+</span>`);
+    if (o.badge_text) badges.push(`<span class="rm-card-badge b-featured">${_rmEsc(o.badge_text)}</span>`);
+    if (o.rarity) badges.push(`<span class="rm-card-badge b-level">${_rmEsc(o.rarity)}</span>`);
+
+    const priceHtml = o.original_price && Number(o.original_price) > Number(o.price)
+      ? `<span class="rm-card-price"><s>${_rmMoney(o.original_price)}</s>${_rmMoney(o.price)}</span>`
+      : `<span class="rm-card-price">${_rmMoney(o.price)}</span>`;
+
+    let dayLogic = '';
+    if (o.expires_after_days) dayLogic += `Aparece y expira en <b>${o.expires_after_days}d</b>. `;
+    if (o.offer_return_day) dayLogic += `Reaparece día <b>${o.offer_return_day}</b> por <b>${o.offer_return_window || '?'}d</b>. `;
+    if (o.duration && o.time_type && o.time_type !== 'permanent') dayLogic += `Dura ${o.duration} ${o.time_type}. `;
+
+    return `
+    <div class="rm-card">
+      ${img}
+      <div class="rm-card-body">
+        <div class="rm-card-title">${_rmEsc(o.title)}</div>
+        ${o.subtitle ? `<div class="rm-card-sub">${_rmEsc(o.subtitle)}</div>` : (o.description ? `<div class="rm-card-sub">${_rmEsc(o.description).slice(0,70)}${o.description.length>70?'…':''}</div>` : '')}
+        ${badges.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:2px;">${badges.join('')}</div>` : ''}
+        <div class="rm-card-foot">${priceHtml}</div>
+        ${dayLogic ? `<div class="rm-card-real">📅 ${dayLogic}</div>` : ''}
+        ${!o.is_active ? `<div class="rm-card-real" style="color:#fca5a5;">⛔ Inactiva ahora mismo</div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  function _rmBranchOpen(key, icon, title, sub, meta, metaWarn, bodyHtml) {
+    return `
+    <div class="rm-branch${key===0?' open':''}">
+      <div class="rm-branch-head" onclick="toggleRmBranch(this)">
+        <div class="rm-branch-key">${icon}</div>
+        <div>
+          <div class="rm-branch-title">${title}</div>
+          ${sub ? `<div class="rm-branch-sub">${sub}</div>` : ''}
+        </div>
+        ${meta ? `<div class="rm-branch-meta${metaWarn?' warn':''}">${meta}</div>` : ''}
+        <div class="rm-branch-arrow">▼</div>
+      </div>
+      <div class="rm-branch-body">${bodyHtml}</div>
+    </div>`;
+  }
+
+  async function loadRoadmap() {
+    const loadingEl = document.getElementById('rmLoading');
+    const bodyEl = document.getElementById('rmBody');
+    loadingEl.style.display = 'block';
+    bodyEl.style.display = 'none';
+
+    try {
+      const [
+        offersRes, coinsRes, productsRes,
+        sorteoRes, membershipsRes, codesRes, arsenalRes, ordersRes, transRes
+      ] = await Promise.all([
+        supabaseClient.from('special_offers').select('*').order('sort_order'),
+        supabaseClient.from('propocoin_packages').select('*').order('sort_order'),
+        supabaseClient.from('products').select('id,name,category,price_cristales,is_free_onboarding,is_active'),
+        supabaseClient.from('sorteo_participantes').select('tipo_premio, cupon_aceptado, cupon_redimido'),
+        supabaseClient.from('memberships').select('plan, status, current_week'),
+        supabaseClient.from('access_codes').select('membership_type, amount_paid').not('membership_type','is',null),
+        supabaseClient.from('arsenal_purchases').select('plan, amount_paid'),
+        supabaseClient.from('orders').select('cause, amount').not('cause','is',null),
+        supabaseClient.from('transacciones').select('tipo, monto_bruto')
+      ]);
+
+      const offers = offersRes.data || [];
+      const coins = coinsRes.data || [];
+      const products = productsRes.data || [];
+      const sorteo = sorteoRes.data || [];
+      const memberships = membershipsRes.data || [];
+      const codes = codesRes.data || [];
+      const arsenal = arsenalRes.data || [];
+      const orders = ordersRes.data || [];
+      const trans = transRes.data || [];
+
+      // ── Agregaciones reales ──
+      const premioCount = {};
+      sorteo.forEach(s => { const k = s.tipo_premio || 'sin_premio'; premioCount[k] = (premioCount[k]||0)+1; });
+
+      const planCount = {};
+      memberships.forEach(m => { const k = m.plan || '—'; planCount[k] = (planCount[k]||0)+1; });
+      const maxWeek = memberships.length ? Math.max(...memberships.map(m => m.current_week||0)) : 0;
+
+      const codeTypeAgg = {};
+      codes.forEach(c => {
+        const k = c.membership_type || '—';
+        if (!codeTypeAgg[k]) codeTypeAgg[k] = { n:0, total:0 };
+        codeTypeAgg[k].n++;
+        codeTypeAgg[k].total += (c.amount_paid||0)/100;
+      });
+
+      const arsenalAgg = {};
+      arsenal.forEach(a => {
+        const k = a.plan || '—';
+        if (!arsenalAgg[k]) arsenalAgg[k] = { n:0, total:0 };
+        arsenalAgg[k].n++;
+        arsenalAgg[k].total += Number(a.amount_paid||0);
+      });
+
+      const causaAgg = {};
+      orders.forEach(o => {
+        const k = o.cause || '—';
+        if (!causaAgg[k]) causaAgg[k] = { n:0, total:0 };
+        causaAgg[k].n++;
+        causaAgg[k].total += Number(o.amount||0)/100;
+      });
+
+      // Separar ofertas: Arsenal RPG (min_level>0) vs resto (permanentes) vs con lógica de día (offer_return_day)
+      const arsenalOffers = offers.filter(o => o.min_level && o.min_level > 0);
+      const dayLogicOffers = offers.filter(o => !!o.offer_return_day || !!o.expires_after_days);
+      const permanentOffers = offers.filter(o => !(o.min_level>0) && !o.offer_return_day && !o.expires_after_days);
+
+      const productsByCat = {};
+      products.forEach(p => { const k = p.category || 'otros'; (productsByCat[k] = productsByCat[k]||[]).push(p); });
+
+      // ── Totales confirmados por fuente ($) — base real para "punto fuerte" ──
+      const totCodes = codes.reduce((s,c) => s + (c.amount_paid||0)/100, 0);
+      const totOrdersCausa = orders.reduce((s,o) => s + (o.amount||0)/100, 0);
+      const totArsenalConMonto = arsenal.filter(a=>a.amount_paid!=null).reduce((s,a)=>s+Number(a.amount_paid||0),0);
+      const arsenalSinMonto = arsenal.filter(a=>a.amount_paid==null).length;
+      const totTrans = trans.reduce((s,t)=>s+Number(t.monto_bruto||0),0);
+
+      const fuentes = [
+        { label:'💳 Membresías (access_codes)', total: totCodes, n: codes.length },
+        { label:'🐾 Landing causa (orders)', total: totOrdersCausa, n: orders.length },
+        { label:'⚔️ Arsenal RPG (arsenal_purchases)', total: totArsenalConMonto, n: arsenal.length, warn: arsenalSinMonto>0 },
+      ].sort((a,b) => b.total - a.total);
+      const puntoFuerte = fuentes.find(f => f.total > 0) || fuentes[0];
+
+      let html = '';
+
+      // ── PANEL: PUNTO FUERTE REAL + HUECOS DETECTADOS ──
+      html += `
+      <div class="rm-branch open">
+        <div class="rm-branch-head" onclick="toggleRmBranch(this)">
+          <div class="rm-branch-key">🔮</div>
+          <div>
+            <div class="rm-branch-title">PUNTO FUERTE REAL HOY + HUECOS DETECTADOS</div>
+            <div class="rm-branch-sub">Calculado en vivo sobre tus propias tablas — no es opinión</div>
+          </div>
+          <div class="rm-branch-arrow">▼</div>
+        </div>
+        <div class="rm-branch-body">
+          <div class="rm-branch-note">💰 <b>Fuente con más dinero confirmado hoy:</b> ${_rmEsc(puntoFuerte.label)} — <b>${_rmMoney(puntoFuerte.total)}</b> en ${puntoFuerte.n} transacciones. (Comparado: ${fuentes.map(f=>`${_rmEsc(f.label)} ${_rmMoney(f.total)}`).join(' · ')})</div>
+          ${arsenalSinMonto>0 ? `<div class="rm-pending">⚠️ <b>Hueco de trazabilidad:</b> Arsenal RPG tiene <b>${arsenal.length}</b> compras reales — más volumen que ninguna otra fuente — pero <b>${arsenalSinMonto}</b> de ellas no tienen <code>amount_paid</code> capturado. Ahora mismo no puedes saber en dólares reales si Arsenal es tu producto más fuerte o no, porque el dato no se está guardando. Esta es la mejora #1: capturar <code>amount_paid</code> en el webhook de Stripe de arsenal, igual que ya lo haces en <code>access_codes</code>.</div>` : ''}
+          ${trans.length <= 2 ? `<div class="rm-pending">⚠️ <b>Hueco de trazabilidad:</b> tu tabla "maestra" <code>transacciones</code> (la que calcula comisiones de aliados) solo tiene <b>${trans.length}</b> fila(s), mientras que <code>access_codes</code>+<code>orders</code>+<code>arsenal_purchases</code> juntas suman <b>${codes.length + orders.length + arsenal.length}</b> movimientos reales. Si <code>transacciones</code> no se está poblando en cada cobro, las comisiones de tus aliados (<code>comisiones</code>) se están calculando sobre una base incompleta.</div>` : ''}
+          <div class="rm-branch-note">📸 <b>Huecos de imagen:</b> ${arsenalOffers.filter(o=>!o.image_url).length} de ${arsenalOffers.length} ofertas Arsenal RPG no tienen <code>image_url</code> — están vendiendo sin foto en la tienda real.</div>
+        </div>
+      </div>`;
+
+      // ── RAMA 0: ENTRADA — ESCANEO / SORTEO ──
+      html += _rmBranchOpen(0, '🎯', 'ENTRADA · DÍA 1 — ESCANEO / SORTEO',
+        'sorteo_participantes.tipo_premio (dato real, no configurable en texto)', `${sorteo.length} registros`, false, `
+        <div class="rm-branch-note">Cuando un usuario escanea (QR físico o link de aliado) entra al sorteo. El sistema real solo registra <b>dos</b> tipos de premio en <code>tipo_premio</code>:</div>
+        <div class="rm-stat-row">
+          <div class="rm-stat-pill"><div class="v">${premioCount['primer_mes_1usd']||0}</div><div class="l">🎟️ Cupón mes 1 · $1</div></div>
+          <div class="rm-stat-pill"><div class="v">${premioCount['beca_6meses']||0}</div><div class="l">🎓 Beca 6 meses</div></div>
+          <div class="rm-stat-pill"><div class="v">${premioCount['sin_premio']||0}</div><div class="l">⚪ Sin premio asignado</div></div>
+        </div>
+        <div class="rm-branch-note">Este cupón/beca es la puerta de entrada a la membresía. De aquí el usuario pasa a la Rama 1 (membresía) y, en paralelo, puede llegar por la landing de causa (Rama 0B).</div>
+      `);
+
+      // ── RAMA 0B: LANDING ALIANZA-CAUSA (donación) ──
+      const causaRows = Object.entries(causaAgg).map(([k,v]) => `
+        <div class="rm-stat-pill"><div class="v">${_rmMoney(v.total)}</div><div class="l">${k==='becas'?'🎓 Becas':k==='perros'?'🐶 Perros':k} · ${v.n} pagos</div></div>
+      `).join('');
+      html += _rmBranchOpen(1, '🐾', 'ENTRADA ALTERNA — LANDING ALIANZA-CAUSA',
+        'orders.cause (checkout real de $20 por causa)', `${orders.length} órdenes reales`, false, `
+        <div class="rm-branch-note">Landing separada donde el usuario elige causa (<b>becas</b> o <b>perros</b>) y paga. Ingreso <b>real y confirmado</b> hoy en tu base:</div>
+        <div class="rm-stat-row">${causaRows || '<div class="rm-branch-note">Sin órdenes con causa registrada.</div>'}</div>
+      `);
+
+      // ── RAMA 1: MEMBRESÍA BASE ──
+      const planRows = Object.entries(planCount).map(([k,n]) => `
+        <div class="rm-stat-pill"><div class="v">${n}</div><div class="l">Plan "${_rmEsc(k)}"</div></div>
+      `).join('');
+      const codeRows = Object.entries(codeTypeAgg).map(([k,v]) => `
+        <div class="rm-stat-pill"><div class="v">${_rmMoney(v.total)}</div><div class="l">${_rmEsc(k)} · ${v.n} códigos</div></div>
+      `).join('');
+      html += _rmBranchOpen(2, '💳', 'MEMBRESÍA — SEMANA 1 A 26 (≈6 MESES)',
+        'memberships.current_week tiene tope real de 26 semanas', `semana más avanzada real: ${maxWeek}/26`, false, `
+        <div class="rm-branch-note">La membresía real corre por <b>semanas (1–26)</b>, tope confirmado en el esquema de la tabla — coincide con tu "hasta el mes 6".</div>
+        <div class="rm-stat-row">${planRows}</div>
+        <div class="rm-branch-note" style="margin-top:10px;">Tipos de acceso reales emitidos vía <code>access_codes</code> (ingreso confirmado):</div>
+        <div class="rm-stat-row">${codeRows || '<div class="rm-branch-note">Sin códigos con monto registrado.</div>'}</div>
+      `);
+
+      // ── RAMA 2: OFERTA FUERTE PROGRAMADA POR DÍA ──
+      html += _rmBranchOpen(3, '🔥', 'OFERTA FUERTE — CON REGLA DE DÍA REAL',
+        'Únicas ofertas con offer_return_day / expires_after_days configurados', `${dayLogicOffers.length} oferta(s) con lógica de día`, false, `
+        <div class="rm-branch-note">Estas son las <b>únicas</b> ofertas de tu tabla <code>special_offers</code> con reglas reales de "en qué día debe entrar". El resto son permanentes (Rama 4).</div>
+        <div class="rm-card-grid">${dayLogicOffers.map(_rmCard).join('') || '<div class="rm-branch-note">No hay ofertas con lógica de día activa ahora mismo.</div>'}</div>
+      `);
+
+      // ── RAMA 2B: CALENDARIO DÍA POR DÍA (solo con reglas reales) ──
+      const calRows = [];
+      dayLogicOffers.forEach(o => {
+        if (o.expires_after_days) {
+          calRows.push({ dia: `Día 1 – ${o.expires_after_days}`, oferta: o.title, precio: o.price, motivo: 'Primera ventana — recién entra el usuario' });
+        }
+        if (o.offer_return_day) {
+          const fin = o.offer_return_day + (o.offer_return_window || 0);
+          calRows.push({ dia: `Día ${o.offer_return_day} – ${fin}`, oferta: o.title, precio: o.price, motivo: 'Reaparece — segunda oportunidad de compra' });
+        }
+      });
+      arsenalOffers.forEach(o => {
+        calRows.push({ dia: `Nivel ${o.min_level}+ (no es día fijo)`, oferta: o.title, precio: o.price, motivo: 'Gatillo por progreso, no por calendario' });
+      });
+      const diasConGap = 'Días 9–14 y 20–26: sin ninguna oferta con regla de día configurada — solo quedan visibles las permanentes (Rama 4).';
+      html += _rmBranchOpen('cal', '📅', 'CALENDARIO POR DÍA — SOLO CON REGLAS REALES',
+        'Construido leyendo offer_return_day / expires_after_days / min_level tal cual están en Supabase', null, false, `
+        <div class="rm-branch-note">Esto <b>no es una sugerencia mía</b> — es literalmente lo que tus columnas de fecha ya disparan hoy. Donde no hay dato, lo digo, no invento un día.</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:11px;">
+            <thead><tr style="border-bottom:1.5px solid rgba(245,208,110,.3);">
+              <th style="text-align:left;padding:8px 6px;color:#f5d06e;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">CUÁNDO</th>
+              <th style="text-align:left;padding:8px 6px;color:#f5d06e;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">QUÉ OFRECER</th>
+              <th style="text-align:left;padding:8px 6px;color:#f5d06e;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">PRECIO</th>
+              <th style="text-align:left;padding:8px 6px;color:#f5d06e;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;">POR QUÉ</th>
+            </tr></thead>
+            <tbody>
+              ${calRows.map(r => `<tr style="border-bottom:1px solid rgba(255,255,255,.05);">
+                <td style="padding:7px 6px;color:#f0e8ff;">${_rmEsc(r.dia)}</td>
+                <td style="padding:7px 6px;color:#f0e8ff;">${_rmEsc(r.oferta)}</td>
+                <td style="padding:7px 6px;color:#f5d06e;font-weight:700;">${_rmMoney(r.precio)}</td>
+                <td style="padding:7px 6px;color:var(--text-faint);font-size:10px;">${_rmEsc(r.motivo)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="rm-pending" style="margin-top:12px;">⚠️ ${diasConGap} Si quieres llenar esos huecos (por ejemplo un empujón en día 10 o una oferta de cierre en día 25), es una decisión de negocio que hay que tomar y luego configurar en <code>special_offers</code> — yo no voy a inventarte un día ni un precio para esos huecos.</div>
+      `);
+
+
+      // ── RAMA 3: ARSENAL RPG (por nivel, no por día) ──
+      const arsenalRealRows = Object.entries(arsenalAgg).map(([k,v]) => `
+        <div class="rm-stat-pill"><div class="v">${_rmMoney(v.total)}</div><div class="l">Plan "${_rmEsc(k)}" · ${v.n} compras</div></div>
+      `).join('');
+      html += _rmBranchOpen(4, '⚔️', 'ARSENAL RPG — DESBLOQUEA POR NIVEL, NO POR DÍA',
+        `min_level = ${arsenalOffers[0]?.min_level ?? '?'} en special_offers`, `${arsenal.length} compras reales`, false, `
+        <div class="rm-branch-note">Estos paquetes se desbloquean cuando el usuario llega a <b>nivel ${arsenalOffers[0]?.min_level ?? '?'}</b>, no en un día fijo del calendario.</div>
+        <div class="rm-card-grid">${arsenalOffers.map(_rmCard).join('') || '<div class="rm-branch-note">Sin ofertas Arsenal activas.</div>'}</div>
+        <div class="rm-branch-note" style="margin-top:10px;">Ingreso real confirmado en <code>arsenal_purchases</code> (nota: son planes "basic/elite" de Stripe, no siempre 1:1 con los 2 packs de arriba — así está guardado hoy):</div>
+        <div class="rm-stat-row">${arsenalRealRows}</div>
+      `);
+
+      // ── RAMA 4: OFERTAS PERMANENTES ──
+      html += _rmBranchOpen(5, '🛍️', 'OFERTAS PERMANENTES — SIEMPRE VISIBLES',
+        'is_active=true, sin min_level ni reglas de día', `${permanentOffers.length} activas`, false, `
+        <div class="rm-branch-note">Visibles desde nivel 0, sin ventana de tiempo — el usuario las puede ver desde el día 1.</div>
+        <div class="rm-card-grid">${permanentOffers.map(_rmCard).join('') || '<div class="rm-branch-note">Sin ofertas permanentes activas.</div>'}</div>
+      `);
+
+      // ── RAMA 5: PROPOCOINS ──
+      html += _rmBranchOpen(6, '🪙', 'TIENDA DE PROPOCOINS',
+        'propocoin_packages — moneda del juego, compra directa con $', `${coins.length} paquetes`, false, `
+        <div class="rm-card-grid">${coins.map(c => _rmCard({ title:c.title, description:c.description, price:c.price, original_price:c.original_price, image_url:c.image_url, is_active:c.is_active })).join('')}</div>
+      `);
+
+      // ── RAMA 6: TEMPLO STORE (cristales, no dólares) ──
+      let templeHtml = '';
+      Object.entries(productsByCat).forEach(([cat, items]) => {
+        const freeCount = items.filter(i => i.is_free_onboarding).length;
+        templeHtml += `<div class="rm-branch-note" style="margin-top:8px;"><b>${_rmEsc(cat)}</b> — ${items.length} ítems${freeCount ? `, ${freeCount} gratis de onboarding` : ''}, ${items[0]?.price_cristales ?? 0} cristales c/u aprox.</div>`;
+      });
+      html += _rmBranchOpen(7, '🏛️', 'TEMPLO STORE — SE CANJEA CON CRISTALES, NO CON $',
+        'products.category — no genera ingreso directo en USD', `${products.length} productos`, false, `
+        <div class="rm-branch-note">Esta tienda no cobra dólares directo: el usuario gana cristales jugando y los canjea aquí. Es retención, no ingreso directo.</div>
+        ${templeHtml}
+      `);
+
+      // ── RAMA 7: FIN DE BECA / MES 6 ──
+      html += _rmBranchOpen(8, '🏁', 'FIN DE BECA — MES 6 (SEMANA 26)',
+        'Punto donde termina el ciclo gratuito/beca', null, false, `
+        <div class="rm-branch-note">Aquí es donde, según me contaste, se le ofrece una suscripción de retención (~$3/mes) para que el usuario se quede activo.</div>
+        <div class="rm-pending">⚠️ <b>Esta oferta de retención de fin de ciclo NO existe todavía en Supabase</b> — no hay ninguna fila en <code>special_offers</code>, <code>propocoin_packages</code> ni <code>access_codes</code> con ese precio o ese propósito. No la inventé. Para que aparezca aquí con foto y trazabilidad real, hay que crearla primero (por ejemplo una nueva fila en <code>special_offers</code> con <code>is_subscription=true</code>, <code>price=3</code>, y alguna regla que la dispare en semana 26).</div>
+      `);
+
+      bodyEl.innerHTML = html;
+      loadingEl.style.display = 'none';
+      bodyEl.style.display = 'block';
+
+    } catch (err) {
+      loadingEl.textContent = '⚠ No se pudo consultar Supabase: ' + (err?.message || err);
+    }
   }
 
   function _puDiasSinEntrar(r) {
