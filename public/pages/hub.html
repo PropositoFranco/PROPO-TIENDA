@@ -3354,9 +3354,11 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
     try {
       const url = localStorage.getItem('_sb_url');
       const key = localStorage.getItem('_sb_key');
+      console.log('[STREAK-DEBUG] url/key presentes?', !!url, !!key, !!window.supabase);
       if (!url || !key || !window.supabase) return null;
-      sb2 = window.supabase.createClient(url, key, { auth:{ persistSession:false, autoRefreshToken:false, detectSessionInUrl:false } });
+      sb2 = window.supabase.createClient(url, key, { auth:{ persistSession:true, autoRefreshToken:false, detectSessionInUrl:false } });
       const { data: { session } } = await sb2.auth.getSession();
+      console.log('[STREAK-DEBUG] sesión encontrada?', !!session, session?.user?.id);
       if (!session) { sb2 = null; return null; }
       uid2 = session.user.id;
       return sb2;
@@ -3365,6 +3367,7 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
 
   async function loadMilestonesAndClaims() {
     const client = await initStreakSb();
+    console.log('[STREAK-DEBUG] client listo?', !!client, 'uid2:', uid2);
     if (!client || !uid2) return;
     const [{ data: ms }, { data: cl }] = await Promise.all([
       client.from('streak_milestones').select('id, day, title, description, icon_emoji').eq('is_active', true).order('day'),
@@ -3372,6 +3375,7 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
     ]);
     milestones = ms || [];
     claimedIds = new Set((cl || []).map(c => c.milestone_id));
+    console.log('[STREAK-DEBUG] milestones:', milestones, 'claimedIds:', [...claimedIds], 'currentStreak:', currentStreak);
     maybeShowModal();
   }
 
@@ -3449,6 +3453,7 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
 
   // Llamado desde el handler de 'profile' en el listener principal de mensajes
   window.__checkStreakMilestones = function(streakDays) {
+    console.log('[STREAK-DEBUG] checkStreakMilestones llamado con streakDays =', streakDays);
     currentStreak = streakDays || 0;
     if (!milestones.length) loadMilestonesAndClaims();
     else maybeShowModal();
