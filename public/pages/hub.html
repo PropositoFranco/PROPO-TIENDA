@@ -1234,6 +1234,12 @@ body.hub-locked .maestro-bubble { display: flex; }
   50%     { transform: translateY(-5px); }
 }
 
+/* ══ GLOBO MÓVIL DEL MAESTRO — versión propia para pantallas chicas, no
+   depende de la posición del personaje (que en mobile es enorme/parcialmente
+   fuera de pantalla). Oculto por default; el CSS mobile inyectado (_mobile_css)
+   la posiciona y la muestra cuando hay evaluación pendiente. ══ */
+.maestro-bubble-mobile { display: none; }
+
 /* ══ EMPUJONCITO: feedback cuando picas algo bloqueado (no invasivo) ══ */
 .maestro-bubble-nudge { animation: bubbleNudge 0.45s ease-in-out !important; }
 @keyframes bubbleNudge {
@@ -1329,6 +1335,14 @@ body.hub-locked .maestro-bubble { display: flex; }
           <div class="maestro-bubble-label">⚔ Maestro Templario</div>
           <div class="maestro-bubble-text" id="maestro-bubble-text">Cada semana vengo a acompañarte, Templario. Tu Evaluación te espera — pícale ahí abajo y sigamos avanzando 👇</div>
         </div>
+      </div>
+
+      <!-- Globo móvil (independiente del personaje, ver .maestro-bubble-mobile) -->
+      <div class="maestro-bubble-mobile" id="maestro-bubble-mobile">
+        <div class="mbm-label">⚔ MAESTRO TEMPLARIO</div>
+        <div class="mbm-text">Tu Evaluación semanal te espera, Templario</div>
+        <div class="mbm-arrow">👇</div>
+        <div class="mbm-cta">CONTÉSTALA AQUÍ ABAJO</div>
       </div>
 
       <!-- Grid -->
@@ -1837,12 +1851,14 @@ function playSoftChime() {
 
 function nudgeMaestro() {
   var bubble = document.getElementById('maestro-bubble');
+  var bubbleMobile = document.getElementById('maestro-bubble-mobile');
   var bar = document.getElementById('continue-bar');
-  if (bubble) {
-    bubble.classList.remove('maestro-bubble-nudge');
-    void bubble.offsetWidth;
-    bubble.classList.add('maestro-bubble-nudge');
-  }
+  [bubble, bubbleMobile].forEach(function(b) {
+    if (!b) return;
+    b.classList.remove('maestro-bubble-nudge');
+    void b.offsetWidth;
+    b.classList.add('maestro-bubble-nudge');
+  });
   if (bar) {
     bar.classList.remove('continue-bar-nudge');
     void bar.offsetWidth;
@@ -2102,6 +2118,69 @@ const isMobile = vw < 1024;
         z-index: 60 !important;
         pointer-events: none !important;
         opacity: 0.95 !important;
+      }
+
+      /* ══ GLOBO DEL MAESTRO EN MÓVIL — vive suelto en .portals-zone, no
+         colgado del personaje (que en mobile es gigante y queda a medias
+         fuera de pantalla) — así nunca tapa el título PROPO-TIENDA. ══ */
+      .maestro-char .maestro-bubble { display: none !important; }
+      body.hub-locked .maestro-bubble-mobile {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 7px !important;
+        position: absolute !important;
+        top: 6px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: min(90vw, 420px) !important;
+        z-index: 65 !important;
+        padding: 18px 22px 16px !important;
+        box-sizing: border-box !important;
+        background: linear-gradient(135deg, rgba(24,10,42,0.98), rgba(48,18,70,0.98)) !important;
+        border: 2px solid rgba(212,175,55,0.85) !important;
+        border-radius: 20px !important;
+        box-shadow: 0 0 45px rgba(212,175,55,0.55), 0 0 16px rgba(212,175,55,0.6), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+        text-align: center !important;
+        animation: bubbleFloat 3.2s ease-in-out infinite !important;
+        pointer-events: none !important;
+      }
+      .mbm-label {
+        font-family: 'Cinzel', serif !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+        letter-spacing: 2.5px !important;
+        color: #D4AF37 !important;
+        text-shadow: 0 0 10px rgba(212,175,55,0.9) !important;
+      }
+      .mbm-text {
+        font-family: 'Nunito', sans-serif !important;
+        font-size: clamp(16px, 4.6vw, 21px) !important;
+        font-weight: 800 !important;
+        line-height: 1.35 !important;
+        color: #fff !important;
+        text-shadow: 0 0 10px rgba(0,0,0,0.6) !important;
+      }
+      .mbm-arrow {
+        font-size: 28px !important;
+        line-height: 1 !important;
+        animation: mbmArrowBounce 1.1s ease-in-out infinite !important;
+        filter: drop-shadow(0 0 8px rgba(212,175,55,0.85)) !important;
+      }
+      .mbm-cta {
+        font-family: 'Cinzel', serif !important;
+        font-size: 12px !important;
+        font-weight: 900 !important;
+        letter-spacing: 1.8px !important;
+        color: #fde68a !important;
+        background: rgba(212,175,55,0.18) !important;
+        border: 1px solid rgba(212,175,55,0.6) !important;
+        border-radius: 100px !important;
+        padding: 6px 18px !important;
+      }
+      @keyframes mbmArrowBounce {
+        0%,100% { transform: translateY(0); }
+        50%     { transform: translateY(7px); }
       }
 
       /* ══ GRID → SCROLL HORIZONTAL (como PC, pero deslizable) ══ */
