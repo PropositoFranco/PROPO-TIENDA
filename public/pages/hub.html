@@ -3430,7 +3430,7 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
   }
 
   function maybeShowModal() {
-    if (pendingMilestone) return; // ya hay uno mostrándose / pendiente de reclamar
+    if (pendingMilestone) return true; // ya hay uno mostrándose / pendiente de reclamar
     const next = milestones
       .filter(m => currentStreak >= m.day && !claimedIds.has(m.id))
       .sort((a,b) => a.day - b.day)[0];
@@ -3438,7 +3438,8 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
     // camino con todos los días) con el hito de hoy ya brillando y listo
     // para tocar — así el usuario ve su progreso sin depender del ícono 🔥
     // del header (que además queda bloqueado si hay una evaluación pendiente).
-    if (next) { openStreakPanel(); }
+    if (next) { openStreakPanel(); return true; }
+    return false;
   }
 
   function renderChest(m) {
@@ -3537,7 +3538,10 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
     document.getElementById('streak-coin-close-btn').addEventListener('click', () => {
       document.getElementById('streak-modal').style.display = 'none';
       pendingMilestone = null;
-      maybeShowModal();
+      // Si ya no queda ningún otro hito pendiente, cerramos también el pase
+      // completo detrás — así no se queda flotando sobre el hub sin motivo.
+      const stillPending = maybeShowModal();
+      if (!stillPending) closeStreakPanel();
     });
   }
 
@@ -3702,7 +3706,10 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
           window.parent.postMessage({ type:'navigate', data:'profile' }, '*');
         }
       }
-      maybeShowModal(); // por si el otro hito (15 o 30) también está listo
+      // Si ya no queda ningún otro hito pendiente (15/30), no dejamos el pase
+      // completo abierto detrás — cerramos todo y regresamos limpio al hub.
+      const stillPending = maybeShowModal();
+      if (!stillPending) closeStreakPanel();
     });
   }
 
