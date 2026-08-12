@@ -1150,8 +1150,17 @@ body.perf-low #continue-bar::after {
   98% { transform: rotate(-2deg); }
 }
 
-/* ══ MODO ENFOQUE: evaluación pendiente — solo #continue-bar es picable ══ */
-body.hub-locked #header,
+/* ══ MODO ENFOQUE: evaluación pendiente — solo #continue-bar es picable ══
+   ⚠️ El 🔥 (streak-fab) queda EXENTO a propósito: un premio de racha ya
+   ganado debe poder verse/reclamarse aunque haya una evaluación pendiente
+   — es prioritario, no debe esconderse detrás del modo enfoque. Por eso
+   ya NO apagamos #header completo (opacity/filter de un padre no se puede
+   "reencender" en un hijo — se aplican a todo el subárbol junto), sino
+   cada pieza del header por separado, dejando fuera al ícono de racha. */
+body.hub-locked #header .profile-block,
+body.hub-locked #header .header-logo,
+body.hub-locked #header .coin-display,
+body.hub-locked #header .header-icons > .hicon:not(#streak-fab),
 body.hub-locked .portals-grid,
 body.hub-locked #bottom-nav,
 body.hub-locked #oraculo-btn {
@@ -1159,6 +1168,11 @@ body.hub-locked #oraculo-btn {
   filter: grayscale(0.55) brightness(0.5);
   opacity: 0.45;
   transition: opacity 0.6s ease, filter 0.6s ease;
+}
+body.hub-locked #streak-fab {
+  pointer-events: auto;
+  filter: none;
+  opacity: 1;
 }
 body.hub-locked .special-offer {
   pointer-events: none;
@@ -3398,7 +3412,7 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
     console.log('[STREAK-DEBUG] client listo?', !!client, 'uid2:', uid2);
     if (!client || !uid2) return;
     const [{ data: ms }, { data: cl }, { data: wins }] = await Promise.all([
-      client.from('streak_milestones').select('id, day, title, description, icon_emoji').eq('is_active', true).order('day'),
+      client.from('streak_milestones').select('id, day, title, description, icon_emoji, reward_type, coin_amount').eq('is_active', true).order('day'),
       client.from('user_streak_claims').select('milestone_id').eq('user_id', uid2),
       client.from('vip_ruleta_wins').select('source, prize_id, prize_name').eq('user_id', uid2).like('source', 'streak_day%'),
     ]);
@@ -3450,6 +3464,116 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
     });
   }
 
+  // ── Hitos de MONEDAS (días 1-14, 16-29) — no usan la ruleta, van directo
+  // a la función segura claim_streak_coin_reward vía RPC. ──
+  function renderCoinChest(m) {
+    const modal = document.getElementById('streak-modal');
+    const body  = document.getElementById('streak-modal-body');
+    const panelOpen = document.getElementById('streak-panel-overlay').style.display === 'flex';
+    body.innerHTML = `
+      ${panelOpen ? `<button id="streak-back-btn" style="position:absolute;top:14px;left:14px;background:none;border:none;color:rgba(212,175,55,0.75);font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;gap:4px;">← VOLVER AL PASE</button>` : ''}
+      <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:rgba(212,175,55,0.6);margin-bottom:6px;">⚔ HITO DE RACHA · DÍA ${m.day}</div>
+      <div style="font-family:'Cinzel',serif;font-size:20px;font-weight:900;background:linear-gradient(135deg,#ffe87a,#d4af37,#fde68a);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:sbpGold 4s linear infinite;margin-bottom:10px;">${m.title || ('Racha de ' + m.day + ' días')}</div>
+      <div id="streak-chest" style="font-size:64px;margin:18px 0;cursor:pointer;animation:sbpChestPulse 1.8s ease-in-out infinite;filter:drop-shadow(0 0 24px rgba(212,175,55,0.7));">🪙</div>
+      <div style="font-family:'Raleway',sans-serif;font-size:12px;color:rgba(200,185,240,0.6);margin-bottom:18px;line-height:1.5;">+${m.coin_amount} monedas te esperan.</div>
+      <button id="streak-coin-open-btn" style="padding:12px 28px;border-radius:100px;background:linear-gradient(135deg,#4c1d95,#7c3aed 50%,#d4af37);border:none;color:#fff;font-family:'Cinzel',serif;font-weight:900;font-size:11px;letter-spacing:2px;cursor:pointer;box-shadow:0 0 30px rgba(212,175,55,0.5);">✦ TOCAR PARA ABRIR</button>
+    `;
+    modal.style.display = 'flex';
+    document.getElementById('streak-coin-open-btn').addEventListener('click', () => claimCoinMilestone(m));
+    const backBtn = document.getElementById('streak-back-btn');
+    if (backBtn) backBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+      pendingMilestone = null;
+    });
+  }
+
+  async function claimCoinMilestone(m) {
+    const btn = document.getElementById('streak-coin-open-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⟳ ABRIENDO...'; }
+    const client = await initStreakSb();
+    if (!client || !uid2) return;
+    const { data, error } = await client.rpc('claim_streak_coin_reward', { p_milestone_id: m.id });
+    console.log('[STREAK-DEBUG] claim_streak_coin_reward →', { error, data });
+    if (error || !data || !data.success) {
+      // Antes esto fallaba en silencio (el botón solo volvía a su texto
+      // original sin explicar nada). Ahora se ve por qué lo rechazó el
+      // servidor — casi siempre es que tu racha real todavía no llega a
+      // este día (revisa DEBUG_FORCE_STREAK_DAYS si el panel muestra un
+      // día como disponible que tu cuenta aún no alcanzó de verdad).
+      const reasons = {
+        streak_not_reached: 'Tu racha real todavía no llega a este día.',
+        already_claimed: 'Ese día ya estaba reclamado.',
+        milestone_not_found: 'Este hito no existe o está inactivo.',
+        not_a_coin_milestone: 'Este hito no es de monedas.',
+        no_auth: 'Tu sesión expiró, vuelve a iniciar sesión.',
+      };
+      const reasonKey = data && data.error;
+      const msg = reasons[reasonKey] || 'No se pudo reclamar. Intenta de nuevo.';
+      if (btn) { btn.disabled = false; btn.textContent = '✦ TOCAR PARA ABRIR'; }
+      const errBox = document.getElementById('streak-chest');
+      if (errBox) errBox.insertAdjacentHTML('afterend', `<div id="streak-claim-error" style="font-family:'Nunito',sans-serif;font-size:11px;color:#fca5a5;margin:-6px 0 12px;">⚠ ${msg}</div>`);
+      return;
+    }
+    claimedIds.add(m.id);
+    // Mismo evento que usa la ruleta para que React actualice el balance de
+    // monedas vía usePlayerStore (addCristales), sin duplicar esa lógica aquí.
+    window.parent.postMessage({ type:'streak-reward-claimed', data:{ day:m.day, prizeId:'coins', xp:0, coins:data.coin_amount } }, '*');
+    renderStreakFab();
+    // El pase (#streak-panel-track) puede seguir abierto detrás del modal —
+    // sin esto se queda pintado con el estado viejo (mostrando "disponible"
+    // en un día que ya se reclamó) hasta que se cierre y se vuelva a abrir.
+    renderStreakPanelTrack();
+    renderCoinWin(data.coin_amount);
+  }
+
+  function renderCoinWin(amount) {
+    const body = document.getElementById('streak-modal-body');
+    body.innerHTML = `
+      <div style="font-size:64px;margin-bottom:12px;animation:sbpUnlock .6s cubic-bezier(.34,1.3,.64,1);filter:drop-shadow(0 0 24px #d4af37);">🪙</div>
+      <div style="display:inline-block;padding:4px 16px;border-radius:100px;background:rgba(212,175,55,0.15);border:1px solid #d4af37;color:#fde68a;font-family:'Cinzel',serif;font-size:8px;letter-spacing:3px;margin-bottom:14px;">✦ PREMIO GANADO</div>
+      <div style="font-family:'Cinzel',serif;font-size:24px;font-weight:900;color:#fde68a;margin-bottom:18px;">+${amount} Coins</div>
+      <button id="streak-coin-close-btn" style="padding:12px 24px;border-radius:100px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);color:#fff;font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;cursor:pointer;">CONTINUAR</button>
+    `;
+    document.getElementById('streak-coin-close-btn').addEventListener('click', () => {
+      document.getElementById('streak-modal').style.display = 'none';
+      pendingMilestone = null;
+      maybeShowModal();
+    });
+  }
+
+  // ── Vista previa (solo lectura) de un hito de ruleta aún bloqueado —
+  // estilo "battle pass" del perfil: muestra el pool real de premios en vez
+  // de dejarlo en "premio sorpresa" sin poder tocarlo. No reclama nada. ──
+  function renderRewardPreview(m) {
+    const modal = document.getElementById('streak-modal');
+    const body  = document.getElementById('streak-modal-body');
+    const panelOpen = document.getElementById('streak-panel-overlay').style.display === 'flex';
+    const daysLeft = Math.max(0, m.day - currentStreak);
+    body.innerHTML = `
+      ${panelOpen ? `<button id="streak-back-btn" style="position:absolute;top:14px;left:14px;background:none;border:none;color:rgba(212,175,55,0.75);font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;gap:4px;">← VOLVER AL PASE</button>` : ''}
+      <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:rgba(212,175,55,0.6);margin-bottom:6px;">🔒 HITO DE RACHA · DÍA ${m.day}</div>
+      <div style="font-family:'Cinzel',serif;font-size:20px;font-weight:900;background:linear-gradient(135deg,#ffe87a,#d4af37,#fde68a);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:sbpGold 4s linear infinite;margin-bottom:4px;">${m.title || ('Racha de ' + m.day + ' días')}</div>
+      <div style="font-family:'Nunito',sans-serif;font-size:10px;color:rgba(200,185,240,0.55);letter-spacing:0.5px;margin-bottom:16px;">Disponible en ${daysLeft} día${daysLeft === 1 ? '' : 's'}</div>
+      <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;color:#fde68a;margin-bottom:12px;">✦ ESTO PUEDES GANAR ✦</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:22px;">
+        ${SPRIZES.map(p => `
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid ${p.color}40;">
+            <span style="font-size:22px;filter:drop-shadow(0 0 6px ${p.color}88);">${p.icon}</span>
+            <span style="font-family:'Cinzel',serif;font-size:7px;font-weight:900;color:${p.color};text-align:center;line-height:1.2;letter-spacing:0.3px;">${p.name}</span>
+            <span style="font-family:'Nunito',sans-serif;font-size:7px;font-weight:700;color:rgba(255,255,255,0.65);text-align:center;line-height:1.2;">${p.type === 'tool' ? p.value : (p.amount + ' XP')}</span>
+          </div>
+        `).join('')}
+      </div>
+      <button id="streak-preview-close-btn" style="padding:12px 28px;border-radius:100px;background:rgba(255,255,255,0.06);border:1px solid rgba(212,175,55,0.4);color:#fde68a;font-family:'Cinzel',serif;font-weight:900;font-size:11px;letter-spacing:2px;cursor:pointer;">ENTENDIDO</button>
+    `;
+    modal.style.display = 'flex';
+    document.getElementById('streak-preview-close-btn').addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+    const backBtn = document.getElementById('streak-back-btn');
+    if (backBtn) backBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+  }
+
   // Rueda SVG en JS puro — mismos slices/colores/íconos que PRIZES en VipRuleta.jsx
   function buildWheelSVG() {
     const cx = 140, cy = 140, r = 125, n = SPRIZES.length, slice = (2 * Math.PI) / n;
@@ -3484,6 +3608,9 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
           <svg viewBox="0 0 20 24" width="20" height="24"><polygon points="10,0 20,20 10,14 0,20" fill="#d4af37" stroke="#fde68a" stroke-width="1"/></svg>
         </div>
         <div id="streak-wheel" style="width:220px;height:220px;">${buildWheelSVG()}</div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:5px;max-width:260px;margin:0 auto 16px;">
+        ${SPRIZES.map(p => `<span style="display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:100px;background:${p.color}18;border:1px solid ${p.color}55;font-family:'Nunito',sans-serif;font-size:7px;font-weight:800;color:${p.color};white-space:nowrap;">${p.icon} ${p.name}</span>`).join('')}
       </div>
       <button id="streak-spin-btn" style="padding:12px 28px;border-radius:100px;background:linear-gradient(135deg,#4c1d95,#7c3aed 50%,#d4af37);border:none;color:#fff;font-family:'Cinzel',serif;font-weight:900;font-size:11px;letter-spacing:2px;cursor:pointer;box-shadow:0 0 30px rgba(212,175,55,0.5);">⚡ ¡GIRAR AHORA!</button>
     `;
@@ -3606,15 +3733,18 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
     }
   }
 
-  function tierOf(day) {
-    if (day >= 30) return { tag: 'LEGENDARIO', cls: 'tier-legendary' };
-    if (day >= 15) return { tag: 'ÉPICO', cls: 'tier-epic' };
-    return { tag: '', cls: '' };
+  function tierOf(m) {
+    // Solo los dos hitos de ruleta (día 15/30) llevan la corona/tag grande.
+    // Antes esto usaba `day >= 15`, lo cual funcionaba cuando esos eran los
+    // únicos hitos — pero ahora los 28 días de monedas también son >= 15 en
+    // varios casos (16-29), así que hay que amarrarlo al tipo de premio.
+    if (!m || m.reward_type !== 'vip_ruleta_spin') return { tag: '', cls: '' };
+    if (m.day >= 30) return { tag: 'LEGENDARIO', cls: 'tier-legendary' };
+    return { tag: 'ÉPICO', cls: 'tier-epic' };
   }
 
   function mysteryPreviewHtml() {
-    const icons = SPRIZES.map(p => p.icon);
-    return `<div class="pass-mystery-row">${icons.map(ic => `<span class="pass-mystery-icon">${ic}</span>`).join('')}</div>`;
+    return `<div class="pass-mystery-row">${SPRIZES.map(p => `<span class="pass-mystery-icon" title="${p.name}">${p.icon}</span>`).join('')}</div>`;
   }
 
   function renderStreakPanelTrack() {
@@ -3645,9 +3775,10 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
         const claimed = claimedIds.has(m.id);
         const available = currentStreak >= m.day && !claimed;
         const daysLeft = Math.max(0, m.day - currentStreak);
-        const tier = tierOf(m.day);
+        const tier = tierOf(m);
         const reached = claimed || available;
         const progressPct = Math.min(100, Math.max(0, (currentStreak / m.day) * 100));
+        const isSpin = m.reward_type === 'vip_ruleta_spin';
 
         html += `<div class="pass-connector ${reached ? 'filled' : ''}"><div class="pass-connector-fill" style="width:${claimed ? 100 : (available ? 100 : progressPct)}%"></div></div>`;
 
@@ -3658,18 +3789,36 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
         else { label = `EN ${daysLeft} DÍAS`; stateCls = 'locked'; }
 
         const won = claimed ? streakWinsByDay[m.day] : null;
-        const icon = claimed ? (won ? won.icon : '📖') : (available ? (m.icon_emoji || '🎁') : '🔒');
+        // Las monedas nunca son misterio (el monto ya se conoce), así que su
+        // ícono se mantiene visible incluso bloqueado. Solo los hitos de
+        // ruleta (15/30) se ocultan con 🔒 hasta que se pueden abrir.
+        const icon = claimed
+          ? (isSpin ? (won ? won.icon : '📖') : '🪙')
+          : (available ? (isSpin ? (m.icon_emoji || '🎁') : (m.icon_emoji || '🪙'))
+                        : (isSpin ? '🔒' : (m.icon_emoji || '🪙')));
 
-        const rewardHtml = claimed
-          ? `<div class="pass-reward-line claimed"><span class="pass-reward-icon" style="color:${won ? won.color : '#4ade80'}">${won ? won.icon : '🎁'}</span><span class="pass-reward-name">${won ? won.name : 'Premio reclamado'}</span></div>`
-          : `<div class="pass-reward-teaser">
-               <div class="pass-reward-teaser-label">${available ? '🎲 ¡GIRA Y DESCUBRE!' : '🎁 PREMIO SORPRESA'}</div>
+        // Bloqueado + ruleta ahora también se puede tocar: abre una vista
+        // previa (no reclamable) de los premios posibles, en vez del texto
+        // fijo "premio sorpresa" que no llevaba a ningún lado.
+        const clickable = available || (!claimed && isSpin);
+
+        let rewardHtml;
+        if (claimed) {
+          rewardHtml = isSpin
+            ? `<div class="pass-reward-line claimed"><span class="pass-reward-icon" style="color:${won ? won.color : '#4ade80'}">${won ? won.icon : '🎁'}</span><span class="pass-reward-name">${won ? won.name : 'Premio reclamado'}</span></div>`
+            : `<div class="pass-reward-line claimed"><span class="pass-reward-icon" style="color:#d4af37">🪙</span><span class="pass-reward-name">+${m.coin_amount} monedas</span></div>`;
+        } else if (isSpin) {
+          rewardHtml = `<div class="pass-reward-teaser">
+               <div class="pass-reward-teaser-label">${available ? '🎲 ¡GIRA Y DESCUBRE!' : '🔍 TOCA PARA VER PREMIOS'}</div>
                ${mysteryPreviewHtml()}
              </div>`;
+        } else {
+          rewardHtml = `<div class="pass-reward-line ${available ? 'available' : 'locked'}"><span class="pass-reward-icon" style="color:#d4af37">🪙</span><span class="pass-reward-name">+${m.coin_amount} monedas</span></div>`;
+        }
 
         html += `
           <div class="pass-node pass-node-milestone">
-            <div class="pass-node-circle ${stateCls} ${tier.cls}" ${available ? `data-milestone-id="${m.id}"` : ''}>
+            <div class="pass-node-circle ${stateCls} ${tier.cls} ${clickable ? 'clickable' : ''}" ${clickable ? `data-milestone-id="${m.id}"` : ''}>
               <span class="pass-node-icon">${icon}</span>
             </div>
             ${tier.tag ? `<div class="pass-node-tier ${tier.cls}">${tier.tag}</div>` : ''}
@@ -3699,7 +3848,18 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
       el.addEventListener('click', () => {
         const id = el.getAttribute('data-milestone-id');
         const found = milestones.find(mm => String(mm.id) === id);
-        if (found) { pendingMilestone = found; renderChest(found); }
+        if (!found) return;
+        const isSpin = found.reward_type === 'vip_ruleta_spin';
+        const claimedNow = claimedIds.has(found.id);
+        const availableNow = currentStreak >= found.day && !claimedNow;
+        if (availableNow) {
+          pendingMilestone = found;
+          if (isSpin) renderChest(found); else renderCoinChest(found);
+        } else if (!claimedNow && isSpin) {
+          // Bloqueado: solo vista previa informativa, no cuenta como pendiente
+          // de reclamar (no debe bloquear el auto-popup de otros hitos).
+          renderRewardPreview(found);
+        }
       });
     });
 
@@ -3752,7 +3912,7 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
     // ⚠️ SOLO PARA PRUEBAS — igual que DEBUG_FORCE_PRIZE_ID, esto pisa la racha
     // real que llega del servidor para que puedas ver el pase/cofre sin
     // esperar los días reales. Déjalo en null para volver a 100% real.
-    const DEBUG_FORCE_STREAK_DAYS = 15;
+    const DEBUG_FORCE_STREAK_DAYS = null;
     const finalStreak = DEBUG_FORCE_STREAK_DAYS != null ? DEBUG_FORCE_STREAK_DAYS : (streakDays || 0);
     console.log('[STREAK-DEBUG] checkStreakMilestones llamado con streakDays =', streakDays, '| forzado a:', finalStreak);
     currentStreak = finalStreak;
@@ -3824,6 +3984,8 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
     }
     .pass-node-circle.available:hover { transform:scale(1.08); }
     .pass-node-circle.locked { opacity:0.5; }
+    .pass-node-circle.locked.clickable { cursor:pointer; }
+    .pass-node-circle.locked.clickable:hover { opacity:0.75; transform:scale(1.05); }
     .pass-node-circle.tier-epic.available,
     .pass-node-circle.tier-epic.claimed { width:64px; height:64px; }
     .pass-node-circle.tier-legendary.available,
@@ -3881,6 +4043,11 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
       font-family:'Nunito',sans-serif; font-size:8px; font-weight:700;
       color:rgba(200,255,220,0.85); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     }
+    /* Monedas: no son misterio, se ven aunque el día esté bloqueado */
+    .pass-reward-line.available { background:rgba(212,175,55,0.14); border-color:rgba(212,175,55,0.4); }
+    .pass-reward-line.available .pass-reward-name { color:#fde68a; }
+    .pass-reward-line.locked { background:rgba(255,255,255,0.03); border-color:rgba(255,255,255,0.08); }
+    .pass-reward-line.locked .pass-reward-name { color:rgba(200,185,240,0.5); }
     .pass-reward-teaser { margin-top:8px; display:flex; flex-direction:column; align-items:center; gap:4px; }
     .pass-reward-teaser-label {
       font-family:'Cinzel',serif; font-size:7px; font-weight:900; letter-spacing:1px;
