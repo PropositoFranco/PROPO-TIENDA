@@ -3420,13 +3420,19 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
     const next = milestones
       .filter(m => currentStreak >= m.day && !claimedIds.has(m.id))
       .sort((a,b) => a.day - b.day)[0];
-    if (next) { pendingMilestone = next; renderChest(next); }
+    // En vez de saltar directo al cofre chico, abrimos el pase completo (el
+    // camino con todos los días) con el hito de hoy ya brillando y listo
+    // para tocar — así el usuario ve su progreso sin depender del ícono 🔥
+    // del header (que además queda bloqueado si hay una evaluación pendiente).
+    if (next) { openStreakPanel(); }
   }
 
   function renderChest(m) {
     const modal = document.getElementById('streak-modal');
     const body  = document.getElementById('streak-modal-body');
+    const panelOpen = document.getElementById('streak-panel-overlay').style.display === 'flex';
     body.innerHTML = `
+      ${panelOpen ? `<button id="streak-back-btn" style="position:absolute;top:14px;left:14px;background:none;border:none;color:rgba(212,175,55,0.75);font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;gap:4px;">← VOLVER AL PASE</button>` : ''}
       <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:4px;color:rgba(212,175,55,0.6);margin-bottom:6px;">⚔ HITO DE RACHA · DÍA ${m.day}</div>
       <div style="font-family:'Cinzel',serif;font-size:20px;font-weight:900;background:linear-gradient(135deg,#ffe87a,#d4af37,#fde68a);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:sbpGold 4s linear infinite;margin-bottom:10px;">${m.title || ('Racha de ' + m.day + ' días')}</div>
       <div id="streak-chest" style="font-size:64px;margin:18px 0;cursor:pointer;animation:sbpChestPulse 1.8s ease-in-out infinite;filter:drop-shadow(0 0 24px rgba(212,175,55,0.7));">${m.icon_emoji || '🎁'}</div>
@@ -3435,6 +3441,13 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
     `;
     modal.style.display = 'flex';
     document.getElementById('streak-open-btn').addEventListener('click', () => renderSpinScreen(m));
+    const backBtn = document.getElementById('streak-back-btn');
+    if (backBtn) backBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+      pendingMilestone = null;
+      // El pase (#streak-panel-overlay) ya estaba abierto detrás — sigue ahí,
+      // solo ocultamos el cofre para volver a verlo.
+    });
   }
 
   // Rueda SVG en JS puro — mismos slices/colores/íconos que PRIZES en VipRuleta.jsx
@@ -3686,7 +3699,7 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
       el.addEventListener('click', () => {
         const id = el.getAttribute('data-milestone-id');
         const found = milestones.find(mm => String(mm.id) === id);
-        if (found) { closeStreakPanel(); pendingMilestone = found; renderChest(found); }
+        if (found) { pendingMilestone = found; renderChest(found); }
       });
     });
 
@@ -3736,8 +3749,13 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
 
   // Llamado desde el handler de 'profile' en el listener principal de mensajes
   window.__checkStreakMilestones = function(streakDays) {
-    console.log('[STREAK-DEBUG] checkStreakMilestones llamado con streakDays =', streakDays);
-    currentStreak = streakDays || 0;
+    // ⚠️ SOLO PARA PRUEBAS — igual que DEBUG_FORCE_PRIZE_ID, esto pisa la racha
+    // real que llega del servidor para que puedas ver el pase/cofre sin
+    // esperar los días reales. Déjalo en null para volver a 100% real.
+    const DEBUG_FORCE_STREAK_DAYS = 15;
+    const finalStreak = DEBUG_FORCE_STREAK_DAYS != null ? DEBUG_FORCE_STREAK_DAYS : (streakDays || 0);
+    console.log('[STREAK-DEBUG] checkStreakMilestones llamado con streakDays =', streakDays, '| forzado a:', finalStreak);
+    currentStreak = finalStreak;
     if (!milestones.length) loadMilestonesAndClaims();
     else maybeShowModal();
   };
