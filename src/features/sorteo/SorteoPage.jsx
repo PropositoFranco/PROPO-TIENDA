@@ -799,13 +799,24 @@ export default function SorteoPage() {
         localStorage.setItem('sorteo_device_id', id);
         return id;
       })();
-      supabase.rpc('registrar_visita_sorteo', {
-        p_evento_id:   eventoId,
-        p_session_id:  sessionId,
-        p_aliado_slug: aliadoSlug,
-        p_utm_source:  utmSource,
-        p_utm_medium:  utmMedium,
-      }).catch(e => console.warn('[sorteo] visita RPC:', e));
+      // Nota: NO se usa .catch() encadenado — en esta versión de supabase-js el
+      // objeto que regresa .rpc() es "thenable" (solo tiene .then), no una
+      // promesa completa, así que .catch no es una función. Un IIFE con
+      // try/catch + await funciona con CUALQUIER thenable y nunca truena el
+      // hilo principal, así que la pantalla de carga ya no se queda pegada.
+      (async () => {
+        try {
+          await supabase.rpc('registrar_visita_sorteo', {
+            p_evento_id:   eventoId,
+            p_session_id:  sessionId,
+            p_aliado_slug: aliadoSlug,
+            p_utm_source:  utmSource,
+            p_utm_medium:  utmMedium,
+          });
+        } catch (e) {
+          console.warn('[sorteo] visita RPC:', e);
+        }
+      })();
     }
 
     // ── Recuperar estado si el usuario ya participó y recargó la página ──────
