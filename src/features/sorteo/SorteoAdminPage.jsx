@@ -73,6 +73,7 @@ function Badge({ activo }) {
 // ══════════════════════════════════════════════════════════════════════════════
 export default function SorteoAdminPage() {
   const [eventos,       setEventos]       = useState([]);
+  const [visitasPorEvento, setVisitasPorEvento] = useState({});
   const [eventoAbierto, setEventoAbierto] = useState(null);
   const [rondas,        setRondas]        = useState({});
   const [loading,       setLoading]       = useState(true);
@@ -142,6 +143,12 @@ export default function SorteoAdminPage() {
       .order('created_at', { ascending: false });
     setEventos(data || []);
     setLoading(false);
+
+    // Visitas por evento (llegadas reales a la página, para conversión real del funnel)
+    const { data: visitasRaw } = await supabase.from('sorteo_visitas').select('evento_id');
+    const conteo = {};
+    (visitasRaw || []).forEach(v => { conteo[v.evento_id] = (conteo[v.evento_id] || 0) + 1; });
+    setVisitasPorEvento(conteo);
   }, []);
 
   useEffect(() => { cargarEventos(); }, [cargarEventos]);
@@ -354,6 +361,7 @@ export default function SorteoAdminPage() {
       { count: totalEntregados },
       { count: totalAceptaron },
       { count: totalVieron },
+      { count: totalVisitas },
     ] = await Promise.all([
       supabase.from('sorteo_eventos').select('id', { count: 'exact', head: true }),
       supabase.from('sorteos').select('id', { count: 'exact', head: true }),
@@ -362,9 +370,12 @@ export default function SorteoAdminPage() {
       supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }).eq('premio_entregado', true),
       supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }).eq('cupon_aceptado', true),
       supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }).eq('premio_visto', true),
+      supabase.from('sorteo_visitas').select('id', { count: 'exact', head: true }),
     ]);
     const convRate = totalGanadores > 0 ? Math.round((totalAceptaron / totalGanadores) * 100) : 0;
-    setMasterStats({ totalEventos, totalRondas, totalRegistrados, totalGanadores, totalEntregados, totalAceptaron, totalVieron, convRate });
+    // Conversión REAL del funnel: cuántos de los que llegaron a la página se registraron
+    const convVisitaRegistro = totalVisitas > 0 ? Math.round((totalRegistrados / totalVisitas) * 100) : 0;
+    setMasterStats({ totalEventos, totalRondas, totalRegistrados, totalGanadores, totalEntregados, totalAceptaron, totalVieron, convRate, totalVisitas, convVisitaRegistro });
   }, []);
 
   useEffect(() => { cargarMasterStats(); }, [cargarMasterStats]);
@@ -459,7 +470,9 @@ export default function SorteoAdminPage() {
     const totalVieron = todosParticipantes.filter(p => p.es_ganador && p.premio_visto).length;
     const mediaAceptacion = totalGanadores > 0 ? Math.round((totalAceptaron / totalGanadores) * 100) : 0;
     const rondaActiva = rs.find(r => r.estado === 'abierto');
-    return { completadas: completadas.length, totalRondas: rs.length, totalRegistrados, totalGanadores, totalEntregados, totalAceptaron, totalVieron, mediaAceptacion, rondaActiva };
+    const totalVisitas = visitasPorEvento[eventoId] || 0;
+    const convVisitaRegistro = totalVisitas > 0 ? Math.round((totalRegistrados / totalVisitas) * 100) : 0;
+    return { completadas: completadas.length, totalRondas: rs.length, totalRegistrados, totalGanadores, totalEntregados, totalAceptaron, totalVieron, mediaAceptacion, rondaActiva, totalVisitas, convVisitaRegistro };
   };
 
   // ── RENDER ───────────────────────────────────────────────────────────────────
@@ -532,9 +545,11 @@ export default function SorteoAdminPage() {
       {masterStats && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 10, marginBottom: 28 }}>
           {[
+            { label: 'VISITAS',      value: masterStats.totalVisitas,    icon: '👣', color: C.muted },
             { label: 'EVENTOS',      value: masterStats.totalEventos,    icon: '🎲', color: C.gold },
             { label: 'RONDAS',       value: masterStats.totalRondas,     icon: '🔁', color: C.goldDim },
             { label: 'REGISTRADOS',  value: masterStats.totalRegistrados,icon: '⚔️', color: C.text },
+            { label: 'CONV. VISITA→REGISTRO', value: `${masterStats.convVisitaRegistro}%`, icon: '🎯', color: masterStats.convVisitaRegistro > 30 ? C.green : masterStats.convVisitaRegistro > 10 ? C.gold : C.red },
             { label: 'GANADORES',    value: masterStats.totalGanadores,  icon: '👑', color: C.gold },
             { label: 'ENTREGADOS',   value: masterStats.totalEntregados, icon: '📦', color: '#60A5FA' },
             { label: 'ACEPTARON',    value: masterStats.totalAceptaron,  icon: '✅', color: C.green },

@@ -768,6 +768,7 @@ export default function SorteoPage() {
   const [enviandoReporte,   setEnviandoReporte]   = useState(false);
   const [reporteEnviado,    setReporteEnviado]    = useState(false);
   const [errReporte,        setErrReporte]        = useState('');
+  const [mostrarExitIntent, setMostrarExitIntent] = useState(false);
 
   // refs declarados arriba junto a setScreen
 
@@ -787,6 +788,25 @@ export default function SorteoPage() {
       .eq('id', eventoId).eq('activo', true).single();
     if (error || !data) { setScreen(SCREEN.CERRADO); return; }
     setEvento(data);
+
+    // ── Trackear visita (llegada real a la página, antes de cualquier registro) ──
+    // sessionStorage: una visita por pestaña/sesión por evento, no por cada render
+    const visitaKey = `sorteo_visita_${eventoId}`;
+    if (!sessionStorage.getItem(visitaKey)) {
+      sessionStorage.setItem(visitaKey, '1');
+      const sessionId = localStorage.getItem('sorteo_device_id') || (() => {
+        const id = crypto.randomUUID();
+        localStorage.setItem('sorteo_device_id', id);
+        return id;
+      })();
+      supabase.rpc('registrar_visita_sorteo', {
+        p_evento_id:   eventoId,
+        p_session_id:  sessionId,
+        p_aliado_slug: aliadoSlug,
+        p_utm_source:  utmSource,
+        p_utm_medium:  utmMedium,
+      }).catch(e => console.warn('[sorteo] visita RPC:', e));
+    }
 
     // ── Recuperar estado si el usuario ya participó y recargó la página ──────
     const emailGuardado = localStorage.getItem(`sorteo_registered_${eventoId}`);
@@ -925,6 +945,39 @@ return data || null;
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2200);
   };
+
+  // ── Exit-intent: detecta intento real de salida, no solo scroll o click dentro ──
+  useEffect(() => {
+    if (screen !== SCREEN.REGISTRO || miRegistro || guardando || !eventoId) return undefined;
+
+    const exitKey = `sorteo_exit_shown_${eventoId}`;
+    if (sessionStorage.getItem(exitKey)) return undefined;
+
+    const dispararExitIntent = () => {
+      if (sessionStorage.getItem(exitKey)) return;
+      sessionStorage.setItem(exitKey, '1');
+      setMostrarExitIntent(true);
+    };
+
+    // Desktop: el cursor sale por arriba de la ventana (hacia pestañas/URL)
+    const onMouseOut = (e) => {
+      if (e.clientY <= 0 && !e.relatedTarget) dispararExitIntent();
+    };
+    document.addEventListener('mouseout', onMouseOut);
+
+    // Móvil y desktop: intercepta el botón "atrás" antes de navegar fuera
+    window.history.pushState({ sorteoGuard: true }, '');
+    const onPopState = () => {
+      dispararExitIntent();
+      window.history.pushState({ sorteoGuard: true }, ''); // se re-empuja por si decide quedarse
+    };
+    window.addEventListener('popstate', onPopState);
+
+    return () => {
+      document.removeEventListener('mouseout', onMouseOut);
+      window.removeEventListener('popstate', onPopState);
+    };
+  }, [screen, miRegistro, guardando, eventoId]);
 
   // ── Registrarse ───────────────────────────────────────────────────────────
   const registrarse = async () => {
@@ -1342,7 +1395,15 @@ return data || null;
               Junto con tu beca, recibes tu{' '}
               <span style={{ color: '#a78bfa', fontStyle: 'normal', fontWeight: 700 }}>código Alianza</span>.<br />
               Compártelo — quien lo use también entra al Templo por{' '}
-              <span style={{ color: '#a78bfa', fontWeight: 700 }}>$1</span>.
+              <span style={{ color: '#a78bfa', fontWeight: 700 }}>$1</span>{' '}
+              su primer mes.
+            </div>
+            <div style={{
+              fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
+              fontSize: 11, color: 'rgba(255,255,255,0.38)',
+              lineHeight: 1.6,
+            }}>
+              (Del segundo mes en adelante, $49 USD al mes — cancela cuando quiera.)
             </div>
           </div>
 
@@ -1443,9 +1504,20 @@ return data || null;
             letterSpacing: 2,
           }}>TU PASE DE GUERRERO</h1>
 
-          <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 15, color: C.muted, fontStyle: 'italic', lineHeight: 1.75, marginBottom: 24 }}>
+          <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 15, color: C.muted, fontStyle: 'italic', lineHeight: 1.75, marginBottom: 12 }}>
             Tu regalo de entrada al Templo:<br />
             <span style={{ color: C.purple, fontWeight: 600 }}>primer mes por solo $1 USD.</span>
+          </p>
+
+          {/* ── Aviso de transparencia: $1 hoy, $49/mes después ── */}
+          <p style={{
+            fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
+            fontSize: 12.5, color: 'rgba(255,255,255,0.5)',
+            lineHeight: 1.7, marginBottom: 24, letterSpacing: 0.2,
+          }}>
+            Tu Llave de Entrada cuesta $1 USD hoy. A partir del segundo mes, tu lugar en el Templo se mantiene por{' '}
+            <span style={{ color: 'rgba(204,68,255,0.75)', fontWeight: 600 }}>$49 USD al mes</span>
+            {' '}— cancelas cuando quieras, sin ataduras.
           </p>
 
           {/* Cupón */}
@@ -1597,7 +1669,15 @@ return data || null;
               El Templo te entrega tu{' '}
               <span style={{ color: '#a78bfa', fontStyle: 'normal', fontWeight: 700 }}>código Alianza</span>.<br />
               Compártelo — quien lo use también entra por{' '}
-              <span style={{ color: '#a78bfa', fontWeight: 700 }}>$1</span>.
+              <span style={{ color: '#a78bfa', fontWeight: 700 }}>$1</span>{' '}
+              su primer mes.
+            </div>
+            <div style={{
+              fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
+              fontSize: 11, color: 'rgba(255,255,255,0.38)',
+              lineHeight: 1.6,
+            }}>
+              (Del segundo mes en adelante, $49 USD al mes — cancela cuando quiera.)
             </div>
           </div>
 
@@ -1915,7 +1995,34 @@ return data || null;
       >
 
         {/* Arco decorativo superior */}
-        <div style={{ position: 'absolute', top: -40, left: '50%', transform: 'translateX(-50%)', width: 320, height: 160, borderRadius: '160px 160px 0 0', border: `2px solid rgba(255,215,0,0.15)`, borderBottom: 'none', pointerEvents: 'none', animation: 'arcGlow 3s ease-in-out infinite' }} />
+        <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 320, height: 160, borderRadius: '160px 160px 0 0', border: `2px solid rgba(255,215,0,0.15)`, borderBottom: 'none', pointerEvents: 'none', animation: 'arcGlow 3s ease-in-out infinite' }} />
+
+        {/* Identidad de fundador — simbólica: describe la etapa real del Templo, no cupo limitado.
+            La segunda línea conecta "eres fundador" con "por eso ves esto hoy" — ambas cosas son
+            ciertas para cualquiera que entre ahora, así que no es promesa falsa, solo cierra el círculo. */}
+        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'rgba(204,68,255,0.08)', border: '1px solid rgba(204,68,255,0.3)',
+            borderRadius: 30, padding: '5px 14px',
+            fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1.5, color: C.purple,
+          }}>
+            🗝️ ERES TEMPLARIO FUNDADOR
+          </span>
+          <p style={{
+            marginTop: 6, fontFamily: 'Crimson Text, serif', fontSize: 11,
+            color: 'rgba(204,68,255,0.75)', fontStyle: 'italic', letterSpacing: 0.2,
+          }}>
+            Por eso tienes acceso a la Beca Completa de hoy
+          </p>
+        </div>
+
+        {/* Ancla clara — qué es esto, en lenguaje llano */}
+        <div style={{ textAlign: 'center', marginBottom: 10 }}>
+          <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 12, color: 'rgba(255,255,255,0.55)', letterSpacing: 0.3 }}>
+            Sorteo real de Templo del Propósito · un ganador se lleva 6 meses gratis, el resto recibe un cupón especial
+          </p>
+        </div>
 
         {/* Título épico */}
         <div style={{ textAlign: 'center', marginBottom: 0, position: 'relative' }}>
@@ -1932,6 +2039,18 @@ return data || null;
           }}>
             {evento?.nombre || 'SORTEO ÉPICO'}
           </div>
+        </div>
+
+        {/* Premio, visible desde el inicio */}
+        <div style={{ textAlign: 'center', marginTop: 10 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'rgba(255,215,0,0.08)', border: '1px solid rgba(255,215,0,0.3)',
+            borderRadius: 30, padding: '6px 16px',
+            fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1, color: C.gold,
+          }}>
+            🏆 Hoy se sortea: 6 meses gratis — valor $294 USD
+          </span>
         </div>
 
         {/* Maestro grande central con templarios orbitando */}
@@ -1997,11 +2116,25 @@ return data || null;
             background: `linear-gradient(135deg,${C.gold},${C.goldLight},${C.gold})`,
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
           }}>
-            El sistema de transformación personal<br />más completo que existe.
+            En los próximos 3 minutos te voy a explicar qué es esto,<br />y por qué esto te puede transformar la vida.
           </div>
         </div>
 
         {videoBloque}
+
+        {/* ── Puente: de la historia real al Templo ── */}
+        <div style={{ textAlign: 'center', marginBottom: 20, padding: '0 8px' }}>
+          <p style={{
+            fontFamily: 'Crimson Text, serif', fontStyle: 'italic',
+            fontSize: 'clamp(13px,3.4vw,15px)', color: 'rgba(255,255,255,0.78)',
+            lineHeight: 1.7, letterSpacing: 0.3,
+          }}>
+            ¿Qué pasaría si por fin ordenaras tu mente, tus emociones y tu camino?<br />
+            Eso es lo que el Templo del Propósito te puede dar.<br />
+            <span style={{ color: C.goldDim }}>Yo lo comprobé primero — de cargar tamales sin rumbo, a vivir con dirección real.</span><br />
+            Ahora es tu turno.
+          </p>
+        </div>
 
         {/* ── 8 Territorios — mismas tarjetas volteables de la landing, adaptadas al tema oscuro ── */}
         <div style={{
@@ -2146,9 +2279,12 @@ return data || null;
           }}>
             ENTRA AL SORTEO
           </h2>
-          <p style={{ textAlign: 'center', fontFamily: 'Crimson Text, serif', fontSize: 15, color: C.muted, fontStyle: 'italic', lineHeight: 1.75, marginBottom: 20 }}>
+          <p style={{ textAlign: 'center', fontFamily: 'Crimson Text, serif', fontSize: 15, color: C.muted, fontStyle: 'italic', lineHeight: 1.75, marginBottom: 8 }}>
             Un guerrero gana <span style={{ color: C.gold }}>6 meses</span> gratis.<br />
             Todos los demás reciben un cupón especial.
+          </p>
+          <p style={{ textAlign: 'center', fontFamily: 'Cinzel, serif', fontSize: 9.5, letterSpacing: 0.5, color: 'rgba(255,255,255,0.45)', marginBottom: 20 }}>
+            Sabrás tu resultado al instante, en esta misma pantalla.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginBottom: 22 }}>
@@ -2463,6 +2599,51 @@ return data || null;
 
         {historial.length > 0 && <HistorialRondas historial={historial} onToggle={() => setMostrarHistorial(v => !v)} mostrar={mostrarHistorial} />}
       </div>
+
+      {mostrarExitIntent && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(4,2,14,0.88)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 20, animation: 'fadeUp 0.3s ease both',
+        }}>
+          <div style={{
+            maxWidth: 340, width: '100%', textAlign: 'center',
+            background: 'linear-gradient(180deg, rgba(20,10,35,0.98), rgba(4,2,14,0.98))',
+            border: `1.5px solid ${C.borderHi}`, borderRadius: 18,
+            padding: '28px 22px', boxShadow: '0 0 40px rgba(255,215,0,0.15)',
+          }}>
+            <div style={{ fontSize: 30, marginBottom: 10 }}>🗝️</div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 15, fontWeight: 700, color: C.gold, letterSpacing: 1, marginBottom: 10 }}>
+              ¿SEGURO QUE QUIERES SALIR?
+            </div>
+            <p style={{ fontFamily: 'Crimson Text, serif', fontSize: 13.5, color: C.muted, fontStyle: 'italic', lineHeight: 1.5, marginBottom: 22 }}>
+              Perderás tu acceso como Templario Fundador a la Beca Completa de hoy — 6 meses gratis, o un cupón especial si no ganas.
+            </p>
+            <button
+              onClick={() => setMostrarExitIntent(false)}
+              style={{
+                width: '100%', padding: '13px 0', borderRadius: 11, border: 'none',
+                background: `linear-gradient(135deg,${C.gold},${C.goldLight})`,
+                color: '#1a1206', fontFamily: 'Cinzel, serif', fontWeight: 700,
+                fontSize: 12, letterSpacing: 1, cursor: 'pointer', marginBottom: 10,
+              }}
+            >
+              QUEDARME Y PARTICIPAR
+            </button>
+            <button
+              onClick={() => { setMostrarExitIntent(false); window.history.go(-2); }}
+              style={{
+                width: '100%', padding: '8px 0', borderRadius: 11, border: 'none',
+                background: 'transparent', color: 'rgba(255,255,255,0.4)',
+                fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 0.5, cursor: 'pointer',
+              }}
+            >
+              Salir de todas formas
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
