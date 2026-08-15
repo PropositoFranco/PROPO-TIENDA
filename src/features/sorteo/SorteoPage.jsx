@@ -780,6 +780,16 @@ export default function SorteoPage() {
     return () => document.head.removeChild(el);
   }, []);
 
+  // ── SEO: canonical — todos los links de sorteo (por gerente) apuntan al general ──
+  useEffect(() => {
+    const EVENTO_GENERAL = '5a9dd9fa-618c-4425-8bee-806560b77e78';
+    const link = document.createElement('link');
+    link.rel = 'canonical';
+    link.href = `https://propotienda.com/sorteo/${EVENTO_GENERAL}`;
+    document.head.appendChild(link);
+    return () => document.head.removeChild(link);
+  }, []);
+
   // ── Data fetchers ─────────────────────────────────────────────────────────
   const cargarEvento = useCallback(async () => {
     if (!eventoId) { setScreen(SCREEN.CERRADO); return; }
