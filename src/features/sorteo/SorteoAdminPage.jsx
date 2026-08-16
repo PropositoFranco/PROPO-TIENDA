@@ -246,6 +246,13 @@ const cargarSellosCodigos = useCallback(async () => {
     setEditsSellos(prev => ({ ...prev, [numeroSesion]: nuevoCodigo }));
   };
 
+  const generarCodigoSello = (numeroSesion) => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin O/0 ni I/1, para que no se confundan al leerlo
+    let codigo = '';
+    for (let i = 0; i < 6; i++) codigo += chars[Math.floor(Math.random() * chars.length)];
+    setEditsSellos(prev => ({ ...prev, [numeroSesion]: codigo }));
+  };
+
   const marcarReporteAtendido = async (id, nuevoStatus) => {
     setActualizandoReporte(id);
     const { error } = await supabase.from('sorteo_reportes').update({ status: nuevoStatus }).eq('id', id);
@@ -1881,16 +1888,29 @@ const cargarSellosCodigos = useCallback(async () => {
                         {tieneCodigo ? '● CARGADO' : '○ VACÍO'}
                       </span>
                     </div>
-                    <input
-                      value={editsSellos[s.numero_sesion] ?? ''}
-                      onChange={e => setEditsSellos(prev => ({ ...prev, [s.numero_sesion]: e.target.value }))}
-                      placeholder="CÓDIGO"
-                      style={{
-                        width: '100%', padding: '9px 12px', background: '#07040f',
-                        border: `1px solid ${C.borderHi}`, borderRadius: 8, color: C.text,
-                        fontFamily: 'monospace', fontSize: 13, letterSpacing: 2, textTransform: 'uppercase',
-                      }}
-                    />
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <input
+                        value={editsSellos[s.numero_sesion] ?? ''}
+                        onChange={e => setEditsSellos(prev => ({ ...prev, [s.numero_sesion]: e.target.value }))}
+                        placeholder="CÓDIGO"
+                        style={{
+                          flex: 1, minWidth: 0, padding: '9px 12px', background: '#07040f',
+                          border: `1px solid ${C.borderHi}`, borderRadius: 8, color: C.text,
+                          fontFamily: 'monospace', fontSize: 13, letterSpacing: 2, textTransform: 'uppercase',
+                        }}
+                      />
+                      <button
+                        onClick={() => generarCodigoSello(s.numero_sesion)}
+                        title="Generar código al azar"
+                        style={{
+                          flexShrink: 0, width: 38, padding: '9px 0',
+                          background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)',
+                          borderRadius: 8, color: C.purple, fontSize: 14, cursor: 'pointer',
+                        }}
+                      >
+                        🎲
+                      </button>
+                    </div>
                     <button
                       onClick={() => guardarSello(s.numero_sesion)}
                       disabled={guardandoSello === s.numero_sesion || !cambiado}
