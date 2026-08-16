@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Check-in · Templo del Propósito</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap&font-display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap&font-display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#D4AF37; --gold-bright:#FFE566; --gold-dim:rgba(212,175,55,0.4); --gold-glow:rgba(212,175,55,0.65);
+  --dark-bg:#04020e; --dark-surface:rgba(10,5,32,0.92);
+  --purple:#CC44FF;
+  --lilac:rgba(200,185,240,0.7); --lilac-dim:rgba(200,185,240,0.42);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%; width:100%;}
+body{
+  overflow:hidden; height:100dvh; display:flex; flex-direction:column;
+  background:
+    radial-gradient(ellipse 120% 50% at 50% 0%, rgba(40,10,90,0.9) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 40% at 12% 15%, rgba(10,40,100,0.35) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 40% at 88% 10%, rgba(80,10,110,0.35) 0%, transparent 55%),
+    linear-gradient(180deg,#050215 0%,#0a0530 18%,#08031c 55%,#04020e 100%);
+  font-family:'Crimson Text',serif; color:#fff; position:relative;
+}
+.stars{position:fixed; inset:0; pointer-events:none; z-index:0;}
+.star{position:absolute; border-radius:50%; background:#fff; animation:twinkle var(--d) ease-in-out infinite; animation-delay:var(--del);}
+@keyframes twinkle{0%,100%{opacity:var(--min);} 50%{opacity:1;}}
+@media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important;} }
+.temple-icon .gold{stroke:var(--gold-bright); fill:var(--gold-bright);}
+.temple-icon .gold-mid{stroke:var(--gold); fill:var(--gold);}
+
+.topnav{
+  flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:14px;
+  padding:10px 26px;
+  background:linear-gradient(180deg, rgba(6,3,18,0.97), rgba(6,3,18,0.88));
+  border-bottom:1px solid var(--gold-dim); position:relative; z-index:10;
+}
+.brand{display:flex; align-items:center; gap:10px;}
+.brand-seal{width:32px; height:32px; flex-shrink:0; filter:drop-shadow(0 0 8px var(--gold-glow));}
+.brand-name{font-family:'Cinzel',serif; font-weight:900; letter-spacing:1px; font-size:17px; color:#fff;}
+.brand-name span{color:var(--gold);}
+.nav-links{display:flex; align-items:center; gap:22px; flex-wrap:nowrap;}
+.nav-item{
+  font-family:'Cinzel',serif; font-size:13.5px; font-weight:700; letter-spacing:0.3px;
+  color:var(--lilac); text-decoration:none; white-space:nowrap; opacity:0.85; transition:opacity .2s, color .2s;
+}
+.nav-item:hover{opacity:1; color:var(--gold-bright);}
+.nav-item.active{color:var(--gold-bright); opacity:1;}
+.nav-select{
+  font-family:'Cinzel',serif; font-size:13px; font-weight:700; color:#fff;
+  background:rgba(212,175,55,0.1); border:1px solid var(--gold-dim); border-radius:8px;
+  padding:8px 14px; white-space:nowrap; max-width:240px;
+}
+@media (max-width:860px){ .nav-links{display:none;} .nav-select{margin-left:auto;} }
+
+.wrap{
+  flex:1 1 auto; min-height:0; overflow:hidden;
+  display:flex; flex-direction:column; justify-content:center; gap:clamp(14px,2.6vh,26px);
+  max-width:900px; width:100%; margin:0 auto;
+  padding:clamp(14px,2.6vh,30px) clamp(20px,4vw,40px);
+  position:relative; z-index:1;
+}
+
+.title-row{display:flex; flex-direction:column; gap:6px;}
+.eyebrow-tag{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(12px,1.6vh,14px); letter-spacing:2.2px; color:var(--gold);}
+h1.page-title{
+  font-family:'Cinzel Decorative',serif; font-weight:900; font-size:clamp(26px,4.4vh,40px);
+  color:#fff; text-shadow:0 0 20px rgba(212,175,55,0.3); line-height:1.1;
+}
+.page-sub{font-family:'Crimson Text',serif; font-size:clamp(14.5px,1.9vh,18px); color:var(--lilac); margin-top:4px;}
+
+.locked-card{
+  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:18px;
+  padding:clamp(34px,6vh,56px) clamp(24px,4vw,40px);
+  display:flex; flex-direction:column; align-items:center; text-align:center; gap:clamp(12px,2vh,18px);
+  position:relative; overflow:hidden;
+}
+.locked-card::before{content:""; position:absolute; inset:0; background:radial-gradient(ellipse 70% 60% at 50% 0%, rgba(212,175,55,0.09), transparent 70%); pointer-events:none;}
+.locked-icon{
+  width:clamp(56px,8.5vh,76px); height:clamp(56px,8.5vh,76px); border-radius:18px;
+  background:linear-gradient(160deg, rgba(212,175,55,0.25), rgba(124,58,237,0.2));
+  border:1px solid var(--gold-dim); display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 20px rgba(212,175,55,0.25); font-size:clamp(24px,3.6vh,32px);
+}
+.locked-title{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(19px,2.9vh,26px); color:#fff;}
+.locked-title .date{color:var(--gold-bright);}
+.locked-sub{font-family:'Crimson Text',serif; font-size:clamp(14px,1.9vh,17.5px); color:var(--lilac); max-width:420px; line-height:1.5;}
+.locked-note{
+  margin-top:clamp(4px,0.8vh,8px); display:inline-flex; align-items:center; gap:7px;
+  font-family:'Nunito',sans-serif; font-weight:700; font-size:clamp(11.5px,1.4vh,13px); color:var(--lilac-dim);
+  background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:100px; padding:7px 16px;
+}
+
+/* Estado activo (referencia para cuando se construya el formulario real) */
+.active-hint{
+  font-family:'Nunito',sans-serif; font-size:clamp(11.5px,1.4vh,13px); color:var(--lilac-dim); text-align:center;
+}
+
+@media (max-width:760px){
+  .topnav{padding:8px 14px;}
+  .wrap{gap:14px; padding:10px 16px 14px;}
+  .locked-card{padding:28px 18px;}
+}
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<nav class="topnav">
+  <div class="brand">
+    <svg class="brand-seal temple-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="32,4 58,22 6,22" class="gold"/>
+      <rect x="9" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="20" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="29.5" y="24" width="5" height="30" class="gold"/>
+      <rect x="39" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="50" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="6" y="54" width="52" height="5" class="gold"/>
+      <circle cx="32" cy="13" r="2.6" fill="#04020e"/>
+    </svg>
+    <div class="brand-name">TEMPLO <span>DEL PROPÓSITO</span></div>
+  </div>
+  <div class="nav-links">
+    <a class="nav-item" href="camino-templario.html">Inicio</a>
+    <a class="nav-item active" href="#">Check-in</a>
+    <a class="nav-item" href="calendario-camino.html">Calendario</a>
+    <a class="nav-item" href="#">Agenda</a>
+    <a class="nav-item" href="pasaporte-templario.html">Pasaporte del Templario</a>
+    <a class="nav-item" href="#">Sala de Cowork</a>
+    <a class="nav-item" href="#">Ranking</a>
+  </div>
+  <select class="nav-select"><option>Camino a Líder Digital · Gen. Agosto</option></select>
+</nav>
+
+<div class="wrap">
+
+  <div class="title-row">
+    <div class="eyebrow-tag">TU CAMINO A LÍDER DIGITAL</div>
+    <h1 class="page-title">Check-in</h1>
+    <div class="page-sub">Registra tu evidencia del día para mantener tu racha.</div>
+  </div>
+
+  <!-- ESTADO BLOQUEADO: se muestra mientras el camino no ha arrancado -->
+  <div class="locked-card" id="lockedState">
+    <div class="locked-icon">🗓️</div>
+    <div class="locked-title">Tu camino empieza el <span class="date">24 de agosto</span></div>
+    <div class="locked-sub">Vuelve ese día para registrar tu primera evidencia.</div>
+    <div class="locked-note">🔒 El registro se activa el día que arranca tu camino</div>
+  </div>
+
+  <!--
+    ESTADO ACTIVO (pendiente de diseñar):
+    Cuando el camino ya arrancó, aquí va el formulario real de subida de evidencia
+    (foto/video del día, selector de red social, link del post, etc.)
+    Se reemplaza el bloque #lockedState por ese formulario según la fecha de inicio del usuario.
+  -->
+
+</div>
+
+<script>
+const starsEl = document.getElementById('stars');
+const n = window.innerWidth < 760 ? 26 : 55;
+let html = '';
+for(let i=0;i<n;i++){
+  const size = (Math.random()*1.5+0.6).toFixed(1);
+  const top = (Math.random()*100).toFixed(1);
+  const left = (Math.random()*100).toFixed(1);
+  const dur = (Math.random()*4+3).toFixed(1);
+  const delay = (Math.random()*4).toFixed(1);
+  const min = (Math.random()*0.4+0.15).toFixed(2);
+  html += `<div class="star" style="width:${size}px;height:${size}px;top:${top}%;left:${left}%;--d:${dur}s;--del:${delay}s;--min:${min};"></div>`;
+}
+starsEl.innerHTML = html;
+</script>
+
+</body>
+</html>

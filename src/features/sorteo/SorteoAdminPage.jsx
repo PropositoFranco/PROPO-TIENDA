@@ -103,6 +103,14 @@ export default function SorteoAdminPage() {
   const [loadingReportes, setLoadingReportes] = useState(false);
   const [actualizandoReporte, setActualizandoReporte] = useState(null); // id del reporte que se está guardando
 
+  // ── CAMINO A LÍDER DIGITAL (interesados) ─────────────────────────────────────
+  const [interesadosCamino, setInteresadosCamino] = useState([]);
+  const [loadingInteresados, setLoadingInteresados] = useState(false);
+  const [aceptandoCamino, setAceptandoCamino] = useState(null);
+  const [fechaInicioCamino, setFechaInicioCamino] = useState('2026-08-24');
+  const [codigoGeneradoModal, setCodigoGeneradoModal] = useState(null);
+  const [copiadoCamino, setCopiadoCamino] = useState('');
+
   // ── FIRMAS (acuerdos digitales de líderes/gerentes) ──────────────────────────
   const [firmas,        setFirmas]        = useState([]);
   const [loadingFirmas, setLoadingFirmas]  = useState(false);
@@ -171,6 +179,35 @@ export default function SorteoAdminPage() {
   }, []);
 
   useEffect(() => { cargarReportes(); }, [cargarReportes]);
+
+  // ── Cargar interesados del Camino a Líder Digital ────────────────────────────
+  const cargarInteresadosCamino = useCallback(async () => {
+    setLoadingInteresados(true);
+    const { data } = await supabase
+      .from('camino_interesados')
+      .select('*')
+      .order('created_at', { ascending: false });
+    setInteresadosCamino(data || []);
+    setLoadingInteresados(false);
+  }, []);
+
+  const aceptarInteresadoCamino = async (interesado) => {
+    setAceptandoCamino(interesado.id);
+    const { data, error } = await supabase.rpc('aceptar_interesado_camino', {
+      p_interesado_id: interesado.id,
+      p_fecha_inicio: fechaInicioCamino,
+      p_cohorte: null,
+    });
+    setAceptandoCamino(null);
+    if (error) { alert('Error al aceptar: ' + error.message); return; }
+    const nuevo = data?.[0];
+    if (nuevo) { setCodigoGeneradoModal(nuevo); cargarInteresadosCamino(); }
+  };
+
+  const descartarInteresadoCamino = async (id) => {
+    await supabase.from('camino_interesados').update({ estado: 'descartado' }).eq('id', id);
+    cargarInteresadosCamino();
+  };
 
   const marcarReporteAtendido = async (id, nuevoStatus) => {
     setActualizandoReporte(id);
@@ -500,6 +537,7 @@ export default function SorteoAdminPage() {
             { id: 'metricas',  label: '📊 MÉTRICAS' },
             { id: 'ltv',       label: '💰 LTV' },
             { id: 'reportes',  label: `🆘 REPORTES${reportes.filter(r => r.status === 'pendiente').length > 0 ? ` (${reportes.filter(r => r.status === 'pendiente').length})` : ''}` },
+            { id: 'camino',    label: `🗺️ CAMINO${interesadosCamino.filter(i => i.estado === 'pendiente').length > 0 ? ` (${interesadosCamino.filter(i => i.estado === 'pendiente').length})` : ''}` },
           ].map(tab => (
             <button
               key={tab.id}
@@ -521,6 +559,7 @@ export default function SorteoAdminPage() {
                   if (aliados.length === 0) cargarAliados();
                 }
                 if (tab.id === 'reportes') cargarReportes();
+                if (tab.id === 'camino') cargarInteresadosCamino();
               }}
               style={{
                 padding: '9px 20px',
@@ -1682,6 +1721,112 @@ export default function SorteoAdminPage() {
 
       {/* ══ TAB: LTV / COMISIONES ══ */}
       {tabActiva === 'ltv' && <LtvComisionesTab />}
+
+      {/* ══ TAB: CAMINO A LÍDER DIGITAL ══ */}
+      {tabActiva === 'camino' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 'clamp(18px,4vw,24px)' }}>
+            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: C.gold, margin: '0 0 8px' }}>
+              🗺️ INTERESADOS · CAMINO A LÍDER DIGITAL
+            </h2>
+            <p style={{ color: C.muted, fontSize: 11.5, marginBottom: 16 }}>
+              Prospectos que llenaron el formulario de interés. Acéptalos después de tu junta 1 a 1 — se genera su código y tú (o quien coordinó la junta) se lo mandas por WhatsApp.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+              <label style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: C.muted }}>FECHA DE INICIO PARA NUEVOS ACEPTADOS</label>
+              <input
+                type="date"
+                value={fechaInicioCamino}
+                onChange={e => setFechaInicioCamino(e.target.value)}
+                style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '6px 10px', color: C.text, fontFamily: 'Cinzel, serif', fontSize: 11 }}
+              />
+            </div>
+            {loadingInteresados ? (
+              <p style={{ color: C.muted, fontSize: 12 }}>Cargando...</p>
+            ) : interesadosCamino.filter(i => i.estado === 'pendiente').length === 0 ? (
+              <p style={{ color: C.muted, fontSize: 12 }}>No hay interesados pendientes.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {interesadosCamino.filter(i => i.estado === 'pendiente').map(i => (
+                  <div key={i.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '12px 14px', flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: C.text }}>{i.nombre}</div>
+                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: C.muted, marginTop: 2 }}>
+                        📱 {i.telefono} · {new Date(i.created_at).toLocaleString('es-MX')}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => aceptarInteresadoCamino(i)}
+                        disabled={aceptandoCamino === i.id}
+                        style={{ padding: '8px 14px', background: 'rgba(68,255,136,0.12)', border: '1px solid rgba(68,255,136,0.35)', borderRadius: 8, color: C.green, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer', opacity: aceptandoCamino === i.id ? 0.5 : 1 }}
+                      >
+                        {aceptandoCamino === i.id ? 'GENERANDO...' : '✓ ACEPTAR'}
+                      </button>
+                      <button
+                        onClick={() => descartarInteresadoCamino(i.id)}
+                        style={{ padding: '8px 14px', background: 'rgba(255,68,102,0.1)', border: '1px solid rgba(255,68,102,0.3)', borderRadius: 8, color: C.red, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
+                      >
+                        DESCARTAR
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 'clamp(18px,4vw,24px)' }}>
+            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: C.gold, margin: '0 0 16px' }}>
+              HISTORIAL
+            </h2>
+            {interesadosCamino.filter(i => i.estado !== 'pendiente').length === 0 ? (
+              <p style={{ color: C.muted, fontSize: 12 }}>Todavía no hay historial.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {interesadosCamino.filter(i => i.estado !== 'pendiente').map(i => (
+                  <div key={i.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '10px 14px', flexWrap: 'wrap' }}>
+                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: C.text }}>{i.nombre}</div>
+                    <span style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: i.estado === 'aceptado' ? C.green : C.muted, border: `1px solid ${i.estado === 'aceptado' ? 'rgba(68,255,136,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 20, padding: '3px 10px' }}>
+                      {i.estado === 'aceptado' ? '✓ ACEPTADO' : '○ DESCARTADO'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal código generado · Camino */}
+      {codigoGeneradoModal && (
+        <div onClick={() => setCodigoGeneradoModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(4,2,14,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 20, padding: '32px 28px', textAlign: 'center', maxWidth: 340, width: '90%' }}>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>🗺️</div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 14, color: C.gold, letterSpacing: 2, marginBottom: 4 }}>ACCESO GENERADO</div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: C.text, marginBottom: 16 }}>{codigoGeneradoModal.nombre}</div>
+            <div style={{ fontFamily: 'monospace', fontSize: 20, letterSpacing: 2, color: C.gold, fontWeight: 900, background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px', marginBottom: 16 }}>
+              {codigoGeneradoModal.codigo_acceso}
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => { copiarAlPortapapeles(codigoGeneradoModal.codigo_acceso); setCopiadoCamino(codigoGeneradoModal.codigo_acceso); setTimeout(() => setCopiadoCamino(''), 1500); }}
+                style={{ padding: '10px 16px', background: 'rgba(212,175,55,0.1)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
+              >
+                {copiadoCamino === codigoGeneradoModal.codigo_acceso ? '✓ COPIADO' : 'COPIAR CÓDIGO'}
+              </button>
+              <a
+                href={`https://wa.me/${(codigoGeneradoModal.telefono || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`¡Bienvenido/a al Camino a Líder Digital! 🗺️\n\nTu código de acceso es: ${codigoGeneradoModal.codigo_acceso}\n\nEntra aquí: ${BASE_URL}/camino/login`)}`}
+                target="_blank" rel="noreferrer"
+                style={{ padding: '10px 16px', background: 'rgba(68,255,136,0.12)', border: '1px solid rgba(68,255,136,0.35)', borderRadius: 8, color: C.green, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer', textDecoration: 'none' }}
+              >
+                💬 ABRIR WHATSAPP
+              </a>
+            </div>
+            <button onClick={() => setCodigoGeneradoModal(null)} style={{ marginTop: 16, background: 'none', border: 'none', color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, cursor: 'pointer', letterSpacing: 1 }}>CERRAR</button>
+          </div>
+        </div>
+      )}
 
       {/* Modal QR físico */}
       {qrFModal && (

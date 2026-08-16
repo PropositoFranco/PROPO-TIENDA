@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Pasaporte del Templario · Templo del Propósito</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap&font-display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap&font-display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#D4AF37; --gold-bright:#FFE566; --gold-dim:rgba(212,175,55,0.4); --gold-glow:rgba(212,175,55,0.65);
+  --dark-bg:#04020e; --dark-surface:rgba(10,5,32,0.92);
+  --purple:#CC44FF; --purple-glow:rgba(204,68,255,0.5);
+  --lilac:rgba(200,185,240,0.7); --lilac-dim:rgba(200,185,240,0.42);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%; width:100%;}
+body{
+  overflow:hidden; height:100dvh; display:flex; flex-direction:column;
+  background:
+    radial-gradient(ellipse 120% 50% at 50% 0%, rgba(40,10,90,0.9) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 40% at 12% 15%, rgba(10,40,100,0.35) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 40% at 88% 10%, rgba(80,10,110,0.35) 0%, transparent 55%),
+    linear-gradient(180deg,#050215 0%,#0a0530 18%,#08031c 55%,#04020e 100%);
+  font-family:'Crimson Text',serif; color:#fff; position:relative;
+}
+.stars{position:fixed; inset:0; pointer-events:none; z-index:0;}
+.star{position:absolute; border-radius:50%; background:#fff; animation:twinkle var(--d) ease-in-out infinite; animation-delay:var(--del);}
+@keyframes twinkle{0%,100%{opacity:var(--min);} 50%{opacity:1;}}
+@media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important;} }
+.temple-icon .gold{stroke:var(--gold-bright); fill:var(--gold-bright);}
+.temple-icon .gold-mid{stroke:var(--gold); fill:var(--gold);}
+
+.topnav{
+  flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:14px;
+  padding:10px 26px;
+  background:linear-gradient(180deg, rgba(6,3,18,0.97), rgba(6,3,18,0.88));
+  border-bottom:1px solid var(--gold-dim); position:relative; z-index:10;
+}
+.brand{display:flex; align-items:center; gap:10px;}
+.brand-seal{width:32px; height:32px; flex-shrink:0; filter:drop-shadow(0 0 8px var(--gold-glow));}
+.brand-name{font-family:'Cinzel',serif; font-weight:900; letter-spacing:1px; font-size:17px; color:#fff;}
+.brand-name span{color:var(--gold);}
+.nav-links{display:flex; align-items:center; gap:22px; flex-wrap:nowrap;}
+.nav-item{
+  font-family:'Cinzel',serif; font-size:13.5px; font-weight:700; letter-spacing:0.3px;
+  color:var(--lilac); text-decoration:none; white-space:nowrap; opacity:0.85; transition:opacity .2s, color .2s;
+}
+.nav-item:hover{opacity:1; color:var(--gold-bright);}
+.nav-item.active{color:var(--gold-bright); opacity:1;}
+.nav-select{
+  font-family:'Cinzel',serif; font-size:13px; font-weight:700; color:#fff;
+  background:rgba(212,175,55,0.1); border:1px solid var(--gold-dim); border-radius:8px;
+  padding:8px 14px; white-space:nowrap; max-width:240px;
+}
+@media (max-width:860px){ .nav-links{display:none;} .nav-select{margin-left:auto;} }
+
+.wrap{
+  flex:1 1 auto; min-height:0; overflow:hidden;
+  display:flex; flex-direction:column; justify-content:center; gap:clamp(10px,2vh,20px);
+  max-width:1080px; width:100%; margin:0 auto;
+  padding:clamp(14px,2.4vh,26px) clamp(20px,4vw,40px);
+  position:relative; z-index:1;
+}
+
+.title-row{display:flex; align-items:center; gap:14px;}
+.title-icon{
+  width:clamp(44px,6.5vh,58px); height:clamp(44px,6.5vh,58px); flex-shrink:0;
+  border-radius:50%; border:2px solid var(--gold);
+  background:radial-gradient(circle at 35% 30%, rgba(255,229,102,0.35), rgba(212,175,55,0.12) 65%, transparent 100%);
+  box-shadow:0 0 16px var(--gold-glow); display:flex; align-items:center; justify-content:center; font-size:clamp(18px,2.6vh,24px);
+}
+h1.title{
+  font-family:'Cinzel Decorative',serif; font-weight:900; font-size:clamp(22px,3.8vh,34px);
+  color:#fff; text-shadow:0 0 20px rgba(212,175,55,0.3); line-height:1.1;
+}
+.subtitle{font-family:'Crimson Text',serif; font-size:clamp(13.5px,1.8vh,16.5px); color:var(--lilac); margin-top:4px;}
+
+.progress-card{
+  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:14px;
+  padding:clamp(14px,2.2vh,20px) clamp(16px,2vw,24px);
+}
+.progress-top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:clamp(8px,1.3vh,12px);}
+.progress-count{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(17px,2.6vh,22px); color:#fff;}
+.progress-left{font-family:'Nunito',sans-serif; font-weight:700; font-size:clamp(11.5px,1.5vh,13.5px); color:var(--lilac);}
+.progress-bar{height:8px; border-radius:6px; background:rgba(255,255,255,0.08); overflow:hidden;}
+.progress-fill{height:100%; width:0%; border-radius:6px; background:linear-gradient(90deg,var(--gold),var(--gold-bright)); box-shadow:0 0 10px var(--gold-glow);}
+
+.stamp-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:clamp(10px,1.6vh,16px);}
+@media (max-width:640px){ .stamp-grid{grid-template-columns:repeat(4,1fr); gap:8px;} }
+
+.stamp{
+  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:12px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:clamp(4px,0.8vh,8px);
+  padding:clamp(10px,1.8vh,18px) 6px; position:relative;
+}
+.stamp-icon{font-size:clamp(16px,2.6vh,22px); filter:grayscale(0.15) opacity(0.85);}
+.stamp-label{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(10.5px,1.35vh,12.5px); color:var(--lilac-dim);}
+.stamp.milestone{border-color:var(--gold); box-shadow:0 0 14px rgba(212,175,55,0.25);}
+.stamp-tag{
+  position:absolute; top:-9px; left:50%; transform:translateX(-50%);
+  font-family:'Cinzel',serif; font-weight:900; font-size:8.5px; letter-spacing:0.6px;
+  color:#1a0a2e; background:linear-gradient(90deg,var(--gold),var(--gold-bright));
+  padding:2px 8px; border-radius:100px; white-space:nowrap;
+}
+
+.practice-row{display:flex; flex-direction:column; gap:clamp(4px,0.8vh,8px);}
+.practice-head{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(12.5px,1.6vh,14.5px); color:#fff;}
+.practice-sub{font-family:'Nunito',sans-serif; font-size:clamp(10.5px,1.3vh,12px); color:var(--lilac-dim); margin-bottom:clamp(4px,0.8vh,8px);}
+.practice-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:clamp(8px,1.4vh,14px);}
+@media (max-width:640px){ .practice-grid{grid-template-columns:repeat(2,1fr);} }
+.practice-stamp{
+  background:rgba(204,68,255,0.05); border:1px solid rgba(204,68,255,0.28); border-radius:11px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+  padding:clamp(8px,1.4vh,14px) 6px;
+}
+.practice-icon{font-size:clamp(14px,2.2vh,18px);}
+.practice-label{font-family:'Nunito',sans-serif; font-weight:700; font-size:clamp(9.5px,1.2vh,11px); color:rgba(220,190,255,0.75); text-align:center;}
+
+@media (max-width:760px){
+  .topnav{padding:8px 14px;}
+  .wrap{gap:8px; padding:10px 16px 12px;}
+  .stamp{padding:8px 4px;}
+  .practice-grid{gap:8px;}
+}
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<nav class="topnav">
+  <div class="brand">
+    <svg class="brand-seal temple-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="32,4 58,22 6,22" class="gold"/>
+      <rect x="9" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="20" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="29.5" y="24" width="5" height="30" class="gold"/>
+      <rect x="39" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="50" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="6" y="54" width="52" height="5" class="gold"/>
+      <circle cx="32" cy="13" r="2.6" fill="#04020e"/>
+    </svg>
+    <div class="brand-name">TEMPLO <span>DEL PROPÓSITO</span></div>
+  </div>
+  <div class="nav-links">
+    <a class="nav-item" href="camino-templario.html">Inicio</a>
+    <a class="nav-item" href="#">Check-in</a>
+    <a class="nav-item" href="#">Calendario</a>
+    <a class="nav-item" href="#">Agenda</a>
+    <a class="nav-item active" href="#">Pasaporte del Templario</a>
+    <a class="nav-item" href="#">Sala de Cowork</a>
+    <a class="nav-item" href="#">Ranking</a>
+  </div>
+  <select class="nav-select"><option>Camino a Líder Digital · Gen. Agosto</option></select>
+</nav>
+
+<div class="wrap">
+
+  <div class="title-row">
+    <div class="title-icon">🎖️</div>
+    <div>
+      <h1 class="title">Pasaporte del Templario</h1>
+      <div class="subtitle">Junta un sello por cada Junta Constructiva en vivo. Llega a 8 y cierras tu camino.</div>
+    </div>
+  </div>
+
+  <div class="progress-card">
+    <div class="progress-top">
+      <div class="progress-count">0/8 sellos</div>
+      <div class="progress-left">Te faltan 8</div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <div class="stamp-grid">
+    <div class="stamp"><div class="stamp-icon">🔒</div><div class="stamp-label">#1</div></div>
+    <div class="stamp"><div class="stamp-icon">🔒</div><div class="stamp-label">#2</div></div>
+    <div class="stamp"><div class="stamp-icon">🔒</div><div class="stamp-label">#3</div></div>
+    <div class="stamp milestone"><span class="stamp-tag">Validado</span><div class="stamp-icon">🔒</div><div class="stamp-label">#4</div></div>
+    <div class="stamp"><div class="stamp-icon">🔒</div><div class="stamp-label">#5</div></div>
+    <div class="stamp"><div class="stamp-icon">🔒</div><div class="stamp-label">#6</div></div>
+    <div class="stamp"><div class="stamp-icon">🔒</div><div class="stamp-label">#7</div></div>
+    <div class="stamp milestone"><span class="stamp-tag">Completo</span><div class="stamp-icon">🔒</div><div class="stamp-label">#8</div></div>
+  </div>
+
+  <div class="practice-row">
+    <div class="practice-head">Sellos de práctica</div>
+    <div class="practice-sub">Practica en la Sala de Cowork (sparring de venta y ganchos validados). No afecta tu racha del camino.</div>
+    <div class="practice-grid">
+      <div class="practice-stamp"><div class="practice-icon">🔒</div><div class="practice-label">Sparring ×5</div></div>
+      <div class="practice-stamp"><div class="practice-icon">🔒</div><div class="practice-label">Sparring ×10</div></div>
+      <div class="practice-stamp"><div class="practice-icon">🔒</div><div class="practice-label">Gancho validado</div></div>
+      <div class="practice-stamp"><div class="practice-icon">🔒</div><div class="practice-label">Gancho validado ×5</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const starsEl = document.getElementById('stars');
+const n = window.innerWidth < 760 ? 26 : 55;
+let html = '';
+for(let i=0;i<n;i++){
+  const size = (Math.random()*1.5+0.6).toFixed(1);
+  const top = (Math.random()*100).toFixed(1);
+  const left = (Math.random()*100).toFixed(1);
+  const dur = (Math.random()*4+3).toFixed(1);
+  const delay = (Math.random()*4).toFixed(1);
+  const min = (Math.random()*0.4+0.15).toFixed(2);
+  html += `<div class="star" style="width:${size}px;height:${size}px;top:${top}%;left:${left}%;--d:${dur}s;--del:${delay}s;--min:${min};"></div>`;
+}
+starsEl.innerHTML = html;
+</script>
+
+</body>
+</html>

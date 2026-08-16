@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Bases del Camino a Líder Digital · Templo del Propósito</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap&font-display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap&font-display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#D4AF37; --gold-bright:#FFE566; --gold-dim:rgba(212,175,55,0.4); --gold-glow:rgba(212,175,55,0.65);
+  --dark-bg:#04020e; --dark-surface:rgba(10,5,32,0.92); --dark-surface-2:rgba(16,8,40,0.75);
+  --purple:#CC44FF; --green:#44FF88;
+  --lilac:rgba(200,185,240,0.72); --lilac-dim:rgba(200,185,240,0.45);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  min-height:100vh; width:100%;
+  background:
+    radial-gradient(ellipse 120% 45% at 50% 0%, rgba(40,10,90,0.85) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 30% at 10% 20%, rgba(10,40,100,0.3) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 30% at 90% 15%, rgba(80,10,110,0.3) 0%, transparent 55%),
+    linear-gradient(180deg,#050215 0%,#0a0530 14%,#08031c 40%,#04020e 100%);
+  font-family:'Crimson Text',serif; color:#fff; position:relative;
+}
+.stars{position:fixed; inset:0; pointer-events:none; z-index:0;}
+.star{position:absolute; border-radius:50%; background:#fff; animation:twinkle var(--d) ease-in-out infinite; animation-delay:var(--del);}
+@keyframes twinkle{0%,100%{opacity:var(--min);} 50%{opacity:1;}}
+@media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important; scroll-behavior:auto !important;} }
+.temple-icon .gold{stroke:var(--gold-bright); fill:var(--gold-bright);}
+.temple-icon .gold-mid{stroke:var(--gold); fill:var(--gold);}
+
+/* ══ NAV (misma app) ══ */
+.topnav{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between; gap:14px;
+  padding:12px 26px;
+  background:linear-gradient(180deg, rgba(6,3,18,0.97), rgba(6,3,18,0.9));
+  border-bottom:1px solid var(--gold-dim); backdrop-filter:blur(10px);
+  flex-wrap:wrap;
+}
+.brand{display:flex; align-items:center; gap:10px;}
+.brand-seal{width:32px; height:32px; flex-shrink:0; filter:drop-shadow(0 0 8px var(--gold-glow));}
+.brand-name{font-family:'Cinzel',serif; font-weight:900; letter-spacing:1px; font-size:17px; color:#fff;}
+.brand-name span{color:var(--gold);}
+.nav-links{display:flex; align-items:center; gap:22px; flex-wrap:wrap;}
+.nav-item{
+  font-family:'Cinzel',serif; font-size:13.5px; font-weight:700; letter-spacing:0.3px;
+  color:var(--lilac); text-decoration:none; white-space:nowrap; opacity:0.85; transition:opacity .2s, color .2s;
+}
+.nav-item:hover{opacity:1; color:var(--gold-bright);}
+.nav-select{
+  font-family:'Cinzel',serif; font-size:13px; font-weight:700;
+  color:#fff; background:rgba(212,175,55,0.1); border:1px solid var(--gold-dim);
+  border-radius:8px; padding:8px 14px; white-space:nowrap;
+}
+@media (max-width:820px){ .nav-links{display:none;} .nav-select{margin-left:auto;} }
+
+/* ══ CONTENT ══ */
+.wrap{max-width:880px; margin:0 auto; padding:44px 24px 90px; position:relative; z-index:1;}
+
+.back-link{
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:'Cinzel',serif; font-weight:700; font-size:13px; letter-spacing:0.3px;
+  color:var(--lilac); text-decoration:none; margin-bottom:20px; transition:color .2s;
+}
+.back-link:hover{color:var(--gold-bright);}
+
+.badge{
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:'Cinzel',serif; font-weight:900; font-size:11.5px; letter-spacing:2px;
+  color:var(--gold-bright); background:rgba(212,175,55,0.1); border:1px solid var(--gold-dim);
+  border-radius:100px; padding:7px 16px; margin-bottom:20px;
+}
+
+h1.title{
+  font-family:'Cinzel Decorative',serif; font-weight:900; font-size:clamp(28px,4.6vw,44px);
+  line-height:1.15; color:#fff; text-shadow:0 0 24px rgba(212,175,55,0.3); margin-bottom:18px;
+}
+.title span{color:var(--gold-bright);}
+
+.lede{font-family:'Crimson Text',serif; font-size:18px; line-height:1.65; color:rgba(255,255,255,0.88); max-width:700px; margin-bottom:36px;}
+.lede b{color:var(--gold-bright); font-weight:600;}
+
+hr.divider{border:none; height:1px; background:linear-gradient(90deg, var(--gold-dim), transparent); margin:40px 0 32px;}
+
+.sec-eyebrow{
+  font-family:'Cinzel',serif; font-weight:900; font-size:12.5px; letter-spacing:2px; color:var(--gold);
+  display:flex; align-items:center; gap:10px; margin-bottom:8px;
+}
+.sec-eyebrow .num{
+  width:26px; height:26px; border-radius:50%; border:1px solid var(--gold-dim);
+  display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--gold-bright);
+}
+h2.sec-title{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(22px,3vw,28px); color:#fff; margin-bottom:20px;}
+
+.quote-card{
+  background:var(--dark-surface); border:1px solid var(--gold-dim); border-left:3px solid var(--gold);
+  border-radius:12px; padding:24px 26px; margin-bottom:24px;
+}
+.quote-card p{font-family:'Cinzel',serif; font-weight:700; font-size:clamp(17px,2vw,20px); line-height:1.5; color:#fff;}
+
+p.body-text{font-family:'Crimson Text',serif; font-size:17px; line-height:1.65; color:rgba(255,255,255,0.85); margin-bottom:22px;}
+p.body-text b{color:var(--gold-bright); font-weight:600;}
+p.body-text:last-child{margin-bottom:0;}
+
+.field{margin-bottom:20px;}
+.field-label{font-family:'Cinzel',serif; font-weight:900; font-size:14px; color:var(--gold-bright); margin-bottom:6px;}
+.field-text{font-family:'Crimson Text',serif; font-size:16.5px; line-height:1.6; color:rgba(255,255,255,0.85);}
+
+table{width:100%; border-collapse:collapse; margin-bottom:24px; border-radius:12px; overflow:hidden; border:1px solid var(--gold-dim);}
+thead th{
+  font-family:'Cinzel',serif; font-weight:900; font-size:11.5px; letter-spacing:1px; text-transform:uppercase;
+  color:var(--gold-bright); background:rgba(212,175,55,0.1); text-align:left; padding:14px 18px;
+}
+tbody td{
+  font-family:'Nunito',sans-serif; font-size:14.5px; line-height:1.5; color:rgba(255,255,255,0.9);
+  padding:16px 18px; border-top:1px solid rgba(212,175,55,0.15); background:var(--dark-surface-2);
+}
+tbody tr:nth-child(even) td{background:rgba(16,8,40,0.5);}
+td.hl{color:var(--gold-bright); font-weight:700; font-family:'Nunito',sans-serif;}
+td.no{color:rgba(255,120,120,0.85);}
+td.yes{color:var(--green);}
+
+ul.rules{list-style:none;}
+ul.rules li{
+  display:flex; gap:14px; padding:16px 0; border-top:1px solid rgba(212,175,55,0.12);
+}
+ul.rules li:first-child{border-top:none;}
+ul.rules li .dot{
+  width:8px; height:8px; border-radius:50%; background:var(--gold); flex-shrink:0; margin-top:9px; box-shadow:0 0 8px var(--gold-glow);
+}
+ul.rules li .txt{font-family:'Crimson Text',serif; font-size:16.5px; line-height:1.6; color:rgba(255,255,255,0.85);}
+ul.rules li .txt b{color:var(--gold-bright); font-weight:600;}
+
+.phase-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:8px;}
+@media (max-width:700px){ .phase-grid{grid-template-columns:1fr 1fr;} }
+@media (max-width:460px){ .phase-grid{grid-template-columns:1fr;} }
+.phase-card{
+  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:12px; padding:18px 16px;
+}
+.phase-num{font-family:'Cinzel',serif; font-weight:900; font-size:11px; letter-spacing:1.5px; color:var(--gold); margin-bottom:6px;}
+.phase-name{font-family:'Cinzel',serif; font-weight:700; font-size:15px; color:#fff; margin-bottom:8px;}
+.phase-focus{font-family:'Nunito',sans-serif; font-size:12.5px; line-height:1.5; color:var(--lilac); margin-bottom:10px;}
+.phase-upload{
+  font-family:'Nunito',sans-serif; font-size:11.5px; font-weight:700; color:var(--gold-bright);
+  background:rgba(212,175,55,0.1); border:1px solid var(--gold-dim); border-radius:100px; padding:5px 10px; display:inline-block;
+}
+
+.cta-row{
+  display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;
+  margin-top:16px; padding:28px; border-radius:16px;
+  background:linear-gradient(160deg, rgba(212,175,55,0.1), rgba(124,58,237,0.08));
+  border:1px solid var(--gold-dim);
+}
+.cta-text{font-family:'Cinzel',serif; font-weight:700; font-size:18px; color:#fff;}
+.cta-btn{
+  font-family:'Cinzel',serif; font-weight:900; font-size:14px; letter-spacing:0.5px; color:#1a0a2e;
+  background:linear-gradient(90deg, var(--gold), var(--gold-bright)); border:none; border-radius:100px;
+  padding:14px 30px; text-decoration:none; box-shadow:0 0 22px var(--gold-glow); white-space:nowrap;
+}
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<nav class="topnav">
+  <div class="brand">
+    <svg class="brand-seal temple-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="32,4 58,22 6,22" class="gold"/>
+      <rect x="9" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="20" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="29.5" y="24" width="5" height="30" class="gold"/>
+      <rect x="39" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="50" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="6" y="54" width="52" height="5" class="gold"/>
+      <circle cx="32" cy="13" r="2.6" fill="#04020e"/>
+    </svg>
+    <div class="brand-name">TEMPLO <span>DEL PROPÓSITO</span></div>
+  </div>
+  <div class="nav-links">
+    <a class="nav-item" href="camino-templario.html">Inicio</a>
+    <a class="nav-item" href="#">Check-in</a>
+    <a class="nav-item" href="#">Calendario</a>
+    <a class="nav-item" href="#">Agenda</a>
+    <a class="nav-item" href="pasaporte-templario.html">Pasaporte del Templario</a>
+    <a class="nav-item" href="#">Sala de Cowork</a>
+    <a class="nav-item" href="#">Ranking</a>
+  </div>
+  <select class="nav-select"><option>Camino a Líder Digital · Gen. Agosto</option></select>
+</nav>
+
+<div class="wrap">
+
+  <a class="back-link" href="camino-templario.html">← Camino a Líder Digital</a>
+  <div class="badge">📜 BASES DEL CAMINO</div>
+  <h1 class="title">Las bases de tu <span>Camino a Líder Digital</span></h1>
+  <p class="lede">Todo lo que necesitas para avanzar: qué esperamos de ti, cómo funciona el día a día, cómo se mide tu constancia, qué desbloqueas y las reglas del juego. Guarda esta página — vas a volver a ella durante todo tu camino.</p>
+
+  <!-- 1 · EL MODELO -->
+  <div class="sec-eyebrow"><span class="num">1</span>EL MODELO</div>
+  <h2 class="sec-title">Qué es este camino</h2>
+  <div class="quote-card">
+    <p>"Cada día apareces y dejas huella. Cada semana das un paso de venta. Al final, tú y tu líder deciden si esto se vuelve tu siguiente nivel."</p>
+  </div>
+  <table>
+    <thead><tr><th>No es</th><th>Sí es</th></tr></thead>
+    <tbody>
+      <tr><td class="no">Un reto con fecha de cierre dura</td><td class="yes">Un camino de validación, entre 30 y 60 días</td></tr>
+      <tr><td class="no">Puntos ni rankings de vanidad</td><td class="yes">Seguidores ganados + ventas registradas</td></tr>
+      <tr><td class="no">Otra tarea más en tu lista</td><td class="yes">Tu guion y formato del día, resueltos hoy y en mejora continua junto contigo</td></tr>
+    </tbody>
+  </table>
+
+  <hr class="divider">
+
+  <!-- 2 · EL RITMO -->
+  <div class="sec-eyebrow"><span class="num">2</span>EL RITMO</div>
+  <h2 class="sec-title">Cómo funciona el día a día</h2>
+  <div class="field">
+    <div class="field-label">El calendario</div>
+    <div class="field-text">Fase por fase, tu guía te dice qué publicar: el tipo de pieza, el formato, la idea con su gancho, una referencia real y, casi siempre, su propio tutorial corto.</div>
+  </div>
+  <div class="field">
+    <div class="field-label">El check-in</div>
+    <div class="field-text">Todos los días subes tu evidencia de que publicaste — foto o captura. Es el piso: sin evidencia no cuenta. Si ese día vendiste, lo registras ahí mismo.</div>
+  </div>
+  <div class="field">
+    <div class="field-label">El paso de la semana</div>
+    <div class="field-text">Un paso de avance por semana. Aparece el lunes de su semana y lo ves directo en tu tablero de Hoy. Se registra con el check-in del día en que cae — no hay subida aparte.</div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- 3 · EL TABLERO -->
+  <div class="sec-eyebrow"><span class="num">3</span>EL TABLERO</div>
+  <h2 class="sec-title">Cómo se mide tu avance</h2>
+  <p class="body-text">Tu tablero ordena por <b>seguidores ganados</b> (tu conteo final menos tu conteo inicial). Si hay empate, decide tu racha de check-ins. Lo que vendes viaja como columna de apoyo: se ve, pero no decide el orden — esto no es una competencia entre ustedes, es tu propia línea de progreso frente a tu punto de partida.</p>
+
+  <hr class="divider">
+
+  <!-- 4 · LA RECOMPENSA -->
+  <div class="sec-eyebrow"><span class="num">4</span>LA RECOMPENSA</div>
+  <h2 class="sec-title">Qué desbloqueas</h2>
+  <table>
+    <thead><tr><th>Logro</th><th>Check-ins</th><th>Pasos semanales</th><th>Qué desbloquea</th></tr></thead>
+    <tbody>
+      <tr><td class="hl">⭐ Camino Completo</td><td>90%+ de días</td><td>Todos cumplidos</td><td>Pasas a liderazgo formal dentro del Templo</td></tr>
+      <tr><td class="hl">✓ Camino Validado</td><td>70%+ de días</td><td>La mayoría cumplidos</td><td>Sigues en el programa, con revisión personal de tu líder</td></tr>
+    </tbody>
+  </table>
+  <p class="body-text">Sin tu métrica final registrada no hay revisión ni Camino Completo, aunque tengas todos tus check-ins.</p>
+
+  <hr class="divider">
+
+  <!-- 5 · REGLAS -->
+  <div class="sec-eyebrow"><span class="num">5</span>LO OBLIGATORIO</div>
+  <h2 class="sec-title">Reglas</h2>
+  <ul class="rules">
+    <li><span class="dot"></span><span class="txt"><b>Puerta de entrada.</b> Antes de usar tu tablero, registras tus seguidores actuales + una captura que lo respalde. Sin eso el panel queda bloqueado — es lo que fija tu línea base.</span></li>
+    <li><span class="dot"></span><span class="txt"><b>Puerta de cierre.</b> Al terminar tu camino, pedimos tus seguidores finales + una captura. Sin eso no hay revisión ni Camino Completo, aunque tengas todos tus check-ins.</span></li>
+    <li><span class="dot"></span><span class="txt"><b>Si un día se te pasa.</b> No quedas fuera: puedes registrarlo después como entrega tardía y seguir sumando. Para Camino Completo necesitas el 90%+; para Camino Validado te basta con el 70%.</span></li>
+    <li><span class="dot"></span><span class="txt"><b>Evidencia obligatoria.</b> Cada check-in necesita su foto o captura — es el piso, sin evidencia no cuenta. Puedes subir hasta 5 archivos por check-in.</span></li>
+  </ul>
+
+  <hr class="divider">
+
+  <!-- 6 · EL CALENDARIO -->
+  <div class="sec-eyebrow"><span class="num">6</span>EL CALENDARIO</div>
+  <h2 class="sec-title">Las fases de tu camino</h2>
+  <p class="body-text">Tu camino corre entre 30 y 60 días, organizado en 4 fases. Tu líder define contigo cuándo cierra cada una según tu ritmo.</p>
+  <div class="phase-grid">
+    <div class="phase-card">
+      <div class="phase-num">FASE 1</div>
+      <div class="phase-name">Cimiento</div>
+      <div class="phase-focus">Aparecer y encontrar tu voz frente a tu audiencia.</div>
+      <div class="phase-upload">Captura de pieza publicada</div>
+    </div>
+    <div class="phase-card">
+      <div class="phase-num">FASE 2</div>
+      <div class="phase-name">Atracción</div>
+      <div class="phase-focus">Secuencias de contenido que generan interés real.</div>
+      <div class="phase-upload">Captura de secuencia</div>
+    </div>
+    <div class="phase-card">
+      <div class="phase-num">FASE 3</div>
+      <div class="phase-name">Prueba social</div>
+      <div class="phase-focus">Documentar y publicar tus propios resultados.</div>
+      <div class="phase-upload">Captura de pieza publicada</div>
+    </div>
+    <div class="phase-card">
+      <div class="phase-num">FASE 4</div>
+      <div class="phase-name">Cierre</div>
+      <div class="phase-focus">Oferta directa a tu lista caliente.</div>
+      <div class="phase-upload">Captura de conversación</div>
+    </div>
+  </div>
+
+  <div class="cta-row">
+    <div class="cta-text">¿Lista para empezar tu camino?</div>
+    <a class="cta-btn" href="camino-templario.html">Ir a mi camino →</a>
+  </div>
+
+</div>
+
+<script>
+const starsEl = document.getElementById('stars');
+const n = window.innerWidth < 760 ? 30 : 60;
+let html = '';
+for(let i=0;i<n;i++){
+  const size = (Math.random()*1.5+0.6).toFixed(1);
+  const top = (Math.random()*100).toFixed(1);
+  const left = (Math.random()*100).toFixed(1);
+  const dur = (Math.random()*4+3).toFixed(1);
+  const delay = (Math.random()*4).toFixed(1);
+  const min = (Math.random()*0.4+0.15).toFixed(2);
+  html += `<div class="star" style="width:${size}px;height:${size}px;top:${top}%;left:${left}%;--d:${dur}s;--del:${delay}s;--min:${min};"></div>`;
+}
+starsEl.innerHTML = html;
+</script>
+
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Camino a Líder Digital · Templo del Propósito</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap&font-display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap&font-display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#D4AF37; --gold-bright:#FFE566; --gold-dim:rgba(212,175,55,0.4); --gold-glow:rgba(212,175,55,0.65);
+  --dark-bg:#04020e; --dark-surface:rgba(10,5,32,0.92);
+  --purple:#CC44FF;
+  --lilac:rgba(200,185,240,0.72); --lilac-dim:rgba(200,185,240,0.45);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%; width:100%;}
+body{
+  overflow:hidden; height:100dvh; position:relative;
+  background:#04020e; font-family:'Crimson Text',serif; color:#fff;
+}
+
+/* ══ FONDO ÉPICO: templo en baja opacidad ══ */
+.hero-bg{position:absolute; inset:0; overflow:hidden; z-index:0;}
+.hero-bg::before{
+  content:""; position:absolute; inset:0;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 30%, rgba(212,175,55,0.16) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 15% 60%, rgba(10,40,100,0.28) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 85% 55%, rgba(204,68,255,0.22) 0%, transparent 55%),
+    linear-gradient(180deg,#050215 0%,#0a0530 22%,#08031c 55%,#04020e 100%);
+}
+.temple-silhouette{
+  position:absolute; left:50%; bottom:0; transform:translateX(-50%);
+  width:min(1400px, 220vw); opacity:0.16; filter:blur(0.3px);
+}
+.hero-bg::after{
+  content:""; position:absolute; inset:0;
+  background:radial-gradient(ellipse 80% 65% at 50% 42%, rgba(4,2,14,0) 0%, rgba(4,2,14,0.55) 65%, rgba(4,2,14,0.94) 100%);
+}
+.stars{position:absolute; inset:0; z-index:1;}
+.star{position:absolute; border-radius:50%; background:#fff; animation:twinkle var(--d) ease-in-out infinite; animation-delay:var(--del);}
+@keyframes twinkle{0%,100%{opacity:var(--min);} 50%{opacity:1;}}
+@keyframes rayPulse{0%,100%{opacity:0.5;} 50%{opacity:0.9;}}
+@media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important;} }
+
+/* ══ CONTENT ══ */
+.page{position:relative; z-index:2; height:100dvh; display:flex; flex-direction:column; overflow:hidden;}
+
+.back-link{
+  flex:0 0 auto; display:inline-flex; align-items:center; gap:8px; width:fit-content;
+  font-family:'Cinzel',serif; font-weight:700; font-size:13px; letter-spacing:0.3px;
+  color:var(--lilac); text-decoration:none; margin:clamp(14px,2.4vh,26px) clamp(20px,4vw,40px) 0;
+  padding:8px 16px; border:1px solid var(--gold-dim); border-radius:100px; background:rgba(10,5,32,0.5);
+  backdrop-filter:blur(6px); transition:color .2s, border-color .2s;
+}
+.back-link:hover{color:var(--gold-bright); border-color:var(--gold);}
+
+.hero{
+  flex:0 0 auto; display:flex; flex-direction:column; align-items:center; text-align:center;
+  gap:clamp(10px,1.8vh,18px); padding:clamp(16px,3vh,30px) clamp(20px,4vw,40px) clamp(10px,1.8vh,20px);
+}
+.hero-icon{
+  width:clamp(46px,7vh,64px); height:clamp(46px,7vh,64px);
+  border-radius:50%; border:2px solid var(--gold);
+  background:radial-gradient(circle at 35% 30%, rgba(255,229,102,0.4), rgba(212,175,55,0.15) 65%, transparent 100%);
+  box-shadow:0 0 22px var(--gold-glow); display:flex; align-items:center; justify-content:center;
+}
+.hero-icon svg{width:56%; height:56%;}
+.hero-tag{
+  font-family:'Cinzel',serif; font-weight:900; font-size:clamp(11px,1.5vh,13px); letter-spacing:2.4px;
+  color:var(--gold-bright); background:rgba(212,175,55,0.12); border:1px solid var(--gold-dim);
+  border-radius:100px; padding:7px 18px;
+}
+h1.hero-title{
+  font-family:'Cinzel Decorative',serif; font-weight:900; font-size:clamp(28px,5.6vh,52px);
+  line-height:1.12; color:#fff; text-shadow:0 0 30px rgba(212,175,55,0.4); max-width:820px;
+}
+h1.hero-title span{color:var(--gold-bright);}
+.hero-sub{font-family:'Crimson Text',serif; font-style:italic; font-size:clamp(14px,2vh,19px); color:var(--lilac); max-width:560px;}
+.hero-meta{display:flex; align-items:center; gap:clamp(16px,2.6vw,30px); flex-wrap:wrap; justify-content:center; margin-top:2px;}
+.meta-item{display:flex; align-items:center; gap:8px; font-family:'Nunito',sans-serif; font-size:clamp(12.5px,1.6vh,15px); color:rgba(255,255,255,0.85);}
+.meta-item b{color:var(--gold-bright); font-weight:800;}
+
+.cta-row{display:flex; align-items:center; gap:20px; flex-wrap:wrap; justify-content:center; margin-top:6px;}
+.cta-btn{
+  font-family:'Cinzel',serif; font-weight:900; font-size:clamp(13.5px,1.7vh,16px); letter-spacing:0.4px; color:#1a0a2e;
+  background:linear-gradient(90deg, var(--gold), var(--gold-bright)); border:none; border-radius:100px;
+  padding:clamp(13px,1.8vh,17px) clamp(26px,3vw,36px); text-decoration:none; box-shadow:0 0 24px var(--gold-glow);
+  display:inline-flex; align-items:center; gap:9px; transition:transform .15s;
+}
+.cta-btn:hover{transform:translateY(-1px);}
+.cta-btn-gestor{background:transparent; color:var(--purple); border:1.5px solid var(--purple); box-shadow:0 0 18px rgba(204,68,255,0.25);}
+.cta-btn-gestor:hover{background:rgba(204,68,255,0.1);}
+.cta-login{font-family:'Nunito',sans-serif; font-size:clamp(12.5px,1.6vh,14.5px); color:var(--lilac); margin-top:2px;}
+.cta-login a{color:var(--gold-bright); font-weight:700; text-decoration:none; border-bottom:1px solid var(--gold-dim);}
+
+.lower{
+  flex:1 1 auto; min-height:0; overflow:hidden;
+  display:flex; flex-direction:column; justify-content:flex-end; gap:clamp(10px,1.8vh,18px);
+  max-width:900px; width:100%; margin:0 auto; padding:0 clamp(20px,4vw,40px) clamp(18px,3vh,34px);
+}
+.card{
+  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:16px;
+  padding:clamp(16px,2.4vh,24px) clamp(18px,2.4vw,26px);
+}
+.card h3{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(14px,1.9vh,17px); color:#fff; margin-bottom:clamp(6px,1vh,10px);}
+.card p{font-family:'Crimson Text',serif; font-size:clamp(14px,1.85vh,17px); line-height:1.5; color:rgba(255,255,255,0.86);}
+
+.section-label{
+  font-family:'Cinzel',serif; font-weight:900; font-size:clamp(12px,1.6vh,14.5px); letter-spacing:0.4px;
+  color:#fff; display:flex; align-items:center; gap:8px; margin-bottom:clamp(6px,1vh,10px);
+}
+.section-label::before{content:""; width:3px; height:14px; background:var(--gold); border-radius:2px; display:inline-block;}
+.material-item{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:clamp(12px,1.8vh,16px) clamp(14px,1.8vw,20px); border-radius:12px;
+  background:rgba(212,175,55,0.07); border:1px solid var(--gold-dim);
+  text-decoration:none; color:#fff; transition:background .2s, border-color .2s;
+}
+.material-item:hover{background:rgba(212,175,55,0.13); border-color:var(--gold);}
+.material-left{display:flex; align-items:center; gap:12px;}
+.material-icon{
+  width:clamp(32px,4.6vh,38px); height:clamp(32px,4.6vh,38px); border-radius:9px;
+  background:linear-gradient(160deg, rgba(212,175,55,0.3), rgba(124,58,237,0.2));
+  display:flex; align-items:center; justify-content:center; font-size:clamp(15px,2vh,17px); border:1px solid var(--gold-dim);
+}
+.material-title{font-family:'Cinzel',serif; font-weight:700; font-size:clamp(13px,1.7vh,15px);}
+.material-cta{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(10.5px,1.35vh,12px); letter-spacing:0.6px; color:var(--gold-bright); white-space:nowrap;}
+
+@media (max-width:760px){
+  .back-link{margin:12px 14px 0;}
+  .hero{padding:14px 14px 8px;}
+  .hero-meta{gap:14px;}
+  .lower{padding:0 14px 14px; gap:8px;}
+  .card{padding:14px 16px;}
+}
+</style>
+</head>
+<body>
+
+<div class="hero-bg">
+  <svg class="temple-silhouette" viewBox="0 0 1400 420" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax meet">
+    <polygon points="700,10 1000,140 400,140" fill="#D4AF37"/>
+    <rect x="430" y="145" width="34" height="260" fill="#D4AF37"/>
+    <rect x="520" y="145" width="34" height="260" fill="#D4AF37"/>
+    <rect x="610" y="145" width="34" height="260" fill="#D4AF37"/>
+    <rect x="700" y="145" width="34" height="260" fill="#FFE566"/>
+    <rect x="790" y="145" width="34" height="260" fill="#D4AF37"/>
+    <rect x="880" y="145" width="34" height="260" fill="#D4AF37"/>
+    <rect x="970" y="145" width="34" height="260" fill="#D4AF37"/>
+    <rect x="380" y="400" width="640" height="20" fill="#D4AF37"/>
+    <circle cx="700" cy="65" r="16" fill="#04020e"/>
+  </svg>
+</div>
+<div class="stars" id="stars"></div>
+
+<div class="page">
+
+  <a class="back-link" href="#">← Templo del Propósito</a>
+
+  <div class="hero">
+    <div class="hero-icon">
+      <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="32,6 54,20 10,20" fill="#FFE566"/>
+        <rect x="12" y="22" width="4.5" height="26" fill="#D4AF37"/>
+        <rect x="22" y="22" width="4.5" height="26" fill="#FFE566"/>
+        <rect x="32" y="22" width="4.5" height="26" fill="#D4AF37"/>
+        <rect x="42" y="22" width="4.5" height="26" fill="#FFE566"/>
+        <rect x="9" y="48" width="46" height="4.5" fill="#FFE566"/>
+      </svg>
+    </div>
+    <div class="hero-tag">CONSTANCIA · LIDERAZGO</div>
+    <h1 class="hero-title">Camino a <span>Líder Digital</span><br>Generación Agosto</h1>
+    <div class="hero-sub">Un camino de constancia en contenido y venta por redes sociales</div>
+    <div class="hero-meta">
+      <div class="meta-item">📅 <b>30–60 días</b> a tu ritmo</div>
+      <div class="meta-item">🔥 empieza el <b>24 de agosto de 2026</b></div>
+    </div>
+    <div class="cta-row">
+      <a class="cta-btn" href="/camino/participante/login">🗺️ Unirme al camino</a>
+      <a class="cta-btn cta-btn-gestor" href="/camino/gestor/login">🗺️ Soy gestor de reto</a>
+    </div>
+    <div class="cta-login">¿Ya estás dentro? <a href="/camino/participante/login">Inicia sesión</a></div>
+  </div>
+
+  <div class="lower">
+    <div class="card">
+      <h3>¿En qué consiste?</h3>
+      <p>Publica contenido durante tu camino, registra cada venta que te traiga y cumple tu paso semanal de avance. Al final, tú y tu líder deciden si esto se vuelve tu siguiente nivel.</p>
+    </div>
+    <div>
+      <div class="section-label">Material del camino</div>
+      <a class="material-item" href="bases-camino.html">
+        <div class="material-left">
+          <div class="material-icon">📜</div>
+          <div class="material-title">Las Bases del Camino</div>
+        </div>
+        <div class="material-cta">ABRIR →</div>
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const starsEl = document.getElementById('stars');
+const n = window.innerWidth < 760 ? 30 : 60;
+let html = '';
+for(let i=0;i<n;i++){
+  const size = (Math.random()*1.6+0.6).toFixed(1);
+  const top = (Math.random()*70).toFixed(1);
+  const left = (Math.random()*100).toFixed(1);
+  const dur = (Math.random()*4+3).toFixed(1);
+  const delay = (Math.random()*4).toFixed(1);
+  const min = (Math.random()*0.4+0.15).toFixed(2);
+  html += `<div class="star" style="width:${size}px;height:${size}px;top:${top}%;left:${left}%;--d:${dur}s;--del:${delay}s;--min:${min};"></div>`;
+}
+starsEl.innerHTML = html;
+</script>
+
+</body>
+</html>

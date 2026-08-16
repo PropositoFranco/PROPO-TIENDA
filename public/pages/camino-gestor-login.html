@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Acceso de Gestor · Templo del Propósito</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap&font-display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap&font-display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --gold:#D4AF37; --gold-bright:#FFE566; --gold-dim:rgba(212,175,55,0.4); --gold-glow:rgba(212,175,55,0.65);
+  --card:#0e0818; --border:rgba(212,175,55,0.15); --borderHi:rgba(212,175,55,0.4);
+  --purple:#9b59ff; --text:#f0eaff; --muted:rgba(240,234,255,0.45);
+  --green:#44ff88; --red:#ff4466; --bg:#07040f;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{
+  min-height:100dvh; background:var(--bg); font-family:'Nunito',sans-serif; color:var(--text);
+}
+.centrado{min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:24px;}
+.tarjeta{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:clamp(24px,5vw,32px); max-width:380px; width:100%; text-align:center;}
+.eyebrow{font-family:'Cinzel',serif; font-weight:900; font-size:10px; letter-spacing:2px; color:var(--gold);}
+h1{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(19px,4vw,23px); color:var(--text); margin:6px 0 10px;}
+p.desc{color:var(--muted); font-size:12.5px; line-height:1.6; margin-bottom:20px;}
+input[type=email]{
+  width:100%; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:10px;
+  padding:12px 14px; color:var(--text); font-family:'Nunito',sans-serif; font-size:13px; margin-bottom:14px;
+}
+input[type=email]:focus{outline:none; border-color:var(--borderHi);}
+.btn-primario{
+  width:100%; padding:13px 16px; background:rgba(212,175,55,0.12); border:1px solid var(--borderHi); border-radius:10px;
+  color:var(--gold); font-family:'Cinzel',serif; font-weight:700; font-size:11px; letter-spacing:1.5px; cursor:pointer;
+}
+.btn-primario:disabled{opacity:0.5; cursor:default;}
+.msg-error{color:var(--red); font-size:11.5px; margin-top:12px; line-height:1.5;}
+.msg-ok{color:var(--green); font-size:11.5px; margin-top:12px; line-height:1.5;}
+.icono{font-size:30px; margin-bottom:10px;}
+.spinner{
+  width:22px; height:22px; border:2.5px solid var(--border); border-top-color:var(--gold);
+  border-radius:50%; margin:0 auto; animation:girar 0.8s linear infinite;
+}
+@keyframes girar{ to{ transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="centrado">
+
+  <!-- Pantalla: verificando sesión / procesando invitación -->
+  <div id="pantallaCargando" class="tarjeta">
+    <div class="spinner"></div>
+    <p class="desc" style="margin-top:16px; margin-bottom:0;">Verificando acceso...</p>
+  </div>
+
+  <!-- Pantalla: pedir correo para magic link -->
+  <div id="pantallaCorreo" class="tarjeta" style="display:none;">
+    <div class="icono">⚜️</div>
+    <div class="eyebrow">CAMINO A LÍDER DIGITAL</div>
+    <h1>Acceso de Gestor</h1>
+    <p class="desc" id="descCorreo">Escribe tu correo y te mandamos un link mágico para entrar. Sin contraseña.</p>
+    <input type="email" id="inputCorreo" placeholder="tu@correo.com" autocomplete="email">
+    <button class="btn-primario" id="btnEnviarLink">ENVIAR LINK MÁGICO</button>
+    <div id="mensajeCorreo"></div>
+  </div>
+
+  <!-- Pantalla: revisa tu correo -->
+  <div id="pantallaEnviado" class="tarjeta" style="display:none;">
+    <div class="icono">📬</div>
+    <div class="eyebrow">CAMINO A LÍDER DIGITAL</div>
+    <h1>Revisa tu correo</h1>
+    <p class="desc" id="descEnviado">Te mandamos un link para entrar. Ábrelo desde este mismo dispositivo.</p>
+  </div>
+
+  <!-- Pantalla: invitación inválida / vencida -->
+  <div id="pantallaInvalida" class="tarjeta" style="display:none;">
+    <div class="icono">🔒</div>
+    <div class="eyebrow">CAMINO A LÍDER DIGITAL</div>
+    <h1>Invitación no válida</h1>
+    <p class="desc">Este link de invitación ya fue usado o venció. Pide uno nuevo a tu líder.</p>
+  </div>
+
+  <!-- Pantalla: error general -->
+  <div id="pantallaErrorGeneral" class="tarjeta" style="display:none;">
+    <div class="icono">⚠️</div>
+    <div class="eyebrow">CAMINO A LÍDER DIGITAL</div>
+    <h1>Algo salió mal</h1>
+    <p class="desc" id="descErrorGeneral">No se pudo verificar tu acceso. Intenta de nuevo.</p>
+    <button class="btn-primario" onclick="location.href='camino-gestor-login.html'">REINTENTAR</button>
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://hdwzhwuhlrtrmhnecypm.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkd3pod3VobHJ0cm1obmVjeXBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyMTUxMjQsImV4cCI6MjA5Mzc5MTEyNH0.bTgW5aIQpslxbtZdKcacvMUMAKUSwcb3StA-OumIUmw';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const BASE_URL = window.location.href.split('?')[0].split('#')[0]; // esta misma página, sin query ni hash
+
+const params = new URLSearchParams(window.location.search);
+const inviteEnUrl = params.get('invite');
+const STORAGE_KEY = 'camino_invite_token';
+
+// Si llega un ?invite= en la URL (primera visita, antes del magic link), lo guardamos
+// para no perderlo cuando Supabase regrese con la sesión.
+if (inviteEnUrl) localStorage.setItem(STORAGE_KEY, inviteEnUrl);
+
+function mostrarPantalla(id) {
+  ['pantallaCargando','pantallaCorreo','pantallaEnviado','pantallaInvalida','pantallaErrorGeneral']
+    .forEach(p => document.getElementById(p).style.display = (p === id ? 'block' : 'none'));
+}
+
+async function init() {
+  const tokenGuardado = localStorage.getItem(STORAGE_KEY);
+  const { data: sessionData } = await supabaseClient.auth.getSession();
+
+  if (!sessionData?.session) {
+    // No hay sesión todavía: pedir correo
+    if (tokenGuardado) {
+      document.getElementById('descCorreo').textContent = 'Fuiste invitado como gestor. Escribe tu correo y te mandamos un link mágico para activar tu acceso.';
+    }
+    mostrarPantalla('pantallaCorreo');
+    return;
+  }
+
+  // Ya hay sesión (venimos del magic link, o ya estaba logueado)
+  const uid = sessionData.session.user.id;
+
+  if (tokenGuardado) {
+    // Hay invitación pendiente de canjear
+    const { data, error } = await supabaseClient.rpc('canjear_invitacion_gestor', { p_token: tokenGuardado });
+    if (error) {
+      localStorage.removeItem(STORAGE_KEY);
+      mostrarPantalla('pantallaInvalida');
+      return;
+    }
+    localStorage.removeItem(STORAGE_KEY);
+    window.location.href = 'camino-gestor-panel.html';
+    return;
+  }
+
+  // No hay invitación pendiente: checar si ya es gestor conocido
+  const { data: gestor } = await supabaseClient
+    .from('camino_gestores')
+    .select('id')
+    .eq('id', uid)
+    .maybeSingle();
+
+  if (gestor) {
+    window.location.href = 'camino-gestor-panel.html';
+  } else {
+    document.getElementById('descErrorGeneral').textContent = 'Tu cuenta todavía no tiene una invitación de gestor asociada. Pide un link de invitación a tu líder.';
+    mostrarPantalla('pantallaErrorGeneral');
+  }
+}
+
+document.getElementById('btnEnviarLink').addEventListener('click', async () => {
+  const correo = document.getElementById('inputCorreo').value.trim();
+  const msgEl = document.getElementById('mensajeCorreo');
+  msgEl.innerHTML = '';
+
+  if (!correo || !correo.includes('@')) {
+    msgEl.innerHTML = '<p class="msg-error">Escribe un correo válido.</p>';
+    return;
+  }
+
+  const btn = document.getElementById('btnEnviarLink');
+  btn.disabled = true;
+  btn.textContent = 'ENVIANDO...';
+
+  const tokenGuardado = localStorage.getItem(STORAGE_KEY);
+  const redirectUrl = tokenGuardado ? `${BASE_URL}?invite=${tokenGuardado}` : BASE_URL;
+
+  const { error } = await supabaseClient.auth.signInWithOtp({
+    email: correo,
+    options: { emailRedirectTo: redirectUrl }
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'ENVIAR LINK MÁGICO';
+
+  if (error) {
+    msgEl.innerHTML = `<p class="msg-error">No se pudo enviar el link: ${error.message}</p>`;
+    return;
+  }
+
+  document.getElementById('descEnviado').textContent = `Te mandamos un link a ${correo}. Ábrelo desde este mismo dispositivo para entrar.`;
+  mostrarPantalla('pantallaEnviado');
+});
+
+supabaseClient.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_IN') init();
+});
+
+init();
+</script>
+
+</body>
+</html>

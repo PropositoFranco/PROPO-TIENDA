@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Calendario del Camino · Templo del Propósito</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap&font-display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap&font-display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#D4AF37; --gold-bright:#FFE566; --gold-dim:rgba(212,175,55,0.4); --gold-glow:rgba(212,175,55,0.65);
+  --dark-bg:#04020e; --dark-surface:rgba(10,5,32,0.92);
+  --purple:#CC44FF; --purple-glow:rgba(204,68,255,0.5);
+  --lilac:rgba(200,185,240,0.7); --lilac-dim:rgba(200,185,240,0.42);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%; width:100%;}
+body{
+  min-height:100dvh; font-family:'Crimson Text',serif; color:#fff; position:relative;
+  background:
+    radial-gradient(ellipse 120% 40% at 50% 0%, rgba(40,10,90,0.9) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 30% at 12% 10%, rgba(10,40,100,0.3) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 30% at 88% 8%, rgba(80,10,110,0.3) 0%, transparent 55%),
+    linear-gradient(180deg,#050215 0%,#0a0530 12%,#08031c 30%,#04020e 60%,#04020e 100%);
+}
+.stars{position:fixed; inset:0; pointer-events:none; z-index:0;}
+.star{position:absolute; border-radius:50%; background:#fff; animation:twinkle var(--d) ease-in-out infinite; animation-delay:var(--del);}
+@keyframes twinkle{0%,100%{opacity:var(--min);} 50%{opacity:1;}}
+@media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important;} }
+.temple-icon .gold{stroke:var(--gold-bright); fill:var(--gold-bright);}
+.temple-icon .gold-mid{stroke:var(--gold); fill:var(--gold);}
+
+.topnav{
+  position:sticky; top:0; z-index:20;
+  display:flex; align-items:center; justify-content:space-between; gap:14px;
+  padding:10px 26px;
+  background:linear-gradient(180deg, rgba(6,3,18,0.98), rgba(6,3,18,0.94));
+  border-bottom:1px solid var(--gold-dim);
+  backdrop-filter:blur(8px);
+}
+.brand{display:flex; align-items:center; gap:10px;}
+.brand-seal{width:32px; height:32px; flex-shrink:0; filter:drop-shadow(0 0 8px var(--gold-glow));}
+.brand-name{font-family:'Cinzel',serif; font-weight:900; letter-spacing:1px; font-size:17px; color:#fff;}
+.brand-name span{color:var(--gold);}
+.nav-links{display:flex; align-items:center; gap:22px; flex-wrap:nowrap;}
+.nav-item{
+  font-family:'Cinzel',serif; font-size:13.5px; font-weight:700; letter-spacing:0.3px;
+  color:var(--lilac); text-decoration:none; white-space:nowrap; opacity:0.85; transition:opacity .2s, color .2s;
+}
+.nav-item:hover{opacity:1; color:var(--gold-bright);}
+.nav-item.active{color:var(--gold-bright); opacity:1;}
+.nav-select{
+  font-family:'Cinzel',serif; font-size:13px; font-weight:700; color:#fff;
+  background:rgba(212,175,55,0.1); border:1px solid var(--gold-dim); border-radius:8px;
+  padding:8px 14px; white-space:nowrap; max-width:240px;
+}
+@media (max-width:860px){ .nav-links{display:none;} .nav-select{margin-left:auto;} }
+
+.wrap{max-width:1080px; width:100%; margin:0 auto; padding:clamp(20px,3.4vh,36px) clamp(18px,4vw,40px) 80px; position:relative; z-index:1;}
+
+.header-row{display:flex; align-items:center; gap:14px; margin-bottom:6px;}
+.header-icon{
+  width:clamp(42px,6vh,54px); height:clamp(42px,6vh,54px); flex-shrink:0;
+  border-radius:50%; border:2px solid var(--gold);
+  background:radial-gradient(circle at 35% 30%, rgba(255,229,102,0.35), rgba(212,175,55,0.12) 65%, transparent 100%);
+  box-shadow:0 0 16px var(--gold-glow); display:flex; align-items:center; justify-content:center; font-size:clamp(18px,2.4vh,22px);
+}
+.eyebrow-tag{font-family:'Cinzel',serif; font-weight:900; font-size:12.5px; letter-spacing:2.2px; color:var(--gold);}
+h1.page-title{font-family:'Cinzel Decorative',serif; font-weight:900; font-size:clamp(24px,3.6vh,36px); color:#fff; text-shadow:0 0 20px rgba(212,175,55,0.3); line-height:1.15;}
+.page-sub{font-family:'Crimson Text',serif; font-size:clamp(14px,1.8vh,17px); color:var(--lilac); max-width:620px; margin-top:10px; line-height:1.5;}
+
+.progress-strip{
+  margin-top:22px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:14px;
+  padding:14px 20px;
+}
+.progress-strip b{color:var(--gold-bright);}
+.progress-strip .txt{font-family:'Nunito',sans-serif; font-size:13.5px; color:var(--lilac); flex:1; min-width:200px;}
+.milestone-pill{
+  font-family:'Cinzel',serif; font-weight:900; font-size:11.5px; letter-spacing:0.5px; color:#1a0a2e;
+  background:linear-gradient(90deg,var(--gold),var(--gold-bright)); padding:6px 14px; border-radius:100px; white-space:nowrap;
+}
+
+.week-block{margin-top:38px;}
+.week-head{display:flex; align-items:baseline; gap:12px; margin-bottom:16px; flex-wrap:wrap;}
+.week-title{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(16px,2.2vh,19px); color:#fff;}
+.week-phase{
+  font-family:'Cinzel',serif; font-weight:700; font-size:11px; letter-spacing:0.8px; color:var(--purple);
+  background:rgba(204,68,255,0.12); border:1px solid rgba(204,68,255,0.3); padding:4px 11px; border-radius:100px;
+}
+.week-range{font-family:'Nunito',sans-serif; font-size:13px; color:var(--lilac-dim);}
+
+.day-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+@media (max-width:760px){ .day-grid{grid-template-columns:1fr;} }
+
+.day-card{
+  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:14px;
+  padding:16px 18px; display:flex; flex-direction:column; gap:8px; position:relative; overflow:hidden;
+}
+.day-card::before{content:""; position:absolute; inset:0; background:radial-gradient(ellipse 70% 50% at 100% 0%, rgba(212,175,55,0.08), transparent 70%); pointer-events:none;}
+.day-top{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.day-label{font-family:'Cinzel',serif; font-weight:900; font-size:12px; letter-spacing:0.4px; color:var(--lilac-dim);}
+.format-badge{
+  font-family:'Cinzel',serif; font-weight:900; font-size:10.5px; letter-spacing:0.6px;
+  padding:4px 10px; border-radius:100px; white-space:nowrap; display:flex; align-items:center; gap:5px;
+}
+.format-badge.reel{color:#1a0a2e; background:linear-gradient(90deg,var(--gold),var(--gold-bright));}
+.format-badge.carrusel{color:#fff; background:rgba(204,68,255,0.25); border:1px solid var(--purple-glow);}
+.day-format{font-family:'Cinzel',serif; font-weight:700; font-size:15px; color:#fff;}
+.day-desc{font-family:'Crimson Text',serif; font-size:14px; line-height:1.45; color:rgba(255,255,255,0.82);}
+.day-video{
+  margin-top:4px; display:flex; align-items:center; gap:8px;
+  font-family:'Nunito',sans-serif; font-weight:700; font-size:12px; color:var(--gold-bright);
+  border:1px dashed var(--gold-dim); border-radius:9px; padding:9px 12px;
+}
+.day-video.pending{color:var(--lilac-dim); border-style:dashed;}
+.day-thumb{
+  margin-top:6px; border-radius:10px; overflow:hidden; position:relative;
+  aspect-ratio:16/10; background:linear-gradient(160deg, rgba(212,175,55,0.12), rgba(124,58,237,0.1));
+  border:1px solid var(--gold-dim); display:flex; align-items:center; justify-content:center;
+}
+.day-thumb.pending{background:repeating-linear-gradient(135deg, rgba(255,255,255,0.02) 0 10px, rgba(255,255,255,0.04) 10px 20px);}
+.play-btn{
+  width:44px; height:44px; border-radius:50%; background:rgba(4,2,14,0.55); border:1.5px solid rgba(255,255,255,0.35);
+  display:flex; align-items:center; justify-content:center; backdrop-filter:blur(2px);
+}
+.play-btn svg{width:16px; height:16px; margin-left:2px;}
+.thumb-pending-label{
+  position:absolute; bottom:8px; left:8px; right:8px;
+  font-family:'Nunito',sans-serif; font-weight:700; font-size:10.5px; color:var(--lilac-dim);
+  display:flex; align-items:center; gap:5px;
+}
+.tutorial-btn{
+  margin-top:2px; display:flex; align-items:center; justify-content:space-between; gap:8px;
+  font-family:'Cinzel',serif; font-weight:900; font-size:11.5px; letter-spacing:0.4px; color:var(--gold-bright);
+  background:rgba(212,175,55,0.08); border:1px solid var(--gold-dim); border-radius:9px; padding:9px 12px;
+  opacity:0.55;
+}
+
+
+.locked-week{
+  background:rgba(255,255,255,0.02); border:1px dashed var(--gold-dim); border-radius:14px;
+  padding:20px 22px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+}
+.locked-left{display:flex; align-items:center; gap:12px;}
+.locked-icon{font-size:22px;}
+.locked-txt b{color:#fff; font-family:'Cinzel',serif; font-size:14px; display:block; margin-bottom:3px;}
+.locked-txt span{font-family:'Nunito',sans-serif; font-size:12.5px; color:var(--lilac-dim);}
+.locked-cta{font-family:'Cinzel',serif; font-weight:900; font-size:11.5px; letter-spacing:0.5px; color:var(--gold-bright); white-space:nowrap;}
+
+.footer-note{
+  margin-top:40px; padding-top:22px; border-top:1px solid rgba(212,175,55,0.15);
+  font-family:'Nunito',sans-serif; font-size:13px; color:var(--lilac-dim); text-align:center; line-height:1.6;
+}
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<nav class="topnav">
+  <div class="brand">
+    <svg class="brand-seal temple-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="32,4 58,22 6,22" class="gold"/>
+      <rect x="9" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="20" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="29.5" y="24" width="5" height="30" class="gold"/>
+      <rect x="39" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="50" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="6" y="54" width="52" height="5" class="gold"/>
+      <circle cx="32" cy="13" r="2.6" fill="#04020e"/>
+    </svg>
+    <div class="brand-name">TEMPLO <span>DEL PROPÓSITO</span></div>
+  </div>
+  <div class="nav-links">
+    <a class="nav-item" href="camino-templario.html">Inicio</a>
+    <a class="nav-item" href="#">Check-in</a>
+    <a class="nav-item active" href="#">Calendario</a>
+    <a class="nav-item" href="#">Agenda</a>
+    <a class="nav-item" href="pasaporte-templario.html">Pasaporte del Templario</a>
+    <a class="nav-item" href="#">Sala de Cowork</a>
+    <a class="nav-item" href="#">Ranking</a>
+  </div>
+  <select class="nav-select"><option>Camino a Líder Digital · Gen. Agosto</option></select>
+</nav>
+
+<div class="wrap">
+
+  <div class="header-row">
+    <div class="header-icon">🗓️</div>
+    <div>
+      <div class="eyebrow-tag">TU RUTA DE CONTENIDO</div>
+      <h1 class="page-title">Calendario del Camino</h1>
+    </div>
+  </div>
+  <p class="page-sub">Lo que te toca publicar cada día: formato, gancho e idea completa. Empieza en tu <b style="color:var(--gold-bright)">Día 1</b> el día que arrancas — no importa la fecha del calendario, todos los templarios recorren la misma ruta.</p>
+
+  <div class="progress-strip">
+    <div class="txt">Plan mínimo: <b>28 días</b> (Cimiento + Atracción). Si decides continuar, el camino sigue hasta el <b>Día 60</b> (Prueba social + Cierre).</div>
+    <div class="milestone-pill">Día 1 = tu fecha de inicio</div>
+  </div>
+
+  <!-- SEMANA 1 -->
+  <div class="week-block">
+    <div class="week-head">
+      <div class="week-title">Semana 1</div>
+      <div class="week-phase">Fase · Cimiento</div>
+      <div class="week-range">Día 1 – 7</div>
+    </div>
+    <div class="day-grid">
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 1</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Ranking</div>
+        <div class="day-desc">Presentas una lista ordenada de opciones dentro de tu tema (de peor a mejor, o al revés) y das tu veredicto final sobre cuál gana.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 2</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Versus</div>
+        <div class="day-desc">Enfrentas dos opciones, ideas o caminos cara a cara y muestras con evidencia por qué uno le gana al otro.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 3</div><div class="format-badge carrusel">📑 CARRUSEL</div></div>
+        <div class="day-format">Niveles / Etapas</div>
+        <div class="day-desc">Cuentas tu historia personal como una escalera de etapas — de dónde partiste, qué cambió en cada nivel, dónde estás hoy.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 4</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Frente a cámara</div>
+        <div class="day-desc">Le hablas directo a la cámara comparando situaciones o herramientas, una tras otra, con un mismo hilo conductor.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 5</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Fórmula</div>
+        <div class="day-desc">Le das a tu audiencia un cálculo simple y accionable: toma un dato que ya tiene, aplícale una operación, y obtén un resultado revelador.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 6</div><div class="format-badge carrusel">📑 CARRUSEL</div></div>
+        <div class="day-format">Storytelling B-Roll</div>
+        <div class="day-desc">Narras tu historia de transformación apoyada en imágenes de tu propio proceso — el antes, el momento de quiebre, el después.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 7</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Pizarra</div>
+        <div class="day-desc">Explicas un concepto clave escribiéndolo en vivo sobre una pizarra o pantalla, como si dieras una clase corta.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEMANA 2 -->
+  <div class="week-block">
+    <div class="week-head">
+      <div class="week-title">Semana 2</div>
+      <div class="week-phase">Fase · Cimiento</div>
+      <div class="week-range">Día 8 – 14</div>
+    </div>
+    <div class="day-grid">
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 8</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Post-it / Pizarra</div>
+        <div class="day-desc">Usas notas escritas a mano que vas revelando una por una para construir la idea completa frente al espectador.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 9</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Explicación con objeto</div>
+        <div class="day-desc">Usas un objeto físico como referencia visual para explicar qué pasa si tu audiencia repite una acción pequeña de forma constante.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 10</div><div class="format-badge carrusel">📑 CARRUSEL</div></div>
+        <div class="day-format">Carteles</div>
+        <div class="day-desc">Desmontas una creencia común de tu nicho con un giro inesperado, cartel por cartel.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 11</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Versus textual</div>
+        <div class="day-desc">Contrastas en pantalla dividida una excusa típica de tu audiencia contra tu respuesta directa y sin filtro.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 12</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Sketch</div>
+        <div class="day-desc">Actúas una escena corta mostrando errores comunes que NUNCA debería cometer alguien de tu área durante un momento clave.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 13</div><div class="format-badge carrusel">📑 CARRUSEL</div></div>
+        <div class="day-format">Comparación</div>
+        <div class="day-desc">Comparas dos caminos difíciles y demuestras con claridad cuál de los dos realmente vale la pena elegir.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 14</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Frecuencia / Lista</div>
+        <div class="day-desc">Entregas una selección de tips poco conocidos que sí funcionan para el resultado que tu audiencia más desea.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEMANA 3 -->
+  <div class="week-block">
+    <div class="week-head">
+      <div class="week-title">Semana 3</div>
+      <div class="week-phase">Fase · Atracción</div>
+      <div class="week-range">Día 15 – 21</div>
+    </div>
+    <div class="day-grid">
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 15</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Carteles</div>
+        <div class="day-desc">Otro giro del formato de carteles, esta vez enfocado en una idea distinta de tu nicho.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 16</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Reto en tiempo</div>
+        <div class="day-desc">Lanzas un pequeño desafío interactivo con una regla clara y un límite de tiempo, invitando a tu audiencia a participar.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 17</div><div class="format-badge carrusel">📑 CARRUSEL</div></div>
+        <div class="day-format">Galería Premium</div>
+        <div class="day-desc">Compartes una selección curada de recursos o recomendaciones enfocadas en un resultado específico.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 18</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Frente a cámara</div>
+        <div class="day-desc">Hablas directo con un gancho textual fuerte que abre el video desde el segundo cero.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 19</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Versus textual</div>
+        <div class="day-desc">Pantalla dividida mostrando la acción recomendada contra la acción que hay que evitar, con etiquetas visibles todo el video.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 20</div><div class="format-badge carrusel">📑 CARRUSEL</div></div>
+        <div class="day-format">Comparación</div>
+        <div class="day-desc">Inviatas a dejar de hacer algo que parece necesario, para empezar a hacer lo que realmente mueve el resultado.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 21</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">B-roll narrado</div>
+        <div class="day-desc">Con imágenes de apoyo, dejas claro que a nadie externo le importa qué tan rápido logres tu meta — solo a ti.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEMANA 4 -->
+  <div class="week-block">
+    <div class="week-head">
+      <div class="week-title">Semana 4</div>
+      <div class="week-phase">Fase · Atracción</div>
+      <div class="week-range">Día 22 – 28</div>
+    </div>
+    <div class="day-grid">
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 22</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Sketch</div>
+        <div class="day-desc">Muestras qué se pierde tu audiencia si no aplica una acción o herramienta clave que tú ya dominas.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 23</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Frente a cámara</div>
+        <div class="day-desc">Respondes una duda inusual de tu nicho con un "sí, y además..." que abre una oportunidad que casi nadie ve.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 24</div><div class="format-badge carrusel">📑 CARRUSEL</div></div>
+        <div class="day-format">Carteles</div>
+        <div class="day-desc">Presentas tu filosofía o concepto insignia junto con los principios clave de tu estilo de trabajo, cerrando con tu oferta.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 25</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Versus + pizarra en blanco</div>
+        <div class="day-desc">Arrancas con un gancho puramente visual antes de decir una sola palabra.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 26</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Pantalla dividida + pizarra digital</div>
+        <div class="day-desc">Desenmascaras algo que parece virtuoso pero en realidad es un error común que casi todos cometen.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 27</div><div class="format-badge carrusel">📑 CARRUSEL</div></div>
+        <div class="day-format">Escalas / Timeline</div>
+        <div class="day-desc">Cuentas un proceso de transformación a lo largo del tiempo, con evidencia y un cierre que invita a la acción.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+      <div class="day-card">
+        <div class="day-top"><div class="day-label">DÍA 28</div><div class="format-badge reel">🎬 REEL</div></div>
+        <div class="day-format">Pantalla verde</div>
+        <div class="day-desc">Muestras cómo era antes un método o proceso, cómo funciona ahora, y quién lo está ejecutando mejor hoy.</div>
+        <div class="day-thumb pending">
+          <div class="play-btn"><svg viewBox="0 0 24 24" fill="var(--gold-bright)"><polygon points="6,3 21,12 6,21"/></svg></div>
+          <div class="thumb-pending-label">🔒 Miniatura se genera al subir el video</div>
+        </div>
+        <div class="tutorial-btn"><span>▶ VER TUTORIAL</span><span>↗</span></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;" class="progress-strip">
+      <div class="txt">🏁 <b>Día 28 completado = Plan mínimo cumplido.</b> Aquí el templario decide con su líder si continúa hasta el Día 60.</div>
+    </div>
+  </div>
+
+  <!-- SEMANAS 5-8 (LOCKED / CONTINUACIÓN) -->
+  <div class="week-block">
+    <div class="week-head">
+      <div class="week-title">Semana 5 – 6</div>
+      <div class="week-phase">Fase · Prueba social</div>
+      <div class="week-range">Día 29 – 42</div>
+    </div>
+    <div class="locked-week">
+      <div class="locked-left">
+        <div class="locked-icon">🔒</div>
+        <div class="locked-txt">
+          <b>Segunda vuelta de formatos, misma técnica con historia nueva</b>
+          <span>Se desbloquea al completar el Día 28. Aquí documentas resultados y casos propios usando los mismos formatos, con un ángulo de prueba social.</span>
+        </div>
+      </div>
+      <div class="locked-cta">Se arma al llegar →</div>
+    </div>
+  </div>
+
+  <div class="week-block">
+    <div class="week-head">
+      <div class="week-title">Semana 7 – 8</div>
+      <div class="week-phase">Fase · Cierre</div>
+      <div class="week-range">Día 43 – 60</div>
+    </div>
+    <div class="locked-week">
+      <div class="locked-left">
+        <div class="locked-icon">🔒</div>
+        <div class="locked-txt">
+          <b>Oferta directa a tu audiencia</b>
+          <span>Se desbloquea al completar la Semana 6. Cierre del camino: ofertas, testimonios y llamados a la acción directos.</span>
+        </div>
+      </div>
+      <div class="locked-cta">Se arma al llegar →</div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    Cada tarjeta lleva su propio video tutorial en Bunny.net — se va activando conforme se graban.<br>
+    Este calendario corre desde el día en que tú arrancas, no desde una fecha fija de generación.
+  </div>
+
+</div>
+
+<script>
+const starsEl = document.getElementById('stars');
+const n = window.innerWidth < 760 ? 40 : 80;
+let html = '';
+for(let i=0;i<n;i++){
+  const size = (Math.random()*1.5+0.6).toFixed(1);
+  const top = (Math.random()*100).toFixed(1);
+  const left = (Math.random()*100).toFixed(1);
+  const dur = (Math.random()*4+3).toFixed(1);
+  const delay = (Math.random()*4).toFixed(1);
+  const min = (Math.random()*0.4+0.15).toFixed(2);
+  html += `<div class="star" style="width:${size}px;height:${size}px;top:${top}%;left:${left}%;--d:${dur}s;--del:${delay}s;--min:${min};"></div>`;
+}
+starsEl.innerHTML = html;
+</script>
+
+</body>
+</html>

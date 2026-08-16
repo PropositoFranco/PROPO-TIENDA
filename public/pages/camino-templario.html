@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Camino a Líder Digital · Templo del Propósito</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap&font-display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap&font-display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#D4AF37; --gold-bright:#FFE566; --gold-dim:rgba(212,175,55,0.4); --gold-glow:rgba(212,175,55,0.65);
+  --dark-bg:#04020e; --dark-surface:rgba(10,5,32,0.92);
+  --purple:#CC44FF;
+  --lilac:rgba(200,185,240,0.68); --lilac-dim:rgba(200,185,240,0.42);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%; width:100%;}
+body{
+  overflow:hidden;
+  height:100dvh;
+  display:flex; flex-direction:column;
+  background:
+    radial-gradient(ellipse 120% 50% at 50% 0%, rgba(40,10,90,0.9) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 40% at 12% 15%, rgba(10,40,100,0.35) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 40% at 88% 10%, rgba(80,10,110,0.35) 0%, transparent 55%),
+    linear-gradient(180deg,#050215 0%,#0a0530 18%,#08031c 55%,#04020e 100%);
+  font-family:'Crimson Text',serif; color:#fff; position:relative;
+}
+.stars{position:fixed; inset:0; pointer-events:none; z-index:0;}
+.star{position:absolute; border-radius:50%; background:#fff; animation:twinkle var(--d) ease-in-out infinite; animation-delay:var(--del);}
+@keyframes twinkle{0%,100%{opacity:var(--min);} 50%{opacity:1;}}
+@media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important;} }
+
+.temple-icon .gold{stroke:var(--gold-bright); fill:var(--gold-bright);}
+.temple-icon .gold-mid{stroke:var(--gold); fill:var(--gold);}
+
+.topnav{
+  flex:0 0 auto;
+  display:flex; align-items:center; justify-content:space-between; gap:14px;
+  padding:10px 26px;
+  background:linear-gradient(180deg, rgba(6,3,18,0.97), rgba(6,3,18,0.88));
+  border-bottom:1px solid var(--gold-dim);
+  position:relative; z-index:10;
+}
+.brand{display:flex; align-items:center; gap:10px;}
+.brand-seal{width:32px; height:32px; flex-shrink:0; filter:drop-shadow(0 0 8px var(--gold-glow));}
+.brand-name{font-family:'Cinzel',serif; font-weight:900; letter-spacing:1px; font-size:17px; color:#fff;}
+.brand-name span{color:var(--gold);}
+.nav-links{display:flex; align-items:center; gap:22px; flex-wrap:nowrap;}
+.nav-item{
+  font-family:'Cinzel',serif; font-size:13.5px; font-weight:700; letter-spacing:0.3px;
+  color:var(--lilac); text-decoration:none; display:flex; align-items:center; gap:5px;
+  white-space:nowrap; opacity:0.85; transition:opacity .2s, color .2s;
+}
+.nav-item:hover{opacity:1; color:var(--gold-bright);}
+.nav-item.active{color:var(--gold-bright); opacity:1;}
+.nav-select{
+  font-family:'Cinzel',serif; font-size:13px; font-weight:700; letter-spacing:0.2px;
+  color:#fff; background:rgba(212,175,55,0.1); border:1px solid var(--gold-dim);
+  border-radius:8px; padding:8px 14px; white-space:nowrap; max-width:240px;
+}
+
+.hero-banner{
+  flex:0 0 auto; height:clamp(40px, 6vh, 64px);
+  position:relative; overflow:hidden;
+  border-bottom:1px solid var(--gold-dim);
+  background:
+    radial-gradient(ellipse 45% 130% at 8% 50%, rgba(204,68,255,0.16), transparent 65%),
+    radial-gradient(ellipse 45% 130% at 92% 50%, rgba(212,175,55,0.18), transparent 65%);
+}
+.colonnade{position:absolute; inset:0; display:flex; justify-content:space-evenly; align-items:flex-end; opacity:0.55;}
+.colonnade div{width:3.4%; height:100%; background:linear-gradient(180deg, rgba(212,175,55,0.22), rgba(212,175,55,0.02)); border-left:1px solid var(--gold-dim); border-right:1px solid var(--gold-dim);}
+.hero-banner::after{content:""; position:absolute; left:0; right:0; bottom:0; height:40%; background:linear-gradient(180deg, transparent, rgba(4,2,14,0.9));}
+
+.wrap{
+  flex:1 1 auto; min-height:0; overflow:hidden;
+  display:flex; flex-direction:column; justify-content:center; gap:clamp(12px,2.4vh,26px);
+  max-width:1080px; width:100%; margin:0 auto;
+  padding:clamp(14px,2.6vh,30px) clamp(20px,4vw,40px);
+  position:relative; z-index:1;
+}
+
+.eyebrow-row{display:flex; align-items:center; gap:clamp(14px,2vh,20px);}
+.eyebrow-icon{
+  width:clamp(52px,7.5vh,68px); height:clamp(52px,7.5vh,68px); flex-shrink:0;
+  border-radius:50%; border:2px solid var(--gold);
+  background:radial-gradient(circle at 35% 30%, rgba(255,229,102,0.35), rgba(212,175,55,0.12) 65%, transparent 100%);
+  box-shadow:0 0 18px var(--gold-glow);
+  display:flex; align-items:center; justify-content:center;
+}
+.eyebrow-icon svg{width:56%; height:56%;}
+.eyebrow-text{display:flex; flex-direction:column; gap:4px;}
+.eyebrow-tag{font-family:'Cinzel',serif; font-size:clamp(13px,1.7vh,15px); font-weight:900; letter-spacing:2.4px; color:var(--gold);}
+h1.page-title{
+  font-family:'Cinzel Decorative',serif; font-weight:900; font-size:clamp(26px,4.6vh,42px);
+  line-height:1.12; color:#fff; text-shadow:0 0 20px rgba(212,175,55,0.3);
+}
+h1.page-title .sub{display:block; font-family:'Cinzel',serif; font-weight:700; font-size:0.42em; letter-spacing:0.8px; color:var(--gold-bright); margin-top:5px;}
+
+.grid{display:grid; grid-template-columns:1.1fr 1fr; gap:clamp(10px,1.8vh,18px); min-height:0;}
+@media (max-width:720px){ .grid{grid-template-columns:1fr;} }
+
+.card{
+  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:16px;
+  padding:clamp(16px,2.8vh,28px) clamp(18px,2.4vw,28px); position:relative; overflow:hidden;
+  display:flex; flex-direction:column; justify-content:center;
+}
+.card::before{content:""; position:absolute; inset:0; background:radial-gradient(ellipse 70% 60% at 50% 0%, rgba(212,175,55,0.08), transparent 70%); pointer-events:none;}
+
+.countdown{text-align:center; display:flex; flex-direction:column; align-items:center; gap:clamp(6px,1.2vh,10px);}
+.countdown-icon{
+  width:clamp(38px,6vh,50px); height:clamp(38px,6vh,50px); border-radius:11px;
+  background:linear-gradient(160deg, rgba(212,175,55,0.25), rgba(124,58,237,0.2));
+  border:1px solid var(--gold-dim); display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 14px rgba(212,175,55,0.25);
+}
+.countdown-icon svg{width:56%; height:56%;}
+.countdown-label{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(20px,3.4vh,28px); color:#fff;}
+.countdown-label .date{color:var(--gold-bright);}
+.countdown-sub{font-family:'Nunito',sans-serif; font-size:clamp(13.5px,1.8vh,16.5px); color:var(--lilac); line-height:1.45; max-width:340px;}
+
+.section-label{
+  font-family:'Cinzel',serif; font-weight:900; font-size:clamp(14px,1.9vh,17px); letter-spacing:0.3px;
+  color:#fff; margin-bottom:clamp(8px,1.3vh,12px); display:flex; align-items:center; gap:9px; flex-shrink:0;
+}
+.section-label::before{content:""; width:4px; height:15px; background:var(--gold); border-radius:2px; display:inline-block;}
+
+.intro-card p{
+  font-family:'Crimson Text',serif; font-size:clamp(16px,2.2vh,20px); line-height:1.5; color:rgba(255,255,255,0.92);
+}
+.intro-card b{color:var(--gold-bright); font-weight:600;}
+
+.material-col{display:flex; flex-direction:column; min-height:0;}
+.material-item{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:clamp(10px,1.7vh,16px) clamp(12px,1.6vw,18px); border-radius:11px;
+  background:rgba(212,175,55,0.07); border:1px solid var(--gold-dim);
+  text-decoration:none; color:#fff; transition:background .2s, border-color .2s, transform .2s;
+}
+.material-item:hover{background:rgba(212,175,55,0.13); border-color:var(--gold); transform:translateY(-1px);}
+.material-left{display:flex; align-items:center; gap:12px; min-width:0;}
+.material-icon{
+  width:clamp(36px,5.4vh,44px); height:clamp(36px,5.4vh,44px); border-radius:10px; flex-shrink:0;
+  background:linear-gradient(160deg, rgba(212,175,55,0.3), rgba(124,58,237,0.2));
+  display:flex; align-items:center; justify-content:center; font-size:clamp(17px,2.4vh,20px);
+  border:1px solid var(--gold-dim);
+}
+.material-title{font-family:'Cinzel',serif; font-weight:700; font-size:clamp(15px,2vh,18px); letter-spacing:0.2px;}
+.material-cta{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(12.5px,1.6vh,14.5px); letter-spacing:0.7px; color:var(--gold-bright); white-space:nowrap;}
+
+.locked-note{
+  margin-top:clamp(8px,1.2vh,12px); font-family:'Nunito',sans-serif; font-size:clamp(12px,1.5vh,14px); color:var(--lilac-dim);
+  display:flex; align-items:center; gap:6px;
+}
+
+.footer-cta{
+  flex-shrink:0; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  padding-top:clamp(8px,1.4vh,14px); border-top:1px solid rgba(212,175,55,0.15);
+}
+.footer-text{font-family:'Crimson Text',serif; font-size:clamp(14.5px,1.9vh,18px); color:var(--lilac);}
+.footer-links{display:flex; gap:18px; flex-wrap:wrap;}
+.footer-link{
+  font-family:'Cinzel',serif; font-weight:700; font-size:clamp(12.5px,1.5vh,14.5px); letter-spacing:0.3px;
+  color:var(--gold-bright); text-decoration:none; border-bottom:1px solid var(--gold-dim); padding-bottom:1px; white-space:nowrap;
+}
+.footer-link:hover{border-color:var(--gold-bright);}
+
+@media (max-width:760px){
+  .topnav{padding:8px 14px;}
+  .nav-links{display:none;}
+  .nav-select{margin-left:auto; font-size:11px; padding:7px 10px; max-width:170px;}
+  .wrap{gap:10px; padding:10px 16px 14px;}
+  .card{padding:14px 16px;}
+  h1.page-title{font-size:clamp(20px,5.4vw,26px);}
+  .countdown-label{font-size:clamp(17px,5vw,22px);}
+  .intro-card p{font-size:clamp(13.5px,3.6vw,16px);}
+}
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<nav class="topnav">
+  <div class="brand">
+    <svg class="brand-seal temple-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="32,4 58,22 6,22" class="gold"/>
+      <rect x="9" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="20" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="29.5" y="24" width="5" height="30" class="gold"/>
+      <rect x="39" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="50" y="24" width="5" height="30" class="gold-mid"/>
+      <rect x="6" y="54" width="52" height="5" class="gold"/>
+      <circle cx="32" cy="13" r="2.6" fill="#04020e"/>
+    </svg>
+    <div class="brand-name">TEMPLO <span>DEL PROPÓSITO</span></div>
+  </div>
+  <div class="nav-links">
+    <a class="nav-item active" href="#">Inicio</a>
+    <a class="nav-item" href="#">Check-in</a>
+    <a class="nav-item" href="#">Calendario</a>
+    <a class="nav-item" href="#">Agenda</a>
+    <a class="nav-item" href="pasaporte-templario.html">Pasaporte del Templario</a>
+    <a class="nav-item" href="#">Sala de Cowork</a>
+    <a class="nav-item" href="#">Ranking</a>
+  </div>
+  <select class="nav-select">
+    <option>Camino a Líder Digital · Gen. Agosto</option>
+  </select>
+</nav>
+
+<div class="hero-banner">
+  <div class="colonnade">
+    <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="eyebrow-row">
+    <div class="eyebrow-icon">
+      <svg class="temple-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="32,6 54,20 10,20" class="gold"/>
+        <rect x="12" y="22" width="4.5" height="26" class="gold-mid"/>
+        <rect x="22" y="22" width="4.5" height="26" class="gold"/>
+        <rect x="32" y="22" width="4.5" height="26" class="gold-mid"/>
+        <rect x="42" y="22" width="4.5" height="26" class="gold"/>
+        <rect x="9" y="48" width="46" height="4.5" class="gold"/>
+      </svg>
+    </div>
+    <div class="eyebrow-text">
+      <div class="eyebrow-tag">TU CAMINO ESTÁ POR EMPEZAR</div>
+      <h1 class="page-title">Camino a Líder Digital<span class="sub">Generación Agosto · Templo del Propósito</span></h1>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="countdown">
+        <div class="countdown-icon">
+          <svg class="temple-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="var(--gold-bright)" stroke-width="1.6"/>
+            <line x1="3" y1="9.5" x2="21" y2="9.5" stroke="var(--gold-bright)" stroke-width="1.6"/>
+            <line x1="7.5" y1="3" x2="7.5" y2="7" stroke="var(--gold-bright)" stroke-width="1.6"/>
+            <line x1="16.5" y1="3" x2="16.5" y2="7" stroke="var(--gold-bright)" stroke-width="1.6"/>
+            <circle cx="12" cy="15" r="2.4" fill="var(--gold-bright)"/>
+          </svg>
+        </div>
+        <div class="countdown-label">Empieza el <span class="date">24 de agosto</span></div>
+        <div class="countdown-sub">Cuando arranque tu camino, aquí registrarás tu evidencia del día.</div>
+      </div>
+    </div>
+
+    <div class="material-col">
+      <div class="section-label">¿En qué consiste este camino?</div>
+      <div class="card intro-card" style="margin-bottom:clamp(8px,1.4vh,14px); flex:1;">
+        <p>Publica contenido durante tu camino, registra <b>cada venta</b> que te traiga y cumple tu <b>paso semanal de avance</b>. Al final, tú y tu líder deciden si esto se vuelve tu siguiente nivel.</p>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-label">Material del camino</div>
+    <a class="material-item" href="bases-camino.html">
+      <div class="material-left">
+        <div class="material-icon">📜</div>
+        <div class="material-title">Las Bases del Camino</div>
+      </div>
+      <div class="material-cta">ABRIR →</div>
+    </a>
+    <div class="locked-note">🔒 El registro de evidencia se desbloquea el día que arranca tu camino.</div>
+  </div>
+
+  <div class="footer-cta">
+    <div class="footer-text">¿Ya lo probaste y quieres formalizarlo?</div>
+    <div class="footer-links">
+      <a class="footer-link" href="#">Habla con tu líder</a>
+      <a class="footer-link" href="#">Conoce el siguiente nivel</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const starsEl = document.getElementById('stars');
+const n = window.innerWidth < 760 ? 26 : 55;
+let html = '';
+for(let i=0;i<n;i++){
+  const size = (Math.random()*1.5+0.6).toFixed(1);
+  const top = (Math.random()*100).toFixed(1);
+  const left = (Math.random()*100).toFixed(1);
+  const dur = (Math.random()*4+3).toFixed(1);
+  const delay = (Math.random()*4).toFixed(1);
+  const min = (Math.random()*0.4+0.15).toFixed(2);
+  html += `<div class="star" style="width:${size}px;height:${size}px;top:${top}%;left:${left}%;--d:${dur}s;--del:${delay}s;--min:${min};"></div>`;
+}
+starsEl.innerHTML = html;
+</script>
+
+</body>
+</html>
