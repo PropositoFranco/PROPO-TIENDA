@@ -208,8 +208,7 @@ export default function CaminoLandingPage() {
           </div>
           <div className="cla-cta-row">
             <Link className="cla-cta-btn" to="/camino/participante/login">🎯 Soy participante</Link>
-            {/* ⚠️ Ruta copiada tal cual de tu HTML original — no verificada contra tu router real */}
-            <Link className="cla-cta-btn cla-cta-btn-gestor" to="/camino/gestor/login">⚜️ Soy gestor de reto</Link>
+            <Link className="cla-cta-btn cla-cta-btn-gestor" to="/camino/gestor/login">⚜️ Soy Líder Digital</Link>
           </div>
         </div>
 
@@ -220,8 +219,8 @@ export default function CaminoLandingPage() {
               <p>Entra a registrar tus check-ins, ver tu racha y competir en el ranking de tu reto. ¿Tienes un link de invitación <code>/r/…</code>? Ábrelo directo.</p>
             </div>
             <div className="cla-card cla-path-card">
-              <h3>⚜️ Soy gestor de reto</h3>
-              <p>Crea retos, elige una modalidad y un estilo, sube recursos e invita a tus participantes.</p>
+              <h3>⚜️ Soy Líder Digital</h3>
+              <p>Acepta interesados, genera sus códigos de acceso y guía a tus participantes en su Camino.</p>
             </div>
           </div>
           <div>
