@@ -148,7 +148,7 @@ const FORMATOS = ['Reel', 'TikTok', 'Historia', 'Post', 'Carrusel'];
 const PLATAFORMAS = ['Instagram', 'TikTok', 'Facebook', 'YouTube'];
 
 // ⚠️ misma ruta usada en CaminoParticipanteHomePage.jsx — mantenerlas sincronizadas
-const RUTA_PASAPORTE = '/pasaporte-templario.html';
+
 
 // Igual que NAV_ITEMS del Home, pero aquí "Check-in" es el activo
 const NAV_ITEMS = [
@@ -156,7 +156,7 @@ const NAV_ITEMS = [
   { label: 'Check-in', activo: true, disponible: true },
   { label: 'Calendario', activo: false, disponible: false },
   { label: 'Agenda', activo: false, disponible: false },
-  { label: 'Pasaporte del Templario', activo: false, disponible: true, hrefExterno: RUTA_PASAPORTE },
+  { label: 'Pasaporte del Templario', activo: false, disponible: true, ruta: '/camino/participante/pasaporte' },
   { label: 'Sala de Cowork', activo: false, disponible: false },
   { label: 'Ranking', activo: false, disponible: false },
 ];

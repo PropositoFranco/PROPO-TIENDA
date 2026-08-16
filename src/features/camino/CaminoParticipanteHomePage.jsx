@@ -145,14 +145,14 @@ h1.chh-title{font-family:'Cinzel Decorative',serif; font-weight:900; font-size:c
 
 // ⚠️ VERIFICA: no sé la ruta real de "Pasaporte del Templario" — dejo esta,
 // ajústala si vive en otro lado (ej. una ruta de React tipo /pasaporte).
-const RUTA_PASAPORTE = '/pasaporte-templario.html';
+
 
 const NAV_ITEMS = [
   { label: 'Inicio', activo: true, disponible: true },
   { label: 'Check-in', activo: false, disponible: true, ruta: '/camino/participante/panel' },
   { label: 'Calendario', activo: false, disponible: false },
   { label: 'Agenda', activo: false, disponible: false },
-  { label: 'Pasaporte del Templario', activo: false, disponible: true, hrefExterno: RUTA_PASAPORTE },
+  { label: 'Pasaporte del Templario', activo: false, disponible: true, ruta: '/camino/participante/pasaporte' },
   { label: 'Sala de Cowork', activo: false, disponible: false },
   { label: 'Ranking', activo: false, disponible: false },
 ];
