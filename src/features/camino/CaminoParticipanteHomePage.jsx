@@ -60,6 +60,21 @@ const styles = `
   position:relative; z-index:1; display:flex; flex-direction:column; gap:clamp(16px,2.4vh,26px);
 }
 
+.chh-hero{
+  position:relative; width:100%; height:clamp(220px,34vh,340px); flex-shrink:0;
+  background-image:url('https://hdwzhwuhlrtrmhnecypm.supabase.co/storage/v1/object/public/banners/camino/camino-lobby-banner.webp');
+  background-size:cover; background-position:center 30%;
+  display:flex; align-items:flex-end; z-index:1;
+}
+.chh-hero::after{
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(4,2,14,0.1) 0%, rgba(4,2,14,0.5) 55%, rgba(4,2,14,0.98) 100%);
+  pointer-events:none;
+}
+.chh-hero-inner{
+  position:relative; z-index:2; max-width:1080px; width:100%; margin:0 auto;
+  padding:0 clamp(20px,4vw,40px) clamp(18px,3vh,28px);
+}
 .chh-eyebrow-row{display:flex; align-items:center; gap:16px;}
 .chh-eyebrow-icon{
   width:56px; height:56px; flex-shrink:0;
@@ -257,15 +272,19 @@ export default function CaminoParticipanteHomePage() {
         <button className="chh-salir" onClick={salir}>Salir</button>
       </nav>
 
-      <div className="chh-wrap">
-        <div className="chh-eyebrow-row">
-          <div className="chh-eyebrow-icon">🗺️</div>
-          <div>
-            <div className="chh-eyebrow-tag">TU CAMINO ESTÁ EN MARCHA</div>
-            <h1 className="chh-title">Hola, {participante?.nombre?.split(' ')[0] || 'Templario'}</h1>
+      <div className="chh-hero">
+        <div className="chh-hero-inner">
+          <div className="chh-eyebrow-row">
+            <div className="chh-eyebrow-icon">🗺️</div>
+            <div>
+              <div className="chh-eyebrow-tag">TU CAMINO ESTÁ EN MARCHA</div>
+              <h1 className="chh-title">Hola, {participante?.nombre?.split(' ')[0] || 'Templario'}</h1>
+            </div>
           </div>
         </div>
+      </div>
 
+      <div className="chh-wrap">
         <div className="chh-grid">
           <div className="chh-card">
             <div className="chh-progress">
