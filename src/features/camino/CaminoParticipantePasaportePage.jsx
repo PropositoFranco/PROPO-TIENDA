@@ -111,17 +111,50 @@ h1.cpp-title{
 .cpp-stamp{
   background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:12px;
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:clamp(4px,0.8vh,8px);
-  padding:clamp(10px,1.8vh,18px) 6px; position:relative;
+  padding:clamp(10px,1.8vh,18px) 6px; position:relative; cursor:pointer; transition:transform .15s, box-shadow .15s;
 }
+.cpp-stamp:hover{transform:translateY(-2px);}
 .cpp-stamp-icon{font-size:clamp(16px,2.6vh,22px); filter:grayscale(0.15) opacity(0.85);}
 .cpp-stamp-label{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(10.5px,1.35vh,12.5px); color:var(--lilac-dim);}
+.cpp-stamp-nombre{font-family:'Cinzel',serif; font-weight:700; font-size:clamp(8.5px,1.05vh,10px); color:var(--lilac-dim); text-align:center; line-height:1.2; min-height:2.2em;}
 .cpp-stamp.milestone{border-color:var(--gold); box-shadow:0 0 14px rgba(212,175,55,0.25);}
+.cpp-stamp.obtenido{
+  border-color:var(--gold); background:linear-gradient(160deg, rgba(212,175,55,0.14), var(--dark-surface));
+  box-shadow:0 0 18px var(--gold-glow);
+}
+.cpp-stamp.obtenido .cpp-stamp-icon{filter:none;}
+.cpp-stamp.obtenido .cpp-stamp-nombre{color:#fff;}
+.cpp-stamp-check{
+  position:absolute; top:7px; right:9px; font-size:11px; color:#1a0a2e;
+  background:linear-gradient(135deg,var(--gold),var(--gold-bright)); width:16px; height:16px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-weight:900;
+}
 .cpp-stamp-tag{
   position:absolute; top:-9px; left:50%; transform:translateX(-50%);
   font-family:'Cinzel',serif; font-weight:900; font-size:8.5px; letter-spacing:0.6px;
   color:#1a0a2e; background:linear-gradient(90deg,var(--gold),var(--gold-bright));
   padding:2px 8px; border-radius:100px; white-space:nowrap;
 }
+
+.cpp-modal-overlay{
+  position:fixed; inset:0; background:rgba(4,2,14,0.86); backdrop-filter:blur(4px);
+  display:flex; align-items:center; justify-content:center; z-index:100; padding:20px;
+}
+.cpp-modal-card{
+  max-width:420px; width:100%; background:linear-gradient(160deg, rgba(20,8,45,0.98), rgba(6,3,18,0.98));
+  border:1.5px solid var(--gold); border-radius:18px; padding:30px 26px; text-align:center;
+  box-shadow:0 0 40px rgba(212,175,55,0.25); position:relative;
+}
+.cpp-modal-close{
+  position:absolute; top:12px; right:14px; background:none; border:none; color:var(--lilac);
+  font-size:18px; cursor:pointer; opacity:0.6;
+}
+.cpp-modal-close:hover{opacity:1;}
+.cpp-modal-icon{font-size:46px; margin-bottom:10px;}
+.cpp-modal-titulo{font-family:'Cinzel Decorative',serif; font-weight:900; font-size:19px; color:var(--gold-bright); margin-bottom:8px; line-height:1.2;}
+.cpp-modal-texto{font-family:'Crimson Text',serif; font-size:15px; color:var(--lilac); line-height:1.5; margin-bottom:12px;}
+.cpp-modal-meta{font-family:'Nunito',sans-serif; font-size:11px; color:var(--lilac-dim); letter-spacing:0.5px;}
+.cpp-modal-progreso{font-family:'Cinzel',serif; font-size:11px; letter-spacing:1px; color:var(--gold); margin-top:16px;}
 
 .cpp-practice-row{display:flex; flex-direction:column; gap:clamp(4px,0.8vh,8px);}
 .cpp-practice-head{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(12.5px,1.6vh,14.5px); color:#fff;}
@@ -151,6 +184,24 @@ h1.cpp-title{
 
 const TOTAL_SELLOS = 8;
 
+// ✏️ EDITA AQUÍ: nombre real y mensaje de logro de cada sello.
+// Cuando tengas las fotos, avísame y las metemos aquí como imagenUrl en vez del ícono.
+const STAGE_INFO = {
+  1: { nombre: 'El Llamado',            logro: 'Diste el primer paso. El Templo empieza a reconocerte.',    icono: '🕯️' },
+  2: { nombre: 'El Primer Voto',        logro: 'Confirmaste tu compromiso con la constancia.',              icono: '📜' },
+  3: { nombre: 'La Disciplina',         logro: 'Ya no es motivación, es hábito. Vas construyendo tu ritmo.', icono: '⚔️' },
+  4: { nombre: 'El Escudo Validado',    logro: 'Etapa validada por tu líder. Vas a la mitad del Camino.',   icono: '🛡️', milestone: true },
+  5: { nombre: 'El Temple',             logro: 'Superaste la mitad — aquí muchos flaquean, tú no.',          icono: '🔥' },
+  6: { nombre: 'La Estrategia',         logro: 'Ya piensas como líder, no solo como participante.',          icono: '🧭' },
+  7: { nombre: 'La Antesala',           logro: 'Un paso más y cierras tu Camino completo.',                  icono: '🗝️' },
+  8: { nombre: 'El Templario Completo', logro: '¡Cerraste tu Camino! Los 8 sellos son tuyos.',               icono: '👑', milestone: true },
+};
+
+function formatFecha(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+}
+
 const NAV_ITEMS = [
   { label: 'Inicio', activo: false, disponible: true, ruta: '/camino/participante/home' },
   { label: 'Check-in', activo: false, disponible: true, ruta: '/camino/participante/panel' },
@@ -166,9 +217,11 @@ export default function CaminoParticipantePasaportePage() {
   const [estado, setEstado] = useState('cargando'); // cargando | listo | sin_acceso
   const [estrellas, setEstrellas] = useState([]);
   const [sellos, setSellos] = useState([]); // números de sesión ya sellados
+  const [fechasSellos, setFechasSellos] = useState({}); // { numero_sesion: sellado_at }
   const [codigoInput, setCodigoInput] = useState('');
   const [canjeando, setCanjeando] = useState(false);
   const [msgCanje, setMsgCanje] = useState(null); // { ok, texto }
+  const [modalSello, setModalSello] = useState(null); // número del sello abierto en el modal
 
   useEffect(() => {
     const n = window.innerWidth < 760 ? 26 : 55;
@@ -198,8 +251,9 @@ export default function CaminoParticipantePasaportePage() {
   }
 
   async function cargarSellos() {
-    const { data } = await supabase.from('camino_sellos_participante').select('numero_sesion');
+    const { data } = await supabase.from('camino_sellos_participante').select('numero_sesion, sellado_at');
     setSellos((data || []).map(s => s.numero_sesion));
+    setFechasSellos(Object.fromEntries((data || []).map(s => [s.numero_sesion, s.sellado_at])));
   }
 
   async function canjearSello() {
@@ -321,12 +375,19 @@ export default function CaminoParticipantePasaportePage() {
         <div className="cpp-stamp-grid">
           {Array.from({ length: TOTAL_SELLOS }, (_, i) => i + 1).map(num => {
             const obtenido = sellos.includes(num);
+            const info = STAGE_INFO[num] || {};
             return (
-              <div key={num} className={`cpp-stamp ${num === 4 || num === 8 ? 'milestone' : ''}`}>
+              <div
+                key={num}
+                className={`cpp-stamp ${info.milestone ? 'milestone' : ''} ${obtenido ? 'obtenido' : ''}`}
+                onClick={() => setModalSello(num)}
+              >
                 {num === 4 && <span className="cpp-stamp-tag">Validado</span>}
                 {num === 8 && <span className="cpp-stamp-tag">Completo</span>}
-                <div className="cpp-stamp-icon">{obtenido ? '🎖️' : '🔒'}</div>
+                {obtenido && <span className="cpp-stamp-check">✓</span>}
+                <div className="cpp-stamp-icon">{obtenido ? (info.icono || '🎖️') : '🔒'}</div>
                 <div className="cpp-stamp-label">#{num}</div>
+                <div className="cpp-stamp-nombre">{obtenido ? info.nombre : '???'}</div>
               </div>
             );
           })}
@@ -343,6 +404,33 @@ export default function CaminoParticipantePasaportePage() {
           </div>
         </div>
       </div>
+
+      {modalSello && (() => {
+        const num = modalSello;
+        const obtenido = sellos.includes(num);
+        const info = STAGE_INFO[num] || {};
+        const siguienteEsperado = sellosObtenidos + 1;
+        return (
+          <div className="cpp-modal-overlay" onClick={() => setModalSello(null)}>
+            <div className="cpp-modal-card" onClick={e => e.stopPropagation()}>
+              <button className="cpp-modal-close" onClick={() => setModalSello(null)}>✕</button>
+              <div className="cpp-modal-icon">{obtenido ? (info.icono || '🎖️') : '🔒'}</div>
+              <div className="cpp-modal-titulo">{obtenido ? info.nombre : `Sello #${num} — Bloqueado`}</div>
+              {obtenido ? (
+                <>
+                  <div className="cpp-modal-texto">{info.logro}</div>
+                  <div className="cpp-modal-meta">Obtenido el {formatFecha(fechasSellos[num])}</div>
+                </>
+              ) : num === siguienteEsperado ? (
+                <div className="cpp-modal-texto">Este es tu siguiente sello. Pide el código de la sesión a tu líder y cánjalo arriba para desbloquearlo.</div>
+              ) : (
+                <div className="cpp-modal-texto">Todavía no te toca. Primero completa el sello #{siguienteEsperado} para llegar hasta aquí.</div>
+              )}
+              <div className="cpp-modal-progreso">{sellosObtenidos}/{TOTAL_SELLOS} SELLOS DEL CAMINO</div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
