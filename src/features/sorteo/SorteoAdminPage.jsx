@@ -111,6 +111,13 @@ export default function SorteoAdminPage() {
   const [codigoGeneradoModal, setCodigoGeneradoModal] = useState(null);
   const [copiadoCamino, setCopiadoCamino] = useState('');
 
+  // ── SELLOS (códigos de sesión del Camino) ────────────────────────────────────
+  const [sellosCodigos,  setSellosCodigos]  = useState([]);
+  const [loadingSellos,  setLoadingSellos]  = useState(false);
+  const [guardandoSello, setGuardandoSello] = useState(null); // id en proceso
+  const [errSello,       setErrSello]       = useState('');
+  const [editsSellos,    setEditsSellos]    = useState({}); // { [id]: valor editado }
+
   // ── FIRMAS (acuerdos digitales de líderes/gerentes) ──────────────────────────
   const [firmas,        setFirmas]        = useState([]);
   const [loadingFirmas, setLoadingFirmas]  = useState(false);
@@ -207,6 +214,36 @@ export default function SorteoAdminPage() {
   const descartarInteresadoCamino = async (id) => {
     await supabase.from('camino_interesados').update({ estado: 'descartado' }).eq('id', id);
     cargarInteresadosCamino();
+  };
+
+const cargarSellosCodigos = useCallback(async () => {
+    setLoadingSellos(true);
+    setErrSello('');
+    const { data, error } = await supabase.rpc('camino_admin_ver_codigos');
+    if (error) {
+      setErrSello(error.message || 'No autorizado para ver los códigos.');
+      setLoadingSellos(false);
+      return;
+    }
+    const porSesion = Object.fromEntries((data || []).map(s => [s.numero_sesion, s]));
+    const slots = Array.from({ length: 8 }, (_, i) => {
+      const n = i + 1;
+      return porSesion[n] || { numero_sesion: n, codigo: '', actualizado_at: null };
+    });
+    setSellosCodigos(slots);
+    setEditsSellos(Object.fromEntries(slots.map(s => [s.numero_sesion, s.codigo || ''])));
+    setLoadingSellos(false);
+  }, []);
+
+  const guardarSello = async (numeroSesion) => {
+    const nuevoCodigo = (editsSellos[numeroSesion] || '').trim().toUpperCase();
+    if (!nuevoCodigo) { alert('El código no puede estar vacío.'); return; }
+    setGuardandoSello(numeroSesion);
+    const { data, error } = await supabase.rpc('camino_admin_set_codigo', { p_numero_sesion: numeroSesion, p_codigo: nuevoCodigo });
+    setGuardandoSello(null);
+    if (error || !data?.ok) { alert('Error al guardar: ' + (error?.message || 'no autorizado')); return; }
+    setSellosCodigos(prev => prev.map(s => s.numero_sesion === numeroSesion ? { ...s, codigo: nuevoCodigo, actualizado_at: new Date().toISOString() } : s));
+    setEditsSellos(prev => ({ ...prev, [numeroSesion]: nuevoCodigo }));
   };
 
   const marcarReporteAtendido = async (id, nuevoStatus) => {
@@ -538,6 +575,7 @@ export default function SorteoAdminPage() {
             { id: 'ltv',       label: '💰 LTV' },
             { id: 'reportes',  label: `🆘 REPORTES${reportes.filter(r => r.status === 'pendiente').length > 0 ? ` (${reportes.filter(r => r.status === 'pendiente').length})` : ''}` },
             { id: 'camino',    label: `🗺️ CAMINO${interesadosCamino.filter(i => i.estado === 'pendiente').length > 0 ? ` (${interesadosCamino.filter(i => i.estado === 'pendiente').length})` : ''}` },
+            { id: 'sellos',    label: '🔑 SELLOS' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -560,6 +598,7 @@ export default function SorteoAdminPage() {
                 }
                 if (tab.id === 'reportes') cargarReportes();
                 if (tab.id === 'camino') cargarInteresadosCamino();
+                if (tab.id === 'sellos') cargarSellosCodigos();
               }}
               style={{
                 padding: '9px 20px',
@@ -1795,6 +1834,82 @@ export default function SorteoAdminPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ══ TAB: SELLOS ══ */}
+      {tabActiva === 'sellos' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: '20px 24px' }}>
+            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.gold, margin: '0 0 8px' }}>
+              🔑 SELLOS — CÓDIGOS DE SESIÓN
+            </h2>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.muted, letterSpacing: 1, margin: 0 }}>
+              Los 8 códigos que el participante canjea en su Pasaporte para desbloquear cada etapa del Camino.
+            </p>
+          </div>
+
+          {errSello && (
+            <div style={{ background: 'rgba(255,68,102,0.08)', border: '1px solid rgba(255,68,102,0.3)', borderRadius: 10, padding: '10px 14px', color: C.red, fontSize: 11 }}>
+              {errSello}
+            </div>
+          )}
+
+          {loadingSellos ? (
+            <p style={{ color: C.goldDim, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, textAlign: 'center' }}>CARGANDO...</p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+              {sellosCodigos.map(s => {
+                const cambiado = (editsSellos[s.numero_sesion] ?? '') !== (s.codigo ?? '');
+                const tieneCodigo = !!s.codigo;
+                return (
+                  <div key={s.numero_sesion} style={{
+                    background: C.card, border: `1px solid ${tieneCodigo ? C.borderHi : C.border}`, borderRadius: 12,
+                    padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 12, color: C.gold, letterSpacing: 1 }}>
+                        SESIÓN {s.numero_sesion}
+                      </span>
+                      <span style={{
+                        fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2,
+                        color: tieneCodigo ? C.green : C.muted,
+                        border: `1px solid ${tieneCodigo ? 'rgba(68,255,136,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                        borderRadius: 20, padding: '3px 10px',
+                      }}>
+                        {tieneCodigo ? '● CARGADO' : '○ VACÍO'}
+                      </span>
+                    </div>
+                    <input
+                      value={editsSellos[s.numero_sesion] ?? ''}
+                      onChange={e => setEditsSellos(prev => ({ ...prev, [s.numero_sesion]: e.target.value }))}
+                      placeholder="CÓDIGO"
+                      style={{
+                        width: '100%', padding: '9px 12px', background: '#07040f',
+                        border: `1px solid ${C.borderHi}`, borderRadius: 8, color: C.text,
+                        fontFamily: 'monospace', fontSize: 13, letterSpacing: 2, textTransform: 'uppercase',
+                      }}
+                    />
+                    <button
+                      onClick={() => guardarSello(s.numero_sesion)}
+                      disabled={guardandoSello === s.numero_sesion || !cambiado}
+                      style={{
+                        padding: '8px 0',
+                        background: cambiado ? 'rgba(212,175,55,0.12)' : 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${cambiado ? C.borderHi : C.border}`,
+                        borderRadius: 7, color: cambiado ? C.gold : C.muted,
+                        fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1,
+                        cursor: cambiado ? 'pointer' : 'default',
+                      }}
+                    >
+                      {guardandoSello === s.numero_sesion ? 'GUARDANDO...' : cambiado ? 'GUARDAR' : '✓ GUARDADO'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

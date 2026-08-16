@@ -83,6 +83,28 @@ h1.cpp-title{
 .cpp-progress-bar{height:8px; border-radius:6px; background:rgba(255,255,255,0.08); overflow:hidden;}
 .cpp-progress-fill{height:100%; border-radius:6px; background:linear-gradient(90deg,var(--gold),var(--gold-bright)); box-shadow:0 0 10px var(--gold-glow);}
 
+.cpp-canje-card{
+  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:14px;
+  padding:clamp(14px,2.2vh,20px) clamp(16px,2vw,24px);
+  display:flex; flex-direction:column; gap:10px;
+}
+.cpp-canje-head{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(12.5px,1.6vh,14.5px); color:#fff;}
+.cpp-canje-row{display:flex; gap:10px; flex-wrap:wrap;}
+.cpp-canje-input{
+  flex:1 1 200px; padding:11px 14px; background:rgba(4,2,14,0.7); border:1px solid var(--gold-dim);
+  border-radius:9px; color:#fff; font-family:monospace; font-size:15px; letter-spacing:2px; text-transform:uppercase;
+}
+.cpp-canje-input:focus{outline:none; border-color:var(--gold);}
+.cpp-canje-btn{
+  padding:11px 22px; background:linear-gradient(135deg,var(--gold),#9a7a00); border:none; border-radius:9px;
+  color:#1a0a2e; font-family:'Cinzel',serif; font-weight:900; font-size:12px; letter-spacing:1px; cursor:pointer;
+  white-space:nowrap;
+}
+.cpp-canje-btn:disabled{opacity:0.5; cursor:default;}
+.cpp-canje-msg{font-family:'Nunito',sans-serif; font-size:12.5px; font-weight:700;}
+.cpp-canje-msg.ok{color:#7CFFB2;}
+.cpp-canje-msg.err{color:#FF7A7A;}
+
 .cpp-stamp-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:clamp(10px,1.6vh,16px);}
 @media (max-width:640px){ .cpp-stamp-grid{grid-template-columns:repeat(4,1fr); gap:8px;} }
 
@@ -143,6 +165,10 @@ export default function CaminoParticipantePasaportePage() {
   const navigate = useNavigate();
   const [estado, setEstado] = useState('cargando'); // cargando | listo | sin_acceso
   const [estrellas, setEstrellas] = useState([]);
+  const [sellos, setSellos] = useState([]); // números de sesión ya sellados
+  const [codigoInput, setCodigoInput] = useState('');
+  const [canjeando, setCanjeando] = useState(false);
+  const [msgCanje, setMsgCanje] = useState(null); // { ok, texto }
 
   useEffect(() => {
     const n = window.innerWidth < 760 ? 26 : 55;
@@ -167,7 +193,35 @@ export default function CaminoParticipantePasaportePage() {
       navigate('/camino/participante/login', { replace: true });
       return;
     }
+    await cargarSellos();
     setEstado('listo');
+  }
+
+  async function cargarSellos() {
+    const { data } = await supabase.from('camino_sellos_participante').select('numero_sesion');
+    setSellos((data || []).map(s => s.numero_sesion));
+  }
+
+  async function canjearSello() {
+    const codigo = codigoInput.trim();
+    if (!codigo) return;
+    setCanjeando(true);
+    setMsgCanje(null);
+    const { data, error } = await supabase.rpc('camino_canjear_sello', { p_codigo: codigo });
+    setCanjeando(false);
+    if (error) { setMsgCanje({ ok: false, texto: 'Error de conexión. Intenta de nuevo.' }); return; }
+    if (!data?.ok) {
+      const mensajes = {
+        sin_acceso: 'Tu cuenta no tiene acceso activo al Camino.',
+        pasaporte_completo: '¡Ya completaste tu Pasaporte! Los 8 sellos están juntos.',
+        codigo_incorrecto: 'Código incorrecto. Revisa que sea el de la sesión que te toca.',
+      };
+      setMsgCanje({ ok: false, texto: mensajes[data?.error] || 'No se pudo canjear el código.' });
+      return;
+    }
+    setCodigoInput('');
+    setMsgCanje({ ok: true, texto: `¡Sello #${data.numero_sesion} obtenido! 🎖️` });
+    cargarSellos();
   }
 
   useEffect(() => { cargar(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
@@ -189,9 +243,7 @@ export default function CaminoParticipantePasaportePage() {
     );
   }
 
-  // ⚠️ PENDIENTE: sellos aún no están conectados a datos reales de Supabase.
-  // Por ahora replica el estado estático "todo bloqueado" que ya tenías en el HTML.
-  const sellosObtenidos = 0;
+  const sellosObtenidos = sellos.length;
 
   return (
     <div className="cpp-root">
@@ -246,15 +298,38 @@ export default function CaminoParticipantePasaportePage() {
           </div>
         </div>
 
+        <div className="cpp-canje-card">
+          <div className="cpp-canje-head">Canjea tu sello</div>
+          <div className="cpp-canje-row">
+            <input
+              className="cpp-canje-input"
+              placeholder="CÓDIGO DE LA SESIÓN"
+              value={codigoInput}
+              onChange={e => setCodigoInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') canjearSello(); }}
+              disabled={canjeando}
+            />
+            <button className="cpp-canje-btn" onClick={canjearSello} disabled={canjeando || !codigoInput.trim()}>
+              {canjeando ? 'CANJEANDO...' : 'CANJEAR'}
+            </button>
+          </div>
+          {msgCanje && (
+            <div className={`cpp-canje-msg ${msgCanje.ok ? 'ok' : 'err'}`}>{msgCanje.texto}</div>
+          )}
+        </div>
+
         <div className="cpp-stamp-grid">
-          {Array.from({ length: TOTAL_SELLOS }, (_, i) => i + 1).map(num => (
-            <div key={num} className={`cpp-stamp ${num === 4 || num === 8 ? 'milestone' : ''}`}>
-              {num === 4 && <span className="cpp-stamp-tag">Validado</span>}
-              {num === 8 && <span className="cpp-stamp-tag">Completo</span>}
-              <div className="cpp-stamp-icon">🔒</div>
-              <div className="cpp-stamp-label">#{num}</div>
-            </div>
-          ))}
+          {Array.from({ length: TOTAL_SELLOS }, (_, i) => i + 1).map(num => {
+            const obtenido = sellos.includes(num);
+            return (
+              <div key={num} className={`cpp-stamp ${num === 4 || num === 8 ? 'milestone' : ''}`}>
+                {num === 4 && <span className="cpp-stamp-tag">Validado</span>}
+                {num === 8 && <span className="cpp-stamp-tag">Completo</span>}
+                <div className="cpp-stamp-icon">{obtenido ? '🎖️' : '🔒'}</div>
+                <div className="cpp-stamp-label">#{num}</div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="cpp-practice-row">
