@@ -114,7 +114,6 @@ h1.cpp-title{
   padding:clamp(10px,1.8vh,18px) 6px; position:relative; cursor:pointer; transition:transform .15s, box-shadow .15s;
 }
 .cpp-stamp:hover{transform:translateY(-2px);}
-.cpp-stamp-icon{font-size:clamp(16px,2.6vh,22px); filter:grayscale(0.15) opacity(0.85);}
 .cpp-stamp-label{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(10.5px,1.35vh,12.5px); color:var(--lilac-dim);}
 .cpp-stamp-nombre{font-family:'Cinzel',serif; font-weight:700; font-size:clamp(8.5px,1.05vh,10px); color:var(--lilac-dim); text-align:center; line-height:1.2; min-height:2.2em;}
 .cpp-stamp.milestone{border-color:var(--gold); box-shadow:0 0 14px rgba(212,175,55,0.25);}
@@ -122,8 +121,32 @@ h1.cpp-title{
   border-color:var(--gold); background:linear-gradient(160deg, rgba(212,175,55,0.14), var(--dark-surface));
   box-shadow:0 0 18px var(--gold-glow);
 }
-.cpp-stamp.obtenido .cpp-stamp-icon{filter:none;}
 .cpp-stamp.obtenido .cpp-stamp-nombre{color:#fff;}
+.cpp-stamp.siguiente{border-color:var(--gold-dim); background:linear-gradient(160deg, rgba(212,175,55,0.07), var(--dark-surface));}
+.cpp-stamp.siguiente .cpp-stamp-nombre{color:var(--lilac);}
+
+.cpp-medallion{
+  width:clamp(38px,6vh,52px); height:clamp(38px,6vh,52px); border-radius:50%;
+  display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;
+  background:radial-gradient(circle at 35% 30%, rgba(255,255,255,0.05), rgba(0,0,0,0.35) 70%);
+  border:2px solid rgba(200,185,240,0.16);
+  font-size:clamp(16px,2.4vh,20px);
+  filter:grayscale(0.9) brightness(0.5);
+  transition:border-color .2s, box-shadow .2s, filter .2s;
+}
+.cpp-medallion img{width:100%; height:100%; object-fit:cover; display:block;}
+.cpp-medallion.siguiente{
+  border-color:var(--gold-dim); filter:grayscale(0.3) brightness(0.85);
+  animation:cpp-pulso 1.8s ease-in-out infinite;
+}
+.cpp-medallion.obtenido{
+  border-color:var(--gold); filter:none; box-shadow:0 0 14px var(--gold-glow);
+}
+.cpp-medallion.grande{ width:96px; height:96px; font-size:40px; margin:0 auto 10px; }
+@keyframes cpp-pulso{
+  0%,100%{ box-shadow:0 0 0 0 rgba(212,175,55,0.35); }
+  50%{ box-shadow:0 0 0 7px rgba(212,175,55,0); }
+}
 .cpp-stamp-check{
   position:absolute; top:7px; right:9px; font-size:11px; color:#1a0a2e;
   background:linear-gradient(135deg,var(--gold),var(--gold-bright)); width:16px; height:16px; border-radius:50%;
@@ -135,6 +158,7 @@ h1.cpp-title{
   color:#1a0a2e; background:linear-gradient(90deg,var(--gold),var(--gold-bright));
   padding:2px 8px; border-radius:100px; white-space:nowrap;
 }
+.cpp-stamp-tag.siguiente{ color:#fff; background:linear-gradient(90deg,var(--purple),#8f1fd6); }
 
 .cpp-modal-overlay{
   position:fixed; inset:0; background:rgba(4,2,14,0.86); backdrop-filter:blur(4px);
@@ -184,22 +208,41 @@ h1.cpp-title{
 
 const TOTAL_SELLOS = 8;
 
-// ✏️ EDITA AQUÍ: nombre real y mensaje de logro de cada sello.
-// Cuando tengas las fotos, avísame y las metemos aquí como imagenUrl en vez del ícono.
+// ✏️ EDITA AQUÍ: nombre, mensaje de logro, ícono y (cuando la tengas) la foto de cada sello.
+// imagen: null → usa el ícono/emoji. Cuando subas tu PNG a public/sellos/, cambia null por la ruta, ej: '/sellos/sello-1.png'
 const STAGE_INFO = {
-  1: { nombre: 'El Llamado',            logro: 'Diste el primer paso. El Templo empieza a reconocerte.',    icono: '🕯️' },
-  2: { nombre: 'El Primer Voto',        logro: 'Confirmaste tu compromiso con la constancia.',              icono: '📜' },
-  3: { nombre: 'La Disciplina',         logro: 'Ya no es motivación, es hábito. Vas construyendo tu ritmo.', icono: '⚔️' },
-  4: { nombre: 'El Escudo Validado',    logro: 'Etapa validada por tu líder. Vas a la mitad del Camino.',   icono: '🛡️', milestone: true },
-  5: { nombre: 'El Temple',             logro: 'Superaste la mitad — aquí muchos flaquean, tú no.',          icono: '🔥' },
-  6: { nombre: 'La Estrategia',         logro: 'Ya piensas como líder, no solo como participante.',          icono: '🧭' },
-  7: { nombre: 'La Antesala',           logro: 'Un paso más y cierras tu Camino completo.',                  icono: '🗝️' },
-  8: { nombre: 'El Templario Completo', logro: '¡Cerraste tu Camino! Los 8 sellos son tuyos.',               icono: '👑', milestone: true },
+  1: { nombre: 'El Llamado',            logro: 'Diste el primer paso. El Templo empieza a reconocerte.',    icono: '🕯️', imagen: null },
+  2: { nombre: 'El Primer Voto',        logro: 'Confirmaste tu compromiso con la constancia.',              icono: '📜', imagen: null },
+  3: { nombre: 'La Disciplina',         logro: 'Ya no es motivación, es hábito. Vas construyendo tu ritmo.', icono: '⚔️', imagen: null },
+  4: { nombre: 'El Escudo Validado',    logro: 'Etapa validada por tu líder. Vas a la mitad del Camino.',   icono: '🛡️', imagen: null, milestone: true },
+  5: { nombre: 'El Temple',             logro: 'Superaste la mitad — aquí muchos flaquean, tú no.',          icono: '🔥', imagen: null },
+  6: { nombre: 'La Estrategia',         logro: 'Ya piensas como líder, no solo como participante.',          icono: '🧭', imagen: null },
+  7: { nombre: 'La Antesala',           logro: 'Un paso más y cierras tu Camino completo.',                  icono: '🗝️', imagen: null },
+  8: { nombre: 'El Templario Completo', logro: '¡Cerraste tu Camino! Los 8 sellos son tuyos.',               icono: '👑', imagen: null, milestone: true },
 };
 
 function formatFecha(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+}
+
+// Muestra la foto del sello si ya la subiste (imagen != null), si no, el ícono/emoji.
+// estado visual: obtenido (a color, brilla) / siguiente (pulsa, ya lo puedes canjear) / bloqueado (gris, misterio)
+function Medallion({ info, obtenido, siguiente, extraClass = '' }) {
+  const estado = obtenido ? 'obtenido' : siguiente ? 'siguiente' : 'bloqueado';
+  const clase = `cpp-medallion ${estado} ${extraClass}`.trim();
+  if (obtenido && info.imagen) {
+    return (
+      <div className={clase}>
+        <img src={info.imagen} alt={info.nombre} />
+      </div>
+    );
+  }
+  return (
+    <div className={clase}>
+      {obtenido ? (info.icono || '🎖️') : siguiente ? (info.icono || '🔒') : '🔒'}
+    </div>
+  );
 }
 
 const NAV_ITEMS = [
@@ -375,19 +418,21 @@ export default function CaminoParticipantePasaportePage() {
         <div className="cpp-stamp-grid">
           {Array.from({ length: TOTAL_SELLOS }, (_, i) => i + 1).map(num => {
             const obtenido = sellos.includes(num);
+            const esSiguiente = !obtenido && num === sellosObtenidos + 1;
             const info = STAGE_INFO[num] || {};
             return (
               <div
                 key={num}
-                className={`cpp-stamp ${info.milestone ? 'milestone' : ''} ${obtenido ? 'obtenido' : ''}`}
+                className={`cpp-stamp ${info.milestone ? 'milestone' : ''} ${obtenido ? 'obtenido' : ''} ${esSiguiente ? 'siguiente' : ''}`}
                 onClick={() => setModalSello(num)}
               >
                 {num === 4 && <span className="cpp-stamp-tag">Validado</span>}
                 {num === 8 && <span className="cpp-stamp-tag">Completo</span>}
+                {esSiguiente && <span className="cpp-stamp-tag siguiente">Tu siguiente</span>}
                 {obtenido && <span className="cpp-stamp-check">✓</span>}
-                <div className="cpp-stamp-icon">{obtenido ? (info.icono || '🎖️') : '🔒'}</div>
+                <Medallion info={info} obtenido={obtenido} siguiente={esSiguiente} />
                 <div className="cpp-stamp-label">#{num}</div>
-                <div className="cpp-stamp-nombre">{obtenido ? info.nombre : '???'}</div>
+                <div className="cpp-stamp-nombre">{obtenido || esSiguiente ? info.nombre : '???'}</div>
               </div>
             );
           })}
@@ -414,15 +459,15 @@ export default function CaminoParticipantePasaportePage() {
           <div className="cpp-modal-overlay" onClick={() => setModalSello(null)}>
             <div className="cpp-modal-card" onClick={e => e.stopPropagation()}>
               <button className="cpp-modal-close" onClick={() => setModalSello(null)}>✕</button>
-              <div className="cpp-modal-icon">{obtenido ? (info.icono || '🎖️') : '🔒'}</div>
-              <div className="cpp-modal-titulo">{obtenido ? info.nombre : `Sello #${num} — Bloqueado`}</div>
+              <Medallion info={info} obtenido={obtenido} siguiente={num === siguienteEsperado} extraClass="grande" />
+              <div className="cpp-modal-titulo">{obtenido || num === siguienteEsperado ? info.nombre : `Sello #${num} — Bloqueado`}</div>
               {obtenido ? (
                 <>
                   <div className="cpp-modal-texto">{info.logro}</div>
                   <div className="cpp-modal-meta">Obtenido el {formatFecha(fechasSellos[num])}</div>
                 </>
               ) : num === siguienteEsperado ? (
-                <div className="cpp-modal-texto">Este es tu siguiente sello. Pide el código de la sesión a tu líder y cánjalo arriba para desbloquearlo.</div>
+                <div className="cpp-modal-texto">Este es tu siguiente sello, «{info.nombre}». Pide el código de la sesión a tu líder y cánjalo arriba para desbloquearlo.</div>
               ) : (
                 <div className="cpp-modal-texto">Todavía no te toca. Primero completa el sello #{siguienteEsperado} para llegar hasta aquí.</div>
               )}
