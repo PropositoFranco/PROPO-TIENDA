@@ -33,7 +33,6 @@ export default function CaminoGestorPanelPage() {
   const navigate = useNavigate();
   const [estado, setEstado] = useState('verificando'); // verificando | sinAcceso | panel
   const [nombreGestor, setNombreGestor] = useState('');
-  const [fechaInicio, setFechaInicio] = useState('2026-08-24');
   const [pendientes, setPendientes] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [aceptandoId, setAceptandoId] = useState(null);
@@ -77,8 +76,9 @@ export default function CaminoGestorPanelPage() {
 
   async function aceptarInteresado(item) {
     setAceptandoId(item.id);
+    const hoy = new Date().toISOString().slice(0, 10);
     const { data, error } = await supabase.rpc('aceptar_interesado_camino_gestor', {
-      p_interesado_id: item.id, p_fecha_inicio: fechaInicio, p_cohorte: null
+      p_interesado_id: item.id, p_fecha_inicio: hoy, p_cohorte: null
     });
     setAceptandoId(null);
     if (error) { alert('Error al aceptar: ' + error.message); return; }
@@ -150,10 +150,6 @@ export default function CaminoGestorPanelPage() {
         <div className="cgp-tarjeta">
           <h2 className="cgp-titulo-tarjeta">🗺️ INTERESADOS</h2>
           <p style={{ color: 'var(--muted)', fontSize: 11.5, marginBottom: 16 }}>Prospectos que te tocan a ti. Acéptalos después de tu junta 1 a 1 — se genera su código y se lo mandas por WhatsApp.</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-            <label style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: 1, color: 'var(--muted)' }}>FECHA DE INICIO PARA NUEVOS ACEPTADOS</label>
-            <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
-          </div>
 
           {pendientes.length === 0 ? (
             <p style={{ color: 'var(--muted)', fontSize: 12 }}>No hay interesados pendientes.</p>

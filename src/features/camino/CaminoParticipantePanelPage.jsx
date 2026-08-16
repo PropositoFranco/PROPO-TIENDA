@@ -228,7 +228,6 @@ export default function CaminoParticipantePanelPage() {
   }
 
   const diaActual = participante?.dia_actual ?? 1;
-  const yaEmpezo = diaActual >= 1 && participante?.fecha_inicio && new Date(participante.fecha_inicio) <= new Date();
 
   return (
     <div className="ctp-root">
@@ -261,12 +260,7 @@ export default function CaminoParticipantePanelPage() {
         <div className="ctp-card">
           <div className="ctp-section-label">Registrar evidencia de hoy</div>
 
-          {!yaEmpezo ? (
-            <div className="ctp-locked">
-              <div className="ctp-locked-icon">🔒</div>
-              <div className="ctp-locked-text">El registro de evidencia se desbloquea el día que arranca tu Camino.</div>
-            </div>
-          ) : (
+          {(() => { return true; })() && (
             <>
               <div className="ctp-form-row">
                 <label>Formato</label>
