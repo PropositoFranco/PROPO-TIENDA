@@ -229,6 +229,14 @@ export default function CaminoParticipantePanelPage() {
 
   const diaActual = participante?.dia_actual ?? 1;
 
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const fechaInicioParticipante = participante?.fecha_inicio ? new Date(participante.fecha_inicio + 'T00:00:00') : null;
+  const yaEmpezo = fechaInicioParticipante ? hoy >= fechaInicioParticipante : false;
+  const fechaInicioTexto = fechaInicioParticipante
+    ? fechaInicioParticipante.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })
+    : '';
+
   return (
     <div className="ctp-root">
       <style>{styles}</style>
@@ -252,15 +260,24 @@ export default function CaminoParticipantePanelPage() {
 
         <div className="ctp-card">
           <div className="ctp-countdown">
-            <div className="ctp-day-label">Día <span className="num">{diaActual}</span> de tu Camino</div>
-            <div className="ctp-day-sub">Publica tu evidencia de hoy para mantener tu constancia.</div>
+            {yaEmpezo ? (
+              <>
+                <div className="ctp-day-label">Día <span className="num">{diaActual}</span> de tu Camino</div>
+                <div className="ctp-day-sub">Publica tu evidencia de hoy para mantener tu constancia.</div>
+              </>
+            ) : (
+              <>
+                <div className="ctp-day-label">Empieza el <span className="num">{fechaInicioTexto}</span></div>
+                <div className="ctp-day-sub">Cuando arranque tu camino, aquí registrarás tu evidencia del día.</div>
+              </>
+            )}
           </div>
         </div>
 
         <div className="ctp-card">
           <div className="ctp-section-label">Registrar evidencia de hoy</div>
 
-          {(() => { return true; })() && (
+          {yaEmpezo && (
             <>
               <div className="ctp-form-row">
                 <label>Formato</label>
@@ -294,6 +311,12 @@ export default function CaminoParticipantePanelPage() {
               {msgOk && <p className="ctp-msg-ok">{msgOk}</p>}
               {msgError && <p className="ctp-msg-error">{msgError}</p>}
             </>
+          )}
+          {!yaEmpezo && (
+            <div className="ctp-locked">
+              <div className="ctp-locked-icon">🔒</div>
+              <div className="ctp-locked-text">El registro de evidencia se desbloquea el día que arranca tu camino.</div>
+            </div>
           )}
         </div>
 

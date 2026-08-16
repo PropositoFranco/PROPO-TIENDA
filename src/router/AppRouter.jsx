@@ -48,6 +48,7 @@ const AliadoDisplayPage = lazy(() => import('../features/sorteo/aliado-display-p
 const FirmaAliadoPage = lazy(() => import('../features/sorteo/FirmaAliadoPage'));
 const LiderDashboardPage = lazy(() => import('../features/lideres/LiderDashboardPage'));
 const MuroDeAliados = lazy(() => import('../features/aliados/MuroDeAliados'));
+const CaminoLandingPage = lazy(() => import('../features/camino/CaminoLandingPage'));
 const CaminoGestorLoginPage = lazy(() => import('../features/camino/CaminoGestorLoginPage'));
 const CaminoGestorPanelPage = lazy(() => import('../features/camino/CaminoGestorPanelPage'));
 const CaminoParticipanteLoginPage = lazy(() => import('../features/camino/CaminoParticipanteLoginPage'));
@@ -151,6 +152,7 @@ export default function AppRouter() {
           <Route path="/firma/:token" element={<FirmaAliadoPage />} />
           <Route path="/lider" element={<LiderDashboardPage />} />
           <Route path="/aliados" element={<MuroDeAliados />} />
+          <Route path="/camino" element={<CaminoLandingPage />} />
           <Route path="/camino/gestor/login" element={<CaminoGestorLoginPage />} />
 <Route path="/camino/gestor/panel" element={<CaminoGestorPanelPage />} />
 <Route path="/camino/participante/login" element={<CaminoParticipanteLoginPage />} />
