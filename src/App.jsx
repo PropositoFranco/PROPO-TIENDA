@@ -136,7 +136,7 @@ useEffect(() => {
     setAnnDismissed(true);
   };
 
-  const isVerticalOnly = currentPath.startsWith('/games/templarios-dijeron') || currentPath.startsWith('/sorteo');
+  const isVerticalOnly = currentPath.startsWith('/games/templarios-dijeron') || currentPath.startsWith('/sorteo') || currentPath.startsWith('/camino');
   const isModuleViewer = /^\/academia\/[^/]+/.test(currentPath);
   const mostrarGraduacion = useGraduacionStore(s => s.mostrar);
 
