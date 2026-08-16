@@ -83,7 +83,13 @@ export default function CaminoGestorPanelPage() {
     setAceptandoId(null);
     if (error) { alert('Error al aceptar: ' + error.message); return; }
     const nuevo = data?.[0];
-    if (nuevo) setModalCodigo(nuevo);
+    if (nuevo) {
+      setModalCodigo({
+        nombre: nuevo.nombre,
+        telefono: nuevo.telefono,
+        url: `${BASE_URL}/camino/participante/login?invite=${nuevo.token}`,
+      });
+    }
     cargarInteresados();
   }
 
@@ -149,7 +155,7 @@ export default function CaminoGestorPanelPage() {
 
         <div className="cgp-tarjeta">
           <h2 className="cgp-titulo-tarjeta">🗺️ INTERESADOS</h2>
-          <p style={{ color: 'var(--muted)', fontSize: 11.5, marginBottom: 16 }}>Prospectos que te tocan a ti. Acéptalos después de tu junta 1 a 1 — se genera su código y se lo mandas por WhatsApp.</p>
+          <p style={{ color: 'var(--muted)', fontSize: 11.5, marginBottom: 16 }}>Prospectos que te tocan a ti. Acéptalos después de tu junta 1 a 1 — se genera su link de invitación y se lo mandas por WhatsApp.</p>
 
           {pendientes.length === 0 ? (
             <p style={{ color: 'var(--muted)', fontSize: 12 }}>No hay interesados pendientes.</p>
@@ -200,19 +206,18 @@ export default function CaminoGestorPanelPage() {
         <div className="cgp-modal-fondo" onClick={() => setModalCodigo(null)}>
           <div className="cgp-modal-caja" onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 28, marginBottom: 8 }}>🗺️</div>
-            <div style={{ fontFamily: "'Cinzel',serif", fontWeight: 900, fontSize: 14, color: 'var(--gold)', letterSpacing: 2, marginBottom: 4 }}>ACCESO GENERADO</div>
+            <div style={{ fontFamily: "'Cinzel',serif", fontWeight: 900, fontSize: 14, color: 'var(--gold)', letterSpacing: 2, marginBottom: 4 }}>INVITACIÓN GENERADA</div>
             <div style={{ fontFamily: "'Cinzel',serif", fontSize: 12, color: 'var(--text)', marginBottom: 16 }}>{modalCodigo.nombre}</div>
-            <div style={{ fontFamily: 'monospace', fontSize: 20, letterSpacing: 2, color: 'var(--gold)', fontWeight: 900, background: 'rgba(212,175,55,0.08)', border: '1px solid var(--border)', borderRadius: 10, padding: 14, marginBottom: 16 }}>
-              {modalCodigo.codigo_acceso}
-            </div>
+            <p style={{ fontFamily: 'monospace', fontSize: 9, color: 'var(--muted)', wordBreak: 'break-all', marginBottom: 16 }}>{modalCodigo.url}</p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button style={{ padding: '10px 16px', background: 'rgba(212,175,55,0.1)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--gold)', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: 1, cursor: 'pointer' }} onClick={() => copiar(modalCodigo.codigo_acceso)}>COPIAR CÓDIGO</button>
+              <button style={{ padding: '10px 16px', background: 'rgba(212,175,55,0.1)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--gold)', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: 1, cursor: 'pointer' }} onClick={() => copiar(modalCodigo.url)}>COPIAR LINK</button>
               <a
                 target="_blank" rel="noreferrer"
                 style={{ padding: '10px 16px', background: 'rgba(68,255,136,0.12)', border: '1px solid rgba(68,255,136,0.35)', borderRadius: 8, color: 'var(--green)', fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: 1, cursor: 'pointer', textDecoration: 'none' }}
-                href={`https://wa.me/${(modalCodigo.telefono || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`¡Bienvenido/a al Camino a Líder Digital! 🗺️\n\nTu código de acceso es: ${modalCodigo.codigo_acceso}\n\nEntra aquí: ${BASE_URL}/camino/participante/login`)}`}
+                href={`https://wa.me/${(modalCodigo.telefono || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`¡Bienvenido/a al Camino a Líder Digital! 🗺️\n\nCrea tu acceso aquí: ${modalCodigo.url}`)}`}
               >💬 ABRIR WHATSAPP</a>
             </div>
+            <div style={{ fontFamily: "'Nunito',sans-serif", fontSize: 10.5, color: 'var(--muted)', marginTop: 14 }}>Válida 14 días, un solo uso.</div>
             <button className="cgp-modal-cerrar" onClick={() => setModalCodigo(null)}>CERRAR</button>
           </div>
         </div>

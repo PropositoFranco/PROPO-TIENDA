@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
 
-const STORAGE_KEY = 'camino_participante_codigo';
-
 const styles = `
 :root{
   --gold:#D4AF37; --gold-bright:#FFE566; --gold-dim:rgba(212,175,55,0.4); --gold-glow:rgba(212,175,55,0.65);
@@ -135,7 +133,7 @@ const PLATAFORMAS = ['Instagram', 'TikTok', 'Facebook', 'YouTube'];
 
 export default function CaminoParticipantePanelPage() {
   const navigate = useNavigate();
-  const [estado, setEstado] = useState('cargando'); // cargando | listo | sin_codigo | error
+  const [estado, setEstado] = useState('cargando'); // cargando | listo | sin_acceso | error
   const [participante, setParticipante] = useState(null);
 
   const [formato, setFormato] = useState(FORMATOS[0]);
@@ -146,17 +144,16 @@ export default function CaminoParticipantePanelPage() {
   const [msgError, setMsgError] = useState('');
 
   async function cargar() {
-    const codigo = localStorage.getItem(STORAGE_KEY);
-    if (!codigo) {
-      setEstado('sin_codigo');
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session) {
+      navigate('/camino/participante/login', { replace: true });
       return;
     }
 
-    const { data, error } = await supabase.rpc('camino_verificar_codigo', { p_codigo: codigo });
+    const { data, error } = await supabase.rpc('camino_mi_progreso');
 
     if (error || !data || data.length === 0) {
-      localStorage.removeItem(STORAGE_KEY);
-      setEstado('sin_codigo');
+      setEstado('sin_acceso');
       return;
     }
 
@@ -164,7 +161,7 @@ export default function CaminoParticipantePanelPage() {
     setEstado('listo');
   }
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => { cargar(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   async function enviarCheckin() {
     setMsgError('');
@@ -175,9 +172,7 @@ export default function CaminoParticipantePanelPage() {
     }
 
     setEnviando(true);
-    const codigo = localStorage.getItem(STORAGE_KEY);
     const { error } = await supabase.rpc('camino_registrar_checkin', {
-      p_codigo: codigo,
       p_dia_numero: participante.dia_actual,
       p_formato: formato,
       p_plataforma: plataforma,
@@ -194,8 +189,8 @@ export default function CaminoParticipantePanelPage() {
     setLinkPost('');
   }
 
-  function salir() {
-    localStorage.removeItem(STORAGE_KEY);
+  async function salir() {
+    await supabase.auth.signOut();
     navigate('/camino/participante/login', { replace: true });
   }
 
@@ -211,15 +206,15 @@ export default function CaminoParticipantePanelPage() {
     );
   }
 
-  if (estado === 'sin_codigo') {
+  if (estado === 'sin_acceso') {
     return (
       <div className="ctp-root">
         <style>{styles}</style>
         <div className="ctp-error-full">
           <div style={{ fontSize: 32 }}>🔒</div>
-          <h1 className="ctp-title" style={{ fontSize: 22 }}>Necesitas tu código</h1>
+          <h1 className="ctp-title" style={{ fontSize: 22 }}>No encontramos tu acceso</h1>
           <p style={{ color: 'var(--lilac)', fontFamily: "'Nunito',sans-serif", fontSize: 14, maxWidth: 320 }}>
-            No encontramos una sesión activa. Entra con tu código de acceso.
+            Tu cuenta todavía no tiene un acceso activo al Camino. Pide un link de invitación a tu gestor.
           </p>
           <button className="ctp-btn" onClick={() => navigate('/camino/participante/login')}>IR AL LOGIN</button>
         </div>
