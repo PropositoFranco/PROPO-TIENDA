@@ -12,7 +12,7 @@ const styles = `
 }
 .ctp-root *,.ctp-root *::before,.ctp-root *::after{margin:0;padding:0;box-sizing:border-box;}
 .ctp-root{
-  min-height:100dvh; width:100%;
+  min-height:100dvh; width:100%; display:flex; flex-direction:column;
   background:
     radial-gradient(ellipse 120% 50% at 50% 0%, rgba(40,10,90,0.9) 0%, transparent 60%),
     radial-gradient(ellipse 70% 40% at 12% 15%, rgba(10,40,100,0.35) 0%, transparent 55%),
@@ -24,24 +24,46 @@ const styles = `
 .ctp-star{position:absolute; border-radius:50%; background:#fff; animation:ctp-twinkle var(--d) ease-in-out infinite; animation-delay:var(--del);}
 @keyframes ctp-twinkle{0%,100%{opacity:var(--min);} 50%{opacity:1;}}
 
+/* ===== Nav superior (idéntica a la del Home, para experiencia sellada) ===== */
 .ctp-topnav{
-  display:flex; align-items:center; justify-content:space-between; gap:14px;
-  padding:12px 26px;
+  flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:14px;
+  padding:10px 26px;
   background:linear-gradient(180deg, rgba(6,3,18,0.97), rgba(6,3,18,0.88));
   border-bottom:1px solid var(--gold-dim);
-  position:relative; z-index:10;
+  position:relative; z-index:10; flex-wrap:wrap;
 }
 .ctp-brand{display:flex; align-items:center; gap:10px;}
 .ctp-brand-name{font-family:'Cinzel',serif; font-weight:900; letter-spacing:1px; font-size:16px; color:#fff;}
 .ctp-brand-name span{color:var(--gold);}
+.ctp-nav-links{display:flex; align-items:center; gap:18px; flex-wrap:wrap;}
+.ctp-nav-item{
+  font-family:'Cinzel',serif; font-size:12.5px; font-weight:700; letter-spacing:0.3px;
+  color:var(--lilac); text-decoration:none; background:none; border:none; cursor:pointer;
+  display:flex; align-items:center; gap:5px; white-space:nowrap; opacity:0.85; transition:opacity .2s, color .2s;
+}
+.ctp-nav-item:hover{opacity:1; color:var(--gold-bright);}
+.ctp-nav-item.active{color:var(--gold-bright); opacity:1;}
+.ctp-nav-item.proximamente{opacity:0.4; cursor:default;}
+.ctp-nav-item.proximamente:hover{opacity:0.4; color:var(--lilac);}
+.ctp-badge-prox{
+  font-size:7.5px; font-weight:900; letter-spacing:0.5px; color:var(--purple);
+  background:rgba(204,68,255,0.14); border:1px solid rgba(204,68,255,0.3);
+  border-radius:20px; padding:1px 5px; text-transform:uppercase;
+}
 .ctp-salir{
   font-family:'Cinzel',serif; font-size:11px; font-weight:700; letter-spacing:0.5px;
   color:var(--lilac); text-decoration:none; opacity:0.75; cursor:pointer; background:none; border:none;
 }
 .ctp-salir:hover{opacity:1; color:var(--gold-bright);}
+@media (max-width:760px){
+  .ctp-topnav{padding:8px 14px;}
+  .ctp-nav-links{gap:10px;}
+  .ctp-nav-item{font-size:10.5px;}
+}
+/* ===== fin nav superior ===== */
 
 .ctp-wrap{
-  max-width:900px; width:100%; margin:0 auto;
+  flex:1 1 auto; max-width:900px; width:100%; margin:0 auto;
   padding:clamp(20px,4vh,40px) clamp(20px,4vw,40px);
   position:relative; z-index:1; display:flex; flex-direction:column; gap:clamp(16px,2.4vh,26px);
 }
@@ -98,12 +120,6 @@ h1.ctp-title{font-family:'Cinzel Decorative',serif; font-weight:900; font-size:c
 .ctp-msg-ok{color:var(--green); font-size:13px; margin-top:12px; text-align:center;}
 .ctp-msg-error{color:var(--red); font-size:13px; margin-top:12px; text-align:center;}
 
-.ctp-locked{
-  display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; padding:20px 10px;
-}
-.ctp-locked-icon{font-size:32px;}
-.ctp-locked-text{font-family:'Nunito',sans-serif; font-size:14px; color:var(--lilac); max-width:320px;}
-
 .ctp-material-item{
   display:flex; align-items:center; justify-content:space-between; gap:12px;
   padding:14px 16px; border-radius:11px; margin-bottom:10px;
@@ -130,6 +146,50 @@ h1.ctp-title{font-family:'Cinzel Decorative',serif; font-weight:900; font-size:c
 
 const FORMATOS = ['Reel', 'TikTok', 'Historia', 'Post', 'Carrusel'];
 const PLATAFORMAS = ['Instagram', 'TikTok', 'Facebook', 'YouTube'];
+
+// ⚠️ misma ruta usada en CaminoParticipanteHomePage.jsx — mantenerlas sincronizadas
+const RUTA_PASAPORTE = '/pasaporte-templario.html';
+
+// Igual que NAV_ITEMS del Home, pero aquí "Check-in" es el activo
+const NAV_ITEMS = [
+  { label: 'Inicio', activo: false, disponible: true, ruta: '/camino/participante/home' },
+  { label: 'Check-in', activo: true, disponible: true },
+  { label: 'Calendario', activo: false, disponible: false },
+  { label: 'Agenda', activo: false, disponible: false },
+  { label: 'Pasaporte del Templario', activo: false, disponible: true, hrefExterno: RUTA_PASAPORTE },
+  { label: 'Sala de Cowork', activo: false, disponible: false },
+  { label: 'Ranking', activo: false, disponible: false },
+];
+
+function NavSuperior({ onSalir }) {
+  const navigate = useNavigate();
+  return (
+    <nav className="ctp-topnav">
+      <div className="ctp-brand">
+        <div className="ctp-brand-name">TEMPLO <span>DEL PROPÓSITO</span></div>
+      </div>
+      <div className="ctp-nav-links">
+        {NAV_ITEMS.map(item => {
+          if (!item.disponible) {
+            return (
+              <span key={item.label} className="ctp-nav-item proximamente">
+                {item.label} <span className="ctp-badge-prox">Próximamente</span>
+              </span>
+            );
+          }
+          if (item.hrefExterno) {
+            return <a key={item.label} className="ctp-nav-item" href={item.hrefExterno}>{item.label}</a>;
+          }
+          if (item.ruta) {
+            return <button key={item.label} className="ctp-nav-item" onClick={() => navigate(item.ruta)}>{item.label}</button>;
+          }
+          return <span key={item.label} className={`ctp-nav-item ${item.activo ? 'active' : ''}`}>{item.label}</span>;
+        })}
+      </div>
+      <button className="ctp-salir" onClick={onSalir}>Salir</button>
+    </nav>
+  );
+}
 
 export default function CaminoParticipantePanelPage() {
   const navigate = useNavigate();
@@ -224,25 +284,12 @@ export default function CaminoParticipantePanelPage() {
 
   const diaActual = participante?.dia_actual ?? 1;
 
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  const fechaInicioParticipante = participante?.fecha_inicio ? new Date(participante.fecha_inicio + 'T00:00:00') : null;
-  const yaEmpezo = fechaInicioParticipante ? hoy >= fechaInicioParticipante : false;
-  const fechaInicioTexto = fechaInicioParticipante
-    ? fechaInicioParticipante.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })
-    : '';
-
   return (
     <div className="ctp-root">
       <style>{styles}</style>
       <div className="ctp-stars" id="ctp-stars"></div>
 
-      <nav className="ctp-topnav">
-        <div className="ctp-brand">
-          <div className="ctp-brand-name">TEMPLO <span>DEL PROPÓSITO</span></div>
-        </div>
-        <button className="ctp-salir" onClick={salir}>Salir</button>
-      </nav>
+      <NavSuperior onSalir={salir} />
 
       <div className="ctp-wrap">
         <div className="ctp-eyebrow-row">
@@ -255,64 +302,45 @@ export default function CaminoParticipantePanelPage() {
 
         <div className="ctp-card">
           <div className="ctp-countdown">
-            {yaEmpezo ? (
-              <>
-                <div className="ctp-day-label">Día <span className="num">{diaActual}</span> de tu Camino</div>
-                <div className="ctp-day-sub">Publica tu evidencia de hoy para mantener tu constancia.</div>
-              </>
-            ) : (
-              <>
-                <div className="ctp-day-label">Empieza el <span className="num">{fechaInicioTexto}</span></div>
-                <div className="ctp-day-sub">Cuando arranque tu camino, aquí registrarás tu evidencia del día.</div>
-              </>
-            )}
+            <div className="ctp-day-label">Día <span className="num">{diaActual}</span> de tu Camino</div>
+            <div className="ctp-day-sub">Publica tu evidencia de hoy para mantener tu constancia.</div>
           </div>
         </div>
 
         <div className="ctp-card">
           <div className="ctp-section-label">Registrar evidencia de hoy</div>
 
-          {yaEmpezo && (
-            <>
-              <div className="ctp-form-row">
-                <label>Formato</label>
-                <div className="ctp-radio-row">
-                  {FORMATOS.map(f => (
-                    <div key={f} className={`ctp-radio-chip ${formato === f ? 'active' : ''}`} onClick={() => setFormato(f)}>{f}</div>
-                  ))}
-                </div>
-              </div>
-              <div className="ctp-form-row">
-                <label>Plataforma</label>
-                <div className="ctp-radio-row">
-                  {PLATAFORMAS.map(p => (
-                    <div key={p} className={`ctp-radio-chip ${plataforma === p ? 'active' : ''}`} onClick={() => setPlataforma(p)}>{p}</div>
-                  ))}
-                </div>
-              </div>
-              <div className="ctp-form-row">
-                <label>Link de tu publicación</label>
-                <input
-                  type="text"
-                  className="ctp-input-text"
-                  placeholder="https://..."
-                  value={linkPost}
-                  onChange={(e) => setLinkPost(e.target.value)}
-                />
-              </div>
-              <button className="ctp-btn" disabled={enviando} onClick={enviarCheckin}>
-                {enviando ? 'REGISTRANDO...' : 'REGISTRAR EVIDENCIA'}
-              </button>
-              {msgOk && <p className="ctp-msg-ok">{msgOk}</p>}
-              {msgError && <p className="ctp-msg-error">{msgError}</p>}
-            </>
-          )}
-          {!yaEmpezo && (
-            <div className="ctp-locked">
-              <div className="ctp-locked-icon">🔒</div>
-              <div className="ctp-locked-text">El registro de evidencia se desbloquea el día que arranca tu camino.</div>
+          <div className="ctp-form-row">
+            <label>Formato</label>
+            <div className="ctp-radio-row">
+              {FORMATOS.map(f => (
+                <div key={f} className={`ctp-radio-chip ${formato === f ? 'active' : ''}`} onClick={() => setFormato(f)}>{f}</div>
+              ))}
             </div>
-          )}
+          </div>
+          <div className="ctp-form-row">
+            <label>Plataforma</label>
+            <div className="ctp-radio-row">
+              {PLATAFORMAS.map(p => (
+                <div key={p} className={`ctp-radio-chip ${plataforma === p ? 'active' : ''}`} onClick={() => setPlataforma(p)}>{p}</div>
+              ))}
+            </div>
+          </div>
+          <div className="ctp-form-row">
+            <label>Link de tu publicación</label>
+            <input
+              type="text"
+              className="ctp-input-text"
+              placeholder="https://..."
+              value={linkPost}
+              onChange={(e) => setLinkPost(e.target.value)}
+            />
+          </div>
+          <button className="ctp-btn" disabled={enviando} onClick={enviarCheckin}>
+            {enviando ? 'REGISTRANDO...' : 'REGISTRAR EVIDENCIA'}
+          </button>
+          {msgOk && <p className="ctp-msg-ok">{msgOk}</p>}
+          {msgError && <p className="ctp-msg-error">{msgError}</p>}
         </div>
 
         <div>

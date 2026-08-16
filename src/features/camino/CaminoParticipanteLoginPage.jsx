@@ -80,7 +80,7 @@ export default function CaminoParticipanteLoginPage() {
         return;
       }
       localStorage.removeItem(STORAGE_KEY);
-      navigate('/camino/participante/panel', { replace: true });
+      navigate('/camino/participante/home', { replace: true });
       return;
     }
 
@@ -92,7 +92,7 @@ export default function CaminoParticipanteLoginPage() {
       .maybeSingle();
 
     if (participante) {
-      navigate('/camino/participante/panel', { replace: true });
+      navigate('/camino/participante/home', { replace: true });
     } else {
       setDescErrorGeneral('Tu cuenta todavía no tiene un acceso de Líder Digital asociado. Pide un link de invitación a tu gestor.');
       setPantalla('error');

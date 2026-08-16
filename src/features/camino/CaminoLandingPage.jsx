@@ -185,7 +185,7 @@ export default function CaminoLandingPage() {
 
       <div className="cla-page">
 
-        {/* ⚠️ PENDIENTE: pon la ruta real. En tu HTML original era href="#" */}
+        {/* ⚠️ PENDIENTE: sigue apuntando a "#" — dime a dónde debe ir realmente (¿/hub? ¿tu sitio principal?) */}
         <a className="cla-back-link" href="#">← Templo del Propósito</a>
 
         <div className="cla-hero">
@@ -200,27 +200,27 @@ export default function CaminoLandingPage() {
             </svg>
           </div>
           <div className="cla-hero-tag">CONSTANCIA · LIDERAZGO</div>
-          <h1 className="cla-hero-title">Camino a <span>Líder Digital</span><br/>Generación Agosto</h1>
+          <h1 className="cla-hero-title">Camino a <span>Líder Digital</span></h1>
           <div className="cla-hero-sub">Un camino de constancia en contenido y venta por redes sociales</div>
           <div className="cla-hero-meta">
             <div className="cla-meta-item">📅 <b>30–60 días</b> a tu ritmo</div>
-            <div className="cla-meta-item">🔥 empieza el <b>24 de agosto de 2026</b></div>
+            <div className="cla-meta-item">🔥 empieza en cuanto entras al equipo</div>
           </div>
           <div className="cla-cta-row">
-            <Link className="cla-cta-btn" to="/camino/participante/login">🎯 Soy participante</Link>
-            <Link className="cla-cta-btn cla-cta-btn-gestor" to="/camino/gestor/login">⚜️ Soy Líder Digital</Link>
+            <Link className="cla-cta-btn" to="/camino/participante/login">🎯 Soy Líder Digital</Link>
+            <Link className="cla-cta-btn cla-cta-btn-gestor" to="/camino/gestor/login">⚜️ Soy gestor</Link>
           </div>
         </div>
 
         <div className="cla-lower">
           <div className="cla-path-grid">
             <div className="cla-card cla-path-card">
-              <h3>🎯 Soy participante</h3>
-              <p>Entra a registrar tus check-ins, ver tu racha y competir en el ranking de tu reto. ¿Tienes un link de invitación <code>/r/…</code>? Ábrelo directo.</p>
+              <h3>🎯 Soy Líder Digital</h3>
+              <p>Entra a registrar tu evidencia de contenido y avanzar en tu Camino de capacitación.</p>
             </div>
             <div className="cla-card cla-path-card">
-              <h3>⚜️ Soy Líder Digital</h3>
-              <p>Acepta interesados, genera sus códigos de acceso y guía a tus participantes en su Camino.</p>
+              <h3>⚜️ Soy gestor</h3>
+              <p>Acepta interesados, genera sus accesos y guía a tus Líderes Digitales.</p>
             </div>
           </div>
           <div>
