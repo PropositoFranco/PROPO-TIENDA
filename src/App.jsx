@@ -148,11 +148,13 @@ useEffect(() => {
     !annDismissed &&
     (!announcement.show_until || new Date() <= new Date(announcement.show_until));
 
+  const isCamino = currentPath.startsWith('/camino');
+
   const content = (
     <Suspense fallback={<LoadingScreen />}>
       <AppRouter />
-      <TestimonioPopup />
-      {mostrarGraduacion && <GraduacionCeremonia />}
+      {!isCamino && <TestimonioPopup />}
+      {!isCamino && mostrarGraduacion && <GraduacionCeremonia />}
     </Suspense>
   );
 
