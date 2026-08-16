@@ -375,6 +375,10 @@ const cargarSellosCodigos = useCallback(async () => {
     localStorage.setItem('sorteosAdminTab', tabActiva);
   }, [tabActiva]);
 
+  useEffect(() => {
+    if (tabActiva === 'sellos') cargarSellosCodigos();
+  }, [tabActiva, cargarSellosCodigos]);
+
   const slugify = (texto) =>
     texto.toLowerCase().trim()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
