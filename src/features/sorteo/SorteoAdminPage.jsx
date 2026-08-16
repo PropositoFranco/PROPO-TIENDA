@@ -82,7 +82,7 @@ export default function SorteoAdminPage() {
   const [errForm,       setErrForm]       = useState('');
   const [copiado,       setCopiado]       = useState('');
   const [masterStats,   setMasterStats]   = useState(null);
-  const [tabActiva,     setTabActiva]     = useState('sorteos');
+  const [tabActiva,     setTabActiva]     = useState(() => localStorage.getItem('sorteosAdminTab') || 'sorteos');
   const [metricas,      setMetricas]      = useState(null);
   const [loadingMetricas, setLoadingMetricas] = useState(false);
   const [aliados,       setAliados]       = useState([]);
@@ -370,6 +370,10 @@ const cargarSellosCodigos = useCallback(async () => {
       cargarEventosActivos();
     }
   }, [tabActiva, cargarAliados, cargarEventosActivos]);
+
+  useEffect(() => {
+    localStorage.setItem('sorteosAdminTab', tabActiva);
+  }, [tabActiva]);
 
   const slugify = (texto) =>
     texto.toLowerCase().trim()
