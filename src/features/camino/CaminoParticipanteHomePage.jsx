@@ -61,9 +61,9 @@ const styles = `
 }
 
 .chh-hero{
-  position:relative; width:100%; height:clamp(220px,34vh,340px); flex-shrink:0;
+  position:relative; width:100%; height:clamp(260px,42vh,420px); flex-shrink:0;
   background-image:url('https://hdwzhwuhlrtrmhnecypm.supabase.co/storage/v1/object/public/banners/camino/camino-lobby-banner.webp');
-  background-size:cover; background-position:center 30%;
+  background-size:cover; background-position:center 62%;
   display:flex; align-items:flex-end; z-index:1;
 }
 .chh-hero::after{
