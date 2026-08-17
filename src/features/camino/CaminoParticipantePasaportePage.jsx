@@ -126,26 +126,35 @@ h1.cpp-title{
 .cpp-stamp.siguiente .cpp-stamp-nombre{color:var(--lilac);}
 
 .cpp-medallion{
-  width:clamp(38px,6vh,52px); height:clamp(38px,6vh,52px); border-radius:50%;
-  display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;
-  background:radial-gradient(circle at 35% 30%, rgba(255,255,255,0.05), rgba(0,0,0,0.35) 70%);
-  border:2px solid rgba(200,185,240,0.16);
-  font-size:clamp(16px,2.4vh,20px);
-  filter:grayscale(0.9) brightness(0.5);
-  transition:border-color .2s, box-shadow .2s, filter .2s;
+  width:clamp(42px,6.4vh,56px); height:clamp(42px,6.4vh,56px); border-radius:50%;
+  padding:3px; position:relative; flex-shrink:0;
+  background:conic-gradient(from 210deg, #2a2a30, #4c4c55, #7a7a86 35%, #9a9aa6 45%, #7a7a86 55%, #3a3a42 75%, #2a2a30 100%);
+  box-shadow:0 5px 10px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.35);
+  transition:transform .18s ease, box-shadow .2s, background .3s;
 }
-.cpp-medallion img{width:100%; height:100%; object-fit:cover; display:block;}
+.cpp-medallion:hover{ transform:translateY(-2px) scale(1.04); }
 .cpp-medallion.siguiente{
-  border-color:var(--gold-dim); filter:grayscale(0.3) brightness(0.85);
+  background:conic-gradient(from 210deg, #4a3a12, #8a6b1d, #d9b34d 35%, #fff2b0 45%, #d9b34d 55%, #6b5218 75%, #4a3a12 100%);
   animation:cpp-pulso 1.8s ease-in-out infinite;
 }
 .cpp-medallion.obtenido{
-  border-color:var(--gold); filter:none; box-shadow:0 0 14px var(--gold-glow);
+  background:conic-gradient(from 210deg, #6b5218, #b9902c, #ffe566 32%, #fff8dd 44%, #ffe566 56%, #b9902c 70%, #6b5218 100%);
+  box-shadow:0 5px 12px rgba(0,0,0,0.5), 0 0 16px var(--gold-glow), 0 0 0 1px rgba(0,0,0,0.3);
 }
-.cpp-medallion.grande{ width:96px; height:96px; font-size:40px; margin:0 auto 10px; }
+.cpp-medallion-cara{
+  width:100%; height:100%; border-radius:50%; overflow:hidden; position:relative;
+  background:radial-gradient(circle at 32% 26%, rgba(255,255,255,0.16), rgba(10,6,20,0.92) 72%);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:inset 0 2px 3px rgba(255,255,255,0.14), inset 0 -5px 8px rgba(0,0,0,0.65);
+}
+.cpp-medallion-cara img{ width:100%; height:100%; object-fit:cover; display:block; }
+.cpp-medallion-icono{ font-size:clamp(16px,2.4vh,20px); filter:drop-shadow(0 1px 1px rgba(0,0,0,0.6)) grayscale(0.15); }
+.cpp-medallion.obtenido .cpp-medallion-icono, .cpp-medallion.siguiente .cpp-medallion-icono{ filter:drop-shadow(0 1px 1px rgba(0,0,0,0.5)); }
+.cpp-medallion.grande{ width:108px; height:108px; padding:4px; margin:0 auto 10px; }
+.cpp-medallion.grande .cpp-medallion-icono{ font-size:44px; }
 @keyframes cpp-pulso{
-  0%,100%{ box-shadow:0 0 0 0 rgba(212,175,55,0.35); }
-  50%{ box-shadow:0 0 0 7px rgba(212,175,55,0); }
+  0%,100%{ box-shadow:0 5px 10px rgba(0,0,0,0.5), 0 0 0 0 rgba(212,175,55,0.45), 0 0 0 1px rgba(0,0,0,0.35); }
+  50%{ box-shadow:0 5px 10px rgba(0,0,0,0.5), 0 0 0 8px rgba(212,175,55,0), 0 0 0 1px rgba(0,0,0,0.35); }
 }
 .cpp-stamp-check{
   position:absolute; top:7px; right:9px; font-size:11px; color:#1a0a2e;
@@ -211,14 +220,14 @@ const TOTAL_SELLOS = 8;
 // ✏️ EDITA AQUÍ: nombre, mensaje de logro, ícono y (cuando la tengas) la foto de cada sello.
 // imagen: null → usa el ícono/emoji. Cuando subas tu PNG a public/sellos/, cambia null por la ruta, ej: '/sellos/sello-1.png'
 const STAGE_INFO = {
-  1: { nombre: 'El Llamado',            logro: 'Diste el primer paso. El Templo empieza a reconocerte.',    icono: '🕯️', imagen: null },
-  2: { nombre: 'El Primer Voto',        logro: 'Confirmaste tu compromiso con la constancia.',              icono: '📜', imagen: null },
-  3: { nombre: 'La Disciplina',         logro: 'Ya no es motivación, es hábito. Vas construyendo tu ritmo.', icono: '⚔️', imagen: null },
-  4: { nombre: 'El Escudo Validado',    logro: 'Etapa validada por tu líder. Vas a la mitad del Camino.',   icono: '🛡️', imagen: null, milestone: true },
-  5: { nombre: 'El Temple',             logro: 'Superaste la mitad — aquí muchos flaquean, tú no.',          icono: '🔥', imagen: null },
-  6: { nombre: 'La Estrategia',         logro: 'Ya piensas como líder, no solo como participante.',          icono: '🧭', imagen: null },
-  7: { nombre: 'La Antesala',           logro: 'Un paso más y cierras tu Camino completo.',                  icono: '🗝️', imagen: null },
-  8: { nombre: 'El Templario Completo', logro: '¡Cerraste tu Camino! Los 8 sellos son tuyos.',               icono: '👑', imagen: null, milestone: true },
+  1: { nombre: 'El Llamado',            logro: 'Diste el primer paso. El Templo empieza a reconocerte.',    icono: '🕯️', imagen: 'https://hdwzhwuhlrtrmhnecypm.supabase.co/storage/v1/object/public/banners/sellos/sello-1.png' },
+  2: { nombre: 'El Primer Voto',        logro: 'Confirmaste tu compromiso con la constancia.',              icono: '📜', imagen: 'https://hdwzhwuhlrtrmhnecypm.supabase.co/storage/v1/object/public/banners/sellos/sello-2.png' },
+  3: { nombre: 'La Disciplina',         logro: 'Ya no es motivación, es hábito. Vas construyendo tu ritmo.', icono: '⚔️', imagen: 'https://hdwzhwuhlrtrmhnecypm.supabase.co/storage/v1/object/public/banners/sellos/sello-3.png' },
+  4: { nombre: 'El Escudo Validado',    logro: 'Etapa validada por tu líder. Vas a la mitad del Camino.',   icono: '🛡️', imagen: 'https://hdwzhwuhlrtrmhnecypm.supabase.co/storage/v1/object/public/banners/sellos/sello-4.png', milestone: true },
+  5: { nombre: 'El Temple',             logro: 'Superaste la mitad — aquí muchos flaquean, tú no.',          icono: '🔥', imagen: 'https://hdwzhwuhlrtrmhnecypm.supabase.co/storage/v1/object/public/banners/sellos/sello-5.png' },
+  6: { nombre: 'La Estrategia',         logro: 'Ya piensas como líder, no solo como participante.',          icono: '🧭', imagen: 'https://hdwzhwuhlrtrmhnecypm.supabase.co/storage/v1/object/public/banners/sellos/sello-6.png' },
+  7: { nombre: 'La Antesala',           logro: 'Un paso más y cierras tu Camino completo.',                  icono: '🗝️', imagen: 'https://hdwzhwuhlrtrmhnecypm.supabase.co/storage/v1/object/public/banners/sellos/sello-7.png' },
+  8: { nombre: 'El Templario Completo', logro: '¡Cerraste tu Camino! Los 8 sellos son tuyos.',               icono: '👑', imagen: 'https://hdwzhwuhlrtrmhnecypm.supabase.co/storage/v1/object/public/banners/sellos/sello-8-opcion-B.png', milestone: true },
 };
 
 function formatFecha(iso) {
@@ -231,16 +240,17 @@ function formatFecha(iso) {
 function Medallion({ info, obtenido, siguiente, extraClass = '' }) {
   const estado = obtenido ? 'obtenido' : siguiente ? 'siguiente' : 'bloqueado';
   const clase = `cpp-medallion ${estado} ${extraClass}`.trim();
-  if (obtenido && info.imagen) {
-    return (
-      <div className={clase}>
-        <img src={info.imagen} alt={info.nombre} />
-      </div>
-    );
-  }
   return (
     <div className={clase}>
-      {obtenido ? (info.icono || '🎖️') : siguiente ? (info.icono || '🔒') : '🔒'}
+      <div className="cpp-medallion-cara">
+        {obtenido && info.imagen ? (
+          <img src={info.imagen} alt={info.nombre} />
+        ) : (
+          <span className="cpp-medallion-icono">
+            {obtenido ? (info.icono || '🎖️') : siguiente ? (info.icono || '🔒') : '🔒'}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
