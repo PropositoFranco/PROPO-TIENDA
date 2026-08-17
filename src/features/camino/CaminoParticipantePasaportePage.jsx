@@ -105,6 +105,23 @@ h1.cpp-title{
 .cpp-canje-msg.ok{color:#7CFFB2;}
 .cpp-canje-msg.err{color:#FF7A7A;}
 
+.cpp-info-card{
+  background:linear-gradient(160deg, rgba(212,175,55,0.08), var(--dark-surface));
+  border:1px solid var(--gold-dim); border-radius:14px;
+  padding:clamp(14px,2.2vh,20px) clamp(16px,2vw,24px);
+  display:flex; gap:14px; align-items:flex-start;
+}
+.cpp-info-icon{font-size:clamp(22px,3.2vh,28px); flex-shrink:0; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.5));}
+.cpp-info-titulo{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(12.5px,1.6vh,14.5px); color:#fff; margin-bottom:6px;}
+.cpp-info-texto{font-family:'Nunito',sans-serif; font-size:clamp(11.5px,1.4vh,13px); color:var(--lilac); line-height:1.5;}
+.cpp-info-texto strong{color:#fff;}
+.cpp-info-texto + .cpp-info-texto{margin-top:8px;}
+.cpp-info-destacado{
+  color:var(--gold-dim); background:rgba(212,175,55,0.08); border-radius:9px;
+  padding:8px 10px;
+}
+.cpp-info-destacado strong{color:var(--gold);}
+
 .cpp-stamp-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:clamp(10px,1.6vh,16px);}
 @media (max-width:640px){ .cpp-stamp-grid{grid-template-columns:repeat(4,1fr); gap:8px;} }
 
@@ -434,6 +451,20 @@ export default function CaminoParticipantePasaportePage() {
           </div>
           <div className="cpp-progress-bar">
             <div className="cpp-progress-fill" style={{ width: `${(sellosObtenidos / TOTAL_SELLOS) * 100}%` }}></div>
+          </div>
+        </div>
+
+        <div className="cpp-info-card">
+          <div className="cpp-info-icon">🗝️</div>
+          <div>
+            <div className="cpp-info-titulo">¿Cómo se gana cada sello?</div>
+            <div className="cpp-info-texto">
+              Este código no lo sacas tú solo — te lo da tu líder <strong>durante</strong> cada Junta Constructiva en vivo.
+              Cada semana hacemos una revisión juntos para tomar retroalimentación constructiva y ayudarte a mejorar de verdad, no solo a marcar una casilla.
+            </div>
+            <div className="cpp-info-texto cpp-info-destacado">
+              📅 En cada Junta en vivo recibes 1 sello para este apartado — <strong>pídelo tú</strong> antes de que termine la sesión, para que no se te pase.
+            </div>
           </div>
         </div>
 
