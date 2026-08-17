@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '../../services/supabase';
+import { supabaseCamino as supabase } from '../../services/supabaseCamino';
 
 const STORAGE_KEY = 'camino_participante_invite_token';
 

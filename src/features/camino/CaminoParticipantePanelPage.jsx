@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../services/supabase';
+import { supabaseCamino as supabase } from '../../services/supabaseCamino';
 
 const styles = `
 :root{
