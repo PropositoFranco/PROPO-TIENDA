@@ -378,9 +378,14 @@ const CSS = `
 .calendario-camino-page .nav-select{
   font-family:'Cinzel',serif; font-size:13px; font-weight:700; color:#fff;
   background:rgba(212,175,55,0.1); border:1px solid var(--gold-dim); border-radius:8px;
-  padding:8px 14px; white-space:nowrap; max-width:240px;
+  padding:8px 14px; white-space:nowrap; max-width:240px; overflow:hidden; text-overflow:ellipsis;
 }
-@media (max-width:860px){ .calendario-camino-page .nav-links{display:none;} .calendario-camino-page .nav-select{margin-left:auto;} }
+@media (max-width:860px){
+  .calendario-camino-page .topnav{padding:8px 14px; flex-wrap:wrap; row-gap:8px;}
+  .calendario-camino-page .nav-links{flex-wrap:wrap; gap:10px 14px;}
+  .calendario-camino-page .nav-item{font-size:10.5px;}
+  .calendario-camino-page .nav-select{margin-left:auto; font-size:11.5px; padding:6px 10px; max-width:180px;}
+}
 
 .calendario-camino-page .cc-bg-fx{position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden;}
 .calendario-camino-page .cc-tone-layer{
