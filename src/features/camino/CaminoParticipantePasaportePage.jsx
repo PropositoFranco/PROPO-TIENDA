@@ -204,10 +204,17 @@ h1.cpp-title{
   50%{ box-shadow:0 5px 10px rgba(0,0,0,0.5), 0 0 0 8px rgba(212,175,55,0), 0 0 0 1px rgba(0,0,0,0.35); }
 }
 .cpp-stamp-check{
-  position:absolute; top:-6px; right:-6px; font-size:11px; color:#1a0a2e; z-index:3;
-  background:linear-gradient(135deg,var(--gold),var(--gold-bright)); width:18px; height:18px; border-radius:50%;
+  position:absolute; top:-8px; right:-8px; font-size:15px; color:#fff; z-index:3;
+  background:linear-gradient(135deg,#3ee06a,#1fae4a); width:26px; height:26px; border-radius:50%;
   display:flex; align-items:center; justify-content:center; font-weight:900;
-  box-shadow:0 3px 6px rgba(0,0,0,0.5), 0 0 6px rgba(212,175,55,0.5);
+  border:2px solid #eafff0;
+  box-shadow:0 3px 8px rgba(0,0,0,0.55), 0 0 12px rgba(62,224,106,0.85), 0 0 0 3px rgba(62,224,106,0.25);
+  animation:cpp-check-pop .4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes cpp-check-pop{
+  0%{ transform:scale(0); }
+  70%{ transform:scale(1.15); }
+  100%{ transform:scale(1); }
 }
 .cpp-stamp-tag{
   position:absolute; top:-11px; left:50%; transform:translateX(-50%); z-index:3;
