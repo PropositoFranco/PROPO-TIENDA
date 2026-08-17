@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../services/supabase';
+import { supabaseCamino as supabase } from '../../services/supabaseCamino';
 
 const styles = `
 :root{
@@ -150,11 +150,10 @@ h1.chh-title{font-family:'Cinzel Decorative',serif; font-weight:900; font-size:c
 const NAV_ITEMS = [
   { label: 'Inicio', activo: true, disponible: true },
   { label: 'Check-in', activo: false, disponible: true, ruta: '/camino/participante/panel' },
-  { label: 'Calendario', activo: false, disponible: false },
-  { label: 'Agenda', activo: false, disponible: false },
+  { label: 'Calendario', activo: false, disponible: true, ruta: '/camino/participante/calendario' },
   { label: 'Pasaporte del Templario', activo: false, disponible: true, ruta: '/camino/participante/pasaporte' },
-  { label: 'Sala de Cowork', activo: false, disponible: false },
-  { label: 'Ranking', activo: false, disponible: false },
+  
+{ label: 'Ranking', activo: false, disponible: true, ruta: '/camino/participante/ranking' },
 ];
 
 export default function CaminoParticipanteHomePage() {
@@ -191,6 +190,12 @@ export default function CaminoParticipanteHomePage() {
 
     if (error || !data || data.length === 0) {
       setEstado('sin_acceso');
+      return;
+    }
+
+    const { data: perfilSocial, error: errPerfilSocial } = await supabase.rpc('camino_mi_perfil_social');
+    if (!errPerfilSocial && (!perfilSocial || perfilSocial.length === 0)) {
+      navigate('/camino/participante/onboarding', { replace: true });
       return;
     }
 
@@ -302,7 +307,7 @@ export default function CaminoParticipanteHomePage() {
 
         <div>
           <div className="chh-section-label">Material del camino</div>
-          <a className="chh-material-item" href="/bases-camino.html">
+          <a className="chh-material-item" href="#" onClick={(e) => { e.preventDefault(); navigate('/camino/participante/bases'); }}>
             <div className="chh-material-left">
               <div className="chh-material-icon">📜</div>
               <div className="chh-material-title">Las Bases del Camino</div>

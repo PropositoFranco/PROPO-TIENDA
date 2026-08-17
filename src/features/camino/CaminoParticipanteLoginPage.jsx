@@ -115,9 +115,12 @@ export default function CaminoParticipanteLoginPage() {
     setMensajeError('');
     setEnviandoGoogle(true);
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: baseRedirectUrl() },
-    });
+  provider: 'google',
+  options: {
+    redirectTo: baseRedirectUrl(),
+    queryParams: { prompt: 'select_account' },
+  },
+});
     if (error) {
       setEnviandoGoogle(false);
       setMensajeError(`No se pudo entrar con Google: ${error.message}`);

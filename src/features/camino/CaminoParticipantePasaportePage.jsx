@@ -314,11 +314,10 @@ function Medallion({ info, obtenido, siguiente, extraClass = '' }) {
 const NAV_ITEMS = [
   { label: 'Inicio', activo: false, disponible: true, ruta: '/camino/participante/home' },
   { label: 'Check-in', activo: false, disponible: true, ruta: '/camino/participante/panel' },
-  { label: 'Calendario', activo: false, disponible: false },
-  { label: 'Agenda', activo: false, disponible: false },
+  { label: 'Calendario', activo: false, disponible: true, ruta: '/camino/participante/calendario' },
   { label: 'Pasaporte del Templario', activo: true, disponible: true },
-  { label: 'Sala de Cowork', activo: false, disponible: false },
-  { label: 'Ranking', activo: false, disponible: false },
+  
+  { label: 'Ranking', activo: false, disponible: true, ruta: '/camino/participante/ranking' },
 ];
 
 export default function CaminoParticipantePasaportePage() {

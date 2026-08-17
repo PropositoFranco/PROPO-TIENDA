@@ -55,6 +55,10 @@ const CaminoParticipanteLoginPage = lazy(() => import('../features/camino/Camino
 const CaminoParticipanteHomePage = lazy(() => import('../features/camino/CaminoParticipanteHomePage'));
 const CaminoParticipantePanelPage = lazy(() => import('../features/camino/CaminoParticipantePanelPage'));
 const CaminoParticipantePasaportePage = lazy(() => import('../features/camino/CaminoParticipantePasaportePage'));
+const CaminoParticipanteCalendarioPage = lazy(() => import('../features/camino/CaminoParticipanteCalendarioPage'));
+const CaminoParticipanteBasesPage = lazy(() => import('../features/camino/CaminoParticipanteBasesPage'));
+const CaminoParticipanteRankingPage = lazy(() => import('../features/camino/CaminoParticipanteRankingPage'));
+const CaminoParticipanteOnboardingPage = lazy(() => import('../features/camino/CaminoParticipanteOnboardingPage'));
 const AdminMapaPage = lazy(() => import('../features/admin/AdminMapaPage'));
 const FinanzasAdminPage = lazy(() => import('../features/admin/FinanzasAdminPage'));
 
@@ -161,6 +165,10 @@ export default function AppRouter() {
 <Route path="/camino/participante/home" element={<CaminoParticipanteHomePage />} />
 <Route path="/camino/participante/pasaporte" element={<CaminoParticipantePasaportePage />} />
 <Route path="/camino/participante/panel" element={<CaminoParticipantePanelPage />} />
+<Route path="/camino/participante/calendario" element={<CaminoParticipanteCalendarioPage />} />
+<Route path="/camino/participante/bases" element={<CaminoParticipanteBasesPage />} />
+<Route path="/camino/participante/ranking" element={<CaminoParticipanteRankingPage />} />
+<Route path="/camino/participante/onboarding" element={<CaminoParticipanteOnboardingPage />} />
 
           <Route element={<SorteosAdminRoute />}>
             <Route path="/admin/sorteos" element={<SorteoAdminPage />} />

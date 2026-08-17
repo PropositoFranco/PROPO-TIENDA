@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 
 // =====================================================================
 // CalendarioCaminoPage.jsx
@@ -79,6 +80,13 @@ const BADGE_META = {
   carrusel: { icon: "📑", label: "CARRUSEL" },
 };
 
+const PHASE_ICONS = {
+  "Fase · Cimiento": "🏛️",
+  "Fase · Atracción": "🧲",
+  "Fase · Prueba social": "🔥",
+  "Fase · Cierre": "🏆",
+};
+
 function PlayIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="var(--gold-bright)">
@@ -129,6 +137,7 @@ function LockedWeek({ title }) {
 }
 
 export default function CalendarioCaminoPage() {
+  const navigate = useNavigate();
   // Genera las estrellas del fondo, igual que el <script> del HTML original
   const stars = useMemo(() => {
     const n = typeof window !== "undefined" && window.innerWidth < 760 ? 40 : 80;
@@ -161,6 +170,13 @@ export default function CalendarioCaminoPage() {
   return (
     <div className="calendario-camino-page">
       <style>{CSS}</style>
+
+      <div className="cc-bg-fx">
+        <div className="cc-tone-layer"></div>
+        <div className="cc-orb cc-orb-gold"></div>
+        <div className="cc-orb cc-orb-purple"></div>
+        <div className="cc-orb cc-orb-teal"></div>
+      </div>
 
       <div className="stars">
         {stars.map((s, i) => (
@@ -197,32 +213,40 @@ export default function CalendarioCaminoPage() {
           </div>
         </div>
         <div className="nav-links">
-          <a className="nav-item" href="camino-templario.html">Inicio</a>
-          <a className="nav-item" href="#">Check-in</a>
-          <a className="nav-item active" href="#">Calendario</a>
-          <a className="nav-item" href="#">Agenda</a>
-          <a className="nav-item" href="pasaporte-templario.html">Pasaporte del Templario</a>
-          <a className="nav-item" href="#">Sala de Cowork</a>
-          <a className="nav-item" href="#">Ranking</a>
+          <button className="nav-item" onClick={() => navigate('/camino/participante/home')}>Inicio</button>
+          <button className="nav-item" onClick={() => navigate('/camino/participante/panel')}>Check-in</button>
+          <span className="nav-item active">Calendario</span>
+          <button className="nav-item" onClick={() => navigate('/camino/participante/pasaporte')}>Pasaporte del Templario</button>
+          <span className="nav-item" style={{opacity:0.4, cursor:'default'}}>Sala de Cowork</span>
+          <span className="nav-item" style={{opacity:0.4, cursor:'default'}}>Ranking</span>
         </div>
         <select className="nav-select">
           <option>Camino a Líder Digital · Gen. Agosto</option>
         </select>
       </nav>
 
-      <div className="wrap">
-        <div className="header-row">
-          <div className="header-icon">🗓️</div>
-          <div>
-            <div className="eyebrow-tag">TU RUTA DE CONTENIDO</div>
-            <h1 className="page-title">Calendario del Camino</h1>
+      <div className="cc-hero">
+        <div className="cc-hero-inner">
+          <div className="header-row cc-hero-header">
+            <div className="header-icon">🗓️</div>
+            <div>
+              <div className="eyebrow-tag">TU RUTA DE CONTENIDO</div>
+              <h1 className="page-title">Calendario del Camino</h1>
+            </div>
           </div>
         </div>
-        <p className="page-sub">
-          Lo que te toca publicar cada día: formato, gancho e idea completa. Empieza en tu{" "}
-          <b style={{ color: "var(--gold-bright)" }}>Día 1</b> el día que arrancas — no importa la fecha del
-          calendario, todos los templarios recorren la misma ruta.
-        </p>
+        <div className="cc-hero-mascot"></div>
+      </div>
+
+      <div className="wrap cc-wrap-with-mascot">
+        <div className="cc-story">
+          <div className="cc-story-ornament">✦</div>
+          <p className="page-sub">
+            Lo que te toca publicar cada día: formato, gancho e idea completa. Empieza en tu{" "}
+            <b style={{ color: "var(--gold-bright)" }}>Día 1</b> el día que arrancas — no importa la fecha del
+            calendario, todos los templarios recorren la misma ruta.
+          </p>
+        </div>
 
         <div className="progress-strip">
           <div className="txt">
@@ -235,13 +259,21 @@ export default function CalendarioCaminoPage() {
         {WEEKS.map((week) => (
           <div className="week-block" key={week.title}>
             <div className="week-head">
-              <div className="week-title">{week.title}</div>
-              <div className="week-phase">{week.phase}</div>
-              <div className="week-range">{week.range}</div>
+              <div className="week-medal">{PHASE_ICONS[week.phase] || "⚜️"}</div>
+              <div>
+                <div className="week-title">{week.title}</div>
+                <div className="week-phase-row">
+                  <span className="week-phase">{week.phase}</span>
+                  <span className="week-range">{week.range}</span>
+                </div>
+              </div>
             </div>
-            <div className="day-grid">
-              {week.days.map((d) => (
-                <DayCard key={d.day} {...d} />
+            <div className="cc-timeline">
+              {week.days.map((d, idx) => (
+                <div className={`cc-timeline-row ${idx % 2 === 0 ? "left" : "right"}`} key={d.day}>
+                  <div className="cc-timeline-node">{d.day}</div>
+                  <DayCard {...d} />
+                </div>
               ))}
             </div>
             {week.title === "Semana 4" && (
@@ -257,9 +289,14 @@ export default function CalendarioCaminoPage() {
 
         <div className="week-block">
           <div className="week-head">
-            <div className="week-title">Semana 5 – 6</div>
-            <div className="week-phase">Fase · Prueba social</div>
-            <div className="week-range">Día 29 – 42</div>
+            <div className="week-medal">🔥</div>
+            <div>
+              <div className="week-title">Semana 5 – 6</div>
+              <div className="week-phase-row">
+                <span className="week-phase">Fase · Prueba social</span>
+                <span className="week-range">Día 29 – 42</span>
+              </div>
+            </div>
           </div>
           <LockedWeek
             title={{
@@ -271,9 +308,14 @@ export default function CalendarioCaminoPage() {
 
         <div className="week-block">
           <div className="week-head">
-            <div className="week-title">Semana 7 – 8</div>
-            <div className="week-phase">Fase · Cierre</div>
-            <div className="week-range">Día 43 – 60</div>
+            <div className="week-medal">🏆</div>
+            <div>
+              <div className="week-title">Semana 7 – 8</div>
+              <div className="week-phase-row">
+                <span className="week-phase">Fase · Cierre</span>
+                <span className="week-range">Día 43 – 60</span>
+              </div>
+            </div>
           </div>
           <LockedWeek
             title={{
@@ -341,7 +383,56 @@ const CSS = `
 }
 @media (max-width:860px){ .calendario-camino-page .nav-links{display:none;} .calendario-camino-page .nav-select{margin-left:auto;} }
 
-.calendario-camino-page .wrap{max-width:1080px; width:100%; margin:0 auto; padding:clamp(20px,3.4vh,36px) clamp(18px,4vw,40px) 80px; position:relative; z-index:1;}
+.calendario-camino-page .cc-bg-fx{position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden;}
+.calendario-camino-page .cc-tone-layer{
+  position:absolute; inset:-10%;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(80,10,110,0.4) 0%, transparent 62%),
+    radial-gradient(ellipse 55% 45% at 15% 60%, rgba(212,175,55,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 85% 85%, rgba(120,220,210,0.08) 0%, transparent 60%);
+  animation:cc-hero-tone 18s ease-in-out infinite alternate;
+}
+@keyframes cc-hero-tone{
+  0%{ filter:hue-rotate(0deg) brightness(1); }
+  100%{ filter:hue-rotate(16deg) brightness(1.1); }
+}
+.calendario-camino-page .cc-orb{position:absolute; border-radius:50%; filter:blur(40px); animation:cc-orb-float ease-in-out infinite;}
+.calendario-camino-page .cc-orb-gold{width:200px; height:200px; background:rgba(212,175,55,0.3); top:6%; left:5%; animation-duration:14s;}
+.calendario-camino-page .cc-orb-purple{width:260px; height:260px; background:rgba(204,68,255,0.24); top:38%; right:6%; animation-duration:18s; animation-delay:1.2s;}
+.calendario-camino-page .cc-orb-teal{width:170px; height:170px; background:rgba(120,220,210,0.2); bottom:10%; left:18%; animation-duration:15s; animation-delay:2.4s;}
+@keyframes cc-orb-float{
+  0%,100%{ transform:translate(0,0) scale(1); }
+  50%{ transform:translate(24px,-20px) scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce){
+  .calendario-camino-page .cc-tone-layer, .calendario-camino-page .cc-orb{animation:none !important;}
+}
+
+.calendario-camino-page .cc-hero{
+  position:relative; width:100%; flex-shrink:0; z-index:1;
+  padding:clamp(22px,4.4vh,34px) 0 0;
+}
+.calendario-camino-page .cc-hero-inner{
+  position:relative; z-index:2; max-width:1080px; width:100%; margin:0 auto;
+  padding:0 clamp(18px,4vw,40px);
+}
+.calendario-camino-page .cc-hero-header{justify-content:center; text-align:center;}
+.calendario-camino-page .cc-hero-mascot{
+  position:relative; z-index:2; margin:32px auto -54px;
+  width:clamp(240px,32vw,360px); height:clamp(240px,32vw,360px);
+  background-image:url('https://hdwzhwuhlrtrmhnecypm.supabase.co/storage/v1/object/public/banners/camino/camino-calendario-banner.webp');
+  background-size:contain; background-repeat:no-repeat; background-position:center;
+  filter:drop-shadow(0 16px 26px rgba(0,0,0,0.5)) drop-shadow(0 0 40px rgba(212,175,55,0.35));
+  -webkit-mask-image:radial-gradient(closest-side, #000 86%, transparent 100%);
+  mask-image:radial-gradient(closest-side, #000 86%, transparent 100%);
+}
+.calendario-camino-page .cc-wrap-with-mascot{padding-top:70px;}
+@media (max-width:600px){
+  .calendario-camino-page .cc-hero-mascot{width:clamp(160px,52vw,240px); height:clamp(160px,52vw,240px); margin-top:22px; margin-bottom:-40px;}
+  .calendario-camino-page .cc-wrap-with-mascot{padding-top:56px;}
+}
+
+.calendario-camino-page .wrap{max-width:1080px; width:100%; margin:0 auto; padding:clamp(18px,3vh,30px) clamp(18px,4vw,40px) 80px; position:relative; z-index:1;}
 
 .calendario-camino-page .header-row{display:flex; align-items:center; gap:14px; margin-bottom:6px;}
 .calendario-camino-page .header-icon{
@@ -352,7 +443,19 @@ const CSS = `
 }
 .calendario-camino-page .eyebrow-tag{font-family:'Cinzel',serif; font-weight:900; font-size:12.5px; letter-spacing:2.2px; color:var(--gold);}
 .calendario-camino-page h1.page-title{font-family:'Cinzel Decorative',serif; font-weight:900; font-size:clamp(24px,3.6vh,36px); color:#fff; text-shadow:0 0 20px rgba(212,175,55,0.3); line-height:1.15;}
-.calendario-camino-page .page-sub{font-family:'Crimson Text',serif; font-size:clamp(14px,1.8vh,17px); color:var(--lilac); max-width:620px; margin-top:10px; line-height:1.5;}
+.calendario-camino-page .cc-story{
+  display:flex; flex-direction:column; align-items:center; text-align:center;
+  max-width:640px; margin:36px auto 0; gap:12px;
+}
+.calendario-camino-page .cc-story-ornament{
+  color:var(--gold); font-size:14px; letter-spacing:8px;
+  text-shadow:0 0 12px var(--gold-glow);
+}
+.calendario-camino-page .page-sub{
+  font-family:'Crimson Text',serif; font-style:italic; font-size:clamp(16px,2.1vh,19px);
+  color:rgba(255,255,255,0.88); line-height:1.65;
+}
+@media (max-width:600px){ .calendario-camino-page .cc-story{margin-top:26px;} }
 
 .calendario-camino-page .progress-strip{
   margin-top:22px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
@@ -366,20 +469,50 @@ const CSS = `
   background:linear-gradient(90deg,var(--gold),var(--gold-bright)); padding:6px 14px; border-radius:100px; white-space:nowrap;
 }
 
-.calendario-camino-page .week-block{margin-top:38px;}
-.calendario-camino-page .week-head{display:flex; align-items:baseline; gap:12px; margin-bottom:16px; flex-wrap:wrap;}
+.calendario-camino-page .week-block{margin-top:44px;}
+.calendario-camino-page .week-head{display:flex; align-items:center; gap:14px; margin-bottom:22px; flex-wrap:wrap;}
+.calendario-camino-page .week-medal{
+  width:46px; height:46px; flex-shrink:0; border-radius:50%; border:2px solid var(--gold);
+  background:radial-gradient(circle at 35% 30%, rgba(255,229,102,0.32), rgba(212,175,55,0.1) 65%, transparent 100%);
+  box-shadow:0 0 14px var(--gold-glow);
+  display:flex; align-items:center; justify-content:center; font-size:20px;
+}
 .calendario-camino-page .week-title{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(16px,2.2vh,19px); color:#fff;}
+.calendario-camino-page .week-phase-row{display:flex; align-items:center; gap:10px; margin-top:4px; flex-wrap:wrap;}
 .calendario-camino-page .week-phase{
   font-family:'Cinzel',serif; font-weight:700; font-size:11px; letter-spacing:0.8px; color:var(--purple);
   background:rgba(204,68,255,0.12); border:1px solid rgba(204,68,255,0.3); padding:4px 11px; border-radius:100px;
 }
 .calendario-camino-page .week-range{font-family:'Nunito',sans-serif; font-size:13px; color:var(--lilac-dim);}
 
-.calendario-camino-page .day-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
-@media (max-width:760px){ .calendario-camino-page .day-grid{grid-template-columns:1fr;} }
+.calendario-camino-page .cc-timeline{position:relative; margin-top:6px;}
+.calendario-camino-page .cc-timeline::before{
+  content:""; position:absolute; left:50%; top:6px; bottom:6px; width:2px; transform:translateX(-50%); z-index:0;
+  background:repeating-linear-gradient(180deg, var(--gold-dim) 0 10px, transparent 10px 22px);
+}
+.calendario-camino-page .cc-timeline-row{position:relative; display:flex; margin-bottom:20px; z-index:1;}
+.calendario-camino-page .cc-timeline-row.left{justify-content:flex-start;}
+.calendario-camino-page .cc-timeline-row.right{justify-content:flex-end;}
+.calendario-camino-page .cc-timeline-row .day-card{width:calc(50% - 32px);}
+.calendario-camino-page .cc-timeline-node{
+  position:absolute; left:50%; top:16px; transform:translateX(-50%); z-index:2;
+  width:30px; height:30px; border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, var(--gold-bright), var(--gold) 70%);
+  border:2px solid #04020e; box-shadow:0 0 12px var(--gold-glow);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Cinzel',serif; font-weight:900; font-size:11px; color:#1a0a2e;
+}
+.calendario-camino-page .cc-timeline-row:nth-child(even) .day-card{border-color:var(--purple-glow);}
+.calendario-camino-page .cc-timeline-row:nth-child(even) .day-card::before{background:radial-gradient(ellipse 70% 50% at 0% 0%, rgba(204,68,255,0.12), transparent 70%);}
+@media (max-width:820px){
+  .calendario-camino-page .cc-timeline::before{left:15px;}
+  .calendario-camino-page .cc-timeline-row.left, .calendario-camino-page .cc-timeline-row.right{justify-content:flex-start; padding-left:44px;}
+  .calendario-camino-page .cc-timeline-node{left:15px;}
+  .calendario-camino-page .cc-timeline-row .day-card{width:100%;}
+}
 
 .calendario-camino-page .day-card{
-  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:14px;
+  background:rgba(8,4,26,0.96); border:1px solid var(--gold-dim); border-radius:14px;
   padding:16px 18px; display:flex; flex-direction:column; gap:8px; position:relative; overflow:hidden;
 }
 .calendario-camino-page .day-card::before{content:""; position:absolute; inset:0; background:radial-gradient(ellipse 70% 50% at 100% 0%, rgba(212,175,55,0.08), transparent 70%); pointer-events:none;}
@@ -391,8 +524,8 @@ const CSS = `
 }
 .calendario-camino-page .format-badge.reel{color:#1a0a2e; background:linear-gradient(90deg,var(--gold),var(--gold-bright));}
 .calendario-camino-page .format-badge.carrusel{color:#fff; background:rgba(204,68,255,0.25); border:1px solid var(--purple-glow);}
-.calendario-camino-page .day-format{font-family:'Cinzel',serif; font-weight:700; font-size:15px; color:#fff;}
-.calendario-camino-page .day-desc{font-family:'Crimson Text',serif; font-size:14px; line-height:1.45; color:rgba(255,255,255,0.82);}
+.calendario-camino-page .day-format{font-family:'Cinzel',serif; font-weight:900; font-size:16.5px; letter-spacing:0.3px; color:var(--gold-bright); text-shadow:0 1px 8px rgba(0,0,0,0.4);}
+.calendario-camino-page .day-desc{font-family:'Crimson Text',serif; font-weight:500; font-size:14.5px; line-height:1.55; color:rgba(255,255,255,0.94); text-shadow:0 1px 6px rgba(0,0,0,0.35);}
 .calendario-camino-page .day-video{
   margin-top:4px; display:flex; align-items:center; gap:8px;
   font-family:'Nunito',sans-serif; font-weight:700; font-size:12px; color:var(--gold-bright);

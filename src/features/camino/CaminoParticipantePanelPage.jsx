@@ -154,11 +154,10 @@ const PLATAFORMAS = ['Instagram', 'TikTok', 'Facebook', 'YouTube'];
 const NAV_ITEMS = [
   { label: 'Inicio', activo: false, disponible: true, ruta: '/camino/participante/home' },
   { label: 'Check-in', activo: true, disponible: true },
-  { label: 'Calendario', activo: false, disponible: false },
-  { label: 'Agenda', activo: false, disponible: false },
+  { label: 'Calendario', activo: false, disponible: true, ruta: '/camino/participante/calendario' },
   { label: 'Pasaporte del Templario', activo: false, disponible: true, ruta: '/camino/participante/pasaporte' },
-  { label: 'Sala de Cowork', activo: false, disponible: false },
-  { label: 'Ranking', activo: false, disponible: false },
+  
+  { label: 'Ranking', activo: false, disponible: true, ruta: '/camino/participante/ranking' },
 ];
 
 function NavSuperior({ onSalir }) {
