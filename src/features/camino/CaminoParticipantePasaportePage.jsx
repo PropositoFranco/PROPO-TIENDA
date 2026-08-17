@@ -110,18 +110,22 @@ h1.cpp-title{
 
 .cpp-stamp{
   aspect-ratio:1/1; border-radius:14px; border:2px solid var(--gold-dim); position:relative;
-  cursor:pointer; overflow:hidden; background:#0d0716; transition:transform .15s, box-shadow .15s;
+  cursor:pointer; overflow:visible; background:transparent; transition:transform .15s, box-shadow .15s;
 }
 .cpp-stamp:hover{transform:translateY(-3px) scale(1.02);}
+.cpp-stamp-media{
+  position:absolute; inset:0; border-radius:12px; overflow:hidden;
+  background:radial-gradient(circle at 50% 38%, rgba(120,90,170,0.28), #0d0716 75%);
+}
 .cpp-stamp-img{
-  position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;
+  position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:block;
   filter:grayscale(0.85) brightness(0.35); transition:filter .3s;
 }
 .cpp-stamp.siguiente .cpp-stamp-img{ filter:grayscale(0.15) brightness(0.75) saturate(1.1); }
 .cpp-stamp.obtenido .cpp-stamp-img{ filter:none; }
 .cpp-stamp-scrim{
   position:absolute; inset:0; z-index:1;
-  background:linear-gradient(180deg, rgba(10,4,20,0.05) 0%, rgba(10,4,20,0.1) 40%, rgba(6,3,14,0.95) 100%);
+  background:linear-gradient(180deg, rgba(10,4,20,0.02) 0%, rgba(10,4,20,0.05) 40%, rgba(6,3,14,0.9) 100%);
 }
 .cpp-stamp-fallback{
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
@@ -141,10 +145,10 @@ h1.cpp-title{
   position:absolute; left:6px; right:6px; bottom:7px; z-index:3; text-align:center;
   font-family:'Cinzel',serif; font-weight:700; font-size:clamp(8.5px,1.05vh,10px); color:var(--lilac-dim); line-height:1.2;
 }
-.cpp-stamp.milestone{border-color:var(--gold); box-shadow:0 0 14px rgba(212,175,55,0.25);}
-.cpp-stamp.obtenido{ border-color:var(--gold); box-shadow:0 0 18px var(--gold-glow); }
+.cpp-stamp.milestone .cpp-stamp-media{border:2px solid var(--gold); box-shadow:0 0 14px rgba(212,175,55,0.25);}
+.cpp-stamp.obtenido .cpp-stamp-media{ border:2px solid var(--gold); box-shadow:0 0 18px var(--gold-glow); }
 .cpp-stamp.obtenido .cpp-stamp-nombre{color:#fff;}
-.cpp-stamp.siguiente{border-color:var(--gold-dim); animation:cpp-pulso-stamp 1.8s ease-in-out infinite;}
+.cpp-stamp.siguiente .cpp-stamp-media{border:2px solid var(--gold-dim); animation:cpp-pulso-stamp 1.8s ease-in-out infinite;}
 .cpp-stamp.siguiente .cpp-stamp-nombre{color:var(--lilac);}
 @keyframes cpp-pulso-stamp{
   0%,100%{ box-shadow:0 0 0 0 rgba(212,175,55,0.4); }
@@ -183,15 +187,17 @@ h1.cpp-title{
   50%{ box-shadow:0 5px 10px rgba(0,0,0,0.5), 0 0 0 8px rgba(212,175,55,0), 0 0 0 1px rgba(0,0,0,0.35); }
 }
 .cpp-stamp-check{
-  position:absolute; top:7px; right:9px; font-size:11px; color:#1a0a2e; z-index:3;
-  background:linear-gradient(135deg,var(--gold),var(--gold-bright)); width:16px; height:16px; border-radius:50%;
+  position:absolute; top:-6px; right:-6px; font-size:11px; color:#1a0a2e; z-index:3;
+  background:linear-gradient(135deg,var(--gold),var(--gold-bright)); width:18px; height:18px; border-radius:50%;
   display:flex; align-items:center; justify-content:center; font-weight:900;
+  box-shadow:0 3px 6px rgba(0,0,0,0.5), 0 0 6px rgba(212,175,55,0.5);
 }
 .cpp-stamp-tag{
-  position:absolute; top:-9px; left:50%; transform:translateX(-50%); z-index:3;
+  position:absolute; top:-11px; left:50%; transform:translateX(-50%); z-index:3;
   font-family:'Cinzel',serif; font-weight:900; font-size:8.5px; letter-spacing:0.6px;
   color:#1a0a2e; background:linear-gradient(90deg,var(--gold),var(--gold-bright));
-  padding:2px 8px; border-radius:100px; white-space:nowrap;
+  padding:3px 9px; border-radius:100px; white-space:nowrap;
+  box-shadow:0 3px 6px rgba(0,0,0,0.5);
 }
 .cpp-stamp-tag.siguiente{ color:#fff; background:linear-gradient(90deg,var(--purple),#8f1fd6); }
 
@@ -462,21 +468,23 @@ export default function CaminoParticipantePasaportePage() {
                 className={`cpp-stamp ${info.milestone ? 'milestone' : ''} ${obtenido ? 'obtenido' : ''} ${esSiguiente ? 'siguiente' : ''}`}
                 onClick={() => setModalSello(num)}
               >
-                {info.imagen ? (
-                  <img className="cpp-stamp-img" src={info.imagen} alt={info.nombre} />
-                ) : (
-                  <div className="cpp-stamp-fallback">
-                    {obtenido ? (info.icono || '🎖️') : esSiguiente ? (info.icono || '🔒') : '🔒'}
-                  </div>
-                )}
-                <div className="cpp-stamp-scrim" />
-                {!obtenido && !esSiguiente && <span className="cpp-stamp-lock">🔒</span>}
+                <div className="cpp-stamp-media">
+                  {info.imagen ? (
+                    <img className="cpp-stamp-img" src={info.imagen} alt={info.nombre} />
+                  ) : (
+                    <div className="cpp-stamp-fallback">
+                      {obtenido ? (info.icono || '🎖️') : esSiguiente ? (info.icono || '🔒') : '🔒'}
+                    </div>
+                  )}
+                  <div className="cpp-stamp-scrim" />
+                  {!obtenido && !esSiguiente && <span className="cpp-stamp-lock">🔒</span>}
+                  <span className="cpp-stamp-label">#{num}</span>
+                  <div className="cpp-stamp-nombre">{obtenido || esSiguiente ? info.nombre : '???'}</div>
+                </div>
                 {num === 4 && <span className="cpp-stamp-tag">Validado</span>}
                 {num === 8 && <span className="cpp-stamp-tag">Completo</span>}
                 {esSiguiente && <span className="cpp-stamp-tag siguiente">Tu siguiente</span>}
                 {obtenido && <span className="cpp-stamp-check">✓</span>}
-                <span className="cpp-stamp-label">#{num}</span>
-                <div className="cpp-stamp-nombre">{obtenido || esSiguiente ? info.nombre : '???'}</div>
               </div>
             );
           })}
