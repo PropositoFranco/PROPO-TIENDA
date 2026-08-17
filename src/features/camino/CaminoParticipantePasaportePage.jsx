@@ -109,21 +109,47 @@ h1.cpp-title{
 @media (max-width:640px){ .cpp-stamp-grid{grid-template-columns:repeat(4,1fr); gap:8px;} }
 
 .cpp-stamp{
-  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:12px;
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:clamp(4px,0.8vh,8px);
-  padding:clamp(10px,1.8vh,18px) 6px; position:relative; cursor:pointer; transition:transform .15s, box-shadow .15s;
+  aspect-ratio:1/1; border-radius:14px; border:2px solid var(--gold-dim); position:relative;
+  cursor:pointer; overflow:hidden; background:#0d0716; transition:transform .15s, box-shadow .15s;
 }
-.cpp-stamp:hover{transform:translateY(-2px);}
-.cpp-stamp-label{font-family:'Cinzel',serif; font-weight:900; font-size:clamp(10.5px,1.35vh,12.5px); color:var(--lilac-dim);}
-.cpp-stamp-nombre{font-family:'Cinzel',serif; font-weight:700; font-size:clamp(8.5px,1.05vh,10px); color:var(--lilac-dim); text-align:center; line-height:1.2; min-height:2.2em;}
+.cpp-stamp:hover{transform:translateY(-3px) scale(1.02);}
+.cpp-stamp-img{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;
+  filter:grayscale(0.85) brightness(0.35); transition:filter .3s;
+}
+.cpp-stamp.siguiente .cpp-stamp-img{ filter:grayscale(0.15) brightness(0.75) saturate(1.1); }
+.cpp-stamp.obtenido .cpp-stamp-img{ filter:none; }
+.cpp-stamp-scrim{
+  position:absolute; inset:0; z-index:1;
+  background:linear-gradient(180deg, rgba(10,4,20,0.05) 0%, rgba(10,4,20,0.1) 40%, rgba(6,3,14,0.95) 100%);
+}
+.cpp-stamp-fallback{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:clamp(28px,4.4vh,40px); filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+}
+.cpp-stamp-lock{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:2;
+  font-size:clamp(20px,3vh,28px); color:#cfcfd8; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+}
+.cpp-stamp.obtenido .cpp-stamp-lock, .cpp-stamp.siguiente .cpp-stamp-lock{ display:none; }
+.cpp-stamp-label{
+  position:absolute; top:8px; left:8px; z-index:3;
+  font-family:'Cinzel',serif; font-weight:900; font-size:clamp(9.5px,1.2vh,11px); color:#fff;
+  background:rgba(0,0,0,0.45); padding:2px 7px; border-radius:100px; letter-spacing:0.4px;
+}
+.cpp-stamp-nombre{
+  position:absolute; left:6px; right:6px; bottom:7px; z-index:3; text-align:center;
+  font-family:'Cinzel',serif; font-weight:700; font-size:clamp(8.5px,1.05vh,10px); color:var(--lilac-dim); line-height:1.2;
+}
 .cpp-stamp.milestone{border-color:var(--gold); box-shadow:0 0 14px rgba(212,175,55,0.25);}
-.cpp-stamp.obtenido{
-  border-color:var(--gold); background:linear-gradient(160deg, rgba(212,175,55,0.14), var(--dark-surface));
-  box-shadow:0 0 18px var(--gold-glow);
-}
+.cpp-stamp.obtenido{ border-color:var(--gold); box-shadow:0 0 18px var(--gold-glow); }
 .cpp-stamp.obtenido .cpp-stamp-nombre{color:#fff;}
-.cpp-stamp.siguiente{border-color:var(--gold-dim); background:linear-gradient(160deg, rgba(212,175,55,0.07), var(--dark-surface));}
+.cpp-stamp.siguiente{border-color:var(--gold-dim); animation:cpp-pulso-stamp 1.8s ease-in-out infinite;}
 .cpp-stamp.siguiente .cpp-stamp-nombre{color:var(--lilac);}
+@keyframes cpp-pulso-stamp{
+  0%,100%{ box-shadow:0 0 0 0 rgba(212,175,55,0.4); }
+  50%{ box-shadow:0 0 0 6px rgba(212,175,55,0); }
+}
 
 .cpp-medallion{
   width:clamp(42px,6.4vh,56px); height:clamp(42px,6.4vh,56px); border-radius:50%;
@@ -157,12 +183,12 @@ h1.cpp-title{
   50%{ box-shadow:0 5px 10px rgba(0,0,0,0.5), 0 0 0 8px rgba(212,175,55,0), 0 0 0 1px rgba(0,0,0,0.35); }
 }
 .cpp-stamp-check{
-  position:absolute; top:7px; right:9px; font-size:11px; color:#1a0a2e;
+  position:absolute; top:7px; right:9px; font-size:11px; color:#1a0a2e; z-index:3;
   background:linear-gradient(135deg,var(--gold),var(--gold-bright)); width:16px; height:16px; border-radius:50%;
   display:flex; align-items:center; justify-content:center; font-weight:900;
 }
 .cpp-stamp-tag{
-  position:absolute; top:-9px; left:50%; transform:translateX(-50%);
+  position:absolute; top:-9px; left:50%; transform:translateX(-50%); z-index:3;
   font-family:'Cinzel',serif; font-weight:900; font-size:8.5px; letter-spacing:0.6px;
   color:#1a0a2e; background:linear-gradient(90deg,var(--gold),var(--gold-bright));
   padding:2px 8px; border-radius:100px; white-space:nowrap;
@@ -436,12 +462,20 @@ export default function CaminoParticipantePasaportePage() {
                 className={`cpp-stamp ${info.milestone ? 'milestone' : ''} ${obtenido ? 'obtenido' : ''} ${esSiguiente ? 'siguiente' : ''}`}
                 onClick={() => setModalSello(num)}
               >
+                {info.imagen ? (
+                  <img className="cpp-stamp-img" src={info.imagen} alt={info.nombre} />
+                ) : (
+                  <div className="cpp-stamp-fallback">
+                    {obtenido ? (info.icono || '🎖️') : esSiguiente ? (info.icono || '🔒') : '🔒'}
+                  </div>
+                )}
+                <div className="cpp-stamp-scrim" />
+                {!obtenido && !esSiguiente && <span className="cpp-stamp-lock">🔒</span>}
                 {num === 4 && <span className="cpp-stamp-tag">Validado</span>}
                 {num === 8 && <span className="cpp-stamp-tag">Completo</span>}
                 {esSiguiente && <span className="cpp-stamp-tag siguiente">Tu siguiente</span>}
                 {obtenido && <span className="cpp-stamp-check">✓</span>}
-                <Medallion info={info} obtenido={obtenido} siguiente={esSiguiente} />
-                <div className="cpp-stamp-label">#{num}</div>
+                <span className="cpp-stamp-label">#{num}</span>
                 <div className="cpp-stamp-nombre">{obtenido || esSiguiente ? info.nombre : '???'}</div>
               </div>
             );
