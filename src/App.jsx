@@ -63,6 +63,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // No inicializar el auth de la app general en rutas de Camino Participante.
+    // Camino usa su propio cliente aislado (supabaseCamino) — si este initAuth
+    // también corre ahí, compite por el ?code= de OAuth de Google y a veces
+    // se queda con la sesión el store equivocado, mandando al usuario a /hub
+    // en vez de dejarlo en Camino.
+    if (window.location.pathname.startsWith('/camino')) return;
     initAuth();
   }, []);
 
