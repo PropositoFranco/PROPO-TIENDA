@@ -71,15 +71,15 @@ const styles = `
 
 .crk-wrap{
   flex:1 1 auto; max-width:820px; width:100%; margin:0 auto;
-  padding:clamp(20px,4vh,40px) clamp(20px,4vw,40px);
-  position:relative; z-index:1; display:flex; flex-direction:column; gap:clamp(16px,2.2vh,24px);
+  padding:clamp(14px,3vh,26px) clamp(20px,4vw,40px);
+  position:relative; z-index:1; display:flex; flex-direction:column; gap:clamp(10px,1.5vh,16px);
 }
 
 .crk-hero-frame{
-  position:relative; width:100%; margin-top:2px;
-  border-radius:20px; overflow:hidden;
+  position:relative; width:100%; max-width:560px; margin:0 auto;
+  border-radius:18px; overflow:hidden;
   border:2px solid var(--gold);
-  box-shadow:0 0 0 1px rgba(212,175,55,0.25), 0 0 40px rgba(212,175,55,0.3), 0 14px 50px rgba(0,0,0,0.55);
+  box-shadow:0 0 0 1px rgba(212,175,55,0.25), 0 0 30px rgba(212,175,55,0.28), 0 10px 36px rgba(0,0,0,0.5);
   background:#050216;
 }
 .crk-hero-img{
@@ -88,23 +88,23 @@ const styles = `
   object-fit:contain;
 }
 .crk-hero-caption{
-  display:flex; align-items:center; gap:12px;
-  padding:14px clamp(16px,3vw,22px);
+  display:flex; align-items:center; gap:10px;
+  padding:9px clamp(14px,3vw,18px);
 }
 
-.crk-tablero-header{padding:2px 2px 0;}
+.crk-tablero-header{padding:0;}
 .crk-tablero-eyebrow{
-  font-family:'Cinzel',serif; font-size:11px; font-weight:900; letter-spacing:2px;
-  color:var(--gold); text-transform:uppercase; margin-bottom:6px;
-  display:flex; align-items:center; gap:8px;
+  font-family:'Cinzel',serif; font-size:10px; font-weight:900; letter-spacing:1.8px;
+  color:var(--gold); text-transform:uppercase; margin-bottom:3px;
+  display:flex; align-items:center; gap:7px;
 }
-.crk-tablero-eyebrow::before{content:"✦"; color:var(--gold-bright); font-size:10px;}
+.crk-tablero-eyebrow::before{content:"✦"; color:var(--gold-bright); font-size:9px;}
 h2.crk-tablero-title{
-  font-family:'Cinzel Decorative',serif; font-weight:900; font-size:clamp(24px,4vh,32px);
-  color:#fff; line-height:1.1; margin-bottom:6px;
+  font-family:'Cinzel Decorative',serif; font-weight:900; font-size:clamp(19px,3vh,25px);
+  color:#fff; line-height:1.1; margin-bottom:3px;
 }
 .crk-tablero-sub{
-  font-family:'Nunito',sans-serif; font-size:13px; color:var(--lilac); line-height:1.5; max-width:560px;
+  font-family:'Nunito',sans-serif; font-size:12px; color:var(--lilac); line-height:1.4; max-width:560px;
 }
 .crk-tablero-sub b{color:var(--gold-bright); font-weight:700;}
 .crk-eyebrow-row{display:flex; align-items:center; gap:16px;}
@@ -119,59 +119,59 @@ h2.crk-tablero-title{
 h1.crk-title{font-family:'Cinzel Decorative',serif; font-weight:900; font-size:clamp(22px,3.6vh,30px); line-height:1.15; color:#fff;}
 
 .crk-explica{
-  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:14px;
-  padding:14px 18px; position:relative; overflow:hidden;
+  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:12px;
+  padding:10px 15px; position:relative; overflow:hidden;
 }
 .crk-explica::before{content:""; position:absolute; inset:0; background:radial-gradient(ellipse 70% 60% at 50% 0%, rgba(212,175,55,0.08), transparent 70%); pointer-events:none;}
-.crk-explica p{position:relative; z-index:1; font-family:'Nunito',sans-serif; font-size:12.5px; line-height:1.55; color:var(--lilac);}
+.crk-explica p{position:relative; z-index:1; font-family:'Nunito',sans-serif; font-size:11.5px; line-height:1.45; color:var(--lilac);}
 .crk-explica b{color:var(--gold-bright); font-weight:700;}
 
 /* ── NUEVO: stats comunitarios ── */
-.crk-stats-row{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+.crk-stats-row{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
 .crk-stat-card{
-  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:13px;
-  padding:13px 14px; position:relative; overflow:hidden;
+  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:12px;
+  padding:10px 12px; position:relative; overflow:hidden;
 }
 .crk-stat-card::before{content:""; position:absolute; inset:0; background:radial-gradient(ellipse 70% 60% at 0% 0%, rgba(212,175,55,0.07), transparent 70%); pointer-events:none;}
 .crk-stat-card > *{position:relative; z-index:1;}
-.crk-stat-label{font-family:'Cinzel',serif; font-size:9px; font-weight:900; letter-spacing:1px; color:var(--lilac-dim); text-transform:uppercase; display:flex; align-items:center; gap:5px; margin-bottom:5px;}
-.crk-stat-num{font-family:'Cinzel Decorative',serif; font-weight:900; font-size:24px; color:var(--gold-bright); line-height:1;}
-.crk-stat-sub{font-family:'Nunito',sans-serif; font-size:10px; color:var(--lilac-dim); margin-top:3px;}
+.crk-stat-label{font-family:'Cinzel',serif; font-size:8.5px; font-weight:900; letter-spacing:0.8px; color:var(--lilac-dim); text-transform:uppercase; display:flex; align-items:center; gap:4px; margin-bottom:3px;}
+.crk-stat-num{font-family:'Cinzel Decorative',serif; font-weight:900; font-size:19px; color:var(--gold-bright); line-height:1;}
+.crk-stat-sub{font-family:'Nunito',sans-serif; font-size:9px; color:var(--lilac-dim); margin-top:2px;}
 
 /* ── NUEVO: barra de meta 1K ── */
 .crk-meta-wrap{width:100%;}
-.crk-meta-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; font-family:'Nunito',sans-serif; font-size:10.5px; color:var(--lilac-dim);}
+.crk-meta-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; font-family:'Nunito',sans-serif; font-size:10px; color:var(--lilac-dim);}
 .crk-meta-top b{color:var(--gold-bright); font-weight:800;}
-.crk-meta-track{height:7px; width:100%; border-radius:20px; background:rgba(255,255,255,0.06); border:1px solid var(--gold-dim); overflow:hidden;}
+.crk-meta-track{height:6px; width:100%; border-radius:20px; background:rgba(255,255,255,0.06); border:1px solid var(--gold-dim); overflow:hidden;}
 .crk-meta-fill{height:100%; border-radius:20px; background:linear-gradient(90deg, var(--gold) 0%, var(--gold-bright) 100%); box-shadow:0 0 10px var(--gold-glow); transition:width .7s ease;}
-.crk-meta-cumplida{font-family:'Cinzel',serif; font-size:10px; font-weight:900; letter-spacing:0.5px; color:var(--gold-bright); margin-top:4px;}
+.crk-meta-cumplida{font-family:'Cinzel',serif; font-size:9px; font-weight:900; letter-spacing:0.5px; color:var(--gold-bright); margin-top:3px;}
 
 .crk-mi-progreso{
-  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
   background:linear-gradient(135deg, rgba(212,175,55,0.1), var(--dark-surface));
-  border:1px solid var(--gold); border-radius:14px; padding:14px 18px;
-  box-shadow:0 0 20px rgba(212,175,55,0.12);
+  border:1px solid var(--gold); border-radius:12px; padding:10px 15px;
+  box-shadow:0 0 16px rgba(212,175,55,0.12);
 }
-.crk-mi-progreso-txt{font-family:'Nunito',sans-serif; font-size:12.5px; color:var(--lilac); flex-shrink:0;}
+.crk-mi-progreso-txt{font-family:'Nunito',sans-serif; font-size:11.5px; color:var(--lilac); flex-shrink:0;}
 .crk-mi-progreso-txt b{color:var(--gold-bright); font-weight:800;}
 
 /* ── NUEVO: tabs de liga ── */
-.crk-liga-tabs{display:flex; gap:8px;}
+.crk-liga-tabs{display:flex; gap:7px;}
 .crk-liga-tab{
-  flex:1; text-align:center; padding:10px 12px; border-radius:11px;
-  font-family:'Cinzel',serif; font-size:11px; font-weight:900; letter-spacing:0.8px; text-transform:uppercase;
+  flex:1; text-align:center; padding:8px 10px; border-radius:10px;
+  font-family:'Cinzel',serif; font-size:10.5px; font-weight:900; letter-spacing:0.6px; text-transform:uppercase;
   border:1px solid var(--gold-dim); background:var(--dark-surface); color:var(--lilac-dim); cursor:pointer;
   transition:all .2s;
 }
 .crk-liga-tab.activo{border-color:var(--gold); color:var(--gold-bright); background:rgba(212,175,55,0.12); box-shadow:0 0 14px rgba(212,175,55,0.18);}
 .crk-liga-tab span{opacity:0.65; font-weight:700; text-transform:none; letter-spacing:0;}
 
-.crk-lista{display:flex; flex-direction:column; gap:9px;}
+.crk-lista{display:flex; flex-direction:column; gap:7px;}
 
 .crk-fila{
-  display:flex; align-items:center; gap:14px;
-  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:13px;
-  padding:12px 16px; position:relative; overflow:hidden;
+  display:flex; align-items:center; gap:12px;
+  background:var(--dark-surface); border:1px solid var(--gold-dim); border-radius:12px;
+  padding:9px 14px; position:relative; overflow:hidden;
 }
 .crk-fila::before{content:""; position:absolute; inset:0; background:radial-gradient(ellipse 70% 60% at 0% 0%, rgba(212,175,55,0.05), transparent 70%); pointer-events:none;}
 .crk-fila > *{position:relative; z-index:1;}
@@ -181,30 +181,40 @@ h1.crk-title{font-family:'Cinzel Decorative',serif; font-weight:900; font-size:c
 .crk-fila.top3{border-color:rgba(180,140,90,0.5);}
 
 .crk-pos{
-  width:34px; flex-shrink:0; text-align:center;
-  font-family:'Cinzel',serif; font-weight:900; font-size:15px; color:var(--lilac);
+  width:30px; flex-shrink:0; text-align:center;
+  font-family:'Cinzel',serif; font-weight:900; font-size:14px; color:var(--lilac);
 }
-.crk-pos.medalla{font-size:22px;}
+.crk-pos.medalla{font-size:19px;}
 
 .crk-info{flex:1 1 auto; min-width:0;}
-.crk-nombre-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
-.crk-nombre{font-family:'Cinzel',serif; font-weight:700; font-size:14.5px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.crk-nombre-row{display:flex; align-items:center; gap:7px; flex-wrap:wrap;}
+.crk-nombre{font-family:'Cinzel',serif; font-weight:700; font-size:13.5px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .crk-tag-yo{
-  font-size:9px; font-weight:900; letter-spacing:0.8px; color:#0a0614;
-  background:var(--gold); border-radius:20px; padding:2px 7px; flex-shrink:0;
+  font-size:8.5px; font-weight:900; letter-spacing:0.7px; color:#0a0614;
+  background:var(--gold); border-radius:20px; padding:2px 6px; flex-shrink:0;
 }
-.crk-stats{display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;}
+.crk-stats{display:flex; gap:8px; flex-wrap:wrap; margin-top:3px;}
 .crk-stat{
-  font-family:'Nunito',sans-serif; font-size:11px; color:var(--lilac-dim);
+  font-family:'Nunito',sans-serif; font-size:10px; color:var(--lilac-dim);
   display:flex; align-items:center; gap:3px; white-space:nowrap;
 }
 
 .crk-puntaje{
-  flex-shrink:0; text-align:center; min-width:58px;
-  display:flex; flex-direction:column; align-items:center; gap:1px;
+  flex-shrink:0; text-align:center; min-width:50px;
+  display:flex; flex-direction:column; align-items:center; gap:0px;
 }
-.crk-puntaje-num{font-family:'Cinzel Decorative',serif; font-weight:900; font-size:19px; color:var(--gold-bright);}
-.crk-puntaje-label{font-family:'Cinzel',serif; font-size:8px; font-weight:900; letter-spacing:1px; color:var(--lilac-dim);}
+.crk-puntaje-num{font-family:'Cinzel Decorative',serif; font-weight:900; font-size:17px; color:var(--gold-bright);}
+.crk-puntaje-label{font-family:'Cinzel',serif; font-size:7.5px; font-weight:900; letter-spacing:0.8px; color:var(--lilac-dim);}
+
+.crk-fila-placeholder{
+  border-style:dashed !important; opacity:0.55;
+  background:rgba(255,255,255,0.015);
+}
+.crk-fila-placeholder::before{display:none;}
+.crk-pos-placeholder{color:var(--lilac-dim); font-size:16px;}
+.crk-nombre-placeholder{font-family:'Cinzel',serif; font-weight:700; font-size:13.5px; color:var(--lilac-dim); font-style:italic;}
+.crk-stat-ph{font-family:'Nunito',sans-serif; font-size:10.5px; color:var(--lilac-dim); font-style:italic;}
+.crk-puntaje-ph{font-family:'Cinzel Decorative',serif; font-weight:900; font-size:16px; color:var(--lilac-dim);}
 
 .crk-vacio{
   text-align:center; padding:40px 20px; color:var(--lilac); font-family:'Nunito',sans-serif; font-size:14px;
@@ -248,7 +258,6 @@ const NAV_ITEMS = [
   { label: 'Check-in', activo: false, disponible: true, ruta: '/camino/participante/panel' },
   { label: 'Calendario', activo: false, disponible: true, ruta: '/camino/participante/calendario' },
   { label: 'Pasaporte del Templario', activo: false, disponible: true, ruta: '/camino/participante/pasaporte' },
-  
   { label: 'Ranking', activo: true, disponible: true },
 ];
 
@@ -400,6 +409,8 @@ export default function CaminoParticipanteRankingPage() {
   const ligaElite = useMemo(() => ranking.filter((p) => p.seguidores_actuales >= META_SEGUIDORES), [ranking]);
   const ligaAscenso = useMemo(() => ranking.filter((p) => p.seguidores_actuales < META_SEGUIDORES), [ranking]);
   const listaActiva = liga === 'elite' ? ligaElite : ligaAscenso;
+  const CUPO_MINIMO = 5;
+  const fantasmasFaltantes = Math.max(0, CUPO_MINIMO - listaActiva.length);
 
   const miFila = useMemo(() => ranking.find((p) => p.participante_id === miId) || null, [ranking, miId]);
   const nombreCohorte = useMemo(() => {
@@ -555,44 +566,52 @@ export default function CaminoParticipanteRankingPage() {
           </button>
         </div>
 
-        {ranking.length === 0 ? (
-          <div className="crk-vacio">Todavía no hay datos suficientes para armar el ranking. En cuanto el grupo empiece a registrar avances, aquí va a aparecer.</div>
-        ) : listaActiva.length === 0 ? (
-          <div className="crk-vacio-liga">
-            {liga === 'elite'
-              ? 'Todavía nadie ha cruzado los 1,000 seguidores. Sé el primer Templario en llegar a la Liga Élite.'
-              : 'Esta liga está esperando a los siguientes Templarios.'}
-          </div>
-        ) : (
-          <div className="crk-lista">
-            {listaActiva.map((r, i) => {
-              const pos = i + 1;
-              const esYo = r.participante_id === miId;
-              const topClass = pos <= 3 ? `top${pos}` : '';
-              return (
-                <div key={r.participante_id} className={`crk-fila ${esYo ? 'yo' : ''} ${topClass}`}>
-                  <div className={`crk-pos ${pos <= 3 ? 'medalla' : ''}`}>{pos <= 3 ? MEDALLA[pos - 1] : pos}</div>
-                  <div className="crk-info">
-                    <div className="crk-nombre-row">
-                      <span className="crk-nombre">{r.nombre}</span>
-                      {esYo && <span className="crk-tag-yo">TÚ</span>}
-                    </div>
-                    <div className="crk-stats">
-                      <span className="crk-stat">✅ {r.checkins_count} check-ins</span>
-                      <span className="crk-stat">🏅 {r.sellos_count} sellos</span>
-                      <span className="crk-stat">📈 +{r.seguidores_ganados} seguidores</span>
-                      {r.vendido_usd > 0 && <span className="crk-stat">💰 ${r.vendido_usd} vendido</span>}
-                    </div>
+        <div className="crk-lista">
+          {listaActiva.map((r, i) => {
+            const pos = i + 1;
+            const esYo = r.participante_id === miId;
+            const topClass = pos <= 3 ? `top${pos}` : '';
+            return (
+              <div key={r.participante_id} className={`crk-fila ${esYo ? 'yo' : ''} ${topClass}`}>
+                <div className={`crk-pos ${pos <= 3 ? 'medalla' : ''}`}>{pos <= 3 ? MEDALLA[pos - 1] : pos}</div>
+                <div className="crk-info">
+                  <div className="crk-nombre-row">
+                    <span className="crk-nombre">{r.nombre}</span>
+                    {esYo && <span className="crk-tag-yo">TÚ</span>}
                   </div>
-                  <div className="crk-puntaje">
-                    <div className="crk-puntaje-num">{r.puntaje}</div>
-                    <div className="crk-puntaje-label">PUNTOS</div>
+                  <div className="crk-stats">
+                    <span className="crk-stat">✅ {r.checkins_count} check-ins</span>
+                    <span className="crk-stat">🏅 {r.sellos_count} sellos</span>
+                    <span className="crk-stat">📈 +{r.seguidores_ganados} seguidores</span>
+                    {r.vendido_usd > 0 && <span className="crk-stat">💰 ${r.vendido_usd} vendido</span>}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+                <div className="crk-puntaje">
+                  <div className="crk-puntaje-num">{r.puntaje}</div>
+                  <div className="crk-puntaje-label">PUNTOS</div>
+                </div>
+              </div>
+            );
+          })}
+
+          {Array.from({ length: fantasmasFaltantes }).map((_, i) => (
+            <div key={`fantasma-${liga}-${i}`} className="crk-fila crk-fila-placeholder">
+              <div className="crk-pos crk-pos-placeholder">❓</div>
+              <div className="crk-info">
+                <div className="crk-nombre-row">
+                  <span className="crk-nombre-placeholder">Templario</span>
+                </div>
+                <div className="crk-stats">
+                  <span className="crk-stat-ph">En proceso de selección</span>
+                </div>
+              </div>
+              <div className="crk-puntaje">
+                <div className="crk-puntaje-ph">—</div>
+                <div className="crk-puntaje-label">PUNTOS</div>
+              </div>
+            </div>
+          ))}
+        </div>
 
         {ultimaActualizacion && (
           <div className="crk-en-vivo">

@@ -217,8 +217,7 @@ export default function CalendarioCaminoPage() {
           <button className="nav-item" onClick={() => navigate('/camino/participante/panel')}>Check-in</button>
           <span className="nav-item active">Calendario</span>
           <button className="nav-item" onClick={() => navigate('/camino/participante/pasaporte')}>Pasaporte del Templario</button>
-          <span className="nav-item" style={{opacity:0.4, cursor:'default'}}>Sala de Cowork</span>
-          <span className="nav-item" style={{opacity:0.4, cursor:'default'}}>Ranking</span>
+          <button className="nav-item" onClick={() => navigate('/camino/participante/ranking')}>Ranking</button>
         </div>
         <select className="nav-select">
           <option>Camino a Líder Digital · Gen. Agosto</option>
