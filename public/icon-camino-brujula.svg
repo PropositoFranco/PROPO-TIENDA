@@ -1,0 +1,80 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="38%" r="75%">
+      <stop offset="0%" stop-color="#2a1650"/>
+      <stop offset="55%" stop-color="#140a2e"/>
+      <stop offset="100%" stop-color="#07040f"/>
+    </radialGradient>
+    <linearGradient id="phoneBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2b2b3a"/>
+      <stop offset="45%" stop-color="#141420"/>
+      <stop offset="100%" stop-color="#050508"/>
+    </linearGradient>
+    <linearGradient id="rimGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE566"/>
+      <stop offset="45%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#8a6a1a"/>
+    </linearGradient>
+    <radialGradient id="screenGlow" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#3a2a10"/>
+      <stop offset="55%" stop-color="#1a1408"/>
+      <stop offset="100%" stop-color="#0a0805"/>
+    </radialGradient>
+    <radialGradient id="compassFace" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3a2a12"/>
+      <stop offset="100%" stop-color="#1a1206"/>
+    </radialGradient>
+    <linearGradient id="needleGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE566"/>
+      <stop offset="100%" stop-color="#D4AF37"/>
+    </linearGradient>
+    <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+    <filter id="glowSoft" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#bgGlow)"/>
+  <g fill="#f0eaff" opacity="0.5">
+    <circle cx="92" cy="96" r="3"/>
+    <circle cx="430" cy="80" r="2.4"/>
+    <circle cx="70" cy="330" r="2.2"/>
+    <circle cx="450" cy="360" r="3"/>
+    <circle cx="120" cy="440" r="2"/>
+  </g>
+  <circle cx="256" cy="270" r="160" fill="#D4AF37" opacity="0.10"/>
+  <g filter="url(#softShadow)" transform="rotate(-6 256 270)">
+    <rect x="150" y="118" width="212" height="392" rx="40" fill="url(#rimGold)"/>
+    <rect x="160" y="128" width="192" height="372" rx="32" fill="url(#phoneBody)"/>
+    <rect x="176" y="158" width="160" height="300" rx="14" fill="url(#screenGlow)"/>
+    <rect x="234" y="140" width="44" height="8" rx="4" fill="#D4AF37" opacity="0.6"/>
+    <g transform="translate(256 306)">
+      <circle r="72" fill="url(#compassFace)" stroke="#D4AF37" stroke-width="4"/>
+      <circle r="58" fill="none" stroke="#D4AF37" stroke-width="1.5" opacity="0.5"/>
+      <g stroke="#D4AF37" stroke-width="3" opacity="0.85">
+        <line x1="0" y1="-72" x2="0" y2="-58"/>
+        <line x1="0" y1="72" x2="0" y2="58"/>
+        <line x1="-72" y1="0" x2="-58" y2="0"/>
+        <line x1="72" y1="0" x2="58" y2="0"/>
+      </g>
+      <g filter="url(#glowSoft)">
+        <path d="M0 -50 L14 0 L0 14 L-14 0 Z" fill="url(#needleGold)"/>
+        <path d="M0 50 L10 0 L0 -6 L-10 0 Z" fill="#7a5a1a"/>
+      </g>
+      <circle r="9" fill="#FFE566"/>
+      <circle r="9" fill="none" stroke="#8a6a1a" stroke-width="1.5"/>
+      <text x="0" y="-84" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#D4AF37" opacity="0.85">N</text>
+    </g>
+    <rect x="160" y="128" width="26" height="372" rx="16" fill="#ffffff" opacity="0.06"/>
+  </g>
+  <g fill="#FFE566" filter="url(#glowSoft)">
+    <circle cx="376" cy="180" r="5"/>
+    <circle cx="118" cy="360" r="4"/>
+    <circle cx="392" cy="400" r="3.5"/>
+  </g>
+</svg>

@@ -1,0 +1,15 @@
+{
+  "id": "/camino/",
+  "name": "Camino a Líder Digital",
+  "short_name": "Camino",
+  "start_url": "/camino/participante/home",
+  "scope": "/camino/",
+  "display": "standalone",
+  "background_color": "#07040f",
+  "theme_color": "#0e0818",
+  "icons": [
+    { "src": "/icon-camino-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-camino-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-camino-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
