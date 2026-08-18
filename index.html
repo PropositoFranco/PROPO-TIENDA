@@ -5,7 +5,13 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" id="app-manifest" />
-    <script>if(location.pathname.startsWith('/camino')){document.getElementById('app-manifest').href='/manifest-camino.json';document.title='Camino a Líder Digital';var mt=document.createElement('meta');mt.name='apple-mobile-web-app-title';mt.content='Camino a Líder Digital';document.head.appendChild(mt);var ti=document.createElement('link');ti.rel='apple-touch-icon';ti.href='/icon-camino-192.png';document.head.appendChild(ti);}</script>
+    <script>
+function applyCaminoManifest(){var isCamino=location.pathname.startsWith('/camino');var link=document.getElementById('app-manifest');var desired=isCamino?'/manifest-camino.json':'/manifest.json';if(link.getAttribute('href')!==desired){link.setAttribute('href',desired);}document.title=isCamino?'Camino a Líder Digital':'Propotienda | Templo del Propósito - App de Transformación Humana';var mt=document.querySelector('meta[name="apple-mobile-web-app-title"]');if(!mt){mt=document.createElement('meta');mt.name='apple-mobile-web-app-title';document.head.appendChild(mt);}mt.content=isCamino?'Camino a Líder Digital':'Propo-Tienda';var ti=document.querySelector('link[rel="apple-touch-icon"]');if(!ti){ti=document.createElement('link');ti.rel='apple-touch-icon';document.head.appendChild(ti);}ti.href=isCamino?'/icon-camino-192.png':'/favicon.svg';}
+applyCaminoManifest();
+var ps=history.pushState;history.pushState=function(){ps.apply(this,arguments);applyCaminoManifest();};
+var rs=history.replaceState;history.replaceState=function(){rs.apply(this,arguments);applyCaminoManifest();};
+window.addEventListener('popstate',applyCaminoManifest);
+</script>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@700&family=Nunito:wght@400;600;700;800&family=Raleway:wght@200;300;400;500;700&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="mobile-web-app-capable" content="yes" />
