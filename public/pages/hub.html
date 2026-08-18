@@ -2414,33 +2414,6 @@ const isMobile = vw < 1024;
       }
       .nav-ranking { padding: clamp(2px,0.7vh,5px) clamp(5px,1.5vw,9px) !important; }
 
-      /* ══ BOTÓN "PREGÚNTALE AL GUARDIÁN" — versión móvil ══
-         Círculo ~1.8x más grande que antes, y su label vuelve al estilo
-         Cinzel dorado/blanco (igual que el resto de la app) en vez del
-         Nunito gigante genérico de arriba — este bloque va DESPUÉS del
-         .ni-label de arriba y es más específico, así que gana. */
-      .nav-item-guardian {
-        gap: clamp(12px,3vh,20px) !important;
-      }
-      .guardian-circle-wrap {
-        width: clamp(92px,20vw,116px) !important;
-        height: clamp(92px,20vw,116px) !important;
-      }
-      .guardian-circle-wrap .guardian-icon {
-        font-size: clamp(50px,11vw,64px) !important;
-      }
-      .guardian-circle-wrap .guardian-glow { inset: -16px !important; }
-      .guardian-circle-wrap::before { inset: -13px !important; }
-      .nav-item-guardian .ni-label {
-        font-family: 'Cinzel', serif !important;
-        font-weight: 700 !important;
-        font-size: clamp(13px,3vw,16px) !important;
-        letter-spacing: 0.5px !important;
-        white-space: normal !important;
-        line-height: 1.25 !important;
-        max-width: 130px !important;
-      }
-
       /* ══ BOTTOM COINS ══ */
       .bottom-coins {
         padding: clamp(6px,1.5vh,12px) clamp(8px,2.5vw,16px) !important;
@@ -3126,36 +3099,6 @@ body.perf-low .guardian-circle-wrap .guardian-btn-core::after { animation-durati
   flex-shrink: 0;
   position: relative;
   z-index: 3;
-}
-
-/* ══ BOTÓN "PREGÚNTALE AL GUARDIÁN" — brillo extra en PC ══
-   En pantallas grandes con mouse (no táctiles) el círculo se ve más
-   apagado que en celular a simple vista, aunque tiene las mismas capas
-   de brillo/giro — es solo cuestión de escala/distancia de vista. Aquí
-   le sumamos un resplandor fijo (sin animación extra, cero costo) para
-   que se note igual de vivo, más un realce al pasar el mouse encima. */
-@media (hover:hover) and (pointer:fine) {
-  .guardian-circle-wrap .guardian-btn-core {
-    box-shadow:
-      0 4px 0 rgba(90,20,140,0.9),
-      0 6px 18px rgba(0,0,0,0.6),
-      inset 0 2px 3px rgba(255,255,255,0.25),
-      inset 0 -6px 10px rgba(0,0,0,0.5),
-      0 0 22px rgba(204,68,255,0.55),
-      0 0 44px rgba(204,68,255,0.28);
-  }
-  .guardian-circle-wrap .guardian-glow {
-    opacity: 0.85;
-  }
-  .nav-item-guardian:hover .guardian-circle-wrap .guardian-btn-core {
-    box-shadow:
-      0 4px 0 rgba(90,20,140,0.9),
-      0 6px 18px rgba(0,0,0,0.6),
-      inset 0 2px 3px rgba(255,255,255,0.25),
-      inset 0 -6px 10px rgba(0,0,0,0.5),
-      0 0 30px rgba(204,68,255,0.75),
-      0 0 60px rgba(204,68,255,0.4);
-  }
 }
 </style>
 
