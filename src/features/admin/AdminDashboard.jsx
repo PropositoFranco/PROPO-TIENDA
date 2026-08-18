@@ -5,6 +5,30 @@ import { useSupabaseQuery } from '../../hooks/useSupabaseQuery';
 import { adminService } from '../../services/admin.service';
 import { missionsService } from '../../services/missions.service';
 import './AdminDashboard.mobile.css';
+
+// ── Clasificador de temas — Conversaciones del Guardián ──────────────────
+// Reglas por palabras clave sobre el texto REAL de cada pregunta (no usa IA
+// ni hace otra llamada al edge function — así no genera costo extra y corre
+// instantáneo sobre los datos que ya trajimos de Supabase). Si un mensaje no
+// matchea ninguna regla, cae en "otros" — nunca se inventa una categoría.
+const GUARDIAN_TEMAS = [
+  { key: 'precio_costo',      label: 'Precio / costo',          emoji: '💰', color: '#f5c842', kws: ['precio','cuesta','costo','pagar','pago','mensualidad','dinero','cuanto cuesta','cuánto cuesta','barato','caro','tarifa','suscripcion','suscripción'] },
+  { key: 'confianza',         label: 'Confianza / es real',     emoji: '🛡️', color: '#EF4444', kws: ['mlm','secta','estafa','confiar','confianza','piramide','pirámide','fraude','es real','es serio','legit'] },
+  { key: 'inicio_proceso',    label: 'Cómo empezar / proceso',  emoji: '🚦', color: '#38bdf8', kws: ['empezar','empiezo','primer paso','primero','onboarding','tutorial','como funciona','cómo funciona','por donde','por dónde'] },
+  { key: 'progreso_nivel',    label: 'Nivel / progreso',        emoji: '📈', color: '#C084FC', kws: ['nivel','xp','subir de nivel','avanzar','mi progreso','ranking','racha','avance'] },
+  { key: 'tecnico',           label: 'Problema técnico',        emoji: '🛠️', color: '#fca5a5', kws: ['error','no funciona','no puedo entrar','no carga','falla','bug','no me deja','no abre','se traba'] },
+  { key: 'cancelar_pausar',   label: 'Cancelar / pausar',       emoji: '🚪', color: '#9CA3AF', kws: ['cancelar','pausar','dar de baja','darme de baja','dejar de pagar','renunciar'] },
+  { key: 'coins_recompensas', label: 'PropoCoins / recompensas',emoji: '🪙', color: '#4ADE80', kws: ['propocoin','coins','recompensa','premio','canjear','canje'] },
+  { key: 'alianza_referidos', label: 'Alianza / referidos',     emoji: '🤝', color: '#60A5FA', kws: ['invitar','referido','alianza','compartir mi codigo','compartir mi código','aliado'] },
+];
+function clasificarTemaGuardian(texto) {
+  const t = (texto || '').toLowerCase();
+  for (const tema of GUARDIAN_TEMAS) {
+    if (tema.kws.some(k => t.includes(k))) return tema;
+  }
+  return { key: 'otros', label: 'Otros / general', emoji: '💬', color: '#6B7280' };
+}
+
 // ── KPI Panel Component ──────────────────────────────────────────────────
 function KpiPanel({ kpiData, kpiLastUpdated, loadKpis }) {
   if (!kpiData) return null;
@@ -360,6 +384,17 @@ Fundador, Templo del Propósito`,
   },
 ];
 
+// ── Conversaciones del Guardián (chatbot) ────────────────────────────────────
+const [showGuardian,       setShowGuardian]       = useState(false);
+const [guardianData,       setGuardianData]       = useState([]);
+const [guardianLoading,    setGuardianLoading]    = useState(false);
+const [guardianStats,      setGuardianStats]      = useState(null);
+const [guardianSearch,     setGuardianSearch]     = useState('');
+const [guardianExpanded,   setGuardianExpanded]   = useState(null);
+const [guardianFilterTema, setGuardianFilterTema] = useState('');
+const [guardianFilterMemb, setGuardianFilterMemb] = useState('');
+const [guardianTab,        setGuardianTab]        = useState('resumen'); // 'resumen' | 'conversaciones'
+
 // ── Sistema / Mantenimiento ────────────────────────────────────────────────
 const [showSistema,        setShowSistema]        = useState(false);
 const [mantConfig,         setMantConfig]         = useState({ active: false, message: 'Optimizando para una mejor experiencia.' });
@@ -430,6 +465,193 @@ const loadTestimonios = async () => {
   setTestimoniosData(data || []);
   setTestimoniosLoading(false);
 };
+
+// ── Conversaciones del Guardián: carga y métricas ────────────────────────────
+const loadGuardianConversaciones = async () => {
+  setGuardianLoading(true);
+  const { supabase } = await import('../../services/supabase.js');
+
+  // Últimas 300 conversaciones, con datos del usuario que las tuvo
+  const { data, error } = await supabase
+    .from('guardian_conversaciones')
+    .select('id, user_id, mensaje_usuario, respuesta_guardian, created_at, profiles(templario_name, email, level, xp, membership_type)')
+    .order('created_at', { ascending: false })
+    .limit(300);
+
+  if (error) { pushToast('❌ ' + error.message); setGuardianLoading(false); return; }
+
+  // A cada fila le pegamos su tema clasificado, una sola vez aquí — así el
+  // resto del componente (filtros, tabla, gráficas) no reclasifica en cada render.
+  const dataConTema = (data || []).map(d => ({ ...d, _tema: clasificarTemaGuardian(d.mensaje_usuario) }));
+  setGuardianData(dataConTema);
+
+  // Conteo histórico real (puede haber más de 300 filas)
+  const { count: totalHistorico } = await supabase
+    .from('guardian_conversaciones')
+    .select('id', { count: 'exact', head: true });
+
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const conversacionesHoy = dataConTema.filter(d => new Date(d.created_at) >= hoy).length;
+  const usuariosUnicos = new Set(dataConTema.map(d => d.user_id)).size;
+
+  const porUsuario = {};
+  dataConTema.forEach(d => {
+    const key = d.user_id || 'sin_id';
+    if (!porUsuario[key]) {
+      porUsuario[key] = {
+        nombre: d.profiles?.templario_name || d.profiles?.email || 'Templario',
+        nivel: d.profiles?.level ?? null,
+        membership: d.profiles?.membership_type || 'free',
+        count: 0,
+        temas: {},
+      };
+    }
+    porUsuario[key].count++;
+    porUsuario[key].temas[d._tema.key] = (porUsuario[key].temas[d._tema.key] || 0) + 1;
+  });
+  const topUsuarios = Object.values(porUsuario).sort((a, b) => b.count - a.count).slice(0, 5);
+
+  // ── Desglose por tema (para la gráfica "dudas más fuertes") ──
+  const porTemaMap = {};
+  dataConTema.forEach(d => {
+    const k = d._tema.key;
+    if (!porTemaMap[k]) porTemaMap[k] = { ...d._tema, count: 0, membershipCounts: {} };
+    porTemaMap[k].count++;
+    const memb = d.profiles?.membership_type || 'free';
+    porTemaMap[k].membershipCounts[memb] = (porTemaMap[k].membershipCounts[memb] || 0) + 1;
+  });
+  const totalClasificadas = dataConTema.length || 1;
+  const porTema = Object.values(porTemaMap)
+    .map(t => ({ ...t, pct: Math.round((t.count / totalClasificadas) * 100) }))
+    .sort((a, b) => b.count - a.count);
+
+  // ── Tendencia — últimos 14 días (sobre las conversaciones traídas) ──
+  const dias = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(hoy); d.setDate(d.getDate() - i);
+    dias.push({ fecha: d, key: d.toISOString().slice(0, 10), count: 0 });
+  }
+  const diasMap = Object.fromEntries(dias.map(d => [d.key, d]));
+  dataConTema.forEach(d => {
+    const k = new Date(d.created_at).toISOString().slice(0, 10);
+    if (diasMap[k]) diasMap[k].count++;
+  });
+  const semanaActual  = dias.slice(7, 14).reduce((s, d) => s + d.count, 0);
+  const semanaAnterior = dias.slice(0, 7).reduce((s, d) => s + d.count, 0);
+  const cambioSemanal = semanaAnterior > 0 ? Math.round(((semanaActual - semanaAnterior) / semanaAnterior) * 100) : null;
+
+  // ── Desglose semanal — últimas 8 semanas (lunes a domingo) ──
+  // Nota: corre sobre las últimas 300 conversaciones traídas, no sobre el
+  // histórico completo — si hay más de 300 en total, semanas muy viejas
+  // pueden no verse completas aquí (para eso está el TOTAL HISTÓRICO arriba).
+  const getWeekStart = (fecha) => {
+    const dt = new Date(fecha); dt.setHours(0, 0, 0, 0);
+    const dow = dt.getDay(); // 0=dom
+    const diff = (dow === 0 ? -6 : 1) - dow; // retrocede al lunes
+    dt.setDate(dt.getDate() + diff);
+    return dt;
+  };
+  const semanasArr = [];
+  const semanaHoyInicio = getWeekStart(hoy);
+  for (let i = 7; i >= 0; i--) {
+    const inicio = new Date(semanaHoyInicio); inicio.setDate(inicio.getDate() - i * 7);
+    const fin = new Date(inicio); fin.setDate(fin.getDate() + 6);
+    semanasArr.push({ inicio, fin, key: inicio.toISOString().slice(0, 10), count: 0, usuarios: new Set(), temas: {} });
+  }
+  const semanaMap = Object.fromEntries(semanasArr.map(s => [s.key, s]));
+  dataConTema.forEach(d => {
+    const wk = getWeekStart(new Date(d.created_at)).toISOString().slice(0, 10);
+    const s = semanaMap[wk];
+    if (!s) return; // fuera de las últimas 8 semanas
+    s.count++;
+    if (d.user_id) s.usuarios.add(d.user_id);
+    s.temas[d._tema.key] = (s.temas[d._tema.key] || 0) + 1;
+  });
+  const porSemana = semanasArr.map(s => {
+    const temaTop = Object.entries(s.temas).sort((a, b) => b[1] - a[1])[0];
+    const temaTopObj = temaTop ? (GUARDIAN_TEMAS.find(t => t.key === temaTop[0]) || (temaTop[0] === 'otros' ? { emoji:'💬', label:'Otros' } : null)) : null;
+    return {
+      key: s.key,
+      label: `${s.inicio.toLocaleDateString('es-MX', { day:'2-digit', month:'short' })} – ${s.fin.toLocaleDateString('es-MX', { day:'2-digit', month:'short' })}`,
+      count: s.count,
+      usuariosUnicos: s.usuarios.size,
+      temaTop: temaTopObj,
+    };
+  });
+
+  // ── Últimos mensajes — para ver de un vistazo quién escribió y qué preguntó ──
+  const ultimosMensajes = dataConTema.slice(0, 8);
+
+  // ── Recomendaciones — solo se generan si los datos reales las sostienen ──
+  const recos = [];
+  const temaTop = porTema[0];
+  if (temaTop && totalClasificadas >= 5 && temaTop.pct >= 20 && temaTop.key !== 'otros') {
+    recos.push({ icon: temaTop.emoji, text: `<b>${temaTop.pct}%</b> de las conversaciones son sobre <b>${temaTop.label}</b> (${temaTop.count} de ${totalClasificadas}). Es la duda más fuerte ahorita — vale la pena reforzar esa info donde el usuario la vea ANTES de tener que preguntarle al Guardián.` });
+  }
+  const temaTecnico = porTemaMap['tecnico'];
+  if (temaTecnico && temaTecnico.count >= 2) {
+    recos.push({ icon: '🛠️', text: `Se detectaron <b>${temaTecnico.count}</b> mensajes de posible problema técnico dentro del chat. Estas no son dudas de contenido — vale revisarlas manualmente, podrían ser bugs reales reportándose aquí en vez de en soporte.` });
+  }
+  const temaPrecio = porTemaMap['precio_costo'];
+  if (temaPrecio && temaPrecio.count >= 3) {
+    const freeCount = temaPrecio.membershipCounts['free'] || 0;
+    const freePct = Math.round((freeCount / temaPrecio.count) * 100);
+    if (freePct >= 60) {
+      recos.push({ icon: '💳', text: `Del total de preguntas sobre precio/costo, el <b>${freePct}%</b> viene de usuarios Free (no pagando todavía). Es una señal de interés de compra — podría valer mostrarles esa información antes, como parte del onboarding o la pantalla de membresías.` });
+    }
+  }
+  const repetidores = Object.values(porUsuario).filter(u => Object.values(u.temas).some(c => c >= 3));
+  if (repetidores.length > 0) {
+    recos.push({ icon: '🔁', text: `<b>${repetidores.length}</b> templario(s) preguntaron 3+ veces sobre el mismo tema. Puede ser señal de que la respuesta del Guardián no está resolviendo la duda del todo, o que la persona no encuentra esa info por su cuenta dentro de la app.` });
+  }
+  if (cambioSemanal !== null && Math.abs(cambioSemanal) >= 30) {
+    recos.push({
+      icon: cambioSemanal > 0 ? '📈' : '📉',
+      text: `Las conversaciones con el Guardián ${cambioSemanal > 0 ? 'subieron' : 'bajaron'} <b>${Math.abs(cambioSemanal)}%</b> esta semana (${semanaActual}) contra la anterior (${semanaAnterior}).`
+    });
+  }
+  if (!recos.length) {
+    recos.push({ icon: '✅', text: totalClasificadas < 5
+      ? 'Todavía no hay suficientes conversaciones para detectar patrones confiables. En cuanto haya más uso, aquí van a aparecer las dudas más frecuentes de tus usuarios.'
+      : 'No se detecta ninguna duda dominante ni foco rojo evidente en las conversaciones actuales — la distribución de temas está pareja.' });
+  }
+
+  setGuardianStats({
+    total: totalHistorico ?? dataConTema.length,
+    usuariosUnicos,
+    conversacionesHoy,
+    promedioPorUsuario: usuariosUnicos ? (dataConTema.length / usuariosUnicos).toFixed(1) : '0',
+    topUsuarios,
+    porTema,
+    tendencia: dias,
+    porSemana,
+    ultimosMensajes,
+    semanaActual,
+    semanaAnterior,
+    cambioSemanal,
+    recomendaciones: recos,
+  });
+
+  setGuardianLoading(false);
+};
+
+const guardianFiltrado = (() => {
+  const q = guardianSearch.trim().toLowerCase();
+  return guardianData.filter(g => {
+    if (guardianFilterTema && g._tema?.key !== guardianFilterTema) return false;
+    if (guardianFilterMemb) {
+      const memb = g.profiles?.membership_type || 'free';
+      if (guardianFilterMemb === 'paying' ? memb === 'free' : memb !== guardianFilterMemb) return false;
+    }
+    if (!q) return true;
+    return (
+      (g.mensaje_usuario || '').toLowerCase().includes(q) ||
+      (g.respuesta_guardian || '').toLowerCase().includes(q) ||
+      (g.profiles?.templario_name || '').toLowerCase().includes(q) ||
+      (g.profiles?.email || '').toLowerCase().includes(q)
+    );
+  });
+})();
 
 const approveTestimonio = async (id) => {
   const { supabase } = await import('../../services/supabase.js');
@@ -3420,6 +3642,21 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
             transition:'all 0.2s',
           }}>📋 PLANTILLAS</button>
 
+          {/* ── GUARDIÁN (conversaciones del chatbot) BUTTON ── */}
+          <button onClick={() => { setShowGuardian(v => !v); loadGuardianConversaciones(); }} style={{
+            background: showGuardian
+              ? 'linear-gradient(135deg,#22D3EE,#0891b2)'
+              : 'linear-gradient(135deg,rgba(34,211,238,0.15),rgba(34,211,238,0.05))',
+            color: showGuardian ? '#0a0614' : '#22D3EE',
+            padding:'clamp(5px,1.5vw,9px) clamp(8px,2vw,16px)',
+            borderRadius:8, fontWeight:900, fontSize:'clamp(8px,2vw,11px)',
+            border:`1px solid rgba(34,211,238,${showGuardian ? '0.8' : '0.35'})`,
+            boxShadow: showGuardian ? '0 3px 16px rgba(34,211,238,0.5)' : '0 0 0 transparent',
+            cursor:'pointer', letterSpacing:1, whiteSpace:'nowrap',
+            display:'flex', alignItems:'center', gap:5,
+            transition:'all 0.2s',
+          }}>{guardianLoading ? '⟳' : '🤖'} GUARDIÁN</button>
+
           {/* ── KPI BUTTON ── */}
           <button onClick={() => { setShowKpis(v => !v); loadKpis(); }} style={{
             background: showKpis
@@ -3910,6 +4147,347 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>,
+            document.body
+          )}
+
+          {/* ── CONVERSACIONES DEL GUARDIÁN MODAL ── */}
+          {showGuardian && createPortal(
+            <div style={{
+              position:'fixed', inset:0, zIndex:99999,
+              background:'rgba(0,0,0,0.88)', backdropFilter:'blur(10px)',
+              display:'flex', alignItems:'flex-start', justifyContent:'center',
+              paddingTop:24, overflowY:'auto',
+            }} onClick={() => setShowGuardian(false)}>
+              <div style={{
+                background:'linear-gradient(135deg,#0d0a1a,#0a0614)',
+                border:'1.5px solid rgba(34,211,238,0.4)',
+                borderRadius:18, padding:'1.5rem',
+                width:'min(960px,97vw)', marginBottom:24,
+                boxShadow:'0 0 80px rgba(34,211,238,0.15)',
+                display:'flex', flexDirection:'column', gap:'1rem',
+              }} onClick={e => e.stopPropagation()}>
+
+                {/* Banner de encabezado */}
+                <div style={{
+                  display:'flex', alignItems:'center', gap:12, padding:'12px 16px',
+                  background:'linear-gradient(90deg,rgba(34,211,238,.14) 0%,transparent 100%)',
+                  borderLeft:'3px solid #22D3EE', borderRadius:10,
+                }}>
+                  <div style={{
+                    width:38, height:38, background:'rgba(34,211,238,.14)', border:'1px solid rgba(34,211,238,.4)',
+                    borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0,
+                  }}>🤖</div>
+                  <div style={{ flex:1 }}>
+                    <p style={{ margin:0, fontFamily:'Cinzel,serif', fontWeight:900, color:'#22D3EE', fontSize:14, letterSpacing:3 }}>CONVERSACIONES DEL GUARDIÁN</p>
+                    <p style={{ margin:0, fontFamily:'Cinzel,serif', fontSize:9.5, color:'rgba(34,211,238,.75)', marginTop:2, letterSpacing:1 }}>
+                      QUÉ LE PREGUNTAN TUS USUARIOS · DÓNDE SE TRABAN · CÓMO VA CRECIENDO EL USO
+                    </p>
+                  </div>
+                  <button onClick={() => loadGuardianConversaciones()} style={{ background:'rgba(34,211,238,0.12)', border:'1px solid rgba(34,211,238,0.35)', borderRadius:8, color:'#22D3EE', fontFamily:'Cinzel,serif', fontSize:9, fontWeight:700, cursor:'pointer', padding:'0.4rem 0.8rem', flexShrink:0 }}>↺</button>
+                  <button onClick={() => setShowGuardian(false)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.4)', fontSize:20, cursor:'pointer', lineHeight:1, flexShrink:0 }}>✕</button>
+                </div>
+
+                {/* Tabs: Resumen / Conversaciones */}
+                <div style={{ display:'flex', gap:8, borderBottom:'1px solid rgba(255,255,255,0.08)', paddingBottom:8 }}>
+                  {[
+                    { key:'resumen', label:'📊 RESUMEN Y DUDAS' },
+                    { key:'conversaciones', label:`💬 CONVERSACIONES (${guardianData.length})` },
+                  ].map(t => (
+                    <button key={t.key} onClick={() => setGuardianTab(t.key)} style={{
+                      background: guardianTab === t.key ? 'rgba(34,211,238,0.15)' : 'transparent',
+                      border: `1px solid ${guardianTab === t.key ? 'rgba(34,211,238,0.5)' : 'transparent'}`,
+                      borderRadius:8, color: guardianTab === t.key ? '#22D3EE' : 'rgba(255,255,255,0.4)',
+                      fontFamily:'Cinzel,serif', fontSize:9.5, fontWeight:700, letterSpacing:1,
+                      cursor:'pointer', padding:'0.45rem 0.9rem',
+                    }}>{t.label}</button>
+                  ))}
+                </div>
+
+                {guardianLoading && !guardianStats ? (
+                  <p style={{ color:'rgba(34,211,238,0.5)', fontFamily:'Cinzel,serif', fontSize:11, textAlign:'center', padding:'3rem', letterSpacing:3 }}>🤖 CONSULTANDO LAS CONVERSACIONES…</p>
+                ) : guardianTab === 'resumen' ? (
+                  <>
+                    {/* Métricas */}
+                    {guardianStats && (
+                      <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8 }}>
+                        {[
+                          { label:'TOTAL HISTÓRICO', val: guardianStats.total, color:'#22D3EE' },
+                          { label:'USUARIOS ÚNICOS', val: guardianStats.usuariosUnicos, color:'#C084FC' },
+                          { label:'HOY', val: guardianStats.conversacionesHoy, color:'#4ADE80' },
+                          { label:'PROMEDIO / USUARIO', val: guardianStats.promedioPorUsuario, color:'#f5c842' },
+                        ].map(k => (
+                          <div key={k.label} style={{
+                            background:'rgba(18,10,38,0.95)', border:'1px solid rgba(255,255,255,0.08)',
+                            borderRadius:10, padding:'0.6rem 0.5rem', textAlign:'center',
+                          }}>
+                            <p style={{ margin:0, fontFamily:'Cinzel,serif', fontSize:20, fontWeight:900, color:k.color }}>{k.val}</p>
+                            <p style={{ margin:0, fontFamily:'Cinzel,serif', fontSize:8, letterSpacing:1.5, color:'rgba(255,255,255,0.4)', marginTop:2 }}>{k.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 🔮 Recomendaciones — deficiencias y dudas detectadas */}
+                    {guardianStats && guardianStats.recomendaciones?.length > 0 && (
+                      <div style={{
+                        background:'linear-gradient(145deg,rgba(10,5,24,.97),rgba(6,3,16,.99))',
+                        border:'1.5px solid rgba(160,100,255,.25)', borderRadius:12, padding:'0.9rem 1rem',
+                      }}>
+                        <p style={{ margin:'0 0 10px 0', fontFamily:'Cinzel,serif', fontSize:10, letterSpacing:2, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', display:'flex', alignItems:'center', gap:6 }}>🔮 Qué está pasando · posibles mejoras</p>
+                        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                          {guardianStats.recomendaciones.map((r, i) => (
+                            <div key={i} style={{ display:'flex', gap:8, alignItems:'flex-start' }}>
+                              <span style={{ fontSize:15, flexShrink:0 }}>{r.icon}</span>
+                              <span
+                                style={{ fontFamily:'Crimson Text,serif', fontSize:12.5, color:'rgba(255,255,255,0.8)', lineHeight:1.5 }}
+                                dangerouslySetInnerHTML={{ __html: r.text }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 📊 Dudas más fuertes — desglose por tema */}
+                    {guardianStats && guardianStats.porTema?.length > 0 && (
+                      <div style={{
+                        background:'linear-gradient(145deg,rgba(10,5,24,.97),rgba(6,3,16,.99))',
+                        border:'1.5px solid rgba(160,100,255,.25)', borderRadius:12, padding:'0.9rem 1rem',
+                      }}>
+                        <p style={{ margin:'0 0 12px 0', fontFamily:'Cinzel,serif', fontSize:10, letterSpacing:2, color:'rgba(255,255,255,0.5)', textTransform:'uppercase' }}>📊 Dudas más fuertes — por tema</p>
+                        <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
+                          {guardianStats.porTema.map(t => (
+                            <div key={t.key} style={{ display:'flex', alignItems:'center', gap:10 }}>
+                              <span style={{ width:150, flexShrink:0, fontSize:11, color:'rgba(255,255,255,0.75)', fontFamily:'Cinzel,serif', letterSpacing:0.3 }}>{t.emoji} {t.label}</span>
+                              <div style={{ flex:1, background:'rgba(255,255,255,0.06)', borderRadius:6, height:10, overflow:'hidden' }}>
+                                <div style={{ width:`${Math.max(t.pct,2)}%`, height:'100%', borderRadius:6, background:t.color, transition:'width 0.5s ease' }} />
+                              </div>
+                              <span
+                                onClick={() => { setGuardianFilterTema(t.key); setGuardianTab('conversaciones'); }}
+                                style={{ width:64, flexShrink:0, textAlign:'right', fontFamily:'Cinzel,serif', fontWeight:900, fontSize:11.5, color:t.color, cursor:'pointer' }}
+                                title="Ver estas conversaciones"
+                              >{t.count} · {t.pct}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 📈 Tendencia — últimos 14 días */}
+                    {guardianStats && guardianStats.tendencia?.length > 0 && (
+                      <div style={{
+                        background:'linear-gradient(145deg,rgba(10,5,24,.97),rgba(6,3,16,.99))',
+                        border:'1.5px solid rgba(160,100,255,.25)', borderRadius:12, padding:'0.9rem 1rem',
+                      }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+                          <p style={{ margin:0, fontFamily:'Cinzel,serif', fontSize:10, letterSpacing:2, color:'rgba(255,255,255,0.5)', textTransform:'uppercase' }}>📈 Últimos 14 días</p>
+                          {guardianStats.cambioSemanal !== null && (
+                            <span style={{
+                              fontFamily:'Cinzel,serif', fontSize:9.5, fontWeight:700,
+                              color: guardianStats.cambioSemanal > 0 ? '#4ADE80' : guardianStats.cambioSemanal < 0 ? '#fca5a5' : 'rgba(255,255,255,0.4)',
+                            }}>
+                              {guardianStats.cambioSemanal > 0 ? '▲' : guardianStats.cambioSemanal < 0 ? '▼' : '—'} {Math.abs(guardianStats.cambioSemanal)}% vs semana anterior
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display:'flex', alignItems:'flex-end', gap:4, height:64 }}>
+                          {(() => {
+                            const max = Math.max(...guardianStats.tendencia.map(d => d.count), 1);
+                            return guardianStats.tendencia.map(d => (
+                              <div key={d.key} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }} title={`${d.fecha.toLocaleDateString('es-MX',{day:'2-digit',month:'short'})}: ${d.count}`}>
+                                <div style={{
+                                  width:'100%', maxWidth:16, height:Math.max((d.count / max) * 46, d.count > 0 ? 3 : 1),
+                                  borderRadius:3, background: d.count > 0 ? 'linear-gradient(180deg,#22D3EE,#0e7490)' : 'rgba(255,255,255,0.06)',
+                                }} />
+                                <span style={{ fontSize:7, color:'rgba(255,255,255,0.3)', fontFamily:'Cinzel,serif' }}>{d.fecha.getDate()}</span>
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 📅 Por semana — últimas 8 semanas */}
+                    {guardianStats && guardianStats.porSemana?.length > 0 && (
+                      <div style={{
+                        background:'linear-gradient(145deg,rgba(10,5,24,.97),rgba(6,3,16,.99))',
+                        border:'1.5px solid rgba(160,100,255,.25)', borderRadius:12, padding:'0.9rem 1rem',
+                      }}>
+                        <p style={{ margin:'0 0 12px 0', fontFamily:'Cinzel,serif', fontSize:10, letterSpacing:2, color:'rgba(255,255,255,0.5)', textTransform:'uppercase' }}>📅 Por semana — últimas 8 semanas</p>
+                        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                          {(() => {
+                            const maxSem = Math.max(...guardianStats.porSemana.map(s => s.count), 1);
+                            return guardianStats.porSemana.map(s => (
+                              <div key={s.key} style={{ display:'flex', alignItems:'center', gap:10 }}>
+                                <span style={{ width:110, flexShrink:0, fontSize:9.5, color:'rgba(255,255,255,0.55)', fontFamily:'Cinzel,serif' }}>{s.label}</span>
+                                <div style={{ flex:1, background:'rgba(255,255,255,0.06)', borderRadius:6, height:16, overflow:'hidden', position:'relative' }}>
+                                  <div style={{ width:`${Math.max((s.count / maxSem) * 100, s.count > 0 ? 3 : 0)}%`, height:'100%', borderRadius:6, background:'linear-gradient(90deg,#22D3EE,#0e7490)', transition:'width 0.5s ease' }} />
+                                </div>
+                                <span style={{ width:34, flexShrink:0, textAlign:'right', fontFamily:'Cinzel,serif', fontWeight:900, fontSize:12, color:'#22D3EE' }}>{s.count}</span>
+                                <span style={{ width:60, flexShrink:0, fontSize:8.5, color:'rgba(255,255,255,0.35)', fontFamily:'Cinzel,serif' }}>{s.usuariosUnicos} usr.</span>
+                                <span style={{ width:110, flexShrink:0, fontSize:8.5, color:'rgba(255,255,255,0.4)', fontFamily:'Cinzel,serif', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                  {s.temaTop ? `${s.temaTop.emoji || '💬'} ${s.temaTop.label}` : '—'}
+                                </span>
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🕐 Últimos mensajes — quién escribió y qué preguntó */}
+                    {guardianStats && guardianStats.ultimosMensajes?.length > 0 && (
+                      <div style={{
+                        background:'linear-gradient(145deg,rgba(10,5,24,.97),rgba(6,3,16,.99))',
+                        border:'1.5px solid rgba(160,100,255,.25)', borderRadius:12, padding:'0.9rem 1rem',
+                      }}>
+                        <p style={{ margin:'0 0 10px 0', fontFamily:'Cinzel,serif', fontSize:10, letterSpacing:2, color:'rgba(255,255,255,0.5)', textTransform:'uppercase' }}>🕐 Últimos mensajes</p>
+                        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                          {guardianStats.ultimosMensajes.map(g => {
+                            const tema = g._tema || clasificarTemaGuardian(g.mensaje_usuario);
+                            return (
+                              <div
+                                key={g.id}
+                                onClick={() => { setGuardianTab('conversaciones'); setGuardianExpanded(g.id); setGuardianSearch(''); setGuardianFilterTema(''); setGuardianFilterMemb(''); }}
+                                style={{ display:'flex', alignItems:'flex-start', gap:8, cursor:'pointer', paddingBottom:8, borderBottom:'1px solid rgba(255,255,255,0.06)' }}
+                              >
+                                <span style={{ flexShrink:0, fontSize:14, marginTop:1 }}>{tema.emoji}</span>
+                                <div style={{ flex:1, minWidth:0 }}>
+                                  <p style={{ margin:0, display:'flex', gap:6, alignItems:'baseline', flexWrap:'wrap' }}>
+                                    <span style={{ fontFamily:'Cinzel,serif', fontWeight:900, fontSize:10.5, color:'#fff' }}>
+                                      {g.profiles?.templario_name || g.profiles?.email || 'Templario'}
+                                    </span>
+                                    {g.profiles?.membership_type && g.profiles.membership_type !== 'free' && (
+                                      <span style={{ fontFamily:'Cinzel,serif', fontSize:8, color:'#f5c842' }}>· {g.profiles.membership_type}</span>
+                                    )}
+                                    <span style={{ fontFamily:'Cinzel,serif', fontSize:8, color:'rgba(255,255,255,0.3)' }}>
+                                      · {new Date(g.created_at).toLocaleString('es-MX', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
+                                    </span>
+                                  </p>
+                                  <p style={{ margin:'2px 0 0 0', fontFamily:'Crimson Text,serif', fontSize:11.5, color:'rgba(255,255,255,0.7)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                    {g.mensaje_usuario}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Top usuarios más activos */}
+                    {guardianStats && guardianStats.topUsuarios.length > 0 && (
+                      <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
+                        <span style={{ fontFamily:'Cinzel,serif', fontSize:9, color:'rgba(255,255,255,0.35)', letterSpacing:1 }}>MÁS ACTIVOS:</span>
+                        {guardianStats.topUsuarios.map((u, i) => (
+                          <span key={i} style={{
+                            background:'rgba(34,211,238,0.1)', border:'1px solid rgba(34,211,238,0.25)',
+                            borderRadius:8, padding:'0.25rem 0.6rem', fontFamily:'Cinzel,serif', fontSize:9, color:'#22D3EE',
+                          }}>{u.nombre}{u.nivel != null ? ` · Nv.${u.nivel}` : ''} · {u.count}</span>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* Filtros */}
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                      <input
+                        type="text"
+                        value={guardianSearch}
+                        onChange={e => setGuardianSearch(e.target.value)}
+                        placeholder="🔍 Buscar por nombre, email, pregunta o respuesta…"
+                        style={{
+                          flex:'2 1 220px', padding:'0.5rem 0.75rem', borderRadius:8,
+                          background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.12)',
+                          color:'#fff', fontFamily:'Cinzel,serif', fontSize:10.5, boxSizing:'border-box',
+                        }}
+                      />
+                      <select value={guardianFilterTema} onChange={e => setGuardianFilterTema(e.target.value)} style={{
+                        flex:'1 1 160px', padding:'0.5rem 0.6rem', borderRadius:8, background:'#1a0a2e',
+                        border:'1px solid rgba(255,255,255,0.12)', color:'rgba(212,175,55,.85)', fontFamily:'Cinzel,serif', fontSize:10,
+                      }}>
+                        <option value="">🏷️ Todos los temas</option>
+                        {GUARDIAN_TEMAS.map(t => <option key={t.key} value={t.key}>{t.emoji} {t.label}</option>)}
+                        <option value="otros">💬 Otros / general</option>
+                      </select>
+                      <select value={guardianFilterMemb} onChange={e => setGuardianFilterMemb(e.target.value)} style={{
+                        flex:'1 1 140px', padding:'0.5rem 0.6rem', borderRadius:8, background:'#1a0a2e',
+                        border:'1px solid rgba(255,255,255,0.12)', color:'rgba(212,175,55,.85)', fontFamily:'Cinzel,serif', fontSize:10,
+                      }}>
+                        <option value="">💳 Toda membresía</option>
+                        <option value="free">Free</option>
+                        <option value="paying">Pagando (cualquier plan)</option>
+                        <option value="vip">VIP</option>
+                      </select>
+                      {(guardianFilterTema || guardianFilterMemb || guardianSearch) && (
+                        <button onClick={() => { setGuardianFilterTema(''); setGuardianFilterMemb(''); setGuardianSearch(''); }} style={{
+                          background:'rgba(212,175,55,0.08)', border:'1px solid rgba(212,175,55,0.2)', borderRadius:8,
+                          color:'rgba(212,175,55,0.7)', fontFamily:'Cinzel,serif', fontSize:10, cursor:'pointer', padding:'0.5rem 0.7rem',
+                        }}>✕ Limpiar</button>
+                      )}
+                    </div>
+                    <p style={{ margin:0, fontSize:9, color:'rgba(255,255,255,0.3)', fontFamily:'Cinzel,serif', letterSpacing:0.5 }}>
+                      Mostrando {guardianFiltrado.length} de {guardianData.length} conversaciones cargadas
+                    </p>
+
+                    {/* Lista */}
+                    {guardianFiltrado.length === 0 ? (
+                      <p style={{ color:'rgba(255,255,255,0.3)', fontFamily:'Cinzel,serif', fontSize:11, textAlign:'center', padding:'2rem' }}>
+                        {guardianData.length === 0 ? 'Nadie le ha escrito al Guardián todavía.' : 'Nada coincide con esos filtros.'}
+                      </p>
+                    ) : (
+                      <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:'55vh', overflowY:'auto' }}>
+                        {guardianFiltrado.map(g => {
+                          const expandido = guardianExpanded === g.id;
+                          const tema = g._tema || clasificarTemaGuardian(g.mensaje_usuario);
+                          return (
+                            <div key={g.id} style={{
+                              background:'rgba(18,10,38,0.95)', border:'1px solid rgba(255,255,255,0.07)',
+                              borderRadius:12, padding:'0.85rem', display:'flex', flexDirection:'column', gap:6,
+                              cursor:'pointer',
+                            }} onClick={() => setGuardianExpanded(expandido ? null : g.id)}>
+                              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
+                                <div>
+                                  <p style={{ margin:0, fontFamily:'Cinzel,serif', fontWeight:900, fontSize:11, color:'#fff' }}>
+                                    {g.profiles?.templario_name || g.profiles?.email || 'Templario'}
+                                    {g.profiles?.level != null && <span style={{ color:'rgba(255,255,255,0.35)', fontWeight:400 }}> · Nv.{g.profiles.level}</span>}
+                                  </p>
+                                  <p style={{ margin:0, fontFamily:'Cinzel,serif', fontSize:8, color:'rgba(255,255,255,0.3)', marginTop:1 }}>
+                                    {new Date(g.created_at).toLocaleString('es-MX', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
+                                    {g.profiles?.membership_type ? ` · ${g.profiles.membership_type}` : ''}
+                                  </p>
+                                </div>
+                                <span style={{
+                                  flexShrink:0, background:`${tema.color}22`, border:`1px solid ${tema.color}55`,
+                                  borderRadius:20, padding:'0.2rem 0.55rem', fontFamily:'Cinzel,serif', fontSize:8, color:tema.color, whiteSpace:'nowrap',
+                                }}>{tema.emoji} {tema.label}</span>
+                              </div>
+                              <p style={{ margin:0, fontFamily:'Crimson Text,serif', fontSize:12.5, color:'rgba(255,255,255,0.85)', lineHeight:1.4 }}>
+                                <span style={{ color:'#22D3EE', fontWeight:700 }}>P: </span>
+                                {expandido || g.mensaje_usuario.length <= 140 ? g.mensaje_usuario : g.mensaje_usuario.slice(0, 140).trim() + '…'}
+                              </p>
+                              <p style={{
+                                margin:0, fontFamily:'Crimson Text,serif', fontSize:12.5, color:'rgba(255,255,255,0.6)', lineHeight:1.4,
+                                display: expandido ? 'block' : '-webkit-box',
+                                WebkitLineClamp: expandido ? 'unset' : 2,
+                                WebkitBoxOrient:'vertical', overflow: expandido ? 'visible' : 'hidden',
+                              }}>
+                                <span style={{ color:'#C084FC', fontWeight:700 }}>R: </span>
+                                {g.respuesta_guardian}
+                              </p>
+                              {!expandido && g.respuesta_guardian.length > 140 && (
+                                <span style={{ fontFamily:'Cinzel,serif', fontSize:8, color:'rgba(34,211,238,0.5)' }}>ver completo ▾</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>,
             document.body

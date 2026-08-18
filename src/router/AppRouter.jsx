@@ -59,6 +59,7 @@ const CaminoParticipanteCalendarioPage = lazy(() => import('../features/camino/C
 const CaminoParticipanteBasesPage = lazy(() => import('../features/camino/CaminoParticipanteBasesPage'));
 const CaminoParticipanteRankingPage = lazy(() => import('../features/camino/CaminoParticipanteRankingPage'));
 const CaminoParticipanteOnboardingPage = lazy(() => import('../features/camino/CaminoParticipanteOnboardingPage'));
+const CaminoInstalarPage = lazy(() => import('../features/camino/CaminoInstalarPage'));
 const AdminMapaPage = lazy(() => import('../features/admin/AdminMapaPage'));
 const FinanzasAdminPage = lazy(() => import('../features/admin/FinanzasAdminPage'));
 
@@ -169,6 +170,7 @@ export default function AppRouter() {
 <Route path="/camino/participante/bases" element={<CaminoParticipanteBasesPage />} />
 <Route path="/camino/participante/ranking" element={<CaminoParticipanteRankingPage />} />
 <Route path="/camino/participante/onboarding" element={<CaminoParticipanteOnboardingPage />} />
+<Route path="/camino/instalar" element={<CaminoInstalarPage />} />
 
           <Route element={<SorteosAdminRoute />}>
             <Route path="/admin/sorteos" element={<SorteoAdminPage />} />
