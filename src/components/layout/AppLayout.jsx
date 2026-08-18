@@ -140,7 +140,7 @@ useEffect(() => {
     if (type === 'navigate' && data) {
       navigate('/' + data);
     }
-    if (type === 'oraculo-modal') {
+    if (type === 'oraculo-modal' || type === 'guardian-modal') {
       setHideHeader(!!data?.open);
     }
     if (type === 'hub-locked') {
