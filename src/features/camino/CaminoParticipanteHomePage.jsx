@@ -140,6 +140,7 @@ h1.chh-title{font-family:'Cinzel Decorative',serif; font-weight:900; font-size:c
   .chh-topnav{padding:8px 14px;}
   .chh-nav-links{gap:10px;}
   .chh-nav-item{font-size:10.5px;}
+  .chh-hero{background-position:80% 58%;}
 }
 `;
 
