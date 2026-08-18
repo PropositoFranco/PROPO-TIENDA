@@ -1,11 +1,50 @@
 export async function onRequest(context) {
   const url = new URL(context.request.url);
 
-  // Solo actuamos sobre /camino/instalar — todo lo demás pasa de largo
-  if (url.pathname !== '/camino/instalar') {
+  // 1) Página especial de instalación con instrucciones
+  if (url.pathname === '/camino/instalar') {
+    return installPageResponse();
+  }
+
+  // 2) Dejar pasar archivos estáticos tal cual (imágenes, css, js, json, fuentes)
+  if (/\.[a-zA-Z0-9]+$/.test(url.pathname)) {
     return context.next();
   }
 
+  // 3) Cualquier otra ruta dentro de /camino/*: servir el index.html real,
+  //    pero con el manifest, título e ícono de Camino YA escritos en el HTML
+  //    (así iOS los lee bien desde el primer instante, sin depender de JS)
+  if (url.pathname.startsWith('/camino')) {
+    const indexRequest = new Request(new URL('/index.html', url.origin), context.request);
+    const assetResponse = await context.env.ASSETS.fetch(indexRequest);
+
+    return new HTMLRewriter()
+      .on('#app-manifest', {
+        element(el) {
+          el.setAttribute('href', '/manifest-camino.json');
+        },
+      })
+      .on('title', {
+        element(el) {
+          el.setInnerContent('Camino a Líder Digital');
+        },
+      })
+      .on('head', {
+        element(el) {
+          el.append(
+            '<meta name="apple-mobile-web-app-title" content="Camino a Líder Digital">' +
+            '<link rel="apple-touch-icon" href="/icon-camino-192.png">',
+            { html: true }
+          );
+        },
+      })
+      .transform(assetResponse);
+  }
+
+  return context.next();
+}
+
+function installPageResponse() {
   const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
