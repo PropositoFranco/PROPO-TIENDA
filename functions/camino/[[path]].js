@@ -11,34 +11,45 @@ export async function onRequest(context) {
     return context.next();
   }
 
-  // 3) Cualquier otra ruta dentro de /camino/*: servir el index.html real,
-  //    pero con el manifest, título e ícono de Camino YA escritos en el HTML
-  //    (así iOS los lee bien desde el primer instante, sin depender de JS)
+  // 3) Cualquier otra ruta dentro de /camino/*
   if (url.pathname.startsWith('/camino')) {
-    const indexRequest = new Request(new URL('/index.html', url.origin), context.request);
-    const assetResponse = await context.env.ASSETS.fetch(indexRequest);
+    try {
+      const indexRequest = new Request(new URL('/index.html', url.origin), context.request);
+      const assetResponse = await context.env.ASSETS.fetch(indexRequest);
 
-    return new HTMLRewriter()
-      .on('#app-manifest', {
-        element(el) {
-          el.setAttribute('href', '/manifest-camino.json');
-        },
-      })
-      .on('title', {
-        element(el) {
-          el.setInnerContent('Camino a Líder Digital');
-        },
-      })
-      .on('head', {
-        element(el) {
-          el.append(
-            '<meta name="apple-mobile-web-app-title" content="Camino a Líder Digital">' +
-            '<link rel="apple-touch-icon" href="/icon-camino-192.png">',
-            { html: true }
-          );
-        },
-      })
-      .transform(assetResponse);
+      const rewritten = new HTMLRewriter()
+        .on('#app-manifest', {
+          element(el) {
+            el.setAttribute('href', '/manifest-camino.json');
+          },
+        })
+        .on('title', {
+          element(el) {
+            el.setInnerContent('Camino a Líder Digital');
+          },
+        })
+        .on('head', {
+          element(el) {
+            el.append(
+              '<meta name="apple-mobile-web-app-title" content="Camino a Líder Digital">' +
+              '<link rel="apple-touch-icon" href="/icon-camino-192.png">',
+              { html: true }
+            );
+          },
+        })
+        .transform(assetResponse);
+
+      // Forzar que esto NUNCA se guarde en caché
+      rewritten.headers.set('Cache-Control', 'no-store');
+      return rewritten;
+
+    } catch (err) {
+      // Si algo truena, MUÉSTRALO en vez de esconderlo
+      return new Response('ERROR EN FUNCION CAMINO: ' + err.message + '\n\n' + err.stack, {
+        status: 500,
+        headers: { 'Content-Type': 'text/plain; charset=UTF-8' },
+      });
+    }
   }
 
   return context.next();
