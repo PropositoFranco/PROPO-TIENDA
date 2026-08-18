@@ -772,6 +772,7 @@ body.perf-low .portal-badge {
 ══════════════════════════════════════════ */
 #bottom-nav {
   position: relative;
+  z-index: 150;
   display: flex;
   align-items: center;
   width: 100%;
@@ -1162,7 +1163,7 @@ body.hub-locked #header .header-logo,
 body.hub-locked #header .coin-display,
 body.hub-locked #header .header-icons > .hicon:not(#streak-fab),
 body.hub-locked .portals-grid,
-body.hub-locked #bottom-nav,
+body.hub-locked #bottom-nav .nav-item,
 body.hub-locked #oraculo-btn {
   pointer-events: none;
   filter: grayscale(0.55) brightness(0.5);
@@ -1170,6 +1171,13 @@ body.hub-locked #oraculo-btn {
   transition: opacity 0.6s ease, filter 0.6s ease;
 }
 body.hub-locked #streak-fab {
+  pointer-events: auto;
+  filter: none;
+  opacity: 1;
+}
+/* El botón del Guardián queda EXENTO del modo enfoque a propósito: debe
+   seguir picable aunque haya una evaluación pendiente, igual que el streak. */
+body.hub-locked .nav-item-guardian {
   pointer-events: auto;
   filter: none;
   opacity: 1;
@@ -1186,7 +1194,7 @@ body.hub-locked .special-offer {
 .maestro-bubble {
   display: none;
   position: absolute;
-  bottom: calc(100% + 18px);
+  bottom: calc(100% + 18px - 1cm);
   left: -4px;
   width: clamp(250px, 38vw, 380px);
   background: linear-gradient(135deg, rgba(24,10,42,0.98), rgba(48,18,70,0.98));
@@ -1572,6 +1580,15 @@ body.hub-locked .maestro-bubble { display: flex; }
       <div class="nav-item" onclick="goTo('library')">
         <div class="ni-icon">🎒</div>
         <div class="ni-label">Mi Arsenal</div>
+      </div>
+      <div class="nav-item-guardian" id="guardian-nav-item" aria-label="El Guardián">
+        <div class="guardian-circle-wrap">
+          <div class="guardian-glow"></div>
+          <div class="guardian-btn-core">
+            <div class="guardian-icon">🛡️</div>
+          </div>
+        </div>
+        <div class="ni-label">Pregúntale al<br>Guardián</div>
       </div>
       <div class="nav-item" onclick="goTo('profile')">
         <div class="ni-icon">🧝</div>
@@ -2911,7 +2928,312 @@ body.oraculo-mobile .oraculo-hook{
   display:-webkit-box !important; -webkit-box-orient:vertical !important; -webkit-line-clamp:9 !important; line-clamp:9 !important; overflow:hidden !important;
 }
 body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !important; }
+
+/* ══════════════════════════════════════════
+   EL GUARDIÁN DEL TEMPLO — botón 3D en la barra de nav
+   Optimizado para fluidez: SOLO se anima transform/opacity
+   (GPU/compositor), nunca box-shadow ni otras propiedades
+   que obligan a repintar en cada frame — así corre igual de
+   fluido en un celular de gama baja que en una PC potente.
+══════════════════════════════════════════ */
+@keyframes guardianRotateGlow {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes guardianGlowPulse {
+  0%,100% { opacity: 0.5; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.18); }
+}
+/* El contenedor ahora es de alto AUTOMÁTICO: círculo arriba + label abajo,
+   ambos dentro del flujo normal, así el label ya NUNCA queda cortado por
+   el borde de la pantalla/contenedor — antes colgaba fuera con position
+   absolute y por eso se veía cortado. */
+.nav-item-guardian {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  margin: 0 clamp(2px, 0.6vw, 8px);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+/* Círculo (botón + aro + brillo) aislado en su propia caja cuadrada,
+   independiente del label que ahora vive debajo en flujo normal.
+   Se recorre 1.8mm hacia abajo con transform (no afecta layout, así que
+   el label de abajo NO se mueve ni un píxel de su posición). */
+.guardian-circle-wrap {
+  position: relative;
+  width: clamp(50px, 5.8vw, 62px);
+  height: clamp(50px, 5.8vw, 62px);
+  flex-shrink: 0;
+  contain: layout style;
+  transform: translateY(1.8mm);
+}
+/* capa de brillo detrás del botón: solo opacity+scale (compositor puro,
+   cero repintado), da la sensación de "latido" de luz morada */
+.guardian-circle-wrap .guardian-glow {
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(204,68,255,0.65) 0%, rgba(204,68,255,0) 72%);
+  animation: guardianGlowPulse 2.4s ease-in-out infinite;
+  will-change: transform, opacity;
+  pointer-events: none;
+  z-index: -1;
+}
+/* anillo giratorio: un círculo SÓLIDO ligeramente más grande que el botón,
+   girando detrás de él (NO usa mask/clip — eso falla en varios navegadores
+   móviles y termina mostrando un cuadro en vez de un aro). El botón opaco
+   de encima tapa el centro, dejando ver solo el borde como un aro. Esta
+   técnica es 100% compatible en cualquier celular o PC, sin excepción.
+   Arco AMPLIO tipo "luz que recorre el marco" (como el borde LED de
+   referencia): un ÚNICO cometa brillante que recorre el borde, con el
+   resto del aro bien apagado (bajo contraste a propósito) para que el
+   giro se note a simple vista de inmediato — antes había 2-3 puntos
+   brillantes casi igual de intensos y el aro se veía como un halo fijo,
+   la rotación no se notaba. Ahora solo hay UN tramo claro contra un
+   fondo oscuro, así el ojo detecta el movimiento sin esfuerzo. */
+.guardian-circle-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    rgba(60,15,110,0.16) 0deg,
+    rgba(60,15,110,0.16) 215deg,
+    rgba(110,25,170,0.4) 255deg,
+    rgba(180,60,240,0.9) 288deg,
+    #e8bbff 310deg,
+    #ffffff 322deg,
+    #e8bbff 334deg,
+    rgba(180,60,240,0.9) 356deg,
+    rgba(60,15,110,0.16) 360deg);
+  filter: drop-shadow(0 0 8px rgba(255,255,255,0.95)) drop-shadow(0 0 20px rgba(204,68,255,0.95));
+  animation: guardianRotateGlow 2.6s linear infinite;
+  will-change: transform;
+  pointer-events: none;
+  z-index: 0;
+}
+/* En equipos de gama baja (ya detectados por tu sistema perf-low): giro
+   más lento y sin la capa de brillo pulsante, para aligerar aún más. */
+body.perf-low .guardian-circle-wrap::before { animation-duration: 7s; }
+body.perf-low .guardian-circle-wrap .guardian-glow { animation: none; opacity: 0.6; }
+@media (prefers-reduced-motion: reduce) {
+  .guardian-circle-wrap::before,
+  .guardian-circle-wrap .guardian-glow { animation: none !important; }
+}
+.guardian-circle-wrap .guardian-btn-core {
+  width: 100%; height: 100%; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 32% 28%, #3a1560 0%, #1c0a34 55%, #0d0420 100%);
+  border: 1.5px solid rgba(230,180,255,0.5);
+  box-shadow:
+    0 4px 0 rgba(90,20,140,0.9),
+    0 6px 18px rgba(0,0,0,0.6),
+    inset 0 2px 3px rgba(255,255,255,0.25),
+    inset 0 -6px 10px rgba(0,0,0,0.5);
+  transition: transform 0.15s ease;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+.nav-item-guardian:active .guardian-btn-core {
+  transform: translateY(2px);
+}
+/* Destello que recorre el círculo de vez en cuando (efecto "de repente
+   brilla"): una sola franja diagonal clara que cruza y luego pausa varios
+   segundos antes de repetir. SOLO anima transform (compositor puro, cero
+   repintado) — el elemento vive DENTRO de guardian-btn-core que ya tiene
+   overflow:hidden, así que no requiere clip-path ni máscara: rendimiento
+   idéntico en un celular de gama baja que en una PC. */
+@keyframes guardianShineSweep {
+  0%, 62%   { transform: translateX(-140%) rotate(22deg); }
+  80%       { transform: translateX(140%)  rotate(22deg); }
+  100%      { transform: translateX(140%)  rotate(22deg); }
+}
+.guardian-circle-wrap .guardian-btn-core::after {
+  content: '';
+  position: absolute;
+  top: -60%; left: -20%;
+  width: 55%; height: 220%;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.75) 50%,
+    rgba(255,255,255,0) 100%);
+  transform: translateX(-140%) rotate(22deg);
+  animation: guardianShineSweep 4.8s ease-in-out infinite;
+  will-change: transform;
+  pointer-events: none;
+  z-index: 2;
+}
+body.perf-low .guardian-circle-wrap .guardian-btn-core::after { animation-duration: 8s; }
+@media (prefers-reduced-motion: reduce) {
+  .guardian-circle-wrap .guardian-btn-core::after { animation: none !important; display: none; }
+}
+.guardian-circle-wrap .guardian-icon {
+  font-size: clamp(28px, 3.4vw, 36px);
+  filter: drop-shadow(0 0 8px rgba(230,180,255,0.9));
+  line-height: 1;
+}
+.nav-item-guardian .ni-label {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(7px, 0.72vw, 9.5px);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: #ffffff;
+  /* Contorno oscuro sólido en todas direcciones (no un blur difuso) para
+     que el texto quede SIEMPRE nítido y al frente, sin perderse contra
+     el brillo morado del aro aunque este bleedee hacia abajo. */
+  text-shadow:
+    0 0 2px #000, 0 0 3px #000,
+    1px 0 0 #1a0330, -1px 0 0 #1a0330,
+    0 1px 0 #1a0330, 0 -1px 0 #1a0330,
+    0 0 8px rgba(0,0,0,0.95);
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+  max-width: 86px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 3;
+}
 </style>
+
+<div id="guardian-modal" style="
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  width:100vw; height:100vh; height:100dvh;
+  z-index:2147483647; display:none;
+  flex-direction:column; align-items:stretch; justify-content:stretch;
+  box-sizing:border-box;
+  background:rgba(1,0,10,0); backdrop-filter:blur(0px); transition:background .3s ease;">
+
+  <div id="guardian-modal-header" style="
+    display:flex; align-items:center; justify-content:space-between;
+    padding:max(14px, env(safe-area-inset-top)) 18px 12px; flex-shrink:0;
+    background:linear-gradient(180deg, rgba(4,2,16,0.96), rgba(4,2,16,0.7));">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span style="font-size:20px;">🛡️</span>
+      <span style="font-family:'Cinzel',serif; font-size:15px; letter-spacing:2px; color:#22D3EE; text-shadow:0 0 14px rgba(34,211,238,0.5);">EL GUARDIÁN</span>
+    </div>
+    <button id="guardian-close" style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.85);
+      width:34px; height:34px; border-radius:50%; cursor:pointer; font-size:16px; flex-shrink:0;">✕</button>
+  </div>
+
+  <iframe id="guardian-iframe" title="El Guardián del Templo" src="about:blank" style="
+    flex:1; width:100%; border:none; background:#04020E;"
+    allow="autoplay"></iframe>
+</div>
+
+<script>
+(function () {
+  const GUARDIAN_SRC = 'guardian-del-templo-chatbot.html';
+  const btn = document.getElementById('guardian-nav-item');
+  const modal = document.getElementById('guardian-modal');
+  const closeBtn = document.getElementById('guardian-close');
+  const iframe = document.getElementById('guardian-iframe');
+  let iframeLoaded = false;
+  let savedScrollY = 0;
+
+  function lockBodyScroll() {
+    savedScrollY = window.scrollY || window.pageYOffset || 0;
+    document.documentElement.style.height = '100%';
+    document.body.style.position = 'fixed';
+    document.body.style.top = (-savedScrollY) + 'px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
+  }
+  function unlockBodyScroll() {
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    document.body.style.overflow = '';
+    document.documentElement.style.height = '';
+    window.scrollTo(0, savedScrollY);
+  }
+
+  function forceFullscreenModal() {
+    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+    modal.style.width = vw + 'px';
+    modal.style.height = vh + 'px';
+  }
+
+  // Le pasamos el nombre real (ya lo tenemos por el mensaje 'profile' que
+  // React le manda a este hub) solo para el saludo — los datos reales del
+  // protocolo/nivel/etc. los resuelve el edge function del lado del servidor
+  // usando el JWT de la sesión, que el iframe comparte al vivir en el mismo
+  // dominio (guardian-del-templo-chatbot.html no usa storageKey personalizado).
+  function enviarPerfilAlIframe() {
+    if (!iframeLoaded) return;
+    const perfil = {
+      nombre: (typeof _userNombre !== 'undefined' && _userNombre) || '',
+    };
+    if (perfil.nombre) {
+      iframe.contentWindow.postMessage({ tipo: 'GUARDIAN_PERFIL', perfil: perfil }, '*');
+    }
+  }
+
+  function openGuardian() {
+    if (iframe.getAttribute('src') === 'about:blank' || !iframe.getAttribute('src')) {
+      iframe.src = GUARDIAN_SRC;
+    }
+    modal.style.display = 'flex';
+    const appHeader = document.getElementById('header');
+    const appBottomNav = document.getElementById('bottom-nav');
+    if (appHeader) appHeader.style.display = 'none';
+    if (appBottomNav) appBottomNav.style.display = 'none';
+    lockBodyScroll();
+    forceFullscreenModal();
+    window.parent.postMessage({ type: 'guardian-modal', data: { open: true } }, '*');
+    requestAnimationFrame(function () {
+      modal.style.background = 'rgba(1,0,10,0.96)';
+      modal.style.backdropFilter = 'blur(14px)';
+    });
+    enviarPerfilAlIframe();
+  }
+
+  function closeGuardian() {
+    modal.style.background = 'rgba(1,0,10,0)';
+    modal.style.backdropFilter = 'blur(0px)';
+    const appHeader = document.getElementById('header');
+    const appBottomNav = document.getElementById('bottom-nav');
+    if (appHeader) appHeader.style.display = '';
+    if (appBottomNav) appBottomNav.style.display = '';
+    unlockBodyScroll();
+    window.parent.postMessage({ type: 'guardian-modal', data: { open: false } }, '*');
+    setTimeout(function () {
+      modal.style.display = 'none';
+      modal.style.width = '';
+      modal.style.height = '';
+    }, 250);
+  }
+
+  iframe.addEventListener('load', function () {
+    if (iframe.getAttribute('src') === 'about:blank') return;
+    iframeLoaded = true;
+    enviarPerfilAlIframe();
+  });
+
+  btn.addEventListener('click', openGuardian);
+  closeBtn.addEventListener('click', closeGuardian);
+  document.addEventListener('keydown', function (e) {
+    if (modal.style.display !== 'flex') return;
+    if (e.key === 'Escape') closeGuardian();
+  });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', function () {
+      if (modal.style.display === 'flex') forceFullscreenModal();
+    });
+  }
+})();
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useEffect, useState, lazy, Suspense, Fragment } from 'react';
 import { ProtectedRoute, AdminRoute, SorteosAdminRoute } from './ProtectedRoute';
 import { useAuthStore } from '../store/useAuthStore';
 import AppLayout from '../components/layout/AppLayout';
@@ -138,11 +138,13 @@ function AdminCursor() {
 }
 
 export default function AppRouter() {
+  const enCamino = window.location.pathname.startsWith('/camino');
+  const Envoltura = enCamino ? Fragment : RewardClaimGate;
   return (
     <BrowserRouter>
       <AdminCursor />
       <Suspense fallback={null}>
-        <RewardClaimGate>
+        <Envoltura>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -230,7 +232,7 @@ export default function AppRouter() {
 
           <Route path="*" element={<CatchAll />} />
         </Routes>
-        </RewardClaimGate>
+        </Envoltura>
       </Suspense>
     </BrowserRouter>
   );
