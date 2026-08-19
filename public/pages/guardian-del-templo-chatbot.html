@@ -6,7 +6,10 @@
 <title>Guía de la Propotienda</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://player.vimeo.com">
+<link rel="preconnect" href="https://i.vimeocdn.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
 <style>
   :root{
     --bg-base:#0a0e17;
@@ -170,7 +173,11 @@
        igual que object-fit:cover en un <video> */
     transform:translate(-50%,-50%) scale(1.6);
     border:0; pointer-events:none; z-index:0;
+    opacity:0;
+    animation: apareceVideoGuardian .7s ease-out forwards;
+    animation-delay: 1.3s;
   }
+  @keyframes apareceVideoGuardian{ from{ opacity:0; } to{ opacity:1; } }
   .video-loop::before, .video-loop::after{
     content:""; position:absolute; width:220px; height:220px; border-radius:50%;
     border:1px solid rgba(242,201,76,0.25); animation: girar 12s linear infinite;
@@ -417,6 +424,7 @@
   <p class="footer-note">El Guardián solo responde con información confirmada del proyecto. Si algo no lo sabe con certeza, te lo dirá en vez de inventarlo.</p>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* =========================================================================
    BASE DE CONOCIMIENTO — TEMPLO DEL PROPÓSITO / PROPOTIENDA
