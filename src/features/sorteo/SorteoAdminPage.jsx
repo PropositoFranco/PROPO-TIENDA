@@ -129,6 +129,12 @@ export default function SorteoAdminPage() {
   const [procesandoJuntaId,       setProcesandoJuntaId]       = useState(null);
   const [editandoJuntaId,         setEditandoJuntaId]         = useState(null);
   const [editJuntaValores,        setEditJuntaValores]        = useState({ titulo: '', numero_sesion: '' });
+  const [vinculandoJuntaId,       setVinculandoJuntaId]       = useState(null);
+  const [nombreMeetVinculo,       setNombreMeetVinculo]       = useState('');
+  const [busquedaVinculo,         setBusquedaVinculo]         = useState('');
+  const [personasVinculables,     setPersonasVinculables]     = useState([]);
+  const [loadingPersonasVinculo,  setLoadingPersonasVinculo]  = useState(false);
+  const [guardandoVinculoId,      setGuardandoVinculoId]      = useState(null);
 
   // ── CURRÍCULUM DE SESIONES (qué se espera cubrir en cada número) ─────────────
   const [curriculumSesiones, setCurriculumSesiones] = useState([]);
@@ -295,6 +301,44 @@ const cargarSellosCodigos = useCallback(async () => {
   const abrirEdicionJunta = (j) => {
     setEditandoJuntaId(j.id);
     setEditJuntaValores({ titulo: j.titulo || '', numero_sesion: j.numero_sesion ?? '' });
+  };
+
+  const cargarPersonasVinculables = useCallback(async () => {
+    if (personasVinculables.length > 0) return;
+    setLoadingPersonasVinculo(true);
+    const [rAliados, rParticipantes] = await Promise.all([
+      supabase.from('aliados').select('id, nombre, rol').order('nombre'),
+      supabase.from('camino_participantes').select('id, nombre').order('nombre'),
+    ]);
+    const lista = [
+      ...(rAliados.data || []).map(a => ({ id: a.id, nombre: a.nombre, tipo: 'aliado', etiqueta: a.rol || 'aliado' })),
+      ...(rParticipantes.data || []).map(p => ({ id: p.id, nombre: p.nombre, tipo: 'camino', etiqueta: 'Camino 30 días' })),
+    ];
+    setPersonasVinculables(lista);
+    setLoadingPersonasVinculo(false);
+  }, [personasVinculables.length]);
+
+  const abrirVinculoManual = (j) => {
+    setVinculandoJuntaId(j.id);
+    const nombres = (j.todos_los_participantes || []).filter(Boolean);
+    setNombreMeetVinculo(nombres[nombres.length - 1] || j.participante_nombre || '');
+    setBusquedaVinculo('');
+    cargarPersonasVinculables();
+  };
+
+  const guardarVinculoManual = async (juntaId, persona) => {
+    if (!nombreMeetVinculo.trim()) { alert('Escribe el nombre exacto como aparece en Meet.'); return; }
+    setGuardandoVinculoId(juntaId);
+    const { data, error } = await supabase.rpc('camino_guardar_alias_y_revincular', {
+      p_nombre_meet: nombreMeetVinculo.trim(),
+      p_tipo: persona.tipo,
+      p_participante_id: persona.id,
+    });
+    setGuardandoVinculoId(null);
+    if (error || data?.ok === false) { alert('No se pudo vincular: ' + (error?.message || data?.error)); return; }
+    setVinculandoJuntaId(null);
+    alert(`Vinculado a ${data.participante_nombre}. ${data.juntas_actualizadas} junta(s) actualizadas — de ahora en adelante cualquier junta futura con el nombre "${nombreMeetVinculo.trim()}" se va a vincular sola.`);
+    cargarJuntasMeet();
   };
   const guardarEdicionJunta = async (juntaId) => {
     const numero_sesion = editJuntaValores.numero_sesion === '' ? null : parseInt(editJuntaValores.numero_sesion, 10);
@@ -2259,9 +2303,60 @@ const cargarSellosCodigos = useCallback(async () => {
                               >
                                 {procesandoJuntaId === j.id ? '...' : '🔗 REINTENTAR VÍNCULO (SIN GASTAR IA)'}
                               </button>
+                              <button
+                                onClick={() => vinculandoJuntaId === j.id ? setVinculandoJuntaId(null) : abrirVinculoManual(j)}
+                                style={{ padding: '5px 10px', background: 'rgba(155,89,255,0.1)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 6, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}
+                              >
+                                🔍 {vinculandoJuntaId === j.id ? 'CERRAR BUSCADOR' : 'VINCULAR A ALGUIEN DE MI LISTA'}
+                              </button>
                             </>
                           )}
                         </div>
+
+                        {vinculandoJuntaId === j.id && (
+                          <div style={{ background: 'rgba(155,89,255,0.06)', border: '1px solid rgba(155,89,255,0.25)', borderRadius: 10, padding: 12, marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <p style={{ fontSize: 10.5, color: C.muted, margin: 0 }}>
+                              Vincula esta junta a una persona real de tu lista. A partir de ahora, cualquier junta (pasada o futura) donde aparezca ese mismo nombre en Meet se va a vincular y numerar sola.
+                            </p>
+                            <div>
+                              <label style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted }}>NOMBRE EXACTO EN MEET</label>
+                              <input
+                                value={nombreMeetVinculo}
+                                onChange={e => setNombreMeetVinculo(e.target.value)}
+                                placeholder="Nombre tal como aparece en Meet"
+                                style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11, marginTop: 4 }}
+                              />
+                            </div>
+                            <input
+                              value={busquedaVinculo}
+                              onChange={e => setBusquedaVinculo(e.target.value)}
+                              placeholder="Buscar aliado o participante del Camino..."
+                              style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11 }}
+                            />
+                            {loadingPersonasVinculo ? (
+                              <p style={{ color: C.muted, fontSize: 10 }}>Cargando personas...</p>
+                            ) : (
+                              <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {personasVinculables
+                                  .filter(p => p.nombre.toLowerCase().includes(busquedaVinculo.toLowerCase()))
+                                  .slice(0, 30)
+                                  .map(p => (
+                                    <button
+                                      key={`${p.tipo}-${p.id}`}
+                                      onClick={() => guardarVinculoManual(j.id, p)}
+                                      disabled={guardandoVinculoId === j.id}
+                                      style={{ textAlign: 'left', padding: '7px 10px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, fontSize: 11, cursor: 'pointer' }}
+                                    >
+                                      {p.nombre} <span style={{ color: C.muted, fontSize: 9 }}>· {p.etiqueta}</span>
+                                    </button>
+                                  ))}
+                                {personasVinculables.length > 0 && personasVinculables.filter(p => p.nombre.toLowerCase().includes(busquedaVinculo.toLowerCase())).length === 0 && (
+                                  <p style={{ color: C.muted, fontSize: 10 }}>Sin resultados.</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {j.estado === 'error' || j.estado === 'error_analisis' ? (
                           <>
