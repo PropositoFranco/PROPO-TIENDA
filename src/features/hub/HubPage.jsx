@@ -7,6 +7,7 @@ import TStoreTutorial from '../store/TStoreTutorial';
 import { missionsService } from '../../services/missions.service';
 import { storeService } from '../../services/store.service';
 import { supabase } from '../../services/supabase';
+import GuardianChatbot from './GuardianChatbot';
 
 export default function HubPage() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function HubPage() {
   );
   const [badgeTick, setBadgeTick] = useState(0);
   const [oraculoOpen, setOraculoOpen] = useState(false);
+  const [guardianOpen, setGuardianOpen] = useState(false);
 const getVh = () => window.visualViewport?.height ?? window.innerHeight;
 const [vh, setVh] = useState(() => getVh());
 
@@ -282,8 +284,18 @@ useEffect(() => {
         if (data?.xp)    addXP(data.xp);
         if (data?.coins) addCristales(data.coins);
       }
-      if (type === 'guardian-modal' || type === 'oraculo-modal') {
+      // El Oráculo sigue viviendo dentro del iframe de hub.html: cuando abre,
+      // este iframe se expande a pantalla completa (igual que antes).
+      if (type === 'oraculo-modal') {
         setOraculoOpen(!!data?.open);
+      }
+      // El Guardián ya NO vive dentro de hub.html (era un iframe anidado
+      // ahí adentro, causante del choque). Ahora hub.html solo nos avisa
+      // que lo abran, y lo renderizamos como componente React encima de
+      // todo — AppLayout ya oculta su barra superior al recibir este mismo
+      // mensaje 'guardian-modal', así que no hace falta tocar nada más.
+      if (type === 'guardian-modal') {
+        setGuardianOpen(!!data?.open);
       }
     };
     window.addEventListener('message', handleMessage);
@@ -305,6 +317,18 @@ useEffect(() => {
           transition: oraculoOpen ? 'none' : 'margin-top .18s ease, height .18s ease',
         }}
       />
+      <GuardianChatbot
+        open={guardianOpen}
+        nombreUsuario={templarioName || profile?.templario_name || ''}
+        onClose={() => {
+          setGuardianOpen(false);
+          // Avisamos a AppLayout (que escucha 'guardian-modal' en window)
+          // para que vuelva a mostrar su barra superior — es el mismo
+          // mensaje que antes mandaba hub.html al cerrar su modal interno.
+          window.postMessage({ type: 'guardian-modal', data: { open: false } }, window.location.origin);
+        }}
+      />
+
       {showTutorial && (
         <TStoreTutorial onComplete={() => {
           localStorage.removeItem('show_tstore_tutorial');
