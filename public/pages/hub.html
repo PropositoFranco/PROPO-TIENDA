@@ -3193,7 +3193,27 @@ body.perf-low .guardian-circle-wrap .guardian-btn-core::after { animation-durati
   const closeBtn = document.getElementById('guardian-close');
   const iframe = document.getElementById('guardian-iframe');
   let iframeLoaded = false;
+  let iframeRequested = false;
   let savedScrollY = 0;
+
+  // Precarga del chatbot ANTES del clic real: el guardián carga un script
+  // externo pesado (supabase-js desde CDN) que, al vivir en el mismo origen
+  // que este hub, comparte hilo de render con React. Si esa carga arranca
+  // justo en el clic, compite por el hilo con el postMessage que oculta la
+  // barra de arriba y se siente "trabado". Precargando en hover/touch (o
+  // en un respiro del hilo si nunca hay hover, como en móvil) el iframe ya
+  // está listo cuando el usuario realmente toca el botón.
+  function precargarGuardian() {
+    if (iframeRequested) return;
+    iframeRequested = true;
+    iframe.src = GUARDIAN_SRC;
+  }
+  if (btn) {
+    btn.addEventListener('pointerenter', precargarGuardian, { passive: true });
+    btn.addEventListener('touchstart', precargarGuardian, { passive: true });
+  }
+  const idlePrecarga = window.requestIdleCallback || function (fn) { setTimeout(fn, 1500); };
+  idlePrecarga(precargarGuardian);
 
   function lockBodyScroll() {
     savedScrollY = window.scrollY || window.pageYOffset || 0;
@@ -3239,25 +3259,31 @@ body.perf-low .guardian-circle-wrap .guardian-btn-core::after { animation-durati
   }
 
   function openGuardian() {
-    if (iframe.getAttribute('src') === 'about:blank' || !iframe.getAttribute('src')) {
-      iframe.src = GUARDIAN_SRC;
-    }
-    // Avisamos a React primero para que el iframe exterior empiece a
-    // redimensionarse de inmediato — así, para cuando el modal se muestra
-    // un instante después, el espacio ya está listo y no hay "salto".
+    // 1) Lo más barato y urgente primero: avisar a React y ocultar la
+    // barra/modal. Esto debe llegar a pantalla ANTES de que arranque
+    // cualquier trabajo pesado (carga del iframe si aún no se precargó,
+    // lecturas de layout), para que nunca compita por el hilo principal.
     window.parent.postMessage({ type: 'guardian-modal', data: { open: true } }, '*');
     modal.style.display = 'flex';
     const appHeader = document.getElementById('header');
     const appBottomNav = document.getElementById('bottom-nav');
     if (appHeader) appHeader.style.display = 'none';
     if (appBottomNav) appBottomNav.style.display = 'none';
-    lockBodyScroll();
-    forceFullscreenModal();
+
+    // 2) Recién en el siguiente frame (ya con la barra oculta pintada)
+    // hacemos el trabajo que fuerza layout y, si por lo que sea el hover/
+    // touch no llegó a precargar el iframe a tiempo, lo disparamos aquí
+    // como respaldo — nunca antes del paso 1.
     requestAnimationFrame(function () {
-      modal.style.background = 'rgba(1,0,10,0.96)';
-      modal.style.backdropFilter = 'blur(14px)';
+      precargarGuardian();
+      lockBodyScroll();
+      forceFullscreenModal();
+      requestAnimationFrame(function () {
+        modal.style.background = 'rgba(1,0,10,0.96)';
+        modal.style.backdropFilter = 'blur(14px)';
+      });
+      enviarPerfilAlIframe();
     });
-    enviarPerfilAlIframe();
   }
 
   function closeGuardian() {
