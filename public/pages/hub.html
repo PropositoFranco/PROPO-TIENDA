@@ -3242,6 +3242,10 @@ body.perf-low .guardian-circle-wrap .guardian-btn-core::after { animation-durati
     if (iframe.getAttribute('src') === 'about:blank' || !iframe.getAttribute('src')) {
       iframe.src = GUARDIAN_SRC;
     }
+    // Avisamos a React primero para que el iframe exterior empiece a
+    // redimensionarse de inmediato — así, para cuando el modal se muestra
+    // un instante después, el espacio ya está listo y no hay "salto".
+    window.parent.postMessage({ type: 'guardian-modal', data: { open: true } }, '*');
     modal.style.display = 'flex';
     const appHeader = document.getElementById('header');
     const appBottomNav = document.getElementById('bottom-nav');
@@ -3249,7 +3253,6 @@ body.perf-low .guardian-circle-wrap .guardian-btn-core::after { animation-durati
     if (appBottomNav) appBottomNav.style.display = 'none';
     lockBodyScroll();
     forceFullscreenModal();
-    window.parent.postMessage({ type: 'guardian-modal', data: { open: true } }, '*');
     requestAnimationFrame(function () {
       modal.style.background = 'rgba(1,0,10,0.96)';
       modal.style.backdropFilter = 'blur(14px)';
@@ -3289,6 +3292,23 @@ body.perf-low .guardian-circle-wrap .guardian-btn-core::after { animation-durati
     window.visualViewport.addEventListener('resize', function () {
       if (modal.style.display === 'flex') forceFullscreenModal();
     });
+  }
+
+  // ── Precarga silenciosa del Guardián ──────────────────────────
+  // El chat (y su video de fondo) tarda en cargar la primera vez porque
+  // hay que conectar con un servidor externo. Si esperamos al clic, esa
+  // carga compite justo con la animación de apertura y se siente trabado.
+  // Aquí lo precargamos oculto (display:none todavía) poco después de que
+  // el hub ya esté listo, así al picar el botón todo aparece al instante.
+  function preloadGuardian() {
+    if (iframe.getAttribute('src') === 'about:blank' || !iframe.getAttribute('src')) {
+      iframe.src = GUARDIAN_SRC;
+    }
+  }
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(preloadGuardian, { timeout: 3000 });
+  } else {
+    setTimeout(preloadGuardian, 1500);
   }
 })();
 </script>

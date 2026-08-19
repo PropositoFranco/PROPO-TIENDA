@@ -302,7 +302,7 @@ useEffect(() => {
           border: 'none',
           display: 'block',
           marginTop: oraculoOpen ? 0 : '68px',
-          transition: 'margin-top .18s ease, height .18s ease',
+          transition: oraculoOpen ? 'none' : 'margin-top .18s ease, height .18s ease',
         }}
       />
       {showTutorial && (
