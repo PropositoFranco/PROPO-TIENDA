@@ -16,7 +16,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../store/useAuthStore';
 import useMembershipStore from '../../store/useMembershipStore';
@@ -1139,6 +1139,7 @@ const PaywallPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const user     = useAuthStore(s => s.user);
+  const logout   = useAuthStore(s => s.logout);
   const timer    = useCountdown();
 
   const memberStatus = useMembershipStore(s => s.status);
@@ -1148,6 +1149,7 @@ const PaywallPage = () => {
   const [showUpsell,       setShowUpsell]       = useState(false);
   const [loadingVip,       setLoadingVip]       = useState(false);
   const [error,            setError]            = useState(null);
+  const [loadingLogout,    setLoadingLogout]     = useState(false);
 
   const fromPath = location.state?.from?.pathname;
   const chosen   = PLANS.find(p => p.id === selectedPlan);
@@ -1213,6 +1215,16 @@ const PaywallPage = () => {
   const handleVipDecline = () => {
     const confirmed = window.confirm('⚠️ ¿Seguro que quieres salir?\n\nEsta oferta del PropoPass VIP es exclusiva post-activación y probablemente no la veas de nuevo.');
     if (confirmed) navigate('/register', { replace: true });
+  };
+
+  const handleSwitchAccount = async () => {
+    if (loadingLogout) return;
+    setLoadingLogout(true);
+    try {
+      await logout(); // ya limpia Supabase auth + usePlayerStore + useMembershipStore + localStorage persistido
+    } finally {
+      navigate('/login', { replace: true });
+    }
   };
 
   return (
@@ -1400,13 +1412,32 @@ const PaywallPage = () => {
         </span>
       </div>
 
-      <Link to="/hub" style={{ fontFamily:font.title, fontSize:'clamp(.65rem,1.4vw,.72rem)',
-        letterSpacing:'.1em', color:'rgba(255,255,255,.18)', textDecoration:'none',
-        transition:'color .2s', position:'relative', zIndex:1 }}
-        onMouseEnter={e=>e.target.style.color='rgba(255,255,255,.45)'}
-        onMouseLeave={e=>e.target.style.color='rgba(255,255,255,.18)'}>
-        ← Volver al hub
-      </Link>
+      <button
+        onClick={handleSwitchAccount}
+        disabled={loadingLogout}
+        style={{
+          display:'inline-flex', alignItems:'center', gap:'.5rem',
+          background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.08)',
+          borderRadius:'.75rem', padding:'.6rem 1.25rem',
+          fontFamily:font.body, fontSize:'clamp(.78rem,1.6vw,.88rem)',
+          color:'rgba(255,255,255,.4)', letterSpacing:'.01em',
+          cursor: loadingLogout ? 'default' : 'pointer',
+          transition:'color .2s, background .2s, border-color .2s',
+          position:'relative', zIndex:1,
+        }}
+        onMouseEnter={e=>{ if(!loadingLogout){ e.currentTarget.style.color='#F5C518'; e.currentTarget.style.background='rgba(245,197,24,.07)'; e.currentTarget.style.borderColor='rgba(245,197,24,.25)'; }}}
+        onMouseLeave={e=>{ e.currentTarget.style.color='rgba(255,255,255,.4)'; e.currentTarget.style.background='rgba(255,255,255,.03)'; e.currentTarget.style.borderColor='rgba(255,255,255,.08)'; }}>
+        {loadingLogout ? (
+          <>
+            <div style={{ width:'.85rem',height:'.85rem',borderRadius:'50%',
+              border:'2px solid rgba(255,255,255,.2)',borderTop:'2px solid rgba(255,255,255,.6)',
+              animation:'spin .8s linear infinite' }}/>
+            Cerrando sesión...
+          </>
+        ) : (
+          <>🔄 ¿Esta no es tu cuenta? <span style={{ color:'#F5C518', fontWeight:600 }}>Cambiar de sesión</span></>
+        )}
+      </button>
 
       {showActivated && (
         <AccessActivatedOverlay
