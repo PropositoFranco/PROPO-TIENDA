@@ -282,6 +282,9 @@ useEffect(() => {
         if (data?.xp)    addXP(data.xp);
         if (data?.coins) addCristales(data.coins);
       }
+      if (type === 'oraculo-modal' || type === 'guardian-modal') {
+        setOraculoOpen(!!data?.open);
+      }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
