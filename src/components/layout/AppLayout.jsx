@@ -143,6 +143,9 @@ useEffect(() => {
     if (type === 'oraculo-modal') {
       setHideHeader(!!data?.open);
     }
+    if (type === 'guardian-modal') {
+      setHideHeader(!!data?.open);
+    }
     if (type === 'hub-locked') {
       setHubLocked(!!data?.locked);
     }
