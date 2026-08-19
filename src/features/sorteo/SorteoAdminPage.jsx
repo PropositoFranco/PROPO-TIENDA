@@ -124,6 +124,18 @@ export default function SorteoAdminPage() {
   const [juntaAbierta,   setJuntaAbierta]   = useState(null);
   const [sincronizando,  setSincronizando]  = useState(false);
   const [msgSync,        setMsgSync]        = useState('');
+  const [filtroParticipanteJunta, setFiltroParticipanteJunta] = useState('todos');
+  const [filtroSesionJunta,       setFiltroSesionJunta]       = useState('todas');
+  const [procesandoJuntaId,       setProcesandoJuntaId]       = useState(null);
+  const [editandoJuntaId,         setEditandoJuntaId]         = useState(null);
+  const [editJuntaValores,        setEditJuntaValores]        = useState({ titulo: '', numero_sesion: '' });
+
+  // ── CURRÍCULUM DE SESIONES (qué se espera cubrir en cada número) ─────────────
+  const [curriculumSesiones, setCurriculumSesiones] = useState([]);
+  const [loadingCurriculum,  setLoadingCurriculum]  = useState(false);
+  const [editsCurriculum,    setEditsCurriculum]    = useState({});
+  const [guardandoCurriculum,setGuardandoCurriculum] = useState(null);
+  const [curriculumAbierto,  setCurriculumAbierto]  = useState(false);
 
 
   // ── FIRMAS (acuerdos digitales de líderes/gerentes) ──────────────────────────
@@ -260,8 +272,65 @@ const cargarSellosCodigos = useCallback(async () => {
     setSincronizando(false);
     if (error) { setMsgSync('Error al sincronizar: ' + error.message); return; }
     const r = data?.resumen;
-    setMsgSync(r ? `Listo — ${r.revisadas} revisadas, ${r.nuevas_guardadas} nuevas, ${r.analizadas} analizadas.` : 'Sincronizado.');
+    setMsgSync(r ? `Listo — ${r.revisadas} revisadas, ${r.nuevas_guardadas} nuevas, ${r.analizadas} analizadas, ${r.vinculadas || 0} vinculadas a alguien conocido.` : 'Sincronizado.');
     cargarJuntasMeet();
+  };
+
+  const reintentarAnalisisJunta = async (juntaId) => {
+    setProcesandoJuntaId(juntaId);
+    const { data, error } = await supabase.functions.invoke('camino-meet-sync', { body: { reintentar_id: juntaId } });
+    setProcesandoJuntaId(null);
+    if (error || data?.ok === false) { alert('No se pudo reintentar: ' + (error?.message || data?.error)); return; }
+    cargarJuntasMeet();
+  };
+
+  const revincularJunta = async (juntaId) => {
+    setProcesandoJuntaId(juntaId);
+    const { data, error } = await supabase.functions.invoke('camino-meet-sync', { body: { revincular_id: juntaId } });
+    setProcesandoJuntaId(null);
+    if (error || data?.ok === false) { alert('No se pudo vincular: ' + (error?.message || data?.error)); return; }
+    cargarJuntasMeet();
+  };
+
+  const abrirEdicionJunta = (j) => {
+    setEditandoJuntaId(j.id);
+    setEditJuntaValores({ titulo: j.titulo || '', numero_sesion: j.numero_sesion ?? '' });
+  };
+  const guardarEdicionJunta = async (juntaId) => {
+    const numero_sesion = editJuntaValores.numero_sesion === '' ? null : parseInt(editJuntaValores.numero_sesion, 10);
+    await supabase.from('camino_juntas_meet').update({ titulo: editJuntaValores.titulo || null, numero_sesion }).eq('id', juntaId);
+    setEditandoJuntaId(null);
+    cargarJuntasMeet();
+  };
+
+  const cargarCurriculum = useCallback(async () => {
+    setLoadingCurriculum(true);
+    const { data, error } = await supabase.from('camino_curriculum_sesiones').select('*').order('numero_sesion');
+    if (!error) {
+      setCurriculumSesiones(data || []);
+      setEditsCurriculum(Object.fromEntries((data || []).map(cs => [cs.numero_sesion, {
+        titulo: cs.titulo || '', objetivo: cs.objetivo || '', temas_texto: (cs.temas_esperados || []).join(', '),
+      }])));
+    }
+    setLoadingCurriculum(false);
+  }, []);
+
+  const guardarCurriculum = async (numeroSesion) => {
+    const edit = editsCurriculum[numeroSesion] || { titulo: '', objetivo: '', temas_texto: '' };
+    const temas_esperados = edit.temas_texto.split(',').map(t => t.trim()).filter(Boolean);
+    setGuardandoCurriculum(numeroSesion);
+    await supabase.from('camino_curriculum_sesiones').upsert({
+      numero_sesion: numeroSesion, titulo: edit.titulo, objetivo: edit.objetivo, temas_esperados,
+      actualizado_at: new Date().toISOString(),
+    });
+    setGuardandoCurriculum(null);
+    cargarCurriculum();
+  };
+
+  const agregarNumeroSesionCurriculum = async () => {
+    const siguiente = (curriculumSesiones[curriculumSesiones.length - 1]?.numero_sesion || 0) + 1;
+    await supabase.from('camino_curriculum_sesiones').insert({ numero_sesion: siguiente, titulo: `Sesión ${siguiente}`, temas_esperados: [], objetivo: '' });
+    cargarCurriculum();
   };
 
   const guardarSello = async (numeroSesion) => {
@@ -406,8 +475,8 @@ const cargarSellosCodigos = useCallback(async () => {
 
   useEffect(() => {
     if (tabActiva === 'sellos') cargarSellosCodigos();
-    if (tabActiva === 'juntas') cargarJuntasMeet();
-  }, [tabActiva, cargarSellosCodigos, cargarJuntasMeet]);
+    if (tabActiva === 'juntas') { cargarJuntasMeet(); cargarCurriculum(); }
+  }, [tabActiva, cargarSellosCodigos, cargarJuntasMeet, cargarCurriculum]);
 
   const slugify = (texto) =>
     texto.toLowerCase().trim()
@@ -645,7 +714,7 @@ const cargarSellosCodigos = useCallback(async () => {
                 if (tab.id === 'reportes') cargarReportes();
                 if (tab.id === 'camino') cargarInteresadosCamino();
                 if (tab.id === 'sellos') cargarSellosCodigos();
-                if (tab.id === 'juntas') cargarJuntasMeet();
+                if (tab.id === 'juntas') { cargarJuntasMeet(); cargarCurriculum(); }
               }}
               style={{
                 padding: '9px 20px',
@@ -2003,13 +2072,121 @@ const cargarSellosCodigos = useCallback(async () => {
             )}
           </div>
 
+          {/* ── CURRÍCULUM ESPERADO POR SESIÓN ── */}
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px 18px' }}>
+            <div
+              onClick={() => setCurriculumAbierto(v => !v)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+            >
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: C.gold }}>
+                📚 QUÉ DEBE CUBRIR CADA SESIÓN {curriculumAbierto ? '▲' : '▼'}
+              </span>
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 8, color: C.muted, letterSpacing: 1 }}>
+                {curriculumSesiones.length} sesiones definidas
+              </span>
+            </div>
+            {curriculumAbierto && (
+              <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ fontSize: 10.5, color: C.muted, margin: 0 }}>
+                  Define aquí qué temas esperas en cada número de sesión del Camino. Cuando una junta se identifique como esa sesión,
+                  la IA compara la transcripción real contra esta lista y te dice qué faltó.
+                </p>
+                {loadingCurriculum ? (
+                  <p style={{ color: C.muted, fontSize: 10 }}>Cargando…</p>
+                ) : (
+                  curriculumSesiones.map(cs => {
+                    const edit = editsCurriculum[cs.numero_sesion] || { titulo: '', objetivo: '', temas_texto: '' };
+                    return (
+                      <div key={cs.numero_sesion} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.gold, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                            Sesión {cs.numero_sesion}
+                          </span>
+                          <input
+                            value={edit.titulo}
+                            onChange={e => setEditsCurriculum(p => ({ ...p, [cs.numero_sesion]: { ...edit, titulo: e.target.value } }))}
+                            placeholder="Título de la sesión"
+                            style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11 }}
+                          />
+                        </div>
+                        <input
+                          value={edit.objetivo}
+                          onChange={e => setEditsCurriculum(p => ({ ...p, [cs.numero_sesion]: { ...edit, objetivo: e.target.value } }))}
+                          placeholder="Objetivo de esta sesión"
+                          style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11 }}
+                        />
+                        <textarea
+                          value={edit.temas_texto}
+                          onChange={e => setEditsCurriculum(p => ({ ...p, [cs.numero_sesion]: { ...edit, temas_texto: e.target.value } }))}
+                          placeholder="Temas esperados, separados por coma (ej: definir marca personal, elegir 1 red social, primer post)"
+                          rows={2}
+                          style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11, resize: 'vertical' }}
+                        />
+                        <button
+                          onClick={() => guardarCurriculum(cs.numero_sesion)}
+                          disabled={guardandoCurriculum === cs.numero_sesion}
+                          style={{ alignSelf: 'flex-end', padding: '6px 14px', background: 'rgba(212,175,55,0.12)', border: `1px solid ${C.borderHi}`, borderRadius: 6, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}
+                        >
+                          {guardandoCurriculum === cs.numero_sesion ? 'GUARDANDO...' : 'GUARDAR'}
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+                <button
+                  onClick={agregarNumeroSesionCurriculum}
+                  style={{ alignSelf: 'flex-start', padding: '7px 14px', background: 'transparent', border: `1px dashed ${C.border}`, borderRadius: 6, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}
+                >
+                  + AGREGAR SIGUIENTE NÚMERO DE SESIÓN
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* ── FILTROS ── */}
+          {juntasMeet.length > 0 && (
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <select
+                value={filtroParticipanteJunta}
+                onChange={e => setFiltroParticipanteJunta(e.target.value)}
+                style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', color: C.text, fontSize: 11, fontFamily: 'Cinzel, serif' }}
+              >
+                <option value="todos">Con quién: todos</option>
+                {Array.from(new Set(juntasMeet.map(j => j.participante_nombre).filter(Boolean))).sort().map(n => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+              <select
+                value={filtroSesionJunta}
+                onChange={e => setFiltroSesionJunta(e.target.value)}
+                style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', color: C.text, fontSize: 11, fontFamily: 'Cinzel, serif' }}
+              >
+                <option value="todas">Sesión: todas</option>
+                {Array.from(new Set(juntasMeet.map(j => j.numero_sesion).filter(n => n != null))).sort((a, b) => a - b).map(n => (
+                  <option key={n} value={n}>Sesión {n}</option>
+                ))}
+              </select>
+              {(filtroParticipanteJunta !== 'todos' || filtroSesionJunta !== 'todas') && (
+                <button
+                  onClick={() => { setFiltroParticipanteJunta('todos'); setFiltroSesionJunta('todas'); }}
+                  style={{ background: 'transparent', border: 'none', color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, cursor: 'pointer', letterSpacing: 1 }}
+                >
+                  ✕ LIMPIAR FILTROS
+                </button>
+              )}
+            </div>
+          )}
+
           {loadingJuntas ? (
             <p style={{ color: C.goldDim, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, textAlign: 'center' }}>CARGANDO...</p>
           ) : juntasMeet.length === 0 ? (
             <p style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>Todavía no hay juntas sincronizadas.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {juntasMeet.map(j => {
+              {juntasMeet
+                .filter(j => filtroParticipanteJunta === 'todos' || j.participante_nombre === filtroParticipanteJunta)
+                .filter(j => filtroSesionJunta === 'todas' || String(j.numero_sesion) === filtroSesionJunta)
+                .map(j => {
                 const abierta = juntaAbierta === j.id;
                 const duracionMin = j.fecha_inicio && j.fecha_fin
                   ? Math.max(1, Math.round((new Date(j.fecha_fin) - new Date(j.fecha_inicio)) / 60000))
@@ -2030,11 +2207,15 @@ const cargarSellosCodigos = useCallback(async () => {
                     >
                       <div>
                         <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: C.text, fontWeight: 700 }}>
-                          {j.fecha_inicio ? new Date(j.fecha_inicio).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Sin fecha'}
+                          {j.titulo || (j.fecha_inicio ? new Date(j.fecha_inicio).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Sin fecha')}
                         </div>
                         <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: C.muted, marginTop: 2 }}>
-                          {duracionMin ? `${duracionMin} min` : ''}
-                          {j.temas?.resumen_ejecutivo ? ` · ${j.temas.resumen_ejecutivo.slice(0, 70)}${j.temas.resumen_ejecutivo.length > 70 ? '…' : ''}` : ''}
+                          {j.fecha_inicio ? new Date(j.fecha_inicio).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+                          {duracionMin ? ` · ${duracionMin} min` : ''}
+                          {j.participante_nombre ? ` · con ${j.participante_nombre}` : ''}
+                        </div>
+                        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: C.muted, marginTop: 2 }}>
+                          {j.temas?.resumen_ejecutivo ? `${j.temas.resumen_ejecutivo.slice(0, 70)}${j.temas.resumen_ejecutivo.length > 70 ? '…' : ''}` : ''}
                         </div>
                       </div>
                       <span style={{
@@ -2047,8 +2228,52 @@ const cargarSellosCodigos = useCallback(async () => {
 
                     {abierta && (
                       <div style={{ padding: '0 18px 18px', borderTop: `1px solid ${C.border}` }}>
+                        <div style={{ marginTop: 14, marginBottom: 4, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                          {editandoJuntaId === j.id ? (
+                            <>
+                              <input
+                                value={editJuntaValores.titulo}
+                                onChange={e => setEditJuntaValores(v => ({ ...v, titulo: e.target.value }))}
+                                placeholder="Título (ej: Sesión 2 — Juan Pérez)"
+                                style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11, flex: 1, minWidth: 180 }}
+                              />
+                              <input
+                                type="number"
+                                value={editJuntaValores.numero_sesion}
+                                onChange={e => setEditJuntaValores(v => ({ ...v, numero_sesion: e.target.value }))}
+                                placeholder="Núm. sesión"
+                                style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11, width: 100 }}
+                              />
+                              <button onClick={() => guardarEdicionJunta(j.id)} style={{ padding: '6px 12px', background: 'rgba(68,255,136,0.12)', border: '1px solid rgba(68,255,136,0.35)', borderRadius: 6, color: C.green, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}>GUARDAR</button>
+                              <button onClick={() => setEditandoJuntaId(null)} style={{ padding: '6px 12px', background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}>CANCELAR</button>
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={() => abrirEdicionJunta(j)} style={{ padding: '5px 10px', background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}>
+                                ✎ EDITAR TÍTULO / SESIÓN
+                              </button>
+                              <button
+                                onClick={() => revincularJunta(j.id)}
+                                disabled={procesandoJuntaId === j.id}
+                                style={{ padding: '5px 10px', background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}
+                              >
+                                {procesandoJuntaId === j.id ? '...' : '🔗 REINTENTAR VÍNCULO (SIN GASTAR IA)'}
+                              </button>
+                            </>
+                          )}
+                        </div>
+
                         {j.estado === 'error' || j.estado === 'error_analisis' ? (
-                          <p style={{ color: C.red, fontSize: 11, marginTop: 14 }}>{j.error_detalle || 'Error desconocido.'}</p>
+                          <>
+                            <p style={{ color: C.red, fontSize: 11, marginTop: 14 }}>{j.error_detalle || 'Error desconocido.'}</p>
+                            <button
+                              onClick={() => reintentarAnalisisJunta(j.id)}
+                              disabled={procesandoJuntaId === j.id}
+                              style={{ padding: '7px 14px', background: 'rgba(212,175,55,0.12)', border: `1px solid ${C.borderHi}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
+                            >
+                              {procesandoJuntaId === j.id ? 'REINTENTANDO...' : '🔄 REINTENTAR ANÁLISIS'}
+                            </button>
+                          </>
                         ) : j.estado === 'sin_transcript' ? (
                           <p style={{ color: C.muted, fontSize: 11, marginTop: 14 }}>Esta llamada no generó transcripción (posiblemente muy corta o sin la opción activada).</p>
                         ) : j.temas ? (
@@ -2096,6 +2321,29 @@ const cargarSellosCodigos = useCallback(async () => {
                                     <li key={i} style={{ fontSize: 11.5, color: C.text }}>{s}</li>
                                   ))}
                                 </ul>
+                              </div>
+                            )}
+
+                            {j.temas.cobertura_curriculum && (
+                              <div>
+                                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.gold, marginBottom: 6 }}>📚 COBERTURA DEL CURRÍCULUM</div>
+                                {j.temas.cobertura_curriculum.nota && (
+                                  <p style={{ fontSize: 11, color: C.muted, margin: '0 0 8px' }}>{j.temas.cobertura_curriculum.nota}</p>
+                                )}
+                                {Array.isArray(j.temas.cobertura_curriculum.cubiertos) && j.temas.cobertura_curriculum.cubiertos.length > 0 && (
+                                  <div style={{ marginBottom: 6 }}>
+                                    {j.temas.cobertura_curriculum.cubiertos.map((t, i) => (
+                                      <div key={i} style={{ fontSize: 11, color: C.green }}>✓ {t}</div>
+                                    ))}
+                                  </div>
+                                )}
+                                {Array.isArray(j.temas.cobertura_curriculum.faltantes) && j.temas.cobertura_curriculum.faltantes.length > 0 && (
+                                  <div>
+                                    {j.temas.cobertura_curriculum.faltantes.map((t, i) => (
+                                      <div key={i} style={{ fontSize: 11, color: C.red }}>✕ {t}</div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             )}
 
