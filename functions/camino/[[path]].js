@@ -28,11 +28,23 @@ export async function onRequest(context) {
             el.setInnerContent('Camino a Líder Digital');
           },
         })
-        .on('head', {
+                .on('head', {
           element(el) {
             el.append(
               '<meta name="apple-mobile-web-app-title" content="Camino a Líder Digital">' +
-              '<link rel="apple-touch-icon" href="/icon-camino-192.png">',
+              '<link rel="apple-touch-icon" href="/icon-camino-192.png">' +
+              '<script>(function(){' +
+                'if("serviceWorker" in navigator){' +
+                  'navigator.serviceWorker.getRegistrations().then(function(regs){' +
+                    'regs.forEach(function(reg){ reg.unregister(); });' +
+                  '});' +
+                '}' +
+                'if(window.caches){' +
+                  'caches.keys().then(function(names){' +
+                    'names.forEach(function(n){ caches.delete(n); });' +
+                  '});' +
+                '}' +
+              '})();</script>',
               { html: true }
             );
           },
