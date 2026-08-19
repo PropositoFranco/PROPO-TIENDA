@@ -6,10 +6,7 @@
 <title>Guía de la Propotienda</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="preconnect" href="https://player.vimeo.com">
-<link rel="preconnect" href="https://i.vimeocdn.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --bg-base:#0a0e17;
@@ -25,6 +22,7 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
+  html{ height:100%; }
   body{
     min-height:100%;
     font-family:'Inter', sans-serif;
@@ -33,7 +31,7 @@
     position:relative;
     display:flex;
     justify-content:center;
-    padding:32px 14px 20px;
+    padding:20px 14px 24px;
   }
   body::before{
     content:"";
@@ -110,9 +108,9 @@
     66%{ transform: translate(calc(-50% + 6vw), calc(-50% - 9vh)) scale(1.1); }
     85%{ transform: translate(calc(-50% - 4vw), calc(-50% + 2vh)) scale(0.95); }
   }
-  .shell{width:100%; max-width:676px;}
+  .shell{ width:100%; max-width:676px; }
 
-  .encabezado{ text-align:center; position:relative; margin-bottom:22px; }
+  .encabezado{ text-align:center; position:relative; margin-bottom:18px; }
   .titulo{
     font-family:'Poppins', sans-serif;
     font-weight:800;
@@ -141,9 +139,30 @@
     border-radius:16px;
     background:var(--panel);
     border:1px solid rgba(255,255,255,0.06);
-    overflow:hidden;
     box-shadow:0 20px 50px rgba(0,0,0,0.45);
     margin-bottom:16px;
+  }
+  /* ---- Cabecera "pegajosa" (barra + video) ----
+     Toda la pestaña (video, mensajes, chips, barra de escribir) forma
+     UNA sola conversación larga que se scrollea junta como página normal
+     — puede ser más alta que la pantalla sin problema. Lo único que no
+     se scrollea con el resto es este bloque: se queda pegado arriba
+     (position:sticky) y se va encogiendo con JS mientras se scrollea
+     hacia abajo, hasta un tamaño mínimo en el que se congela — así nunca
+     estorba ni quita espacio al chat, pero el Guardián sigue siempre
+     visible. Solo vuelve a su tamaño completo si se regresa hasta
+     arriba del todo (ver <script> al final). */
+  .ventana-header{
+    position:sticky; top:0; z-index:6;
+    border-radius:16px 16px 0 0;
+    overflow:hidden;
+    background:var(--panel-2);
+    box-shadow:0 10px 18px -12px rgba(0,0,0,0.6);
+  }
+  #contenidoChat{
+    border-radius:0 0 16px 16px;
+    overflow:hidden;
+    background:var(--panel);
   }
   .barra-ventana{
     display:flex; align-items:center; justify-content:center; position:relative;
@@ -164,6 +183,7 @@
       radial-gradient(circle at 75% 75%, rgba(242,201,76,0.18), transparent 50%),
       #0e1424;
     display:flex; align-items:center; justify-content:center; overflow:hidden;
+    transition: height .1s linear;
   }
   .video-loop iframe{
     position:absolute; top:50%; left:50%;
@@ -173,17 +193,32 @@
        igual que object-fit:cover en un <video> */
     transform:translate(-50%,-50%) scale(1.6);
     border:0; pointer-events:none; z-index:0;
-    opacity:0;
-    animation: apareceVideoGuardian .7s ease-out forwards;
-    animation-delay: 1.3s;
   }
-  @keyframes apareceVideoGuardian{ from{ opacity:0; } to{ opacity:1; } }
   .video-loop::before, .video-loop::after{
     content:""; position:absolute; width:220px; height:220px; border-radius:50%;
     border:1px solid rgba(242,201,76,0.25); animation: girar 12s linear infinite;
+    transition: opacity .2s ease;
   }
   .video-loop::after{ width:150px; height:150px; border-color:rgba(47,214,217,0.35); animation-duration:8s; animation-direction:reverse; }
   @keyframes girar{ from{ transform:rotate(0deg);} to{ transform:rotate(360deg);} }
+
+  /* Estado compacto: cuando el recuadro llega a su tamaño mínimo, los
+     anillos decorativos (pensados para el tamaño grande) ya no caben bien,
+     así que se ocultan y la barra de título se reduce. El video en sí
+     sigue siempre visible. */
+  .ventana-header.is-compact .barra-ventana{
+    padding:5px 12px;
+  }
+  .ventana-header.is-compact .barra-ventana .etiqueta{
+    font-size:9px;
+  }
+  .ventana-header.is-compact .puntos span{
+    width:6px; height:6px;
+  }
+  .ventana-header.is-compact .video-loop::before,
+  .ventana-header.is-compact .video-loop::after{
+    opacity:0;
+  }
   .sello-guardian{
     width:70px; height:70px; border-radius:50%; display:flex; align-items:center; justify-content:center;
     font-size:30px;
@@ -236,9 +271,7 @@
   .chip:hover{ background:rgba(242,201,76,0.16); }
   .chip:disabled{ opacity:.4; cursor:not-allowed; }
 
-  .chat{ padding:16px 14px 4px; display:flex; flex-direction:column; gap:12px; max-height:58vh; overflow-y:auto; }
-  .chat::-webkit-scrollbar{ width:7px; }
-  .chat::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.12); border-radius:4px; }
+  .chat{ padding:16px 14px 4px; display:flex; flex-direction:column; gap:12px; }
 
   .msg{ max-width:88%; padding:11px 14px; border-radius:14px; font-size:13.5px; line-height:1.5; }
   .msg.bot{ align-self:flex-start; background:var(--bot-bubble); border:1px solid rgba(255,255,255,0.05); border-top-left-radius:3px; }
@@ -299,7 +332,23 @@
   .contador-caracteres.cerca{ color:var(--gold); }
   .contador-caracteres.lleno{ color:#e0685a; }
 
-  .footer-note{ text-align:center; font-size:11.5px; color:var(--text-dim); padding:0 20px 4px; }
+  .footer-note{ text-align:center; font-size:11.5px; color:var(--text-dim); padding:6px 20px 4px; }
+
+  /* ---- Ajustes para celular (el chatbot solo abre en horizontal) ----
+     Ya no hace falta forzar todo dentro de una sola pantalla — la página
+     puede ser más alta y se scrollea (con el video encogiéndose y
+     quedándose fijo arriba, ver JS). Aquí solo se recorta el "chrome"
+     decorativo (título, márgenes) para dejarle más aire al chat; el
+     texto de mensajes y chips se queda en tamaño legible normal. */
+  @media (max-height:520px){
+    body{ padding:12px 10px 20px; }
+    .encabezado{ margin-bottom:8px; }
+    .titulo{ font-size:19px; }
+    .chispa{ display:none; }
+    .barra-ventana{ padding:6px 12px; }
+    .barra-ventana .etiqueta{ font-size:9.5px; }
+    .chat{ padding:12px 14px 4px; }
+  }
 
   /* ---- Brillo que sigue al cursor sobre los bordes (solo en PC/mouse) ----
      Dos capas por elemento (::before morado, ::after dorado) que se turnan
@@ -375,19 +424,21 @@
   </div>
 
   <div class="ventana">
-    <div class="barra-ventana">
-      <div class="puntos"><span></span><span></span><span></span></div>
-      <span class="etiqueta">La Cámara del Guardián</span>
-    </div>
+    <div class="ventana-header" id="ventanaHeader">
+      <div class="barra-ventana">
+        <div class="puntos"><span></span><span></span><span></span></div>
+        <span class="etiqueta">La Cámara del Guardián</span>
+      </div>
 
-    <div class="video-loop">
-      <iframe
-        src="https://player.vimeo.com/video/1218704734?autoplay=1&loop=1&muted=1&background=1&autopause=0&controls=0"
-        title="Video del Guardián del Templo"
-        allow="autoplay; fullscreen; picture-in-picture"
-        loading="eager"
-        referrerpolicy="strict-origin-when-cross-origin"
-      ></iframe>
+      <div class="video-loop" id="videoLoop">
+        <iframe
+          src="https://player.vimeo.com/video/1218704734?autoplay=1&loop=1&muted=1&background=1&autopause=0&controls=0"
+          title="Video del Guardián del Templo"
+          allow="autoplay; fullscreen; picture-in-picture"
+          loading="eager"
+          referrerpolicy="strict-origin-when-cross-origin"
+        ></iframe>
+      </div>
     </div>
 
     <div id="contenidoChat">
@@ -424,7 +475,6 @@
   <p class="footer-note">El Guardián solo responde con información confirmada del proyecto. Si algo no lo sabe con certeza, te lo dirá en vez de inventarlo.</p>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* =========================================================================
    BASE DE CONOCIMIENTO — TEMPLO DEL PROPÓSITO / PROPOTIENDA
@@ -775,6 +825,50 @@ const btnEnviar = document.getElementById('btnEnviar');
 const preguntasBox = document.getElementById('preguntas');
 const btnDescargar = document.getElementById('btnDescargar');
 const btnNuevaSesion = document.getElementById('btnNuevaSesion');
+const ventanaHeader = document.getElementById('ventanaHeader');
+const videoLoop = document.getElementById('videoLoop');
+
+/* ---- Recuadro del video: toda la pestaña (video, mensajes, chips, barra
+   de escribir) es una sola página larga que se scrollea junta. Lo único
+   que no se va con el scroll es este bloque (position:sticky arriba). Al
+   hacer scroll hacia abajo por la página, el recuadro del video se va
+   encogiendo hasta un tamaño mínimo fijo en el que se queda congelado —
+   sin importar cuánto se siga bajando. Solo vuelve a crecer si se
+   regresa hasta arriba del todo de la página. Nunca desaparece — el
+   usuario siempre ve al Guardián, solo más chico cuando no hace falta
+   tanto espacio. */
+(function initVideoEncogible(){
+  if (!ventanaHeader || !videoLoop) return;
+
+  function tamanos(){
+    const compacto = window.matchMedia('(max-height:520px)').matches;
+    return compacto
+      ? { completo:150, minimo:56, rango:55 }
+      : { completo:230, minimo:90, rango:70 };
+  }
+  let t = tamanos();
+
+  function actualizar(){
+    const y = window.scrollY || window.pageYOffset || 0;
+    const ratio = Math.max(0, Math.min(1, y / t.rango));
+    const alto = t.completo - ratio * (t.completo - t.minimo);
+    videoLoop.style.height = alto + 'px';
+    ventanaHeader.classList.toggle('is-compact', ratio > 0.65);
+  }
+
+  let pendiente = false;
+  window.addEventListener('scroll', () => {
+    if (!pendiente){
+      requestAnimationFrame(() => { actualizar(); pendiente = false; });
+      pendiente = true;
+    }
+  }, { passive:true });
+
+  window.addEventListener('resize', () => { t = tamanos(); actualizar(); });
+  window.addEventListener('orientationchange', () => { t = tamanos(); actualizar(); });
+
+  actualizar();
+})();
 
 /* =========================================================================
    ENTRADA — el Guardián ya sabe quién eres, no se lo pregunta a nadie
@@ -858,7 +952,7 @@ function agregarMensaje(texto, tipo){
     const ultimaPregunta = mensajes[mensajes.length - 1];
     (ultimaPregunta || div).scrollIntoView({ behavior:'smooth', block:'start' });
   } else {
-    chat.scrollTop = chat.scrollHeight;
+    div.scrollIntoView({ behavior:'smooth', block:'start' });
   }
   return div;
 }
@@ -871,7 +965,7 @@ function agregarMensajeError(detalleTecnico){
     (detalleTecnico ? '<span class="detalle">Detalle técnico: ' + escaparHTML(detalleTecnico) + '</span>' : '') +
     '<br><button id="btnReintentar">Reintentar</button>';
   chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
+  div.scrollIntoView({ behavior:'smooth', block:'start' });
   const btn = div.querySelector('#btnReintentar');
   btn.addEventListener('click', () => {
     div.remove();
@@ -913,7 +1007,7 @@ function mostrarPensando(){
   div.id = 'pensando';
   div.innerHTML = '<span></span><span></span><span></span>';
   chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
+  div.scrollIntoView({ behavior:'smooth', block:'end' });
 }
 function quitarPensando(){
   const el = document.getElementById('pensando');
@@ -1160,7 +1254,13 @@ function mostrarBienvenida(){
    el contexto para las respuestas que sigan. */
 if(window.GUARDIAN_PERFIL) entrarConPerfil(window.GUARDIAN_PERFIL);
 mostrarBienvenida();
-entrada.focus();
+// En celular, enfocar el textarea al cargar hace que el navegador salte
+// la pantalla hasta el input (para dejarlo visible sobre el teclado),
+// tapando el video y el saludo de bienvenida. Por eso el autofocus al
+// abrir solo corre en dispositivos de mouse/PC — en touch no se dispara.
+if (window.matchMedia('(hover:hover) and (pointer:fine)').matches) {
+  entrada.focus();
+}
 cargarPerfilEnSegundoPlano();
 
 </script>
