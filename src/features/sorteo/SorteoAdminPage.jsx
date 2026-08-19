@@ -116,7 +116,15 @@ export default function SorteoAdminPage() {
   const [loadingSellos,  setLoadingSellos]  = useState(false);
   const [guardandoSello, setGuardandoSello] = useState(null); // id en proceso
   const [errSello,       setErrSello]       = useState('');
-  const [editsSellos,    setEditsSellos]    = useState({}); // { [id]: valor editado }
+    const [editsSellos,    setEditsSellos]    = useState({}); // { [id]: valor editado }
+
+  // ── JUNTAS MEET (análisis automático de sesiones) ────────────────────────────
+  const [juntasMeet,     setJuntasMeet]     = useState([]);
+  const [loadingJuntas,  setLoadingJuntas]  = useState(false);
+  const [juntaAbierta,   setJuntaAbierta]   = useState(null);
+  const [sincronizando,  setSincronizando]  = useState(false);
+  const [msgSync,        setMsgSync]        = useState('');
+
 
   // ── FIRMAS (acuerdos digitales de líderes/gerentes) ──────────────────────────
   const [firmas,        setFirmas]        = useState([]);
@@ -234,6 +242,27 @@ const cargarSellosCodigos = useCallback(async () => {
     setEditsSellos(Object.fromEntries(slots.map(s => [s.numero_sesion, s.codigo || ''])));
     setLoadingSellos(false);
   }, []);
+
+  const cargarJuntasMeet = useCallback(async () => {
+    setLoadingJuntas(true);
+    const { data, error } = await supabase
+      .from('camino_juntas_meet')
+      .select('*')
+      .order('fecha_inicio', { ascending: false });
+    if (!error) setJuntasMeet(data || []);
+    setLoadingJuntas(false);
+  }, []);
+
+  const sincronizarJuntasMeet = async () => {
+    setSincronizando(true);
+    setMsgSync('');
+    const { data, error } = await supabase.functions.invoke('camino-meet-sync');
+    setSincronizando(false);
+    if (error) { setMsgSync('Error al sincronizar: ' + error.message); return; }
+    const r = data?.resumen;
+    setMsgSync(r ? `Listo — ${r.revisadas} revisadas, ${r.nuevas_guardadas} nuevas, ${r.analizadas} analizadas.` : 'Sincronizado.');
+    cargarJuntasMeet();
+  };
 
   const guardarSello = async (numeroSesion) => {
     const nuevoCodigo = (editsSellos[numeroSesion] || '').trim().toUpperCase();
@@ -377,7 +406,8 @@ const cargarSellosCodigos = useCallback(async () => {
 
   useEffect(() => {
     if (tabActiva === 'sellos') cargarSellosCodigos();
-  }, [tabActiva, cargarSellosCodigos]);
+    if (tabActiva === 'juntas') cargarJuntasMeet();
+  }, [tabActiva, cargarSellosCodigos, cargarJuntasMeet]);
 
   const slugify = (texto) =>
     texto.toLowerCase().trim()
@@ -591,6 +621,7 @@ const cargarSellosCodigos = useCallback(async () => {
             { id: 'reportes',  label: `🆘 REPORTES${reportes.filter(r => r.status === 'pendiente').length > 0 ? ` (${reportes.filter(r => r.status === 'pendiente').length})` : ''}` },
             { id: 'camino',    label: `🗺️ CAMINO${interesadosCamino.filter(i => i.estado === 'pendiente').length > 0 ? ` (${interesadosCamino.filter(i => i.estado === 'pendiente').length})` : ''}` },
             { id: 'sellos',    label: '🔑 SELLOS' },
+            { id: 'juntas',    label: '🎥 JUNTAS' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -614,6 +645,7 @@ const cargarSellosCodigos = useCallback(async () => {
                 if (tab.id === 'reportes') cargarReportes();
                 if (tab.id === 'camino') cargarInteresadosCamino();
                 if (tab.id === 'sellos') cargarSellosCodigos();
+                if (tab.id === 'juntas') cargarJuntasMeet();
               }}
               style={{
                 padding: '9px 20px',
@@ -1933,6 +1965,163 @@ const cargarSellosCodigos = useCallback(async () => {
                     >
                       {guardandoSello === s.numero_sesion ? 'GUARDANDO...' : cambiado ? 'GUARDAR' : '✓ GUARDADO'}
                     </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══ TAB: JUNTAS MEET ══ */}
+      {tabActiva === 'juntas' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: '20px 24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.gold, margin: '0 0 8px' }}>
+                  🎥 JUNTAS DE MEET — ANÁLISIS AUTOMÁTICO
+                </h2>
+                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.muted, letterSpacing: 1, margin: 0 }}>
+                  Transcripción y análisis con IA de cada sesión grabada en Meet. Se sincroniza sola cada 3 horas.
+                </p>
+              </div>
+              <button
+                onClick={sincronizarJuntasMeet}
+                disabled={sincronizando}
+                style={{
+                  padding: '9px 18px', background: 'rgba(212,175,55,0.12)', border: `1px solid ${C.borderHi}`,
+                  borderRadius: 8, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1,
+                  cursor: sincronizando ? 'default' : 'pointer', opacity: sincronizando ? 0.5 : 1, whiteSpace: 'nowrap',
+                }}
+              >
+                {sincronizando ? 'SINCRONIZANDO...' : '🔄 SINCRONIZAR AHORA'}
+              </button>
+            </div>
+            {msgSync && (
+              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.green, letterSpacing: 1, marginTop: 12 }}>{msgSync}</p>
+            )}
+          </div>
+
+          {loadingJuntas ? (
+            <p style={{ color: C.goldDim, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, textAlign: 'center' }}>CARGANDO...</p>
+          ) : juntasMeet.length === 0 ? (
+            <p style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>Todavía no hay juntas sincronizadas.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {juntasMeet.map(j => {
+                const abierta = juntaAbierta === j.id;
+                const duracionMin = j.fecha_inicio && j.fecha_fin
+                  ? Math.max(1, Math.round((new Date(j.fecha_fin) - new Date(j.fecha_inicio)) / 60000))
+                  : null;
+                const estadoInfo = {
+                  analizado:       { color: C.green,  label: '● ANALIZADO' },
+                  transcrito:      { color: C.gold,   label: '● TRANSCRITO' },
+                  sin_transcript:  { color: C.muted,  label: '○ SIN TRANSCRIPT' },
+                  error:           { color: C.red,    label: '✕ ERROR' },
+                  error_analisis:  { color: C.red,    label: '✕ ERROR DE ANÁLISIS' },
+                }[j.estado] || { color: C.muted, label: (j.estado || '—').toUpperCase() };
+
+                return (
+                  <div key={j.id} style={{ background: C.card, border: `1px solid ${abierta ? C.borderHi : C.border}`, borderRadius: 14, overflow: 'hidden' }}>
+                    <div
+                      onClick={() => setJuntaAbierta(abierta ? null : j.id)}
+                      style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, cursor: 'pointer', flexWrap: 'wrap' }}
+                    >
+                      <div>
+                        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: C.text, fontWeight: 700 }}>
+                          {j.fecha_inicio ? new Date(j.fecha_inicio).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Sin fecha'}
+                        </div>
+                        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: C.muted, marginTop: 2 }}>
+                          {duracionMin ? `${duracionMin} min` : ''}
+                          {j.temas?.resumen_ejecutivo ? ` · ${j.temas.resumen_ejecutivo.slice(0, 70)}${j.temas.resumen_ejecutivo.length > 70 ? '…' : ''}` : ''}
+                        </div>
+                      </div>
+                      <span style={{
+                        fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: estadoInfo.color,
+                        border: `1px solid ${estadoInfo.color}55`, borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap',
+                      }}>
+                        {estadoInfo.label}
+                      </span>
+                    </div>
+
+                    {abierta && (
+                      <div style={{ padding: '0 18px 18px', borderTop: `1px solid ${C.border}` }}>
+                        {j.estado === 'error' || j.estado === 'error_analisis' ? (
+                          <p style={{ color: C.red, fontSize: 11, marginTop: 14 }}>{j.error_detalle || 'Error desconocido.'}</p>
+                        ) : j.estado === 'sin_transcript' ? (
+                          <p style={{ color: C.muted, fontSize: 11, marginTop: 14 }}>Esta llamada no generó transcripción (posiblemente muy corta o sin la opción activada).</p>
+                        ) : j.temas ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 14 }}>
+                            <div>
+                              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.gold, marginBottom: 4 }}>RESUMEN</div>
+                              <p style={{ fontSize: 12, color: C.text, margin: 0, lineHeight: 1.5 }}>{j.temas.resumen_ejecutivo}</p>
+                            </div>
+
+                            {Array.isArray(j.temas.puntos_tocados) && j.temas.puntos_tocados.length > 0 && (
+                              <div>
+                                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.gold, marginBottom: 6 }}>PUNTOS TOCADOS</div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                  {j.temas.puntos_tocados.map((p, i) => (
+                                    <div key={i} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                                        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: C.text, fontWeight: 700 }}>{p.tema}</span>
+                                        {p.tiempo_aprox_min != null && (
+                                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, whiteSpace: 'nowrap' }}>~{p.tiempo_aprox_min} min</span>
+                                        )}
+                                      </div>
+                                      {p.detalle && <p style={{ fontSize: 11, color: C.muted, margin: '4px 0 0' }}>{p.detalle}</p>}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {Array.isArray(j.temas.puntos_pendientes_o_sin_tiempo) && j.temas.puntos_pendientes_o_sin_tiempo.length > 0 && (
+                              <div>
+                                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.gold, marginBottom: 6 }}>QUEDÓ PENDIENTE</div>
+                                <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                  {j.temas.puntos_pendientes_o_sin_tiempo.map((p, i) => (
+                                    <li key={i} style={{ fontSize: 11.5, color: C.text }}>{p}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {Array.isArray(j.temas.senales_de_alerta) && j.temas.senales_de_alerta.length > 0 && (
+                              <div>
+                                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.red, marginBottom: 6 }}>⚠ SEÑALES DE ALERTA</div>
+                                <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                  {j.temas.senales_de_alerta.map((s, i) => (
+                                    <li key={i} style={{ fontSize: 11.5, color: C.text }}>{s}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {j.recomendaciones && (
+                              <div>
+                                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.gold, marginBottom: 6 }}>RECOMENDACIONES</div>
+                                <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                  {j.recomendaciones.split('\n').filter(Boolean).map((r, i) => (
+                                    <li key={i} style={{ fontSize: 11.5, color: C.text }}>{r}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            <details>
+                              <summary style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: C.muted, cursor: 'pointer' }}>Ver transcripción completa</summary>
+                              <pre style={{ whiteSpace: 'pre-wrap', fontSize: 10, color: C.muted, marginTop: 8, maxHeight: 300, overflowY: 'auto', background: 'rgba(255,255,255,0.02)', padding: 10, borderRadius: 8 }}>
+                                {j.transcript_crudo}
+                              </pre>
+                            </details>
+                          </div>
+                        ) : (
+                          <p style={{ color: C.muted, fontSize: 11, marginTop: 14 }}>Transcrito, análisis pendiente.</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
