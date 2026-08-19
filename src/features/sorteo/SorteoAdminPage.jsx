@@ -2196,8 +2196,18 @@ const cargarSellosCodigos = useCallback(async () => {
                 style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', color: C.text, fontSize: 11, fontFamily: 'Cinzel, serif' }}
               >
                 <option value="todos">Con quién: todos</option>
-                {Array.from(new Set(juntasMeet.map(j => j.participante_nombre).filter(Boolean))).sort().map(n => (
-                  <option key={n} value={n}>{n}</option>
+                {Array.from(
+                  new Map(
+                    juntasMeet
+                      .filter(j => j.participante_nombre)
+                      .map(j => {
+                        const key = j.participante_id ? `${j.participante_tipo}:${j.participante_id}` : `nombre:${j.participante_nombre}`;
+                        const label = j.participante_id && j.titulo ? j.titulo.split('—').pop().trim() : j.participante_nombre;
+                        return [key, label];
+                      })
+                  ).entries()
+                ).sort((a, b) => a[1].localeCompare(b[1])).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
                 ))}
               </select>
               <select
@@ -2228,7 +2238,7 @@ const cargarSellosCodigos = useCallback(async () => {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {juntasMeet
-                .filter(j => filtroParticipanteJunta === 'todos' || j.participante_nombre === filtroParticipanteJunta)
+                .filter(j => filtroParticipanteJunta === 'todos' || (j.participante_id ? `${j.participante_tipo}:${j.participante_id}` : `nombre:${j.participante_nombre}`) === filtroParticipanteJunta)
                 .filter(j => filtroSesionJunta === 'todas' || String(j.numero_sesion) === filtroSesionJunta)
                 .map(j => {
                 const abierta = juntaAbierta === j.id;
