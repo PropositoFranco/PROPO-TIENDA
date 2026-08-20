@@ -171,18 +171,26 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   }, [open]);
 
   // ── Auto-scroll: cuando llega la respuesta del bot, deja arriba la
-  //    última pregunta del usuario (igual que antes); si es un mensaje
-  //    del usuario o un error, se muestra ese mismo mensaje arriba ──
+  //    última pregunta del usuario; si es un mensaje del usuario o un
+  //    error, se muestra ese mismo mensaje arriba. IMPORTANTE: si el
+  //    mensaje es del bot pero no existe ninguna pregunta previa del
+  //    usuario (o sea, es solo el saludo inicial), NO se hace scroll —
+  //    así la primera apertura siempre se queda arriba del todo, con el
+  //    video a tamaño completo y el saludo visible ──
   useEffect(() => {
     if (!mensajes.length) return;
     const ultimo = mensajes[mensajes.length - 1];
-    let idObjetivo = ultimo.id;
     if (ultimo.tipo === 'bot') {
+      let idPregunta = null;
       for (let i = mensajes.length - 2; i >= 0; i--) {
-        if (mensajes[i].tipo === 'user') { idObjetivo = mensajes[i].id; break; }
+        if (mensajes[i].tipo === 'user') { idPregunta = mensajes[i].id; break; }
       }
+      if (idPregunta) {
+        msgRefs.current[idPregunta]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      return;
     }
-    msgRefs.current[idObjetivo]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    msgRefs.current[ultimo.id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [mensajes]);
 
   useEffect(() => {
@@ -447,6 +455,19 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     <div
       ref={overlayRef}
       className="gc-overlay"
+      // El chatbot debe comportarse como una pestaña totalmente aislada:
+      // nada de lo que se toque aquí adentro debe "escapar" hacia
+      // listeners globales de `window` del resto de la app (por ejemplo,
+      // el que intenta activar pantalla completa en AppLayout con el
+      // primer toque en cualquier parte de la pantalla). Frenamos la
+      // propagación en fase de burbuja: los botones internos (enviar,
+      // cerrar, preguntas, textarea) reciben el clic con total
+      // normalidad primero; solo evitamos que siga subiendo más allá
+      // de este overlay hacia el resto de la app.
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
     >
       <style>{CSS}</style>
 
