@@ -67,22 +67,34 @@ function saludoSegunNombre(nombre) {
 }
 
 export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
-  const chatRef = useRef(null);
   const entradaRef = useRef(null);
   const ventanaHeaderRef = useRef(null);
   const videoLoopRef = useRef(null);
   const overlayRef = useRef(null);
   const scrollRef = useRef(null);
+  const pensandoRef = useRef(null);
+  const msgRefs = useRef({});
 
   const historialRef = useRef([]);
   const ultimaPreguntaFallidaRef = useRef(null);
   const savedScrollYRef = useRef(0);
 
+  // Los mensajes viven en estado de React (no insertados a mano en el DOM),
+  // así que sobreviven a que el chatbot se oculte y se vuelva a mostrar.
+  // Solo "Nueva sesión" debe vaciar esta lista.
+  const [mensajes, setMensajes] = useState([]);
+  const [pensando, setPensando] = useState(false);
+
   const [preguntas, setPreguntas] = useState(PREGUNTAS_INICIALES.map(p => p.q));
   const [bloqueado, setBloqueado] = useState(false);
   const [contador, setContador] = useState(0);
   const [vh, setVh] = useState(() => window.visualViewport?.height ?? window.innerHeight);
+  const [vOffset, setVOffset] = useState(() => window.visualViewport?.offsetTop ?? 0);
   const [inited, setInited] = useState(false);
+
+  function nuevoId() {
+    return 'm' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+  }
 
   // ── Abrir/cerrar: bloqueo de scroll del body + alto real de viewport ──
   useEffect(() => {
@@ -96,6 +108,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
       setVh(window.visualViewport?.height ?? window.innerHeight);
+      setVOffset(window.visualViewport?.offsetTop ?? 0);
     } else {
       document.body.style.position = '';
       document.body.style.top = '';
@@ -118,11 +131,16 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   }, [open]);
 
   useEffect(() => {
-    const update = () => setVh(window.visualViewport?.height ?? window.innerHeight);
+    const update = () => {
+      setVh(window.visualViewport?.height ?? window.innerHeight);
+      setVOffset(window.visualViewport?.offsetTop ?? 0);
+    };
     window.visualViewport?.addEventListener('resize', update);
+    window.visualViewport?.addEventListener('scroll', update);
     window.addEventListener('orientationchange', update);
     return () => {
       window.visualViewport?.removeEventListener('resize', update);
+      window.visualViewport?.removeEventListener('scroll', update);
       window.removeEventListener('orientationchange', update);
     };
   }, []);
@@ -144,6 +162,43 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, inited]);
+
+  // ── Al reabrir: si ya hubo conversación (al menos una pregunta del
+  //    usuario), mostrar el final tal como quedó. Si es la primera vez
+  //    (solo el saludo, sin preguntas), se deja la vista inicial de
+  //    siempre (arriba, con el video y las preguntas sugeridas) ──
+  useEffect(() => {
+    if (!open) return;
+    const hayConversacion = mensajes.some(m => m.tipo === 'user');
+    if (hayConversacion) {
+      requestAnimationFrame(() => {
+        const el = scrollRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // ── Auto-scroll: cuando llega la respuesta del bot, deja arriba la
+  //    última pregunta del usuario (igual que antes); si es un mensaje
+  //    del usuario o un error, se muestra ese mismo mensaje arriba ──
+  useEffect(() => {
+    if (!mensajes.length) return;
+    const ultimo = mensajes[mensajes.length - 1];
+    let idObjetivo = ultimo.id;
+    if (ultimo.tipo === 'bot') {
+      for (let i = mensajes.length - 2; i >= 0; i--) {
+        if (mensajes[i].tipo === 'user') { idObjetivo = mensajes[i].id; break; }
+      }
+    }
+    msgRefs.current[idObjetivo]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [mensajes]);
+
+  useEffect(() => {
+    if (pensando) {
+      pensandoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [pensando]);
 
   // ── Video encogible al hacer scroll dentro del panel ──
   useEffect(() => {
@@ -209,52 +264,20 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   }, [open, onClose]);
 
   function agregarMensaje(texto, tipo) {
-    const chat = chatRef.current;
-    if (!chat) return;
-    const div = document.createElement('div');
-    div.className = 'gc-msg ' + tipo;
-    if (tipo === 'bot') div.innerHTML = formatear(texto);
-    else div.textContent = texto;
-    chat.appendChild(div);
-    if (tipo === 'bot') {
-      const mensajes = chat.querySelectorAll('.gc-msg.user');
-      const ultimaPregunta = mensajes[mensajes.length - 1];
-      (ultimaPregunta || div).scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else {
-      div.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    return div;
+    const id = nuevoId();
+    setMensajes(prev => [...prev, { id, tipo, texto }]);
+    return id;
   }
 
   function agregarMensajeError(detalleTecnico) {
-    const chat = chatRef.current;
-    if (!chat) return;
-    const div = document.createElement('div');
-    div.className = 'gc-msg error';
-    div.innerHTML =
-      'Hubo un problema para conectar con el Guardián. Revisa tu conexión e inténtalo de nuevo.' +
-      (detalleTecnico ? '<span class="gc-detalle">Detalle técnico: ' + escaparHTML(detalleTecnico) + '</span>' : '') +
-      '<br><button class="gc-reintentar">Reintentar</button>';
-    chat.appendChild(div);
-    div.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    div.querySelector('.gc-reintentar')?.addEventListener('click', () => {
-      div.remove();
-      reintentarUltimoEnvio();
-    });
+    setMensajes(prev => [...prev, { id: nuevoId(), tipo: 'error', detalle: detalleTecnico || null }]);
   }
 
   function mostrarPensando() {
-    const chat = chatRef.current;
-    if (!chat || chat.querySelector('#gc-pensando')) return;
-    const div = document.createElement('div');
-    div.className = 'gc-thinking';
-    div.id = 'gc-pensando';
-    div.innerHTML = '<span></span><span></span><span></span>';
-    chat.appendChild(div);
-    div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    setPensando(true);
   }
   function quitarPensando() {
-    chatRef.current?.querySelector('#gc-pensando')?.remove();
+    setPensando(false);
   }
 
   async function obtenerAccessToken() {
@@ -396,7 +419,8 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
 
   function nuevaSesion() {
     historialRef.current = [];
-    if (chatRef.current) chatRef.current.innerHTML = '';
+    msgRefs.current = {};
+    setMensajes([]);
     setPreguntas(PREGUNTAS_INICIALES.map(p => p.q));
     agregarMensaje(
       (nombreUsuario
@@ -432,7 +456,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     <div
       ref={overlayRef}
       className="gc-overlay"
-      style={{ height: `${vh}px` }}
+      style={{ height: `${vh}px`, top: `${vOffset}px` }}
     >
       <style>{CSS}</style>
 
@@ -476,7 +500,37 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
             </div>
 
             <div className="gc-contenido">
-              <div className="gc-chat" ref={chatRef}></div>
+              <div className="gc-chat">
+                {mensajes.map(m => (
+                  <div
+                    key={m.id}
+                    ref={el => { if (el) msgRefs.current[m.id] = el; }}
+                    className={'gc-msg ' + m.tipo}
+                  >
+                    {m.tipo === 'bot' && <div dangerouslySetInnerHTML={{ __html: formatear(m.texto) }} />}
+                    {m.tipo === 'user' && m.texto}
+                    {m.tipo === 'error' && (
+                      <>
+                        Hubo un problema para conectar con el Guardián. Revisa tu conexión e inténtalo de nuevo.
+                        {m.detalle && <span className="gc-detalle">Detalle técnico: {m.detalle}</span>}
+                        <br />
+                        <button
+                          className="gc-reintentar"
+                          onClick={() => {
+                            setMensajes(prev => prev.filter(x => x.id !== m.id));
+                            reintentarUltimoEnvio();
+                          }}
+                        >
+                          Reintentar
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
+                {pensando && (
+                  <div className="gc-thinking" ref={pensandoRef}><span></span><span></span><span></span></div>
+                )}
+              </div>
 
               <div className="gc-acciones">
                 <button className="gc-accion" onClick={descargarPlan}>⬇ Descargar plan</button>
@@ -496,27 +550,29 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
                 ))}
               </div>
 
-              <div className="gc-input-bar">
-                <textarea
-                  ref={entradaRef}
-                  className="gc-textarea"
-                  rows={1}
-                  maxLength={LIMITE_CARACTERES}
-                  placeholder="Escríbele al Guardián..."
-                  disabled={bloqueado}
-                  onChange={onInputChange}
-                  onKeyDown={onEntradaKeyDown}
-                />
-                <button
-                  className="gc-enviar"
-                  disabled={bloqueado}
-                  onClick={() => enviarPregunta(entradaRef.current?.value || '')}
-                >
-                  ↑
-                </button>
-              </div>
-              <div className={`gc-contador ${cercaDelLimite ? 'cerca' : ''} ${lleno ? 'lleno' : ''}`}>
-                {contador} / {LIMITE_CARACTERES}
+              <div className="gc-input-zona">
+                <div className="gc-input-bar">
+                  <textarea
+                    ref={entradaRef}
+                    className="gc-textarea"
+                    rows={1}
+                    maxLength={LIMITE_CARACTERES}
+                    placeholder="Escríbele al Guardián..."
+                    disabled={bloqueado}
+                    onChange={onInputChange}
+                    onKeyDown={onEntradaKeyDown}
+                  />
+                  <button
+                    className="gc-enviar"
+                    disabled={bloqueado}
+                    onClick={() => enviarPregunta(entradaRef.current?.value || '')}
+                  >
+                    ↑
+                  </button>
+                </div>
+                <div className={`gc-contador ${cercaDelLimite ? 'cerca' : ''} ${lleno ? 'lleno' : ''}`}>
+                  {contador} / {LIMITE_CARACTERES}
+                </div>
               </div>
             </div>
           </div>
@@ -535,6 +591,7 @@ const CSS = `
   background:#0a0e17;
   font-family:'Inter', sans-serif;
   color:#eef1f7;
+  cursor:auto;
 }
 .gc-modal-header{
   position:absolute; top:0; left:0; right:0; z-index:5;
@@ -552,7 +609,7 @@ const CSS = `
 .gc-scroll{
   flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;
   display:flex; justify-content:center;
-  padding:56px 14px 24px;
+  padding:0 14px 24px;
   position:relative;
 }
 .gc-esfera{ position:fixed; top:50%; left:50%; border-radius:50%; pointer-events:none; z-index:-1; filter:blur(95px); mix-blend-mode:screen; opacity:0.95; will-change:transform; }
@@ -591,7 +648,7 @@ const CSS = `
   85%{ transform:translate(calc(-50% - 4vw), calc(-50% + 2vh)) scale(0.95); }
 }
 .gc-shell{ width:100%; max-width:676px; }
-.gc-encabezado{ text-align:center; position:relative; margin-bottom:18px; }
+.gc-encabezado{ text-align:center; position:relative; margin-top:56px; margin-bottom:18px; }
 .gc-titulo{ font-family:'Poppins', sans-serif; font-weight:800; font-size:34px; color:#fff; letter-spacing:-0.01em; margin:0; position:relative; display:inline-block; }
 .gc-subrayado{ position:absolute; left:6%; right:6%; top:-10px; height:2px; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); }
 .gc-chispa{ position:absolute; font-size:16px; color:#f2c94c; filter:drop-shadow(0 0 6px rgba(242,201,76,0.7)); animation:gcDestello 2.6s ease-in-out infinite; }
@@ -600,7 +657,7 @@ const CSS = `
 .gc-chispa.c3{ bottom:-8px; right:26%; font-size:10px; animation-delay:1.6s; }
 @keyframes gcDestello{ 0%,100%{ opacity:.35; transform:scale(0.85);} 50%{ opacity:1; transform:scale(1.05);} }
 .gc-ventana{ border-radius:16px; background:#141a2b; border:1px solid rgba(255,255,255,0.06); box-shadow:0 20px 50px rgba(0,0,0,0.45); margin-bottom:16px; }
-.gc-ventana-header{ position:sticky; top:0; z-index:6; border-radius:16px 16px 0 0; overflow:hidden; background:#1b2338; box-shadow:0 10px 18px -12px rgba(0,0,0,0.6); }
+.gc-ventana-header{ position:sticky; top:0; z-index:4; border-radius:16px 16px 0 0; overflow:hidden; background:#1b2338; box-shadow:0 10px 18px -12px rgba(0,0,0,0.6); }
 .gc-contenido{ border-radius:0 0 16px 16px; overflow:hidden; background:#141a2b; }
 .gc-barra-ventana{ display:flex; align-items:center; justify-content:center; position:relative; padding:10px 14px; background:#1b2338; border-bottom:1px solid rgba(255,255,255,0.05); }
 .gc-puntos{ position:absolute; left:14px; display:flex; gap:6px; }
@@ -633,6 +690,7 @@ const CSS = `
 .gc-acciones{ display:flex; gap:6px; justify-content:center; padding:6px 12px 0; }
 .gc-accion{ display:flex; align-items:center; gap:4px; background:#1b2338; border:1px solid rgba(255,255,255,0.06); color:#8b93a7; font-size:10.5px; font-weight:600; padding:4px 9px; border-radius:8px; cursor:pointer; position:relative; }
 .gc-accion:hover{ color:#eef1f7; border-color:rgba(255,255,255,0.15); }
+.gc-input-zona{ position:sticky; bottom:0; z-index:3; background:#141a2b; padding-bottom:env(safe-area-inset-bottom); }
 .gc-input-bar{ display:flex; align-items:flex-end; gap:8px; padding:12px 10px 2px; }
 .gc-textarea{ flex:1; resize:none; background:#1b2338; border:1px solid rgba(255,255,255,0.08); border-radius:24px; color:#eef1f7; font-family:'Inter', sans-serif; font-size:13px; line-height:1.4; padding:13px 20px; max-height:110px; outline:none; position:relative; }
 .gc-textarea:focus{ border-color:#f2c94c; }
@@ -644,8 +702,8 @@ const CSS = `
 .gc-contador.lleno{ color:#e0685a; }
 .gc-footer-note{ text-align:center; font-size:11.5px; color:#8b93a7; padding:6px 20px 4px; }
 @media (max-height:520px){
-  .gc-scroll{ padding:44px 10px 20px; }
-  .gc-encabezado{ margin-bottom:8px; }
+  .gc-scroll{ padding:0 10px 20px; }
+  .gc-encabezado{ margin-top:44px; margin-bottom:8px; }
   .gc-titulo{ font-size:19px; }
   .gc-chispa{ display:none; }
   .gc-barra-ventana{ padding:6px 12px; }
