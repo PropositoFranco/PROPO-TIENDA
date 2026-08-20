@@ -88,8 +88,6 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   const [preguntas, setPreguntas] = useState(PREGUNTAS_INICIALES.map(p => p.q));
   const [bloqueado, setBloqueado] = useState(false);
   const [contador, setContador] = useState(0);
-  const [vh, setVh] = useState(() => window.visualViewport?.height ?? window.innerHeight);
-  const [vOffset, setVOffset] = useState(() => window.visualViewport?.offsetTop ?? 0);
   const [inited, setInited] = useState(false);
 
   function nuevoId() {
@@ -107,9 +105,17 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
       document.body.style.right = '0';
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
-      setVh(window.visualViewport?.height ?? window.innerHeight);
-      setVOffset(window.visualViewport?.offsetTop ?? 0);
     } else {
+      // Muy importante: si el usuario estaba escribiendo y cierra sin
+      // enviar, el teclado se queda "fantasma" abierto si no soltamos el
+      // foco a propósito. Como HubPage.jsx calcula el alto del hub con el
+      // mismo dato de pantalla visible (visualViewport), un teclado
+      // fantasma hace que el hub se vea encogido o con una franja negra
+      // abajo. Por eso soltamos el foco explícitamente antes de cerrar.
+      entradaRef.current?.blur();
+      if (document.activeElement && document.activeElement !== document.body) {
+        document.activeElement.blur();
+      }
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.left = '';
@@ -129,21 +135,6 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
       document.documentElement.style.height = '';
     };
   }, [open]);
-
-  useEffect(() => {
-    const update = () => {
-      setVh(window.visualViewport?.height ?? window.innerHeight);
-      setVOffset(window.visualViewport?.offsetTop ?? 0);
-    };
-    window.visualViewport?.addEventListener('resize', update);
-    window.visualViewport?.addEventListener('scroll', update);
-    window.addEventListener('orientationchange', update);
-    return () => {
-      window.visualViewport?.removeEventListener('resize', update);
-      window.visualViewport?.removeEventListener('scroll', update);
-      window.removeEventListener('orientationchange', update);
-    };
-  }, []);
 
   // ── Mensaje de bienvenida (una sola vez, al primer open) ──
   useEffect(() => {
@@ -258,7 +249,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   // ── ESC para cerrar ──
   useEffect(() => {
     if (!open) return;
-    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    const onKey = (e) => { if (e.key === 'Escape') { entradaRef.current?.blur(); onClose?.(); } };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
@@ -456,7 +447,6 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     <div
       ref={overlayRef}
       className="gc-overlay"
-      style={{ height: `${vh}px`, top: `${vOffset}px` }}
     >
       <style>{CSS}</style>
 
@@ -465,7 +455,11 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
           <span className="gc-modal-icon">🛡️</span>
           <span className="gc-modal-label">EL GUARDIÁN</span>
         </div>
-        <button className="gc-close" onClick={onClose} aria-label="Cerrar">✕</button>
+        <button
+          className="gc-close"
+          onClick={() => { entradaRef.current?.blur(); onClose?.(); }}
+          aria-label="Cerrar"
+        >✕</button>
       </div>
 
       <div className="gc-scroll" ref={scrollRef}>
@@ -475,13 +469,6 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
         <div className="gc-esfera morado"></div>
 
         <div className="gc-shell">
-          <div className="gc-encabezado">
-            <span className="gc-chispa c1">✦</span>
-            <span className="gc-chispa c2">✧</span>
-            <span className="gc-chispa c3">✦</span>
-            <h1 className="gc-titulo"><span className="gc-subrayado"></span>Guía de la Propotienda</h1>
-          </div>
-
           <div className="gc-ventana">
             <div className="gc-ventana-header" ref={ventanaHeaderRef}>
               <div className="gc-barra-ventana">
@@ -500,6 +487,12 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
             </div>
 
             <div className="gc-contenido">
+              <div className="gc-encabezado">
+                <span className="gc-chispa c1">✦</span>
+                <span className="gc-chispa c2">✧</span>
+                <span className="gc-chispa c3">✦</span>
+                <h1 className="gc-titulo"><span className="gc-subrayado"></span>Guía de la Propotienda</h1>
+              </div>
               <div className="gc-chat">
                 {mensajes.map(m => (
                   <div
@@ -587,11 +580,15 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
 const CSS = `
 .gc-overlay{
   position:fixed; inset:0; z-index:2147483647;
+  height:100vh;
   display:flex; flex-direction:column;
   background:#0a0e17;
   font-family:'Inter', sans-serif;
   color:#eef1f7;
   cursor:auto;
+}
+@supports (height: 100dvh){
+  .gc-overlay{ height:100dvh; }
 }
 .gc-modal-header{
   position:absolute; top:0; left:0; right:0; z-index:5;
@@ -648,8 +645,8 @@ const CSS = `
   85%{ transform:translate(calc(-50% - 4vw), calc(-50% + 2vh)) scale(0.95); }
 }
 .gc-shell{ width:100%; max-width:676px; }
-.gc-encabezado{ text-align:center; position:relative; margin-top:56px; margin-bottom:18px; }
-.gc-titulo{ font-family:'Poppins', sans-serif; font-weight:800; font-size:34px; color:#fff; letter-spacing:-0.01em; margin:0; position:relative; display:inline-block; }
+.gc-encabezado{ text-align:center; position:relative; margin:16px 0 14px; }
+.gc-titulo{ font-family:'Poppins', sans-serif; font-weight:800; font-size:22px; color:#fff; letter-spacing:-0.01em; margin:0; position:relative; display:inline-block; }
 .gc-subrayado{ position:absolute; left:6%; right:6%; top:-10px; height:2px; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); }
 .gc-chispa{ position:absolute; font-size:16px; color:#f2c94c; filter:drop-shadow(0 0 6px rgba(242,201,76,0.7)); animation:gcDestello 2.6s ease-in-out infinite; }
 .gc-chispa.c1{ top:-14px; left:14%; animation-delay:.2s; }
@@ -703,7 +700,7 @@ const CSS = `
 .gc-footer-note{ text-align:center; font-size:11.5px; color:#8b93a7; padding:6px 20px 4px; }
 @media (max-height:520px){
   .gc-scroll{ padding:0 10px 20px; }
-  .gc-encabezado{ margin-top:44px; margin-bottom:8px; }
+  .gc-encabezado{ margin:8px 0 6px; }
   .gc-titulo{ font-size:19px; }
   .gc-chispa{ display:none; }
   .gc-barra-ventana{ padding:6px 12px; }
