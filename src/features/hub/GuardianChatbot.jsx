@@ -410,6 +410,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     if (entradaRef.current) {
       entradaRef.current.value = '';
       entradaRef.current.style.height = 'auto';
+      entradaRef.current.blur();
     }
     setContador(0);
     await consultarGuardian();
@@ -444,6 +445,17 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
       entradaRef.current.focus();
     }
     actualizarContadorDesdeInput();
+    // Aseguramos manualmente que la barra de escribir quede visible
+    // arriba del teclado: el navegador a veces falla en hacer ese scroll
+    // automático justo cuando el textarea cambia de alto (por el texto
+    // largo de la pregunta) en el mismo instante en que se abre el
+    // teclado. Lo intentamos de inmediato y una vez más un poco después,
+    // por si el teclado tarda en terminar de abrirse.
+    const irAlFondo = () => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    };
+    requestAnimationFrame(irAlFondo);
+    setTimeout(irAlFondo, 350);
   }
 
   function nuevaSesion() {
