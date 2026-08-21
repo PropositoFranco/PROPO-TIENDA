@@ -352,6 +352,16 @@ function hexToRgb(hex) {
   return { r, g, b };
 }
 
+// Optimiza cualquier imagen servida desde Supabase Storage usando su endpoint de
+// transformación (render/image), pidiendo un tamaño acotado con resize=contain
+// para que nunca salga distorsionada, sin importar la proporción original.
+// Si la URL no es de Supabase Storage (o viene null), la devuelve tal cual.
+function optimizeStorageImg(url, { width = 700, height = 700, quality = 70 } = {}) {
+  if (!url || !url.includes('/storage/v1/object/public/')) return url;
+  return url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/')
+    + `?width=${width}&height=${height}&resize=contain&quality=${quality}`;
+}
+
 // ─────────────────────────────────────────────
 //  STAFF CANVAS — with activeSphere support
 // ─────────────────────────────────────────────
@@ -1535,7 +1545,12 @@ maxHeight: '92dvh',
           justifyContent: 'center',
         }}>
           {module.image ? (
-            <img src={module.image} alt={module.title} style={{ width:'100%', height:'100%', objectFit:'contain', objectPosition:'center top' }} />
+            <img
+              src={optimizeStorageImg(module.image, { width: 900, height: 900 })}
+              alt={module.title}
+              style={{ width:'100%', height:'100%', objectFit:'contain', objectPosition:'center top' }}
+              decoding="async"
+            />
           ) : (
             <>
               <div style={{ position:'absolute', inset:0, background:`radial-gradient(ellipse at 25% 30%, rgba(${c.r},${c.g},${c.b},0.45) 0%, transparent 60%)` }} />
@@ -1820,7 +1835,7 @@ function ModuleCard({ module, onOpen, owned = false, isSeen = false, bestsellerR
       `}</style>
       <EnergyBorder color={module.color} />
       <div style={{ position:'relative', height:'clamp(160px,20vw,210px)', background: module.image ? 'transparent' : `linear-gradient(135deg, rgba(${c.r},${c.g},${c.b},0.25) 0%, rgba(${c.r},${c.g},${c.b},0.05) 50%, rgba(0,0,0,0.6) 100%)`, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center' }}>
-        {module.image ? <img src={module.image} alt={module.title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} /> : (
+        {module.image ? <img src={optimizeStorageImg(module.image)} alt={module.title} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} loading="lazy" decoding="async" /> : (
           <>
             <div style={{ position:'absolute', inset:0, background:`radial-gradient(ellipse at 30% 30%, rgba(${c.r},${c.g},${c.b},0.35) 0%, transparent 65%)` }} />
             <div style={{ position:'absolute', inset:0, background:`radial-gradient(ellipse at 70% 70%, rgba(${c.r},${c.g},${c.b},0.2) 0%, transparent 60%)` }} />

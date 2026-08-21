@@ -122,6 +122,16 @@ function hexToRgb(hex) {
   return { r, g, b };
 }
 
+// Optimiza cualquier imagen servida desde Supabase Storage usando su endpoint de
+// transformación (render/image), pidiendo un tamaño acotado con resize=contain
+// para que nunca salga distorsionada, sin importar la proporción original.
+// Si la URL no es de Supabase Storage (o viene null), la devuelve tal cual.
+function optimizeStorageImg(url, { width = 700, height = 700, quality = 70 } = {}) {
+  if (!url || !url.includes('/storage/v1/object/public/')) return url;
+  return url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/')
+    + `?width=${width}&height=${height}&resize=contain&quality=${quality}`;
+}
+
 // ─── HOOK: responsive breakpoint ────────────────────────────────────────────────
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
@@ -626,7 +636,7 @@ function ArsenalCard({ item, onClick, isActivated }) {
           transition: 'filter 0.35s ease',
           animation: 'cardIconFloat 3.5s ease-in-out infinite',
         }}>{!item.image && item.icon}</div>
-        {item.image && <img src={item.image} alt={item.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', zIndex:3 }}/>}
+        {item.image && <img src={optimizeStorageImg(item.image)} alt={item.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', zIndex:3 }} loading="lazy" decoding="async" />}
 
         {/* Badges */}
         <div style={{
@@ -813,7 +823,7 @@ function ModuleIntroView({ item, onClose, onActivate, alreadyActivated }) {
           ))}
 
           {item.image
-            ? <img src={item.image} alt={item.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', zIndex:2 }}/>
+            ? <img src={optimizeStorageImg(item.image)} alt={item.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', zIndex:2 }} decoding="async" />
             : <div style={{
                 position:'absolute', left:'50%', top:'46%', transform:'translate(-50%,-50%)',
                 fontSize: isMobile ? '80px' : '100px', lineHeight:1, zIndex:2,
