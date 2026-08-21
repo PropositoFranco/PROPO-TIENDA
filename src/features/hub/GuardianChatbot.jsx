@@ -90,6 +90,28 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   const [contador, setContador] = useState(0);
   const [inited, setInited] = useState(false);
 
+  // ── Precalentar la conexión con Vimeo desde que carga el hub (no solo
+  //    cuando se abre el chat), para que al abrir el chatbot el video no
+  //    pierda tiempo en la conexión inicial y empiece a reproducirse más
+  //    rápido. No cambia nada de layout, tamaño ni calidad del video ──
+  useEffect(() => {
+    const dominios = ['https://player.vimeo.com', 'https://i.vimeocdn.com', 'https://f.vimeocdn.com'];
+    const agregados = [];
+    dominios.forEach(href => {
+      if (document.querySelector(`link[data-guardian-preconnect="${href}"]`)) return;
+      const link = document.createElement('link');
+      link.rel = 'preconnect';
+      link.href = href;
+      link.crossOrigin = 'anonymous';
+      link.setAttribute('data-guardian-preconnect', href);
+      document.head.appendChild(link);
+      agregados.push(link);
+    });
+    return () => {
+      agregados.forEach(link => link.remove());
+    };
+  }, []);
+
   function nuevoId() {
     return 'm' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
   }
@@ -124,6 +146,14 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
       document.body.style.overflow = '';
       document.documentElement.style.height = '';
       window.scrollTo(0, savedScrollYRef.current);
+      // Auto-corrección: una vez que el chat terminó de cerrarse y la
+      // pantalla ya se asentó, le avisamos al resto de la app (HubPage)
+      // que vuelva a medir el tamaño real de la pantalla, disparando el
+      // mismo evento nativo que ya usa para eso. Esto evita que el hub se
+      // quede con una medida equivocada, sin importar la causa.
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 400);
     }
     return () => {
       document.body.style.position = '';
@@ -559,7 +589,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
                     disabled={bloqueado}
                     onClick={() => onChipClick(q)}
                   >
-                    {q.length > 42 ? q.slice(0, 40).trim() + '…' : q}
+                    {q}
                   </button>
                 ))}
               </div>
@@ -686,8 +716,8 @@ const CSS = `
 .gc-ventana-header.is-compact .gc-barra-ventana{ padding:5px 12px; }
 .gc-ventana-header.is-compact .gc-etiqueta{ font-size:9px; }
 .gc-ventana-header.is-compact .gc-puntos span{ width:6px; height:6px; }
-.gc-preguntas{ display:flex; flex-wrap:wrap; gap:5px; padding:8px 12px 0; justify-content:center; border-top:1px solid rgba(255,255,255,0.05); margin-top:2px; }
-.gc-chip{ font-family:'Inter', sans-serif; font-size:11px; font-weight:600; color:#f2c94c; background:rgba(242,201,76,0.08); border:1px solid rgba(242,201,76,0.16); border-radius:999px; padding:5px 9px; cursor:pointer; transition:all .18s ease; position:relative; }
+.gc-preguntas{ display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:10px 12px 0; border-top:1px solid rgba(255,255,255,0.05); margin-top:2px; }
+.gc-chip{ font-family:'Inter', sans-serif; font-size:12px; line-height:1.35; font-weight:600; color:#f2c94c; background:rgba(242,201,76,0.08); border:1px solid rgba(242,201,76,0.16); border-radius:12px; padding:9px 12px; cursor:pointer; transition:all .18s ease; position:relative; text-align:left; white-space:normal; }
 .gc-chip:hover{ background:rgba(242,201,76,0.16); }
 .gc-chip:disabled{ opacity:.4; cursor:not-allowed; }
 .gc-chat{ padding:16px 14px 4px; display:flex; flex-direction:column; gap:12px; }
@@ -727,6 +757,9 @@ const CSS = `
   .gc-barra-ventana{ padding:6px 12px; }
   .gc-etiqueta{ font-size:9.5px; }
   .gc-chat{ padding:12px 14px 4px; }
+}
+@media (max-width:420px){
+  .gc-preguntas{ grid-template-columns:1fr; }
 }
 @media (hover:hover) and (pointer:fine){
   .gc-ventana::before, .gc-ventana::after,
