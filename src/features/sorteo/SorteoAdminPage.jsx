@@ -110,6 +110,11 @@ export default function SorteoAdminPage() {
   const [fechaInicioCamino, setFechaInicioCamino] = useState('2026-08-24');
   const [codigoGeneradoModal, setCodigoGeneradoModal] = useState(null);
   const [copiadoCamino, setCopiadoCamino] = useState('');
+  const [metricasLideres, setMetricasLideres] = useState([]);
+  const [loadingMetricasLideres, setLoadingMetricasLideres] = useState(false);
+  const [errMetricasLideres, setErrMetricasLideres] = useState('');
+  const [filtroEstadoLider, setFiltroEstadoLider] = useState('todos');
+  const [buscaLider, setBuscaLider] = useState('');
 
   // ── SELLOS (códigos de sesión del Camino) ────────────────────────────────────
   const [sellosCodigos,  setSellosCodigos]  = useState([]);
@@ -241,6 +246,16 @@ export default function SorteoAdminPage() {
     await supabase.from('camino_interesados').update({ estado: 'descartado' }).eq('id', id);
     cargarInteresadosCamino();
   };
+
+  // ── Métricas en vivo de los Líderes Digitales activos (RPC camino_metricas_gestor) ──
+  const cargarMetricasLideres = useCallback(async () => {
+    setLoadingMetricasLideres(true);
+    setErrMetricasLideres('');
+    const { data, error } = await supabase.rpc('camino_metricas_gestor');
+    if (error) setErrMetricasLideres(error.message);
+    setMetricasLideres(data || []);
+    setLoadingMetricasLideres(false);
+  }, []);
 
 const cargarSellosCodigos = useCallback(async () => {
     setLoadingSellos(true);
@@ -756,7 +771,7 @@ const cargarSellosCodigos = useCallback(async () => {
                   if (aliados.length === 0) cargarAliados();
                 }
                 if (tab.id === 'reportes') cargarReportes();
-                if (tab.id === 'camino') cargarInteresadosCamino();
+                if (tab.id === 'camino') { cargarInteresadosCamino(); cargarMetricasLideres(); }
                 if (tab.id === 'sellos') cargarSellosCodigos();
                 if (tab.id === 'juntas') { cargarJuntasMeet(); cargarCurriculum(); }
               }}
@@ -1974,6 +1989,163 @@ const cargarSellosCodigos = useCallback(async () => {
               </div>
             )}
           </div>
+
+          {/* ── LÍDERES DIGITALES ACTIVOS · resumen + filtros + tabla ── */}
+          {(() => {
+            const total = metricasLideres.length;
+            const alDia = metricasLideres.filter(m => m.estado === 'al_dia').length;
+            const atrasados = metricasLideres.filter(m => m.estado === 'atrasado').length;
+            const enRiesgo = metricasLideres.filter(m => m.estado === 'en_riesgo').length;
+            const checklistProm = total > 0 ? Math.round(metricasLideres.reduce((a, m) => a + Number(m.checklist_pct || 0), 0) / total) : 0;
+            const seguidoresGanados = metricasLideres.reduce((a, m) => a + Number(m.seguidores_ganados || 0), 0);
+            const vendidoTotal = metricasLideres.reduce((a, m) => a + Number(m.vendido_usd || 0), 0);
+            const estadoInfo = {
+              al_dia:    { label: '🟢 AL DÍA',     color: C.green },
+              atrasado:  { label: '🟡 ATRASADO',   color: C.gold },
+              en_riesgo: { label: '🔴 EN RIESGO',  color: C.red },
+            };
+            const filtrados = metricasLideres
+              .filter(m => filtroEstadoLider === 'todos' || m.estado === filtroEstadoLider)
+              .filter(m => {
+                const q = buscaLider.trim().toLowerCase();
+                if (!q) return true;
+                return (m.nombre || '').toLowerCase().includes(q)
+                  || (m.telefono || '').toLowerCase().includes(q)
+                  || (m.gestor_nombre || '').toLowerCase().includes(q);
+              });
+
+            return (
+              <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: 'clamp(18px,4vw,24px)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 6 }}>
+                  <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: C.gold, margin: 0 }}>
+                    ⚔️ LÍDERES DIGITALES ACTIVOS
+                  </h2>
+                  <button
+                    onClick={cargarMetricasLideres}
+                    disabled={loadingMetricasLideres}
+                    style={{ padding: '6px 12px', background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 8, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer', opacity: loadingMetricasLideres ? 0.5 : 1 }}
+                  >
+                    {loadingMetricasLideres ? 'ACTUALIZANDO...' : '↻ ACTUALIZAR'}
+                  </button>
+                </div>
+                <p style={{ color: C.muted, fontSize: 11.5, marginBottom: 18 }}>
+                  Racha, checklist, seguidores y ventas de cada participante activo del Camino — en vivo desde sus check-ins.
+                </p>
+
+                {errMetricasLideres && (
+                  <p style={{ color: C.red, fontSize: 11, marginBottom: 12 }}>⚠️ {errMetricasLideres}</p>
+                )}
+
+                {loadingMetricasLideres ? (
+                  <p style={{ color: C.muted, fontSize: 12 }}>Cargando métricas...</p>
+                ) : total === 0 ? (
+                  <p style={{ color: C.muted, fontSize: 12 }}>Todavía no hay Líderes Digitales activos — acepta un interesado arriba para empezar su Camino.</p>
+                ) : (
+                  <>
+                    {/* Resumen */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 18 }}>
+                      {[
+                        { label: 'ACTIVOS',      valor: total,                                     color: C.text },
+                        { label: 'AL DÍA',       valor: alDia,                                     color: C.green },
+                        { label: 'ATRASADOS',    valor: atrasados,                                 color: C.gold },
+                        { label: 'EN RIESGO',    valor: enRiesgo,                                  color: C.red },
+                        { label: 'CHECKLIST',    valor: `${checklistProm}%`,                       color: C.purple },
+                        { label: 'SEGUIDORES +', valor: `+${seguidoresGanados.toLocaleString('es-MX')}`, color: C.green },
+                        { label: 'VENDIDO',      valor: `$${vendidoTotal.toLocaleString('es-MX')}`, color: C.gold },
+                      ].map((s, i) => (
+                        <div key={i} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                          <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 18, color: s.color }}>{s.valor}</div>
+                          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1.5, color: C.muted, marginTop: 3 }}>{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Filtros */}
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {[
+                        { id: 'todos', label: `TODOS (${total})` },
+                        { id: 'al_dia', label: `🟢 AL DÍA (${alDia})` },
+                        { id: 'atrasado', label: `🟡 ATRASADOS (${atrasados})` },
+                        { id: 'en_riesgo', label: `🔴 EN RIESGO (${enRiesgo})` },
+                      ].map(f => (
+                        <button
+                          key={f.id}
+                          onClick={() => setFiltroEstadoLider(f.id)}
+                          style={{
+                            padding: '6px 12px',
+                            background: filtroEstadoLider === f.id ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.03)',
+                            border: `1px solid ${filtroEstadoLider === f.id ? C.borderHi : C.border}`,
+                            borderRadius: 20, color: filtroEstadoLider === f.id ? C.gold : C.muted,
+                            fontFamily: 'Cinzel, serif', fontSize: 8.5, letterSpacing: 1, cursor: 'pointer',
+                          }}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                      <input
+                        type="text"
+                        value={buscaLider}
+                        onChange={e => setBuscaLider(e.target.value)}
+                        placeholder="Buscar por nombre, teléfono o gestor..."
+                        style={{ marginLeft: 'auto', minWidth: 200, flex: '1 1 200px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 12px', color: C.text, fontFamily: 'Cinzel, serif', fontSize: 10 }}
+                      />
+                    </div>
+
+                    {/* Tabla */}
+                    {filtrados.length === 0 ? (
+                      <p style={{ color: C.muted, fontSize: 12 }}>Ningún líder coincide con ese filtro.</p>
+                    ) : (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
+                          <thead>
+                            <tr>
+                              {['LÍDER', 'DÍA', 'ÚLTIMO CHECK-IN', 'RACHA', 'CHECKLIST', 'SEGUIDORES', 'VENDIDO', 'GESTOR', 'ESTADO'].map(h => (
+                                <th key={h} style={{ textAlign: 'left', fontFamily: 'Cinzel, serif', fontSize: 8.5, letterSpacing: 1.5, color: C.muted, padding: '0 10px 8px', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filtrados.map(m => (
+                              <tr key={m.participante_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
+                                  <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: C.text }}>{m.nombre}</div>
+                                  <div style={{ fontFamily: 'monospace', fontSize: 9, color: C.muted }}>{m.telefono}</div>
+                                </td>
+                                <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 11, color: C.text }}>Día {m.dia_actual}</td>
+                                <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 11, color: C.text, whiteSpace: 'nowrap' }}>
+                                  {m.ultimo_dia_checkin > 0 ? `Día ${m.ultimo_dia_checkin} · hace ${m.dias_sin_checkin}d` : 'Sin check-ins'}
+                                </td>
+                                <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 11, color: C.text }}>
+                                  {m.racha_actual > 0 ? `🔥 ${m.racha_actual}` : '—'} <span style={{ color: C.muted, fontSize: 9 }}>({m.checkins_totales} tot.)</span>
+                                </td>
+                                <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 11, color: C.purple }}>{m.checklist_pct}%</td>
+                                <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 11, color: C.green }}>
+                                  {m.seguidores_actuales}
+                                  {Number(m.seguidores_ganados) !== 0 && <span style={{ color: C.muted, fontSize: 9 }}> ({m.seguidores_ganados >= 0 ? '+' : ''}{m.seguidores_ganados})</span>}
+                                </td>
+                                <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 11, color: C.gold }}>${Number(m.vendido_usd || 0).toLocaleString('es-MX')}</td>
+                                <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 10, color: C.muted, whiteSpace: 'nowrap' }}>{m.gestor_nombre || '—'}</td>
+                                <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
+                                  <span style={{
+                                    fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1,
+                                    color: (estadoInfo[m.estado] || {}).color || C.muted,
+                                    border: `1px solid ${(estadoInfo[m.estado] || {}).color || C.border}55`,
+                                    borderRadius: 20, padding: '3px 10px',
+                                  }}>
+                                    {(estadoInfo[m.estado] || {}).label || m.estado}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 'clamp(18px,4vw,24px)' }}>
             <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: C.gold, margin: '0 0 16px' }}>
