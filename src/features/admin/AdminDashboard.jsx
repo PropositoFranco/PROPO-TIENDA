@@ -4662,6 +4662,7 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
             { href:'/admin/aliados', bg:'linear-gradient(135deg,#D4AF37,#9a7a00)', color:'#1a0800', shadow:'rgba(212,175,55,0.5)', border:'rgba(212,175,55,0.4)', label:'⚔ ALIADOS' },
             { href:'/admin/mapa', bg:'linear-gradient(135deg,#22d3ee,#0e7490)', color:'#0a0614', shadow:'rgba(34,211,238,0.5)', border:'rgba(34,211,238,0.3)', label:'🗺️ MAPA' },
             { href:'/admin/finanzas', bg:'linear-gradient(135deg,#D4AF37,#4a3a00)', color:'#fff', shadow:'rgba(212,175,55,0.5)', border:'rgba(212,175,55,0.4)', label:'🔐 FINANZAS' },
+            { href:'https://camino.propotienda.com/camino', bg:'linear-gradient(135deg,#9b59ff,#4a1a8a)', color:'#fff', shadow:'rgba(155,89,255,0.5)', border:'rgba(155,89,255,0.4)', label:'🗺️ CAMINO' },
           ].map(btn => (
             <a key={btn.href} href={btn.href} style={{
               background: btn.bg, color: btn.color,

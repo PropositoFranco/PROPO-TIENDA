@@ -737,6 +737,16 @@ const cargarSellosCodigos = useCallback(async () => {
         <p style={{ color: C.muted, fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>
           Crea eventos de rifa continua — cada QR abre rondas automáticas sin parar.
         </p>
+        <a
+          href="https://camino.propotienda.com/camino"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12,
+            padding: '8px 16px', background: 'linear-gradient(135deg,#9b59ff,#4a1a8a)',
+            border: '1px solid rgba(155,89,255,0.4)', borderRadius: 8, color: '#fff',
+            fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 10.5, letterSpacing: 1,
+            textDecoration: 'none', boxShadow: '0 3px 16px rgba(155,89,255,0.4)',
+          }}
+        >🗺️ IR AL REACT DE CAMINO</a>
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
           {[
@@ -1997,6 +2007,7 @@ const cargarSellosCodigos = useCallback(async () => {
             const atrasados = metricasLideres.filter(m => m.estado === 'atrasado').length;
             const enRiesgo = metricasLideres.filter(m => m.estado === 'en_riesgo').length;
             const checklistProm = total > 0 ? Math.round(metricasLideres.reduce((a, m) => a + Number(m.checklist_pct || 0), 0) / total) : 0;
+            const modulo1Listo = metricasLideres.filter(m => m.modulo1_estado === 'confirmado').length;
             const seguidoresGanados = metricasLideres.reduce((a, m) => a + Number(m.seguidores_ganados || 0), 0);
             const vendidoTotal = metricasLideres.reduce((a, m) => a + Number(m.vendido_usd || 0), 0);
             const estadoInfo = {
@@ -2050,6 +2061,7 @@ const cargarSellosCodigos = useCallback(async () => {
                         { label: 'ATRASADOS',    valor: atrasados,                                 color: C.gold },
                         { label: 'EN RIESGO',    valor: enRiesgo,                                  color: C.red },
                         { label: 'CHECKLIST',    valor: `${checklistProm}%`,                       color: C.purple },
+                        { label: 'MÓDULO 1',     valor: total ? `${Math.round((modulo1Listo/total)*100)}%` : '0%', color: C.green },
                         { label: 'SEGUIDORES +', valor: `+${seguidoresGanados.toLocaleString('es-MX')}`, color: C.green },
                         { label: 'VENDIDO',      valor: `$${vendidoTotal.toLocaleString('es-MX')}`, color: C.gold },
                       ].map((s, i) => (
@@ -2099,7 +2111,7 @@ const cargarSellosCodigos = useCallback(async () => {
                         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
                           <thead>
                             <tr>
-                              {['LÍDER', 'DÍA', 'ÚLTIMO CHECK-IN', 'RACHA', 'CHECKLIST', 'SEGUIDORES', 'VENDIDO', 'GESTOR', 'ESTADO'].map(h => (
+                              {['LÍDER', 'DÍA', 'ÚLTIMO CHECK-IN', 'RACHA', 'CHECKLIST', 'MÓDULO 1', 'SEGUIDORES', 'VENDIDO', 'GESTOR', 'ESTADO'].map(h => (
                                 <th key={h} style={{ textAlign: 'left', fontFamily: 'Cinzel, serif', fontSize: 8.5, letterSpacing: 1.5, color: C.muted, padding: '0 10px 8px', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' }}>{h}</th>
                               ))}
                             </tr>
@@ -2119,6 +2131,22 @@ const cargarSellosCodigos = useCallback(async () => {
                                   {m.racha_actual > 0 ? `🔥 ${m.racha_actual}` : '—'} <span style={{ color: C.muted, fontSize: 9 }}>({m.checkins_totales} tot.)</span>
                                 </td>
                                 <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 11, color: C.purple }}>{m.checklist_pct}%</td>
+                                <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
+                                  {(() => {
+                                    const mod1 = {
+                                      confirmado: { label: '📜 Listo', color: C.green },
+                                      descargado: { label: '📜 A medias', color: C.gold },
+                                      pendiente:  { label: '📜 Pendiente', color: C.red },
+                                    }[m.modulo1_estado] || { label: m.modulo1_estado || '—', color: C.muted };
+                                    return (
+                                      <span style={{
+                                        fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 0.5,
+                                        color: mod1.color, border: `1px solid ${mod1.color}55`,
+                                        borderRadius: 20, padding: '3px 9px',
+                                      }}>{mod1.label}</span>
+                                    );
+                                  })()}
+                                </td>
                                 <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 11, color: C.green }}>
                                   {m.seguidores_actuales}
                                   {Number(m.seguidores_ganados) !== 0 && <span style={{ color: C.muted, fontSize: 9 }}> ({m.seguidores_ganados >= 0 ? '+' : ''}{m.seguidores_ganados})</span>}
