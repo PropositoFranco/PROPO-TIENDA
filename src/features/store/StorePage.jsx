@@ -239,6 +239,33 @@ const CATEGORY_CONFIG = {
 };
 
 // ─────────────────────────────────────────────
+//  NICHE / PROFESSION FILTER (nuevo — filtro adicional por nicho)
+//  No reemplaza TABS ni CATEGORY_CONFIG — es un filtro paralelo.
+//  Cada producto necesita metadata.niches = ['emprendedores', 'ejecutivos', ...]
+//  usando los ids de abajo. Un producto puede tener varios ids.
+// ─────────────────────────────────────────────
+const NICHE_CATEGORIES = [
+  { id: 'emprendedores',     label: 'Emprendedores / Dueños de negocio',                          icon: '🚀' },
+  { id: 'ejecutivos',        label: 'Ejecutivos / Gerentes / Líderes de equipo',                  icon: '💼' },
+  { id: 'ventas',            label: 'Ventas / Negociadores / Closers',                            icon: '🤝' },
+  { id: 'oradores',          label: 'Oradores públicos / Speakers / Presentadores',               icon: '🎤' },
+  { id: 'coaches',           label: 'Coaches / Capacitadores / Formadores',                       icon: '🧑\u200d🏫' },
+  { id: 'atletas',           label: 'Atletas / Deportistas / Entrenadores deportivos',            icon: '🏆' },
+  { id: 'salud',             label: 'Salud / Medicina',                                           icon: '⚕️' },
+  { id: 'legal',             label: 'Legal / Abogados',                                           icon: '⚖️' },
+  { id: 'seguridad',         label: 'Fuerzas de seguridad / Militares / Primeros respondientes',  icon: '🛡️' },
+  { id: 'estudiantes',       label: 'Estudiantes',                                                icon: '🎓' },
+  { id: 'inversionistas',    label: 'Inversionistas / Finanzas',                                  icon: '📈' },
+  { id: 'tech',              label: 'Ingeniería / Desarrollo de software / Tech',                 icon: '💻' },
+  { id: 'creadores',         label: 'Creadores de contenido / Influencers / Redes sociales',      icon: '🎬' },
+  { id: 'marketing',         label: 'Marketing digital / Community managers / Copywriters',       icon: '📣' },
+  { id: 'presion',           label: 'Profesionales bajo presión extrema en general',              icon: '🔥' },
+  { id: 'padres',            label: 'Padres y madres',                                            icon: '👨\u200d👩\u200d👧' },
+  { id: 'autoconocimiento',  label: 'Autoconocimiento y bloqueos personales',                     icon: '🪞' },
+  { id: 'proposito',         label: 'Búsqueda de propósito vocacional / Transición de carrera',   icon: '🧭' },
+];
+
+// ─────────────────────────────────────────────
 //  DEMO MODULE DATA
 // ─────────────────────────────────────────────
 const DEMO_MODULES = {
@@ -2102,6 +2129,100 @@ function TabButton({ tab, isActive, onClick }) {
 }
 
 // ─────────────────────────────────────────────
+//  NICHE FILTER BUTTON + DROPDOWN (nuevo)
+//  Botón adicional junto a TODO/CLAVES/VR/MAPAS que abre un panel
+//  tipo "género de película" para filtrar por nicho/profesión.
+//  No modifica TABS, TAB_STYLES ni la lógica de activeTab.
+// ─────────────────────────────────────────────
+const NICHE_STYLE = { color: '#38BDF8', rgb: '56,189,248', glow: 'rgba(56,189,248,0.7)', activeText: '#BAE6FD', hoverBg: 'rgba(56,189,248,0.12)' };
+
+function NicheFilterButton({ isOpen, onToggle, activeLabel }) {
+  const [hovered, setHovered] = useState(false);
+  const c = hexToRgb(NICHE_STYLE.color);
+  const isActive = isOpen || !!activeLabel;
+  return (
+    <button
+      onClick={onToggle}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position:'relative', padding:'10px 22px', borderRadius:'30px',
+        background: isActive ? `linear-gradient(135deg, rgba(${c.r},${c.g},${c.b},0.28), rgba(${c.r},${c.g},${c.b},0.12))` : hovered ? NICHE_STYLE.hoverBg : 'rgba(255,255,255,0.03)',
+        border: isActive ? `1px solid rgba(${c.r},${c.g},${c.b},0.7)` : hovered ? `1px solid rgba(${c.r},${c.g},${c.b},0.35)` : '1px solid rgba(255,255,255,0.08)',
+        color: isActive ? NICHE_STYLE.activeText : hovered ? NICHE_STYLE.color : 'rgba(255,255,255,0.4)',
+        fontFamily:"'Cinzel', serif", fontSize:'10px', letterSpacing:'2.5px', textTransform:'uppercase', cursor:'pointer',
+        transition:'all 0.3s cubic-bezier(0.34,1.2,0.64,1)',
+        boxShadow: isActive ? `0 0 20px rgba(${c.r},${c.g},${c.b},0.4), inset 0 1px 0 rgba(255,255,255,0.1)` : 'none',
+        transform: isActive ? 'translateY(-2px) scale(1.04)' : hovered ? 'translateY(-1px)' : 'none',
+        whiteSpace:'nowrap', display:'inline-flex', alignItems:'center',
+      }}
+    >
+      <span style={{ marginRight:'6px', fontSize:'12px' }}>☰</span>
+      {activeLabel ? activeLabel : 'CATEGORÍAS'}
+      <span style={{ marginLeft:'8px', fontSize:'9px', transition:'transform 0.25s ease', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', display:'inline-block' }}>▾</span>
+    </button>
+  );
+}
+
+function NicheDropdownPanel({ selectedNiche, onSelect, onClear }) {
+  const c = hexToRgb(NICHE_STYLE.color);
+  return (
+    <div style={{
+      background:'rgba(10,6,20,0.96)',
+      border:`1px solid rgba(${c.r},${c.g},${c.b},0.35)`,
+      borderRadius:'16px',
+      boxShadow:`0 12px 40px rgba(0,0,0,0.55), 0 0 30px rgba(${c.r},${c.g},${c.b},0.15)`,
+      padding:'clamp(14px,2.5vw,22px)',
+      margin:'0 auto clamp(20px,4vw,40px)',
+      maxWidth:'980px',
+      animation:'nicheDropIn 0.25s cubic-bezier(0.34,1.2,0.64,1)',
+    }}>
+      <style>{`
+        @keyframes nicheDropIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+      `}</style>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'14px' }}>
+        <span style={{ fontFamily:"'Cinzel', serif", fontSize:'11px', letterSpacing:'2px', color:'rgba(186,230,253,0.9)', textTransform:'uppercase' }}>
+          ✦ Filtrar por categoría
+        </span>
+        {selectedNiche && (
+          <button
+            onClick={onClear}
+            style={{ background:'transparent', border:'none', color:'rgba(255,255,255,0.5)', fontFamily:"'Raleway',sans-serif", fontSize:'11px', cursor:'pointer', letterSpacing:'1px', textDecoration:'underline' }}
+          >
+            Quitar filtro ✕
+          </button>
+        )}
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:'10px' }}>
+        {NICHE_CATEGORIES.map(n => {
+          const active = selectedNiche === n.id;
+          return (
+            <button
+              key={n.id}
+              onClick={() => onSelect(n.id)}
+              style={{
+                display:'flex', alignItems:'center', gap:'8px', textAlign:'left',
+                padding:'10px 14px', borderRadius:'10px',
+                background: active ? `linear-gradient(135deg, rgba(${c.r},${c.g},${c.b},0.3), rgba(${c.r},${c.g},${c.b},0.12))` : 'rgba(255,255,255,0.03)',
+                border: active ? `1px solid rgba(${c.r},${c.g},${c.b},0.7)` : '1px solid rgba(255,255,255,0.08)',
+                color: active ? NICHE_STYLE.activeText : 'rgba(255,255,255,0.75)',
+                fontFamily:"'Raleway', sans-serif", fontSize:'12.5px', fontWeight: active ? 600 : 400,
+                cursor:'pointer', transition:'all 0.2s ease',
+              }}
+              onMouseEnter={e => { if(!active) e.currentTarget.style.border = `1px solid rgba(${c.r},${c.g},${c.b},0.4)`; }}
+              onMouseLeave={e => { if(!active) e.currentTarget.style.border = '1px solid rgba(255,255,255,0.08)'; }}
+            >
+              <span style={{ fontSize:'15px' }}>{n.icon}</span>
+              <span>{n.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 //  MAIN COMPONENT
 // ─────────────────────────────────────────────
 
@@ -2188,6 +2309,7 @@ export default function TempleStorePage({
             category: p.category,
             territory:   p.metadata?.territory || (p.metadata?.territories?.[0]) || 'mente',
             territories: p.metadata?.territories?.length ? p.metadata.territories : [p.metadata?.territory || 'mente'],
+            niches:      p.metadata?.niches?.length ? p.metadata.niches : [],
             image: p.asset_url || null,
             color: CATEGORY_CONFIG[p.category]?.color || '#8b5cf6',
             propocoins: p.price_cristales || 0,
@@ -2233,7 +2355,28 @@ updateHubNewStatus(data, seenSet);
     init();
   }, [user?.id, user]);
 
-  const currentModules = modules[activeTab] || [];
+  // ── Filtro por nicho/profesión (nuevo, paralelo a activeTab) ──
+  const [selectedNiche, setSelectedNiche] = useState(null);
+  const [nicheMenuOpen, setNicheMenuOpen] = useState(false);
+
+  const activeNicheInfo = NICHE_CATEGORIES.find(n => n.id === selectedNiche) || null;
+
+  const currentModules = selectedNiche
+    ? (modules.todo || []).filter(m => Array.isArray(m.niches) && m.niches.includes(selectedNiche))
+    : (modules[activeTab] || []);
+
+  const handleSelectNiche = (nicheId) => {
+    setSelectedNiche(prev => (prev === nicheId ? null : nicheId));
+    setNicheMenuOpen(false);
+  };
+
+  const handleClearNiche = () => setSelectedNiche(null);
+
+  const handleTabClick = (tabId) => {
+    setSelectedNiche(null);
+    setActiveTab(tabId);
+  };
+
   const [selectedTerritory, setSelectedTerritory] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
 
@@ -2316,11 +2459,28 @@ updateHubNewStatus(data, seenSet);
         </div>
 
         {/* ── TAB NAVIGATION ── */}
-        <nav style={{ display:'flex', justifyContent:'center', gap:'clamp(5px,1.2vw,10px)', marginBottom:'clamp(20px,4vw,40px)', flexWrap:'wrap', padding:'0 clamp(6px,1.5vw,12px)' }}>
+        <nav style={{ display:'flex', justifyContent:'center', gap:'clamp(5px,1.2vw,10px)', marginBottom:'clamp(12px,2.5vw,16px)', flexWrap:'wrap', padding:'0 clamp(6px,1.5vw,12px)' }}>
           {TABS.map(tab => (
-            <TabButton key={tab.id} tab={tab} isActive={activeTab === tab.id} onClick={setActiveTab} />
+            <TabButton key={tab.id} tab={tab} isActive={activeTab === tab.id && !selectedNiche} onClick={handleTabClick} />
           ))}
+          <NicheFilterButton
+            isOpen={nicheMenuOpen}
+            onToggle={() => setNicheMenuOpen(o => !o)}
+            activeLabel={activeNicheInfo ? `${activeNicheInfo.icon} ${activeNicheInfo.label}` : null}
+          />
         </nav>
+
+        {nicheMenuOpen && (
+          <NicheDropdownPanel
+            selectedNiche={selectedNiche}
+            onSelect={handleSelectNiche}
+            onClear={handleClearNiche}
+          />
+        )}
+
+        {!nicheMenuOpen && (
+          <div style={{ marginBottom:'clamp(20px,4vw,40px)' }} />
+        )}
 
         {/* ── MODULE GRID ── */}
         {loading ? (
