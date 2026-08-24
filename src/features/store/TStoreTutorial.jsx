@@ -1858,8 +1858,6 @@ export default function TStoreTutorial({onComplete}) {
   const stepRef=useRef(0);
   const didMountRef=useRef(false);
   const initialSpokenRef=useRef(false);
-  const keepAliveRef=useRef(null);
-  const fallbackRef=useRef(null);
   const size=useWindowSize();
 
   useEffect(()=>{ stepRef.current=step; },[step]);
@@ -1871,20 +1869,9 @@ export default function TStoreTutorial({onComplete}) {
     }
   };
 
-  // detiene por completo la narración en curso: cancela el audio, y limpia
-  // tanto el keep-alive como el temporizador de respaldo, para que nunca
-  // queden corriendo de fondo ni disparen un avance de más
-  const stopSpeaking=()=>{
-    clearInterval(keepAliveRef.current);
-    clearTimeout(fallbackRef.current);
-    if(window.speechSynthesis) window.speechSynthesis.cancel();
-  };
-
-  // idx: paso a narrar. Al terminar el audio de ese paso, avanza SOLO al
-  // siguiente automáticamente — excepto en el último paso, que espera el
-  // clic manual de "Completar mi Evaluación". El avance nunca depende de
-  // un solo aviso del navegador: se dispara por el evento normal de fin de
-  // audio, o por el temporizador de respaldo si ese aviso nunca llega.
+  // idx: paso a narrar. Al terminar el audio de ese paso (onend), avanza SOLO
+  // al siguiente automáticamente — excepto en el último paso, que espera el
+  // clic manual de "Completar mi Evaluación".
   const doSpeak=(idx)=>{
     if(!window.speechSynthesis) return;
     const text=NARRATION[idx];
@@ -1895,40 +1882,14 @@ export default function TStoreTutorial({onComplete}) {
     // ritmo ágil y tono natural-brillante: voz enérgica y animada, nunca apagada
     utter.rate=1.05;
     utter.pitch=1.02;
-
-    let advanced=false;
-    const goNext=()=>{
-      if(advanced) return;
-      advanced=true;
-      clearInterval(keepAliveRef.current);
-      clearTimeout(fallbackRef.current);
+    utter.onend=()=>{
+      // solo avanza si seguimos en el mismo paso en el que arrancó esta narración
+      // (evita saltos de más si el usuario ya cambió de paso a mano)
       if(stepRef.current===idx&&idx<STEPS.length-1){
         setStep(s=>s+1);
       }
     };
-    utter.onend=goNext;
-    utter.onerror=goNext;
-
     window.speechSynthesis.speak(utter);
-
-    // parche para un bug conocido de algunos navegadores (sobre todo Chrome de
-    // escritorio): en textos largos, la síntesis de voz a veces se detiene
-    // sola a medias sin avisar. Este "pulso" cada 4s evita que se quede
-    // pausada de fondo.
-    clearInterval(keepAliveRef.current);
-    keepAliveRef.current=setInterval(()=>{
-      if(window.speechSynthesis.speaking){
-        window.speechSynthesis.pause();
-        window.speechSynthesis.resume();
-      }
-    },4000);
-
-    // red de seguridad final: si por cualquier motivo el navegador nunca
-    // avisa que terminó, avanza solo según la duración estimada del audio,
-    // para que JAMÁS se quede esperando un clic
-    clearTimeout(fallbackRef.current);
-    const estMs=Math.max(3000,Math.round((text.length/13)*1000/utter.rate)+1800);
-    fallbackRef.current=setTimeout(goNext,estMs);
   };
 
   // ── NARRACIÓN DEL PRIMER PASO — UNA SOLA VEZ ────────────────
@@ -1942,7 +1903,7 @@ export default function TStoreTutorial({onComplete}) {
     if(initialSpokenRef.current) return;
     if(!voiceEnabled) return;
     initialSpokenRef.current=true;
-    stopSpeaking();
+    window.speechSynthesis.cancel();
     doSpeak(stepRef.current);
   };
 
@@ -1987,10 +1948,10 @@ export default function TStoreTutorial({onComplete}) {
       didMountRef.current=true;
       return;
     }
-    stopSpeaking();
+    window.speechSynthesis.cancel();
     if(!voiceEnabled) return;
     const t=setTimeout(()=>{ doSpeak(step); },60);
-    return ()=>{clearTimeout(t); stopSpeaking();};
+    return ()=>{clearTimeout(t); window.speechSynthesis.cancel();};
   },[step,voiceEnabled]);
 
   const mobile=size.w<900;
