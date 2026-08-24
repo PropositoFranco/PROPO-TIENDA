@@ -229,6 +229,57 @@ const STEPS=[
   {screen:"final",      highlight:null,            master:"El templo te espera, Templario.",     sub:"Recuerda: tu Evaluación Semanal es lo único que no puedes saltarte. Menos de 5 minutos, cada semana. Y si alguna vez tienes dudas, puedes volver a ver este tutorial completo desde el botón Tutorial, ahí abajo a la derecha de tu Lobby.",btn:"Completar mi Evaluación"},
 ];
 
+// ─── NARRACIÓN POR VOZ (Web Speech API — gratis, sin costo) ───
+const NARRATION=[
+  "Bienvenido, Templario. Soy el Maestro Templario. Voy a enseñarte una sola cosa importante, y algunas herramientas de apoyo alrededor. No necesitas memorizar nada — solo entender el camino.",
+  "Esto es el corazón de la Propo-Tienda. Cada semana tienes aquí abajo tu Evaluación — te toma menos de 5 minutos. Es lo único que de verdad mueve tu progreso. Todo lo demás en esta pantalla es apoyo alrededor de esto.",
+  "Estos son tus PropoCoins. Nacen de completar tu protocolo semanal, y se usan para desbloquear herramientas extra. Entre más constante seas con tu evaluación, más PropoCoins acumulas.",
+  "Tus herramientas de apoyo. Claves, Victorias Rápidas y Mapas del Templo te dan técnicas extra para profundizar. Úsalas cuando quieras ir más allá de tu evaluación — no las necesitas para avanzar.",
+  "100 Templarios Dijeron. Aquí pones a prueba lo que vas aprendiendo y compites por un lugar en el podio. Es el juego del templo — divertido, pero no es tu evaluación.",
+  "Tu Evaluación Semanal. Cada semana respondes preguntas cortas por territorio, deslizando del 1 al 10. Toma menos de 5 minutos y es lo único que de verdad mueve tu progreso.",
+  "Los Territorios del Templo. Tu vida se organiza en 8 áreas: Cuerpo, Mente, Emociones, Relaciones, Riqueza, Vocación, Espiritualidad y Ocio. Tu Evaluación Semanal revisa estas áreas y te dice en cuál enfocarte primero.",
+  "Cada color te ubica. Los colores y símbolos conectan cada herramienta con su territorio, para que sepas de un vistazo en qué área estás trabajando.",
+  "La Tienda del Templo. Aquí desbloqueas herramientas extra con los PropoCoins que ganaste en tu evaluación. Revisa el objetivo y el territorio de cada una antes de canjear.",
+  "Tu Arsenal Personal. Aquí vive todo lo que has desbloqueado. Fíltralo por territorio o tipo cuando busques algo específico.",
+  "Operaciones del Templo. Retos activos con recompensa fija en XP y PropoCoins — desde entrar por primera vez a la tienda, hasta pelear el Top 1 en 100 Templarios. Cuando el avance llega a 100%, reclamas.",
+  "La Academia del Templo. Cada semana se abre un módulo nuevo, y tu Evaluación Semanal vive justo aquí dentro. Tus módulos anteriores quedan guardados como historial de tu crecimiento.",
+  "La Comunidad del Templo. Publica tu avance o tus dudas y gana XP y PropoCoins solo por participar. Cada punto te acerca al siguiente rango — de Discípulo a Guardián, y más allá.",
+  "El templo te espera, Templario. Recuerda: tu Evaluación Semanal es lo único que no puedes saltarte. Menos de 5 minutos, cada semana. Y si alguna vez tienes dudas, puedes volver a ver este tutorial completo desde el botón Tutorial, ahí abajo a la derecha de tu Lobby.",
+];
+
+function pickSpanishVoice(){
+  if(!window.speechSynthesis) return null;
+  const voices=window.speechSynthesis.getVoices();
+  if(!voices.length) return null;
+  // nombres de voces MASCULINAS en español que existen en los principales navegadores/sistemas
+  const maleNames=/jorge|diego|carlos|álvaro|alvaro|juan|miguel|pablo|enrique|raúl|raul|pedro|fernando|andrés|andres|male|hombre|reba|eddy/i;
+  // nombres de voces FEMENINAS conocidas, para descartarlas siempre
+  const femaleNames=/paulina|mónica|monica|helena|sabina|lucía|lucia|elvira|esperanza|marisol|catalina|angélica|angelica|lupe|isabela|isabella|camila|valentina|renata|inés|ines|carmen|rosa|dalia|conchita|female|mujer|laura|sofía|sofia|maría|maria|ximena|salomé|salome|fred/i;
+  // universo de voces en español, quitando cualquiera que suene a voz femenina
+  const esVoices=voices.filter(v=>/^es/i.test(v.lang)&&!femaleNames.test(v.name));
+  const priority=[
+    // 1) voz masculina explícita, natural/neural, en español latino
+    v=>maleNames.test(v.name)&&/es-MX|es-US|es-419/i.test(v.lang)&&/natural|online|neural/i.test(v.name),
+    // 2) voz masculina explícita, natural/neural, en cualquier español
+    v=>maleNames.test(v.name)&&/natural|online|neural/i.test(v.name),
+    // 3) voz masculina explícita en español latino
+    v=>maleNames.test(v.name)&&/es-MX|es-US|es-419/i.test(v.lang),
+    // 4) voz masculina explícita en cualquier español
+    v=>maleNames.test(v.name),
+    // 5) sin nombre reconocido como masculino, pero tampoco femenino: natural/neural en español latino
+    v=>/es-MX|es-US|es-419/i.test(v.lang)&&/natural|online|neural/i.test(v.name),
+    v=>/es-ES/i.test(v.lang)&&/natural|online|neural/i.test(v.name),
+    v=>/es-MX|es-US|es-419/i.test(v.lang),
+    v=>/es-ES/i.test(v.lang),
+  ];
+  for(const test of priority){
+    const found=esVoices.find(test);
+    if(found) return found;
+  }
+  // último recurso: cualquier voz en español, aunque no se haya podido filtrar por nombre
+  return esVoices[0]||voices.find(v=>/^es/i.test(v.lang))||null;
+}
+
 // ─── TITLE SHIMMER ───────────────────────────────────────
 function TitleShimmer({mobile}) {
   const [active,setActive]=useState(0);
@@ -1646,7 +1697,7 @@ function CinematicText({title,body,stepKey,mobile}) {
 }
 
 // ─── MASTER PANEL ────────────────────────────────────────
-function MasterPanel({cur,step,total,onNext,mobile}) {
+function MasterPanel({cur,step,total,onNext,mobile,voiceEnabled,onToggleVoice}) {
   const progress=((step+1)/total)*100;
   const offset=mobile?0:12;
   const panelPos={bottom:mobile?0:offset,left:offset,right:offset};
@@ -1697,6 +1748,13 @@ function MasterPanel({cur,step,total,onNext,mobile}) {
           </div>
           <div style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:5}}>
             <div style={{display:"flex",gap:10,alignItems:"center"}}>
+              <button onClick={onToggleVoice}
+                title={voiceEnabled?"Silenciar narración":"Activar narración"}
+                style={{background:"transparent",border:"none",
+                  color:voiceEnabled?"#FFE566":"rgba(212,175,55,0.4)",
+                  fontSize:13,cursor:"pointer",padding:0,lineHeight:1}}>
+                {voiceEnabled?"🔊":"🔈"}
+              </button>
               <span style={{fontSize:9,color:"rgba(255,255,255,0.25)",fontFamily:"'Cinzel',serif"}}>
                 {step+1}/{total}
               </span>
@@ -1745,6 +1803,16 @@ function MasterPanel({cur,step,total,onNext,mobile}) {
             </div>
           </div>
           <div style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}>
+            <button onClick={onToggleVoice}
+              title={voiceEnabled?"Silenciar narración":"Activar narración"}
+              style={{display:"flex",alignItems:"center",gap:6,background:"transparent",
+                border:`1px solid rgba(212,175,55,${voiceEnabled?0.5:0.25})`,borderRadius:20,
+                padding:"4px 10px",cursor:"pointer",
+                color:voiceEnabled?"#FFE566":"rgba(212,175,55,0.4)",
+                fontFamily:"'Cinzel',serif",fontSize:10,letterSpacing:1}}>
+              <span style={{fontSize:13}}>{voiceEnabled?"🔊":"🔈"}</span>
+              {voiceEnabled?"Voz activa":"Silenciada"}
+            </button>
             <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
               <span style={{fontSize:10,color:"rgba(255,255,255,0.25)",fontFamily:"'Cinzel',serif",letterSpacing:1}}>
                 {step+1} / {total}
@@ -1784,7 +1852,95 @@ export default function TStoreTutorial({onComplete}) {
   const [selectedModule,setSelectedModule]=useState(null);
   const [coins]=useState(2850);
   const [timerSecs,setTimerSecs]=useState(23*3600+39*60+12);
+  const [voiceEnabled,setVoiceEnabled]=useState(true);
+  const chosenVoiceRef=useRef(null);
+  const voiceUnlockedRef=useRef(false);
+  const stepRef=useRef(0);
+  const didMountRef=useRef(false);
   const size=useWindowSize();
+
+  useEffect(()=>{ stepRef.current=step; },[step]);
+
+  const unlockVoice=()=>{
+    if(!voiceUnlockedRef.current&&window.speechSynthesis){
+      chosenVoiceRef.current=pickSpanishVoice();
+      voiceUnlockedRef.current=true;
+    }
+  };
+
+  const doSpeak=(idx)=>{
+    if(!window.speechSynthesis) return;
+    const text=NARRATION[idx];
+    if(!text) return;
+    const utter=new SpeechSynthesisUtterance(text);
+    utter.lang=(chosenVoiceRef.current&&chosenVoiceRef.current.lang)||"es-MX";
+    if(chosenVoiceRef.current) utter.voice=chosenVoiceRef.current;
+    // ritmo pausado y tono ligeramente grave: voz cálida, amable, que transmite calma
+    utter.rate=0.96;
+    utter.pitch=0.92;
+    window.speechSynthesis.speak(utter);
+  };
+
+  // ── ARRANQUE AUTOMÁTICO CON SONIDO ACTIVADO ────────────────
+  // Se dispara apenas se monta el tutorial (usuario nuevo o clic en "Tutorial"
+  // desde el Hub). Si el navegador bloquea el primer audio automático, en cuanto
+  // haya el primer toque/clic/tecla en cualquier parte de la pantalla, se
+  // reintenta de inmediato — así el sonido nunca se queda apagado por más de
+  // una interacción de distancia.
+  useEffect(()=>{
+    if(!window.speechSynthesis) return;
+
+    const tryStartOnLoad=()=>{
+      unlockVoice();
+      if(voiceEnabled) doSpeak(stepRef.current);
+    };
+
+    if(window.speechSynthesis.getVoices().length){
+      tryStartOnLoad();
+    } else {
+      window.speechSynthesis.onvoiceschanged=tryStartOnLoad;
+      // algunos navegadores nunca disparan onvoiceschanged: reintenta de todas formas
+      setTimeout(tryStartOnLoad,400);
+    }
+
+    let firstInteractionHandled=false;
+    const unlockOnFirstInteraction=()=>{
+      if(firstInteractionHandled) return;
+      firstInteractionHandled=true;
+      unlockVoice();
+      if(voiceEnabled&&!window.speechSynthesis.speaking&&!window.speechSynthesis.pending){
+        doSpeak(stepRef.current);
+      }
+      document.removeEventListener("click",unlockOnFirstInteraction);
+      document.removeEventListener("touchstart",unlockOnFirstInteraction);
+      document.removeEventListener("keydown",unlockOnFirstInteraction);
+    };
+    document.addEventListener("click",unlockOnFirstInteraction);
+    document.addEventListener("touchstart",unlockOnFirstInteraction);
+    document.addEventListener("keydown",unlockOnFirstInteraction);
+
+    return ()=>{
+      document.removeEventListener("click",unlockOnFirstInteraction);
+      document.removeEventListener("touchstart",unlockOnFirstInteraction);
+      document.removeEventListener("keydown",unlockOnFirstInteraction);
+    };
+  },[]);
+
+  // ── NARRACIÓN AL CAMBIAR DE PASO ────────────────────────────
+  // El primer paso ya quedó a cargo del efecto de arranque automático de
+  // arriba (con su reintento por interacción); este efecto solo entra en
+  // acción a partir del segundo paso en adelante, o si se silencia/activa la voz.
+  useEffect(()=>{
+    if(!window.speechSynthesis) return;
+    if(!didMountRef.current){
+      didMountRef.current=true;
+      return;
+    }
+    window.speechSynthesis.cancel();
+    if(!voiceEnabled) return;
+    const t=setTimeout(()=>{ doSpeak(step); },60);
+    return ()=>{clearTimeout(t); window.speechSynthesis.cancel();};
+  },[step,voiceEnabled]);
 
   const mobile=size.w<900;
   const panelH=mobile?95:128;
@@ -1948,7 +2104,9 @@ export default function TStoreTutorial({onComplete}) {
         cur={{...cur,onExit:onComplete}}
         step={step} total={STEPS.length}
         onNext={advance}
-        mobile={mobile}/>
+        mobile={mobile}
+        voiceEnabled={voiceEnabled}
+        onToggleVoice={()=>setVoiceEnabled(v=>!v)}/>
     </div>
   );
 }
