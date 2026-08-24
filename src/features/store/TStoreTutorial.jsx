@@ -231,20 +231,20 @@ const STEPS=[
 
 // ─── NARRACIÓN POR VOZ (Web Speech API — gratis, sin costo) ───
 const NARRATION=[
-  "Bienvenido, Templario. Soy el Maestro Templario. Voy a enseñarte una sola cosa importante, y algunas herramientas de apoyo alrededor. No necesitas memorizar nada — solo entender el camino.",
-  "Esto es el corazón de la Propo-Tienda. Cada semana tienes aquí abajo tu Evaluación — te toma menos de 5 minutos. Es lo único que de verdad mueve tu progreso. Todo lo demás en esta pantalla es apoyo alrededor de esto.",
-  "Estos son tus PropoCoins. Nacen de completar tu protocolo semanal, y se usan para desbloquear herramientas extra. Entre más constante seas con tu evaluación, más PropoCoins acumulas.",
-  "Tus herramientas de apoyo. Claves, Victorias Rápidas y Mapas del Templo te dan técnicas extra para profundizar. Úsalas cuando quieras ir más allá de tu evaluación — no las necesitas para avanzar.",
-  "100 Templarios Dijeron. Aquí pones a prueba lo que vas aprendiendo y compites por un lugar en el podio. Es el juego del templo — divertido, pero no es tu evaluación.",
-  "Tu Evaluación Semanal. Cada semana respondes preguntas cortas por territorio, deslizando del 1 al 10. Toma menos de 5 minutos y es lo único que de verdad mueve tu progreso.",
-  "Los Territorios del Templo. Tu vida se organiza en 8 áreas: Cuerpo, Mente, Emociones, Relaciones, Riqueza, Vocación, Espiritualidad y Ocio. Tu Evaluación Semanal revisa estas áreas y te dice en cuál enfocarte primero.",
-  "Cada color te ubica. Los colores y símbolos conectan cada herramienta con su territorio, para que sepas de un vistazo en qué área estás trabajando.",
-  "La Tienda del Templo. Aquí desbloqueas herramientas extra con los PropoCoins que ganaste en tu evaluación. Revisa el objetivo y el territorio de cada una antes de canjear.",
-  "Tu Arsenal Personal. Aquí vive todo lo que has desbloqueado. Fíltralo por territorio o tipo cuando busques algo específico.",
-  "Operaciones del Templo. Retos activos con recompensa fija en XP y PropoCoins — desde entrar por primera vez a la tienda, hasta pelear el Top 1 en 100 Templarios. Cuando el avance llega a 100%, reclamas.",
-  "La Academia del Templo. Cada semana se abre un módulo nuevo, y tu Evaluación Semanal vive justo aquí dentro. Tus módulos anteriores quedan guardados como historial de tu crecimiento.",
-  "La Comunidad del Templo. Publica tu avance o tus dudas y gana XP y PropoCoins solo por participar. Cada punto te acerca al siguiente rango — de Discípulo a Guardián, y más allá.",
-  "El templo te espera, Templario. Recuerda: tu Evaluación Semanal es lo único que no puedes saltarte. Menos de 5 minutos, cada semana. Y si alguna vez tienes dudas, puedes volver a ver este tutorial completo desde el botón Tutorial, ahí abajo a la derecha de tu Lobby.",
+  "¡Bienvenido, Templario! Soy tu Maestro Templario, ¡y qué alegría tenerte aquí! Te voy a enseñar una sola cosa importante, y algunas herramientas de apoyo alrededor. No necesitas memorizar nada. ¡Solo disfruta el camino!",
+  "¡Mira esto! Aquí está el corazón de la Propo-Tienda. Cada semana, aquí abajo, tienes tu Evaluación. Te toma menos de cinco minutos, ¡y es lo único que de verdad mueve tu progreso! Todo lo demás en esta pantalla es apoyo alrededor de esto.",
+  "¡Estos son tus PropoCoins! Nacen de completar tu protocolo semanal, y los usas para desbloquear herramientas extra. Entre más constante seas con tu evaluación, ¡más PropoCoins vas acumulando!",
+  "¡Estas son tus herramientas de apoyo! Claves, Victorias Rápidas y Mapas del Templo te dan técnicas extra para profundizar. Úsalas cuando quieras ir más allá de tu evaluación. ¡Pero ojo, no las necesitas para avanzar!",
+  "¡Y aquí, 100 Templarios Dijeron! Aquí pones a prueba lo que vas aprendiendo, y compites por un lugar en el podio. Es el juego del templo. ¡Súper divertido! Aunque, ojo, no es tu evaluación.",
+  "Hablemos de tu Evaluación Semanal. Cada semana respondes preguntas cortas por territorio, deslizando del uno al diez. Toma menos de cinco minutos, ¡y es lo único que de verdad mueve tu progreso!",
+  "¡Estos son los Territorios del Templo! Tu vida se organiza en ocho áreas: Cuerpo, Mente, Emociones, Relaciones, Riqueza, Vocación, Espiritualidad y Ocio. Tu Evaluación Semanal revisa estas áreas, ¡y te dice en cuál enfocarte primero!",
+  "¡Fíjate bien en los colores! Cada color y símbolo conecta tu herramienta con su territorio, para que sepas de un vistazo en qué área estás trabajando.",
+  "¡Bienvenido a la Tienda del Templo! Aquí desbloqueas herramientas extra con los PropoCoins que ganaste en tu evaluación. Revisa el objetivo y el territorio de cada una antes de canjear.",
+  "¡Este es tu Arsenal Personal! Aquí vive todo lo que has desbloqueado. Fíltralo por territorio o tipo cuando busques algo específico.",
+  "¡Ahora, las Operaciones del Templo! Retos activos con recompensa fija en XP y PropoCoins, desde entrar por primera vez a la tienda, hasta pelear el Top uno en 100 Templarios Dijeron. Cuando el avance llega a cien por ciento, ¡reclamas tu recompensa!",
+  "¡Bienvenido a la Academia del Templo! Cada semana se abre un módulo nuevo, y tu Evaluación Semanal vive justo aquí dentro. Tus módulos anteriores quedan guardados como historial de tu crecimiento.",
+  "¡Y aquí está la Comunidad del Templo! Publica tu avance o tus dudas, y gana XP y PropoCoins solo por participar. Cada punto te acerca al siguiente rango, de Discípulo a Guardián, ¡y más allá!",
+  "¡El templo te espera, Templario! Recuerda: tu Evaluación Semanal es lo único que no puedes saltarte. Menos de cinco minutos, cada semana. Y si alguna vez tienes dudas, puedes volver a ver este tutorial completo desde el botón Tutorial, ahí abajo a la derecha de tu Lobby. ¡Vamos, este es tu momento!",
 ];
 
 function pickSpanishVoice(){
@@ -252,7 +252,9 @@ function pickSpanishVoice(){
   const voices=window.speechSynthesis.getVoices();
   if(!voices.length) return null;
   // nombres de voces MASCULINAS en español que existen en los principales navegadores/sistemas
-  const maleNames=/jorge|diego|carlos|álvaro|alvaro|juan|miguel|pablo|enrique|raúl|raul|pedro|fernando|andrés|andres|male|hombre|reba|eddy/i;
+  // (Jorge y Alonso primero: son las voces "Online Natural" de Edge/Windows para es-MX,
+  // consistentemente las más cálidas y expresivas disponibles gratis en Web Speech API)
+  const maleNames=/jorge|alonso|tomás|tomas|néstor|nestor|liam|diego|carlos|álvaro|alvaro|juan|miguel|pablo|enrique|raúl|raul|pedro|fernando|andrés|andres|male|hombre|reba|eddy/i;
   // nombres de voces FEMENINAS conocidas, para descartarlas siempre
   const femaleNames=/paulina|mónica|monica|helena|sabina|lucía|lucia|elvira|esperanza|marisol|catalina|angélica|angelica|lupe|isabela|isabella|camila|valentina|renata|inés|ines|carmen|rosa|dalia|conchita|female|mujer|laura|sofía|sofia|maría|maria|ximena|salomé|salome|fred/i;
   // universo de voces en español, quitando cualquiera que suene a voz femenina
@@ -1869,26 +1871,83 @@ export default function TStoreTutorial({onComplete}) {
     }
   };
 
-  // idx: paso a narrar. Al terminar el audio de ese paso (onend), avanza SOLO
-  // al siguiente automáticamente — excepto en el último paso, que espera el
-  // clic manual de "Completar mi Evaluación".
+  const speakSessionRef=useRef(null); // {settled, keepAliveId, fallbackId} de la narración en curso
+
+  // Cierra por completo cualquier narración en curso: cancela el audio y
+  // limpia sus temporizadores. Se llama SIEMPRE antes de arrancar una nueva
+  // narración, así nunca hay dos audios sonando ni dos avances programados.
+  const stopSpeaking=()=>{
+    const s=speakSessionRef.current;
+    if(s){
+      s.settled=true;
+      if(s.keepAliveId) clearInterval(s.keepAliveId);
+      if(s.fallbackId) clearTimeout(s.fallbackId);
+      speakSessionRef.current=null;
+    }
+    if(window.speechSynthesis) window.speechSynthesis.cancel();
+  };
+
+  // idx: paso a narrar. En cuanto termina el audio de ese paso, avanza AL
+  // INSTANTE al siguiente — como si se hubiera dado clic en "Continuar" —
+  // excepto en el último paso. Blindado en 3 capas para que el tutorial
+  // JAMÁS se quede detenido y NUNCA repita un audio ya reproducido:
+  //  1) onend / onerror del propio navegador → avanza al terminar el audio real.
+  //  2) Respaldo anti-atasco calculado según la duración real del texto de
+  //     ese paso (por si el navegador no llega a disparar onend/onerror).
+  //  3) Un flag "settled" por sesión asegura que, dispare lo que dispare
+  //     primero, el avance ocurre UNA sola vez — nunca duplicado.
   const doSpeak=(idx)=>{
     if(!window.speechSynthesis) return;
     const text=NARRATION[idx];
     if(!text) return;
+
+    stopSpeaking();
+
+    const session={settled:false,keepAliveId:null,fallbackId:null};
+    speakSessionRef.current=session;
+
     const utter=new SpeechSynthesisUtterance(text);
     utter.lang=(chosenVoiceRef.current&&chosenVoiceRef.current.lang)||"es-MX";
     if(chosenVoiceRef.current) utter.voice=chosenVoiceRef.current;
-    // ritmo ágil y tono natural-brillante: voz enérgica y animada, nunca apagada
-    utter.rate=1.05;
-    utter.pitch=1.02;
-    utter.onend=()=>{
+    // ritmo vivo y tono brillante: voz enérgica, alegre y animada, nunca apagada ni seria
+    utter.rate=1.12;
+    utter.pitch=1.18;
+    utter.volume=1;
+
+    const finish=()=>{
+      if(session.settled) return; // ya se avanzó — el resto de las señales se ignora
+      session.settled=true;
+      if(session.keepAliveId) clearInterval(session.keepAliveId);
+      if(session.fallbackId) clearTimeout(session.fallbackId);
       // solo avanza si seguimos en el mismo paso en el que arrancó esta narración
       // (evita saltos de más si el usuario ya cambió de paso a mano)
       if(stepRef.current===idx&&idx<STEPS.length-1){
         setStep(s=>s+1);
       }
     };
+
+    utter.onend=finish;
+    utter.onerror=finish; // si la síntesis falla, igual avanza — nunca se queda trabado
+
+    // Chrome corta narraciones largas (~15s+) si el hilo de síntesis queda
+    // inactivo; este "latido" lo mantiene vivo sin reiniciar ni repetir el audio.
+    session.keepAliveId=setInterval(()=>{
+      if(!window.speechSynthesis.speaking){
+        clearInterval(session.keepAliveId);
+        return;
+      }
+      window.speechSynthesis.pause();
+      window.speechSynthesis.resume();
+    },4000);
+
+    // Respaldo anti-atasco: calculado con la duración real estimada de ESTE
+    // texto (según su número de palabras y la velocidad configurada), más un
+    // colchón amplio. Si el navegador nunca dispara onend/onerror, esto
+    // fuerza el avance para que el tutorial nunca deje de explicarse.
+    const words=text.trim().split(/\s+/).length;
+    const estMs=(words/2.6)*1000/utter.rate + 4500;
+    session.fallbackId=setTimeout(finish,Math.max(6000,estMs));
+
     window.speechSynthesis.speak(utter);
   };
 
@@ -1903,7 +1962,6 @@ export default function TStoreTutorial({onComplete}) {
     if(initialSpokenRef.current) return;
     if(!voiceEnabled) return;
     initialSpokenRef.current=true;
-    window.speechSynthesis.cancel();
     doSpeak(stepRef.current);
   };
 
@@ -1935,6 +1993,7 @@ export default function TStoreTutorial({onComplete}) {
       document.removeEventListener("click",tryOnInteraction);
       document.removeEventListener("touchstart",tryOnInteraction);
       document.removeEventListener("keydown",tryOnInteraction);
+      stopSpeaking();
     };
   },[]);
 
@@ -1948,10 +2007,9 @@ export default function TStoreTutorial({onComplete}) {
       didMountRef.current=true;
       return;
     }
-    window.speechSynthesis.cancel();
-    if(!voiceEnabled) return;
+    if(!voiceEnabled){ stopSpeaking(); return; }
     const t=setTimeout(()=>{ doSpeak(step); },60);
-    return ()=>{clearTimeout(t); window.speechSynthesis.cancel();};
+    return ()=>{clearTimeout(t); stopSpeaking();};
   },[step,voiceEnabled]);
 
   const mobile=size.w<900;
