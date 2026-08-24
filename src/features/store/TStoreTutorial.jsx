@@ -246,12 +246,12 @@ const STEPS=[
   {screen:"home",       highlight:"apoyo",         master:"Tus herramientas de apoyo.",          sub:"Claves, Victorias Rápidas y Mapas del Templo te dan técnicas extra para profundizar. Úsalas cuando quieras ir más allá de tu evaluación — no las necesitas para avanzar.",btn:"Continuar"},
   {screen:"home",       highlight:"templo",        master:"100 Templarios Dijeron.",             sub:"Aquí pones a prueba lo que vas aprendiendo y compites por un lugar en el podio. Es el juego del templo — divertido, pero no es tu evaluación.",btn:"Continuar"},
   {screen:"evaluacion", highlight:null,            master:"Tu Evaluación Semanal.",              sub:"Cada semana respondes preguntas cortas por territorio, deslizando del 1 al 10. Toma menos de 5 minutos y es lo único que de verdad mueve tu progreso.",btn:"¿Y dónde vive esto?"},
+  {screen:"academia",   highlight:null,            master:"📍 La Academia del Templo.",           sub:"Cada semana al responder tu evaluación el sistema te libera el módulo exacto que necesitas según los resultados de tu evaluación. Tus módulos anteriores quedan guardados como historial de tu crecimiento.",btn:"Ver los Territorios"},
   {screen:"territories",highlight:null,            master:"Los Territorios del Templo.",         sub:"Tu vida se organiza en 8 áreas: Cuerpo, Mente, Emociones, Relaciones, Riqueza, Vocación, Espiritualidad y Ocio. Tu Evaluación Semanal revisa estas áreas y te dice en cuál enfocarte primero.",btn:"Continuar"},
   {screen:"territories",highlight:"t_connections", master:"Cada color te ubica.",                sub:"Los colores y símbolos conectan cada herramienta con su territorio, para que sepas de un vistazo en qué área estás trabajando.",btn:"Ver la Tienda"},
   {screen:"modules",    highlight:null,            master:"La Tienda del Templo.",               sub:"Aquí desbloqueas herramientas extra con los PropoCoins que ganaste en tu evaluación. Revisa el objetivo y el territorio de cada una antes de canjear.",btn:"Ver tu Arsenal"},
   {screen:"arsenal",    highlight:null,            master:"Tu Arsenal Personal.",                sub:"Aquí vive todo lo que has desbloqueado. Fíltralo por territorio o tipo cuando busques algo específico.",btn:"Ver tus Misiones"},
-  {screen:"missions",   highlight:null,            master:"Operaciones del Templo.",             sub:"Retos activos con recompensa fija en XP y PropoCoins — desde entrar por primera vez a la tienda, hasta pelear el Top 1 en 100 Templarios. Cuando el avance llega a 100%, reclamas.",btn:"Ver la Academia"},
-  {screen:"academia",   highlight:null,            master:"La Academia del Templo.",             sub:"Cada semana se abre un módulo nuevo, y tu Evaluación Semanal vive justo aquí dentro. Tus módulos anteriores quedan guardados como historial de tu crecimiento.",btn:"Ver la Comunidad"},
+  {screen:"missions",   highlight:null,            master:"Operaciones del Templo.",             sub:"Retos activos con recompensa fija en XP y PropoCoins — desde entrar por primera vez a la tienda, hasta pelear el Top 1 en 100 Templarios. Cuando el avance llega a 100%, reclamas.",btn:"Ver la Comunidad"},
   {screen:"comunidad",  highlight:null,            master:"La Comunidad del Templo.",            sub:"Publica tu avance o tus dudas y gana XP y PropoCoins solo por participar. Cada punto te acerca al siguiente rango — de Discípulo a Guardián, y más allá.",btn:"Finalizar"},
   {screen:"final",      highlight:null,            master:"El templo te espera, Templario.",     sub:"Recuerda: tu Evaluación Semanal es lo único que no puedes saltarte. Menos de 5 minutos, cada semana. Y si alguna vez tienes dudas, puedes volver a ver este tutorial completo desde el botón Tutorial, ahí abajo a la derecha de tu Lobby.",btn:"Completar mi Evaluación"},
 ];
@@ -264,12 +264,12 @@ const NARRATION=[
   "¡Estas son tus herramientas de apoyo! Claves, Victorias Rápidas y Mapas del Templo te dan técnicas extra para profundizar. Úsalas cuando quieras ir más allá de tu evaluación. ¡Pero ojo, no las necesitas para avanzar!",
   "¡Y aquí, 100 Templarios Dijeron! Aquí pones a prueba lo que vas aprendiendo, y compites por un lugar en el podio. Es el juego del templo. ¡Súper divertido! Aunque, ojo, no es tu evaluación.",
   "Hablemos de tu Evaluación Semanal. Cada semana respondes preguntas cortas por territorio, deslizando del uno al diez. Toma menos de cinco minutos, ¡y es lo único que de verdad mueve tu progreso!",
+  "¡Bienvenido a la Academia del Templo! Cada semana, al responder tu evaluación, el sistema te libera el módulo exacto que necesitas según los resultados de tu evaluación. Tus módulos anteriores quedan guardados como historial de tu crecimiento.",
   "¡Estos son los Territorios del Templo! Tu vida se organiza en ocho áreas: Cuerpo, Mente, Emociones, Relaciones, Riqueza, Vocación, Espiritualidad y Ocio. Tu Evaluación Semanal revisa estas áreas, ¡y te dice en cuál enfocarte primero!",
   "¡Fíjate bien en los colores! Cada color y símbolo conecta tu herramienta con su territorio, para que sepas de un vistazo en qué área estás trabajando.",
   "¡Bienvenido a la Tienda del Templo! Aquí desbloqueas herramientas extra con los PropoCoins que ganaste en tu evaluación. Revisa el objetivo y el territorio de cada una antes de canjear.",
   "¡Este es tu Arsenal Personal! Aquí vive todo lo que has desbloqueado. Fíltralo por territorio o tipo cuando busques algo específico.",
   "¡Ahora, las Operaciones del Templo! Retos activos con recompensa fija en XP y PropoCoins, desde entrar por primera vez a la tienda, hasta pelear el Top uno en 100 Templarios Dijeron. Cuando el avance llega a cien por ciento, ¡reclamas tu recompensa!",
-  "¡Bienvenido a la Academia del Templo! Cada semana se abre un módulo nuevo, y tu Evaluación Semanal vive justo aquí dentro. Tus módulos anteriores quedan guardados como historial de tu crecimiento.",
   "¡Y aquí está la Comunidad del Templo! Publica tu avance o tus dudas, y gana XP y PropoCoins solo por participar. Cada punto te acerca al siguiente rango, de Discípulo a Guardián, ¡y más allá!",
   "¡El templo te espera, Templario! Recuerda: tu Evaluación Semanal es lo único que no puedes saltarte. Menos de cinco minutos, cada semana. Y si alguna vez tienes dudas, puedes volver a ver este tutorial completo desde el botón Tutorial, ahí abajo a la derecha de tu Lobby. ¡Vamos, este es tu momento!",
 ];
@@ -2081,6 +2081,24 @@ export default function TStoreTutorial({onComplete}) {
 
   useEffect(()=>{
     if(!window.speechSynthesis) return;
+
+    // ── "CALENTAMIENTO" DEL MOTOR DE VOZ (arreglo del silencio la primera vez) ──
+    // Bug conocido de Chrome/Android (WebView incluido): justo después de un
+    // arranque en frío de la app/página, la PRIMERA llamada real a .speak()
+    // en toda la sesión puede quedar muda — el motor de síntesis la usa para
+    // auto-inicializarse y no produce sonido, aunque no dispare ningún error.
+    // Las llamadas siguientes, dentro de esa misma sesión, sí suenan bien —
+    // por eso funcionaba al cerrar y reabrir el tutorial (ya no era la
+    // primera llamada de la sesión). Aquí "gastamos" esa primera llamada
+    // muda con un utterance vacío y silencioso ANTES de que arranque el
+    // poll de la mejor voz, así la narración real del paso 1 ya no es la
+    // que se pierde.
+    try{
+      const warm=new SpeechSynthesisUtterance(" ");
+      warm.volume=0;
+      window.speechSynthesis.speak(warm);
+      window.speechSynthesis.cancel();
+    }catch(e){/* si el navegador no lo soporta, seguimos igual con el flujo normal */}
 
     startVoicePolling();
     // el navegador dispara esto en cuanto termina de cargar TODAS las voces
