@@ -25,10 +25,28 @@ function hexToRgb(hex) {
 function useWindowSize() {
   const [sz, setSz] = useState({ w: 1200, h: 800 });
   useEffect(() => {
-    const fn = () => setSz({ w: window.innerWidth, h: window.innerHeight });
+    const fn = () => {
+      const vv = window.visualViewport;
+      setSz({
+        w: Math.round(vv ? vv.width : window.innerWidth),
+        h: Math.round(vv ? vv.height : window.innerHeight),
+      });
+    };
     fn();
     window.addEventListener("resize", fn);
-    return () => window.removeEventListener("resize", fn);
+    window.addEventListener("orientationchange", fn);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", fn);
+      window.visualViewport.addEventListener("scroll", fn);
+    }
+    return () => {
+      window.removeEventListener("resize", fn);
+      window.removeEventListener("orientationchange", fn);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", fn);
+        window.visualViewport.removeEventListener("scroll", fn);
+      }
+    };
   }, []);
   return sz;
 }
@@ -248,9 +266,9 @@ const NARRATION=[
 ];
 
 function pickSpanishVoice(){
-  if(!window.speechSynthesis) return null;
+  if(!window.speechSynthesis) return {voice:null,tier:99};
   const voices=window.speechSynthesis.getVoices();
-  if(!voices.length) return null;
+  if(!voices.length) return {voice:null,tier:99};
   // nombres de voces MASCULINAS en español que existen en los principales navegadores/sistemas
   // (Jorge y Alonso primero: son las voces "Online Natural" de Edge/Windows para es-MX,
   // consistentemente las más cálidas y expresivas disponibles gratis en Web Speech API)
@@ -274,12 +292,13 @@ function pickSpanishVoice(){
     v=>/es-MX|es-US|es-419/i.test(v.lang),
     v=>/es-ES/i.test(v.lang),
   ];
-  for(const test of priority){
-    const found=esVoices.find(test);
-    if(found) return found;
+  for(let tier=0;tier<priority.length;tier++){
+    const found=esVoices.find(priority[tier]);
+    if(found) return {voice:found,tier};
   }
   // último recurso: cualquier voz en español, aunque no se haya podido filtrar por nombre
-  return esVoices[0]||voices.find(v=>/^es/i.test(v.lang))||null;
+  const fallback=esVoices[0]||voices.find(v=>/^es/i.test(v.lang))||null;
+  return {voice:fallback,tier:99};
 }
 
 // ─── TITLE SHIMMER ───────────────────────────────────────
@@ -328,8 +347,13 @@ function HomeScreen({highlight,highlightPortalIds,coins,timerStr,mobile,size,pan
 
   const availW = mobile ? size.w - 32 : size.w * 0.58;
   const chromeH = mobile ? 170 : 230;
-  const availH = Math.max(160, size.h - chromeH - (panelH + 16));
-  const pScale = Math.min(1, Math.max(0.55, Math.min(availW / 958, availH / 350)));
+  const availH = Math.max(120, size.h - chromeH - (panelH + 16));
+  // Sin piso fijo: en pantallas muy bajas (celular con barra del navegador
+  // visible, o el contenedor donde vive el tutorial siendo más corto de lo
+  // esperado) el portal debe poder encoger todo lo necesario para que NADA
+  // se corte. El *1.22 reserva espacio extra porque el portal activo crece
+  // ~10% y se desplaza -6px al iluminarse (ver <Portal active>).
+  const pScale = Math.min(1, Math.max(0.32, Math.min(availW / 958, availH / (350*1.22))));
 
   useEffect(()=>{
     if (mobile&&highlightPortalIds.length>0&&portalScrollRef.current) {
@@ -420,7 +444,7 @@ function HomeScreen({highlight,highlightPortalIds,coins,timerStr,mobile,size,pan
       {/* ── PORTAL AREA ── */}
       <div style={{
         flex:1,display:"flex",alignItems:"center",justifyContent:"center",
-        position:"relative",minHeight:0,overflow:"hidden",
+        position:"relative",minHeight:0,overflowY:"auto",overflowX:"hidden",
         zIndex:highlightPortalIds.length>0?53:2,
       }}>
         {/* Side elements: only on wide desktop */}
@@ -1856,20 +1880,29 @@ export default function TStoreTutorial({onComplete}) {
   const [timerSecs,setTimerSecs]=useState(23*3600+39*60+12);
   const [voiceEnabled,setVoiceEnabled]=useState(true);
   const chosenVoiceRef=useRef(null);
-  const voiceUnlockedRef=useRef(false);
   const stepRef=useRef(0);
   const didMountRef=useRef(false);
   const initialSpokenRef=useRef(false);
+  const voicePollStartedRef=useRef(false);
   const size=useWindowSize();
 
   useEffect(()=>{ stepRef.current=step; },[step]);
 
+  // Reevalúa la mejor voz disponible en este momento y la guarda. Devuelve
+  // el "tier" (0 = mejor voz masculina neural encontrada ... 99 = no hay
+  // ninguna voz en español todavía). Se puede llamar varias veces: cada
+  // llamada simplemente ACTUALIZA chosenVoiceRef con lo mejor disponible
+  // hasta ese instante — así, si el navegador aún no ha terminado de cargar
+  // su lista completa de voces (típico justo después de refrescar la
+  // página), no nos quedamos pegados con la primera voz mediocre que
+  // encontremos.
   const unlockVoice=()=>{
-    if(!voiceUnlockedRef.current&&window.speechSynthesis){
-      chosenVoiceRef.current=pickSpanishVoice();
-      voiceUnlockedRef.current=true;
-    }
+    if(!window.speechSynthesis) return 99;
+    const {voice,tier}=pickSpanishVoice();
+    if(voice) chosenVoiceRef.current=voice;
+    return tier;
   };
+  const GOOD_VOICE_TIER=3; // tier 0-3 = voz masculina explícita ya identificada (calidad buena)
 
   const speakSessionRef=useRef(null); // {settled, keepAliveId, fallbackId} de la narración en curso
 
@@ -1953,32 +1986,58 @@ export default function TStoreTutorial({onComplete}) {
 
   // ── NARRACIÓN DEL PRIMER PASO — UNA SOLA VEZ ────────────────
   // speakInitial() está blindada con initialSpokenRef: sin importar cuántas
-  // veces se dispare (voces ya listas, onvoiceschanged, el reintento de 400ms,
-  // o el primer toque/clic/tecla del usuario), solo la PRIMERA llamada real
-  // habla — todas las demás no hacen nada. Así se elimina la voz duplicada
-  // y apagada que se escuchaba de fondo.
+  // veces se dispare, solo la PRIMERA llamada real habla — todas las demás
+  // no hacen nada. Así se elimina la voz duplicada y apagada que se
+  // escuchaba de fondo.
   const speakInitial=()=>{
-    unlockVoice();
     if(initialSpokenRef.current) return;
     if(!voiceEnabled) return;
     initialSpokenRef.current=true;
     doSpeak(stepRef.current);
   };
 
+  // ── ESPERAR A LA MEJOR VOZ ANTES DE HABLAR POR PRIMERA VEZ ──
+  // Justo después de refrescar la página, el navegador NO ha terminado de
+  // cargar su lista completa de voces cuando este componente se monta —
+  // `getVoices()` ya devuelve algo (por eso antes se disparaba de inmediato),
+  // pero todavía sin las voces "Online/Natural/Neural" buenas, así que se
+  // elegía la primera voz mediocre disponible y esa quedaba fija para todo
+  // el tutorial. Si el tutorial se vuelve a abrir sin refrescar, el navegador
+  // ya tiene la lista completa cacheada y por eso sonaba bien.
+  // Este poll reintenta cada 150ms (hasta 12 veces ≈ 1.8s tope) reevaluando
+  // la mejor voz disponible, y solo habla en cuanto encuentra una voz de
+  // buena calidad — o, como máximo, tras el tope de tiempo, para que el
+  // tutorial NUNCA deje de sonar automáticamente.
+  const waitForGoodVoiceThenSpeak=(attempt=0)=>{
+    if(initialSpokenRef.current) return;
+    if(!window.speechSynthesis) return;
+    const tier=unlockVoice();
+    if(tier<=GOOD_VOICE_TIER||attempt>=12){
+      speakInitial();
+      return;
+    }
+    setTimeout(()=>waitForGoodVoiceThenSpeak(attempt+1),150);
+  };
+
+  const startVoicePolling=()=>{
+    if(voicePollStartedRef.current) return;
+    voicePollStartedRef.current=true;
+    waitForGoodVoiceThenSpeak(0);
+  };
+
   useEffect(()=>{
     if(!window.speechSynthesis) return;
 
-    if(window.speechSynthesis.getVoices().length){
-      speakInitial();
-    } else {
-      window.speechSynthesis.onvoiceschanged=speakInitial;
-      // por si el navegador nunca dispara onvoiceschanged — speakInitial ya
-      // está blindada, así que este reintento nunca duplica el audio
-      setTimeout(speakInitial,400);
-    }
+    startVoicePolling();
+    // el navegador dispara esto en cuanto termina de cargar TODAS las voces
+    // (incluidas las buenas "Online/Natural") — startVoicePolling ya está
+    // blindado con voicePollStartedRef, así que esto nunca duplica el audio,
+    // solo asegura que el poll de arriba también arranque si por lo que sea
+    // no lo hizo antes.
+    window.speechSynthesis.onvoiceschanged=startVoicePolling;
 
     const tryOnInteraction=()=>{
-      speakInitial();
+      startVoicePolling();
       if(initialSpokenRef.current){
         document.removeEventListener("click",tryOnInteraction);
         document.removeEventListener("touchstart",tryOnInteraction);
@@ -2052,7 +2111,7 @@ export default function TStoreTutorial({onComplete}) {
   const commonScreenProps={mobile,panelH,size};
 
   return (
-    <div style={{
+    <div className="tdp-tutorial-root" style={{
       position:"fixed",inset:0,zIndex:9999,
       background:`linear-gradient(180deg,#050215 0%,#0a0530 20%,#080320 50%,${C.bg} 100%)`,
       color:"#fff",overflow:"hidden",userSelect:"none",
@@ -2067,6 +2126,10 @@ export default function TStoreTutorial({onComplete}) {
         button{outline:none;}
         .portal-row::-webkit-scrollbar{display:none;}
         @keyframes floatIcon{from{transform:translateY(0)}to{transform:translateY(-7px)}}
+        .tdp-tutorial-root{
+          height:100vh; /* respaldo para navegadores que no soportan dvh */
+          height:100dvh; /* alto VISIBLE real: se ajusta solo si aparece/desaparece la barra del navegador móvil */
+        }
       `}</style>
 
       <Stars/>
