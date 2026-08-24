@@ -1857,6 +1857,7 @@ export default function TStoreTutorial({onComplete}) {
   const voiceUnlockedRef=useRef(false);
   const stepRef=useRef(0);
   const didMountRef=useRef(false);
+  const initialSpokenRef=useRef(false);
   const size=useWindowSize();
 
   useEffect(()=>{ stepRef.current=step; },[step]);
@@ -1868,6 +1869,9 @@ export default function TStoreTutorial({onComplete}) {
     }
   };
 
+  // idx: paso a narrar. Al terminar el audio de ese paso (onend), avanza SOLO
+  // al siguiente automáticamente — excepto en el último paso, que espera el
+  // clic manual de "Completar mi Evaluación".
   const doSpeak=(idx)=>{
     if(!window.speechSynthesis) return;
     const text=NARRATION[idx];
@@ -1875,61 +1879,69 @@ export default function TStoreTutorial({onComplete}) {
     const utter=new SpeechSynthesisUtterance(text);
     utter.lang=(chosenVoiceRef.current&&chosenVoiceRef.current.lang)||"es-MX";
     if(chosenVoiceRef.current) utter.voice=chosenVoiceRef.current;
-    // ritmo pausado y tono ligeramente grave: voz cálida, amable, que transmite calma
-    utter.rate=0.96;
-    utter.pitch=0.92;
+    // ritmo ágil y tono natural-brillante: voz enérgica y animada, nunca apagada
+    utter.rate=1.05;
+    utter.pitch=1.02;
+    utter.onend=()=>{
+      // solo avanza si seguimos en el mismo paso en el que arrancó esta narración
+      // (evita saltos de más si el usuario ya cambió de paso a mano)
+      if(stepRef.current===idx&&idx<STEPS.length-1){
+        setStep(s=>s+1);
+      }
+    };
     window.speechSynthesis.speak(utter);
   };
 
-  // ── ARRANQUE AUTOMÁTICO CON SONIDO ACTIVADO ────────────────
-  // Se dispara apenas se monta el tutorial (usuario nuevo o clic en "Tutorial"
-  // desde el Hub). Si el navegador bloquea el primer audio automático, en cuanto
-  // haya el primer toque/clic/tecla en cualquier parte de la pantalla, se
-  // reintenta de inmediato — así el sonido nunca se queda apagado por más de
-  // una interacción de distancia.
+  // ── NARRACIÓN DEL PRIMER PASO — UNA SOLA VEZ ────────────────
+  // speakInitial() está blindada con initialSpokenRef: sin importar cuántas
+  // veces se dispare (voces ya listas, onvoiceschanged, el reintento de 400ms,
+  // o el primer toque/clic/tecla del usuario), solo la PRIMERA llamada real
+  // habla — todas las demás no hacen nada. Así se elimina la voz duplicada
+  // y apagada que se escuchaba de fondo.
+  const speakInitial=()=>{
+    unlockVoice();
+    if(initialSpokenRef.current) return;
+    if(!voiceEnabled) return;
+    initialSpokenRef.current=true;
+    window.speechSynthesis.cancel();
+    doSpeak(stepRef.current);
+  };
+
   useEffect(()=>{
     if(!window.speechSynthesis) return;
 
-    const tryStartOnLoad=()=>{
-      unlockVoice();
-      if(voiceEnabled) doSpeak(stepRef.current);
-    };
-
     if(window.speechSynthesis.getVoices().length){
-      tryStartOnLoad();
+      speakInitial();
     } else {
-      window.speechSynthesis.onvoiceschanged=tryStartOnLoad;
-      // algunos navegadores nunca disparan onvoiceschanged: reintenta de todas formas
-      setTimeout(tryStartOnLoad,400);
+      window.speechSynthesis.onvoiceschanged=speakInitial;
+      // por si el navegador nunca dispara onvoiceschanged — speakInitial ya
+      // está blindada, así que este reintento nunca duplica el audio
+      setTimeout(speakInitial,400);
     }
 
-    let firstInteractionHandled=false;
-    const unlockOnFirstInteraction=()=>{
-      if(firstInteractionHandled) return;
-      firstInteractionHandled=true;
-      unlockVoice();
-      if(voiceEnabled&&!window.speechSynthesis.speaking&&!window.speechSynthesis.pending){
-        doSpeak(stepRef.current);
+    const tryOnInteraction=()=>{
+      speakInitial();
+      if(initialSpokenRef.current){
+        document.removeEventListener("click",tryOnInteraction);
+        document.removeEventListener("touchstart",tryOnInteraction);
+        document.removeEventListener("keydown",tryOnInteraction);
       }
-      document.removeEventListener("click",unlockOnFirstInteraction);
-      document.removeEventListener("touchstart",unlockOnFirstInteraction);
-      document.removeEventListener("keydown",unlockOnFirstInteraction);
     };
-    document.addEventListener("click",unlockOnFirstInteraction);
-    document.addEventListener("touchstart",unlockOnFirstInteraction);
-    document.addEventListener("keydown",unlockOnFirstInteraction);
+    document.addEventListener("click",tryOnInteraction);
+    document.addEventListener("touchstart",tryOnInteraction);
+    document.addEventListener("keydown",tryOnInteraction);
 
     return ()=>{
-      document.removeEventListener("click",unlockOnFirstInteraction);
-      document.removeEventListener("touchstart",unlockOnFirstInteraction);
-      document.removeEventListener("keydown",unlockOnFirstInteraction);
+      document.removeEventListener("click",tryOnInteraction);
+      document.removeEventListener("touchstart",tryOnInteraction);
+      document.removeEventListener("keydown",tryOnInteraction);
     };
   },[]);
 
   // ── NARRACIÓN AL CAMBIAR DE PASO ────────────────────────────
-  // El primer paso ya quedó a cargo del efecto de arranque automático de
-  // arriba (con su reintento por interacción); este efecto solo entra en
-  // acción a partir del segundo paso en adelante, o si se silencia/activa la voz.
+  // El primer paso ya quedó a cargo de speakInitial() de arriba; este efecto
+  // entra en acción a partir del segundo paso en adelante (por avance
+  // automático al terminar el audio, o por clic manual en el botón).
   useEffect(()=>{
     if(!window.speechSynthesis) return;
     if(!didMountRef.current){
