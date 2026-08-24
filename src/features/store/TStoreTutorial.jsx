@@ -21,6 +21,15 @@ function hexToRgb(hex) {
   return r?`${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}`:"255,255,255";
 }
 
+// ─── LIENZO DE DISEÑO FIJO (referencia "PC") ───────────────
+// Todo el tutorial se dibuja SIEMPRE con estas dimensiones virtuales,
+// sin importar el dispositivo real. Así el layout jamás se reordena ni
+// se corta: en pantallas más chicas (celular) el lienzo completo se
+// reduce de tamaño con un transform:scale, manteniendo pixel a pixel
+// la misma composición que se ve en PC.
+const DESKTOP_W=1200;
+const DESKTOP_H=675;
+
 // ─── RESPONSIVE HOOK ──────────────────────────────────────
 function useWindowSize() {
   const [sz, setSz] = useState({ w: 1200, h: 800 });
@@ -296,8 +305,17 @@ function pickSpanishVoice(){
     const found=esVoices.find(priority[tier]);
     if(found) return {voice:found,tier};
   }
-  // último recurso: cualquier voz en español, aunque no se haya podido filtrar por nombre
-  const fallback=esVoices[0]||voices.find(v=>/^es/i.test(v.lang))||null;
+  // penúltimo recurso: si el dispositivo tiene una voz masculina identificada
+  // por nombre pero en OTRO idioma (p. ej. el celular no trae voces es-MX
+  // masculinas instaladas), se prefiere esa antes que resignarse a una voz
+  // femenina en español — sigue sonando a hombre, aunque el acento no sea
+  // perfecto en cada palabra.
+  const anyMaleVoice=voices.find(v=>maleNames.test(v.name));
+  if(anyMaleVoice) return {voice:anyMaleVoice,tier:98};
+  // último recurso real: solo si NO existe ninguna voz masculina identificable
+  // en todo el dispositivo, se usa cualquier voz en español disponible
+  // (podría ser femenina, pero ya no hay otra opción en el sistema).
+  const fallback=esVoices[0]||voices.find(v=>/^es/i.test(v.lang))||voices[0]||null;
   return {voice:fallback,tier:99};
 }
 
@@ -1884,7 +1902,9 @@ export default function TStoreTutorial({onComplete}) {
   const didMountRef=useRef(false);
   const initialSpokenRef=useRef(false);
   const voicePollStartedRef=useRef(false);
-  const size=useWindowSize();
+  const realSize=useWindowSize();
+  const size={w:DESKTOP_W,h:DESKTOP_H};
+  const tutorialScale=Math.min(realSize.w/DESKTOP_W,realSize.h/DESKTOP_H)||1;
 
   useEffect(()=>{ stepRef.current=step; },[step]);
 
@@ -2111,11 +2131,11 @@ export default function TStoreTutorial({onComplete}) {
   const commonScreenProps={mobile,panelH,size};
 
   return (
-    <div className="tdp-tutorial-root" style={{
+    <div className="tdp-tutorial-viewport" style={{
       position:"fixed",inset:0,zIndex:9999,
-      background:`linear-gradient(180deg,#050215 0%,#0a0530 20%,#080320 50%,${C.bg} 100%)`,
-      color:"#fff",overflow:"hidden",userSelect:"none",
-      fontFamily:"'Crimson Text',serif",
+      background:C.bg,
+      display:"flex",alignItems:"center",justifyContent:"center",
+      overflow:"hidden",
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Nunito:wght@400;600&display=swap');
@@ -2126,11 +2146,20 @@ export default function TStoreTutorial({onComplete}) {
         button{outline:none;}
         .portal-row::-webkit-scrollbar{display:none;}
         @keyframes floatIcon{from{transform:translateY(0)}to{transform:translateY(-7px)}}
-        .tdp-tutorial-root{
+        .tdp-tutorial-viewport{
           height:100vh; /* respaldo para navegadores que no soportan dvh */
           height:100dvh; /* alto VISIBLE real: se ajusta solo si aparece/desaparece la barra del navegador móvil */
         }
       `}</style>
+
+      <div className="tdp-tutorial-root" style={{
+        position:"relative",flexShrink:0,
+        width:DESKTOP_W,height:DESKTOP_H,
+        transform:`scale(${tutorialScale})`,transformOrigin:"center center",
+        background:`linear-gradient(180deg,#050215 0%,#0a0530 20%,#080320 50%,${C.bg} 100%)`,
+        color:"#fff",overflow:"hidden",userSelect:"none",
+        fontFamily:"'Crimson Text',serif",
+      }}>
 
       <Stars/>
       <Particles count={mobile?4:8}/>
@@ -2240,6 +2269,7 @@ export default function TStoreTutorial({onComplete}) {
         mobile={mobile}
         voiceEnabled={voiceEnabled}
         onToggleVoice={()=>setVoiceEnabled(v=>!v)}/>
+      </div>
     </div>
   );
 }
