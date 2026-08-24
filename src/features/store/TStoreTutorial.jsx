@@ -359,7 +359,27 @@ function TitleShimmer({mobile}) {
 }
 
 // ─── HOME SCREEN ─────────────────────────────────────────
-function HomeScreen({highlight,highlightPortalIds,coins,timerStr,mobile,size,panelH}) {
+// ─── COUNTDOWN AISLADO ──────────────────────────────────
+// Antes el "timerSecs" vivía en el componente raíz (TStoreTutorial) y cada
+// tick de 1s (setInterval) re-renderizaba TODO el árbol del tutorial
+// (Stars, Particles, pantalla activa, MasterPanel...), aunque el número
+// solo se ve en una esquina en desktop. Aislado aquí, solo este badge
+// se actualiza cada segundo — el resto del tutorial deja de repintarse
+// sin necesidad, lo cual es la ganancia de fluidez más grande posible
+// sin tocar el resto del diseño.
+function CountdownBadge() {
+  const [secs,setSecs]=useState(23*3600+39*60+12);
+  useEffect(()=>{
+    const iv=setInterval(()=>setSecs(s=>Math.max(0,s-1)),1000);
+    return ()=>clearInterval(iv);
+  },[]);
+  const h=String(Math.floor(secs/3600)).padStart(2,"0");
+  const m=String(Math.floor((secs%3600)/60)).padStart(2,"0");
+  const s=String(secs%60).padStart(2,"0");
+  return <>{h}:{m}:{s}</>;
+}
+
+function HomeScreen({highlight,highlightPortalIds,coins,mobile,size,panelH}) {
   const dim=(id)=>highlightPortalIds.length>0&&!highlightPortalIds.includes(id);
   const portalScrollRef=useRef(null);
 
@@ -481,17 +501,32 @@ function HomeScreen({highlight,highlightPortalIds,coins,timerStr,mobile,size,pan
                     OFERTAS ESPECIALES</div>
                   <div style={{fontSize:9,color:"rgba(255,255,255,0.45)",marginTop:2,lineHeight:1.4}}>
                     Descuentos únicos por tiempo limitado</div>
-                  <div style={{fontSize:9,color:C.amber,marginTop:4}}>⏱ {timerStr}</div>
+                  <div style={{fontSize:9,color:C.amber,marginTop:4}}>⏱ <CountdownBadge/></div>
                 </div>
               </div>
             </motion.div>
             <div
-              style={{position:"absolute",left:120,bottom:50,fontSize:90,zIndex:highlight==="coins"?53:1,
+              style={{position:"absolute",left:130,bottom:44,width:150,height:250,zIndex:highlight==="coins"?53:1,
                 animation:"floatIcon 3s ease-in-out infinite alternate",
                 opacity:(highlight&&highlight!=="coins")?0.1:1,transition:"opacity 0.3s"}}>
-              <img src="https://i.imgur.com/7ofsCSm.png" alt="Maestro" style={{width:"100%",height:"100%",objectFit:"contain",borderRadius:"50%"}}/>
+              {/* objectFit:"contain" sin borderRadius circular: el círculo anterior
+                  recortaba la cabeza y la punta del bastón del personaje */}
+              <img src="https://i.imgur.com/7ofsCSm.png" alt="Maestro" style={{width:"100%",height:"100%",objectFit:"contain"}}/>
             </div>
           </>
+        )}
+
+        {/* Personaje en móvil: lado derecho, debajo de PropoCoins/XP,
+            ocupando el espacio oscuro vacío junto a "Mi Perfil" */}
+        {mobile&&(
+          <motion.div
+            animate={{opacity:(highlight&&highlight!=="coins")?0.1:1}}
+            style={{position:"absolute",right:2,top:4,
+              width:Math.min(96,size.w*0.26),height:Math.min(190,availH*0.68),
+              zIndex:highlight==="coins"?53:2,pointerEvents:"none",
+              transition:"opacity 0.3s"}}>
+            <img src="https://i.imgur.com/7ofsCSm.png" alt="Maestro" style={{width:"100%",height:"100%",objectFit:"contain"}}/>
+          </motion.div>
         )}
 
         {/* PORTALS ROW */}
@@ -1895,7 +1930,6 @@ export default function TStoreTutorial({onComplete}) {
   const [filterT,setFilterT]=useState(null);
   const [selectedModule,setSelectedModule]=useState(null);
   const [coins]=useState(2850);
-  const [timerSecs,setTimerSecs]=useState(23*3600+39*60+12);
   const [voiceEnabled,setVoiceEnabled]=useState(true);
   const chosenVoiceRef=useRef(null);
   const stepRef=useRef(0);
@@ -2094,18 +2128,6 @@ export default function TStoreTutorial({onComplete}) {
   const mobile=size.w<900;
   const panelH=mobile?95:128;
 
-  useEffect(()=>{
-    const iv=setInterval(()=>setTimerSecs(s=>Math.max(0,s-1)),1000);
-    return ()=>clearInterval(iv);
-  },[]);
-
-  const fmtTimer=s=>{
-    const h=String(Math.floor(s/3600)).padStart(2,"0");
-    const m=String(Math.floor((s%3600)/60)).padStart(2,"0");
-    const sec=String(s%60).padStart(2,"0");
-    return `${h}:${m}:${sec}`;
-  };
-
   const cur=STEPS[step];
   const isLast=step===STEPS.length-1;
   const advance=()=>{
@@ -2184,7 +2206,6 @@ export default function TStoreTutorial({onComplete}) {
               highlight={cur.highlight}
               highlightPortalIds={highlightPortalIds}
               coins={coins}
-              timerStr={fmtTimer(timerSecs)}
               {...commonScreenProps}/>
           </motion.div>
         )}
