@@ -125,6 +125,22 @@ export default function SorteoAdminPage() {
 
   // ── JUNTAS MEET (análisis automático de sesiones) ────────────────────────────
   const [juntasMeet,     setJuntasMeet]     = useState([]);
+  const [metricasProspeccion, setMetricasProspeccion] = useState(null);
+
+  const cargarMetricasProspeccion = useCallback(async () => {
+    const { data, error } = await supabase.rpc('camino_metricas_prospeccion');
+    if (!error) setMetricasProspeccion(data);
+  }, []);
+  const [metricasMentoria, setMetricasMentoria] = useState(null);
+  const cargarMetricasMentoria = useCallback(async () => {
+    const { data, error } = await supabase.rpc('camino_metricas_mentoria');
+    if (!error) setMetricasMentoria(data);
+  }, []);
+  const [patronesRecurrentes, setPatronesRecurrentes] = useState(null);
+  const cargarPatronesRecurrentes = useCallback(async () => {
+    const { data, error } = await supabase.rpc('camino_recomendaciones_recurrentes');
+    if (!error) setPatronesRecurrentes(data);
+  }, []);
   const [loadingJuntas,  setLoadingJuntas]  = useState(false);
   const [juntaAbierta,   setJuntaAbierta]   = useState(null);
   const [sincronizando,  setSincronizando]  = useState(false);
@@ -147,6 +163,7 @@ export default function SorteoAdminPage() {
   const [editsCurriculum,    setEditsCurriculum]    = useState({});
   const [guardandoCurriculum,setGuardandoCurriculum] = useState(null);
   const [curriculumAbierto,  setCurriculumAbierto]  = useState(false);
+  const [curriculumContextoActivo, setCurriculumContextoActivo] = useState('interesado');
 
 
   // ── FIRMAS (acuerdos digitales de líderes/gerentes) ──────────────────────────
@@ -364,31 +381,33 @@ const cargarSellosCodigos = useCallback(async () => {
 
   const cargarCurriculum = useCallback(async () => {
     setLoadingCurriculum(true);
-    const { data, error } = await supabase.from('camino_curriculum_sesiones').select('*').order('numero_sesion');
+    const { data, error } = await supabase.from('camino_curriculum_sesiones').select('*').order('contexto').order('numero_sesion');
     if (!error) {
       setCurriculumSesiones(data || []);
-      setEditsCurriculum(Object.fromEntries((data || []).map(cs => [cs.numero_sesion, {
+      setEditsCurriculum(Object.fromEntries((data || []).map(cs => [`${cs.contexto}::${cs.numero_sesion}`, {
         titulo: cs.titulo || '', objetivo: cs.objetivo || '', temas_texto: (cs.temas_esperados || []).join(', '),
       }])));
     }
     setLoadingCurriculum(false);
   }, []);
 
-  const guardarCurriculum = async (numeroSesion) => {
-    const edit = editsCurriculum[numeroSesion] || { titulo: '', objetivo: '', temas_texto: '' };
+  const guardarCurriculum = async (contexto, numeroSesion) => {
+    const key = `${contexto}::${numeroSesion}`;
+    const edit = editsCurriculum[key] || { titulo: '', objetivo: '', temas_texto: '' };
     const temas_esperados = edit.temas_texto.split(',').map(t => t.trim()).filter(Boolean);
-    setGuardandoCurriculum(numeroSesion);
+    setGuardandoCurriculum(key);
     await supabase.from('camino_curriculum_sesiones').upsert({
-      numero_sesion: numeroSesion, titulo: edit.titulo, objetivo: edit.objetivo, temas_esperados,
+      numero_sesion: numeroSesion, contexto, titulo: edit.titulo, objetivo: edit.objetivo, temas_esperados,
       actualizado_at: new Date().toISOString(),
-    });
+    }, { onConflict: 'numero_sesion,contexto' });
     setGuardandoCurriculum(null);
     cargarCurriculum();
   };
 
-  const agregarNumeroSesionCurriculum = async () => {
-    const siguiente = (curriculumSesiones[curriculumSesiones.length - 1]?.numero_sesion || 0) + 1;
-    await supabase.from('camino_curriculum_sesiones').insert({ numero_sesion: siguiente, titulo: `Sesión ${siguiente}`, temas_esperados: [], objetivo: '' });
+  const agregarNumeroSesionCurriculum = async (contexto) => {
+    const deEsteContexto = curriculumSesiones.filter(cs => cs.contexto === contexto);
+    const siguiente = (deEsteContexto[deEsteContexto.length - 1]?.numero_sesion || 0) + 1;
+    await supabase.from('camino_curriculum_sesiones').insert({ numero_sesion: siguiente, contexto, titulo: `Sesión ${siguiente}`, temas_esperados: [], objetivo: '' });
     cargarCurriculum();
   };
 
@@ -534,8 +553,8 @@ const cargarSellosCodigos = useCallback(async () => {
 
   useEffect(() => {
     if (tabActiva === 'sellos') cargarSellosCodigos();
-    if (tabActiva === 'juntas') { cargarJuntasMeet(); cargarCurriculum(); }
-  }, [tabActiva, cargarSellosCodigos, cargarJuntasMeet, cargarCurriculum]);
+    if (tabActiva === 'juntas') { cargarJuntasMeet(); cargarCurriculum(); cargarMetricasProspeccion(); cargarMetricasMentoria(); cargarPatronesRecurrentes(); }
+  }, [tabActiva, cargarSellosCodigos, cargarJuntasMeet, cargarCurriculum, cargarMetricasProspeccion, cargarMetricasMentoria, cargarPatronesRecurrentes]);
 
   const slugify = (texto) =>
     texto.toLowerCase().trim()
@@ -2311,12 +2330,192 @@ const cargarSellosCodigos = useCallback(async () => {
                 {sincronizando ? 'SINCRONIZANDO...' : '🔄 SINCRONIZAR AHORA'}
               </button>
             </div>
-            {msgSync && (
+           {msgSync && (
               <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.green, letterSpacing: 1, marginTop: 12 }}>{msgSync}</p>
             )}
           </div>
 
-          {/* ── CURRÍCULUM ESPERADO POR SESIÓN ── */}
+          {/* ── PROSPECCIÓN: conversión real de juntas 1 con interesados ── */}
+          {metricasProspeccion && metricasProspeccion.prospectos_distintos > 0 && (
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '18px 20px' }}>
+              <h3 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 12, letterSpacing: 1.5, color: C.gold, margin: '0 0 4px' }}>
+                🎯 PROSPECCIÓN — ¿LAS JUNTAS 1 CONVIERTEN?
+              </h3>
+              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 0.5, margin: '0 0 16px' }}>
+                Comparación entre todas las juntas 1 con interesados y si terminaron aceptados.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: 10, marginBottom: metricasProspeccion.detalle?.length ? 18 : 0 }}>
+                {[
+                  { label: 'PROSPECTOS CON JUNTA', valor: metricasProspeccion.prospectos_distintos },
+                  { label: 'CONVERTIDOS', valor: metricasProspeccion.convertidos, color: C.green },
+                  { label: 'TASA DE CONVERSIÓN', valor: metricasProspeccion.tasa_conversion_pct != null ? `${metricasProspeccion.tasa_conversion_pct}%` : '—', color: C.gold },
+                  { label: 'CON SEÑALES DE ALERTA', valor: metricasProspeccion.con_senales_de_alerta, color: metricasProspeccion.con_senales_de_alerta > 0 ? '#ff8080' : C.muted },
+                  { label: 'DURACIÓN PROM.', valor: `${metricasProspeccion.duracion_promedio_min} min` },
+                ].map((m) => (
+                  <div key={m.label} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: m.color || C.text }}>{m.valor}</div>
+                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 7, letterSpacing: 1, color: C.muted, marginTop: 4 }}>{m.label}</div>
+                  </div>
+                ))}
+              </div>
+              {metricasProspeccion.detalle?.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {metricasProspeccion.detalle.map((d) => (
+                    <div key={d.junta_id} style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <span style={{
+                        fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, padding: '3px 8px', borderRadius: 20,
+                        background: d.estado_prospecto === 'aceptado' ? 'rgba(68,255,136,0.12)' : 'rgba(255,255,255,0.06)',
+                        color: d.estado_prospecto === 'aceptado' ? C.green : C.muted,
+                        border: `1px solid ${d.estado_prospecto === 'aceptado' ? 'rgba(68,255,136,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                      }}>
+                        {d.estado_prospecto === 'aceptado' ? '✓ CONVERTIDO' : (d.estado_prospecto || 'PENDIENTE').toUpperCase()}
+                      </span>
+                      <b style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: C.text }}>{d.prospecto}</b>
+                      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted }}>
+                        {new Date(d.fecha_junta).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })} · {d.duracion_min} min
+                      </span>
+                      {d.tiene_alertas && (
+                        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: '#ff8080' }}>
+                          ⚠ {d.num_alertas} alerta{d.num_alertas > 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {d.resumen && (
+                        <p style={{ width: '100%', margin: '4px 0 0', fontSize: 10, color: C.muted, lineHeight: 1.4 }}>{d.resumen}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── PATRONES RECURRENTES: lo mismo que se repite entre juntas distintas ── */}
+          {patronesRecurrentes && Object.keys(patronesRecurrentes).length > 0 && (
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '18px 20px' }}>
+              <h3 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 12, letterSpacing: 1.5, color: C.gold, margin: '0 0 4px' }}>
+                🔁 PATRONES QUE SE REPITEN
+              </h3>
+              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 0.5, margin: '0 0 16px' }}>
+                Solo aparece aquí lo que se repitió 2 veces o más en juntas distintas — una sola mención no cuenta como patrón.
+              </p>
+              {Object.entries(patronesRecurrentes).map(([tipo, patrones]) => {
+                const etiquetasCategoria = {
+                  seguimiento_pendiente: 'Seguimiento pendiente', logistica_tecnica: 'Logística técnica',
+                  confirmar_asistencia: 'Confirmar asistencia', definir_metas: 'Definir metas',
+                  resolver_dudas_miedos: 'Dudas / miedos sin resolver', entregar_material: 'Falta entregar material',
+                  estructura_contenido: 'Estructura de contenido', constancia_habito: 'Constancia / hábito',
+                  reconocimiento_motivacion: 'Motivación / reconocimiento', claridad_explicacion: 'Falta claridad al explicar',
+                };
+                const tituloTipo = tipo === 'interesado' ? '🎯 En entrevistas' : tipo === 'aliado' ? '🎓 En mentoría' : tipo;
+                return (
+                  <div key={tipo} style={{ marginBottom: 14 }}>
+                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1.5, color: C.muted, marginBottom: 8 }}>{tituloTipo}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {patrones.map((p, i) => (
+                        <div key={i} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.gold, fontWeight: 700 }}>
+                              {etiquetasCategoria[p.categoria] || p.categoria}
+                            </span>
+                            <span style={{ fontSize: 9, color: C.muted }}>× {p.veces} juntas</span>
+                          </div>
+                          {p.ejemplo && <p style={{ margin: '4px 0 0', fontSize: 10.5, color: C.text, lineHeight: 1.4 }}>{p.ejemplo}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── MENTORÍA: ¿las sesiones con aliados cubren lo que deben cubrir? ── */}
+          {metricasMentoria && metricasMentoria.total_juntas > 0 && (
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '18px 20px' }}>
+              <h3 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 12, letterSpacing: 1.5, color: C.gold, margin: '0 0 4px' }}>
+                🎓 MENTORÍA — ¿LAS SESIONES CUBREN LO QUE DEBEN?
+              </h3>
+              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 0.5, margin: '0 0 16px' }}>
+                Cobertura de currículum, alertas y duración en tus sesiones de mentoría con aliados ya aceptados.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: 10, marginBottom: 18 }}>
+                {[
+                  { label: 'JUNTAS ANALIZADAS', valor: metricasMentoria.total_juntas },
+                  { label: 'ALIADOS DISTINTOS', valor: metricasMentoria.aliados_distintos },
+                  { label: 'COBERTURA PROMEDIO', valor: `${metricasMentoria.cobertura_promedio_pct}%`, color: metricasMentoria.cobertura_promedio_pct >= 80 ? C.green : metricasMentoria.cobertura_promedio_pct >= 50 ? C.gold : C.red },
+                  { label: 'CON SEÑALES DE ALERTA', valor: metricasMentoria.con_senales_de_alerta, color: metricasMentoria.con_senales_de_alerta > 0 ? '#ff8080' : C.muted },
+                  { label: 'DURACIÓN PROM.', valor: `${metricasMentoria.duracion_promedio_min} min` },
+                ].map((m) => (
+                  <div key={m.label} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: m.color || C.text }}>{m.valor}</div>
+                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 7, letterSpacing: 1, color: C.muted, marginTop: 4 }}>{m.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {metricasMentoria.por_sesion?.length > 0 && (
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.gold, marginBottom: 8 }}>📊 COBERTURA POR SESIÓN</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {metricasMentoria.por_sesion.map(s => {
+                      const pct = s.cobertura_promedio_pct ?? 0;
+                      const color = pct >= 80 ? C.green : pct >= 50 ? C.gold : C.red;
+                      return (
+                        <div key={s.numero_sesion} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, width: 90, flexShrink: 0 }}>SESIÓN {s.numero_sesion} ({s.n_juntas})</span>
+                          <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 4 }} />
+                          </div>
+                          <span style={{ fontSize: 10, color, width: 34, textAlign: 'right' }}>{s.cobertura_promedio_pct != null ? `${pct}%` : '—'}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {metricasMentoria.temas_mas_faltantes?.length > 0 && (
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.red, marginBottom: 8 }}>⚠ LO QUE MÁS SE SALTA</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {metricasMentoria.temas_mas_faltantes.map((t, i) => (
+                      <span key={i} style={{ fontSize: 10.5, color: C.text, background: 'rgba(255,128,128,0.08)', border: '1px solid rgba(255,128,128,0.25)', borderRadius: 20, padding: '4px 10px' }}>
+                        {t.tema} <span style={{ color: '#ff8080' }}>×{t.veces_faltante}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {metricasMentoria.detalle?.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {metricasMentoria.detalle.map((d) => (
+                    <div key={d.junta_id} style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <b style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: C.text }}>{d.aliado}</b>
+                      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted }}>
+                        SESIÓN {d.numero_sesion ?? '—'} · {new Date(d.fecha_junta).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })} · {d.duracion_min} min
+                      </span>
+                      {d.cobertura_pct != null && (
+                        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: d.cobertura_pct >= 80 ? C.green : d.cobertura_pct >= 50 ? C.gold : C.red }}>
+                          {d.cobertura_pct}% CUBIERTO
+                        </span>
+                      )}
+                      {d.tiene_alertas && (
+                        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: '#ff8080' }}>
+                          ⚠ {d.num_alertas} alerta{d.num_alertas > 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {d.resumen && (
+                        <p style={{ width: '100%', margin: '4px 0 0', fontSize: 10, color: C.muted, lineHeight: 1.4 }}>{d.resumen}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── CURRÍCULUM ESPERADO POR SESIÓN (por tipo de participante) ── */}
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px 18px' }}>
             <div
               onClick={() => setCurriculumAbierto(v => !v)}
@@ -2332,53 +2531,74 @@ const cargarSellosCodigos = useCallback(async () => {
             {curriculumAbierto && (
               <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <p style={{ fontSize: 10.5, color: C.muted, margin: 0 }}>
-                  Define aquí qué temas esperas en cada número de sesión del Camino. Cuando una junta se identifique como esa sesión,
-                  la IA compara la transcripción real contra esta lista y te dice qué faltó.
+                  Define aquí qué temas esperas en cada número de sesión, separado por tipo de participante. Cuando una junta se
+                  identifique como esa sesión y ese tipo, la IA compara la transcripción real contra esta lista y te dice qué faltó.
                 </p>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[
+                    { id: 'interesado', label: '🎯 ENTREVISTA (INTERESADOS)' },
+                    { id: 'camino', label: '🎓 MENTORÍA (ALIADOS)' },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setCurriculumContextoActivo(tab.id)}
+                      style={{
+                        padding: '6px 12px', borderRadius: 6, cursor: 'pointer',
+                        fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1,
+                        background: curriculumContextoActivo === tab.id ? 'rgba(212,175,55,0.15)' : 'transparent',
+                        border: `1px solid ${curriculumContextoActivo === tab.id ? C.borderHi : C.border}`,
+                        color: curriculumContextoActivo === tab.id ? C.gold : C.muted,
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
                 {loadingCurriculum ? (
                   <p style={{ color: C.muted, fontSize: 10 }}>Cargando…</p>
                 ) : (
-                  curriculumSesiones.map(cs => {
-                    const edit = editsCurriculum[cs.numero_sesion] || { titulo: '', objetivo: '', temas_texto: '' };
+                  curriculumSesiones.filter(cs => cs.contexto === curriculumContextoActivo).map(cs => {
+                    const key = `${cs.contexto}::${cs.numero_sesion}`;
+                    const edit = editsCurriculum[key] || { titulo: '', objetivo: '', temas_texto: '' };
                     return (
-                      <div key={cs.numero_sesion} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div key={key} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.gold, fontWeight: 700, whiteSpace: 'nowrap' }}>
                             Sesión {cs.numero_sesion}
                           </span>
                           <input
                             value={edit.titulo}
-                            onChange={e => setEditsCurriculum(p => ({ ...p, [cs.numero_sesion]: { ...edit, titulo: e.target.value } }))}
+                            onChange={e => setEditsCurriculum(p => ({ ...p, [key]: { ...edit, titulo: e.target.value } }))}
                             placeholder="Título de la sesión"
                             style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11 }}
                           />
                         </div>
                         <input
                           value={edit.objetivo}
-                          onChange={e => setEditsCurriculum(p => ({ ...p, [cs.numero_sesion]: { ...edit, objetivo: e.target.value } }))}
+                          onChange={e => setEditsCurriculum(p => ({ ...p, [key]: { ...edit, objetivo: e.target.value } }))}
                           placeholder="Objetivo de esta sesión"
                           style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11 }}
                         />
                         <textarea
                           value={edit.temas_texto}
-                          onChange={e => setEditsCurriculum(p => ({ ...p, [cs.numero_sesion]: { ...edit, temas_texto: e.target.value } }))}
+                          onChange={e => setEditsCurriculum(p => ({ ...p, [key]: { ...edit, temas_texto: e.target.value } }))}
                           placeholder="Temas esperados, separados por coma (ej: definir marca personal, elegir 1 red social, primer post)"
                           rows={2}
                           style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11, resize: 'vertical' }}
                         />
                         <button
-                          onClick={() => guardarCurriculum(cs.numero_sesion)}
-                          disabled={guardandoCurriculum === cs.numero_sesion}
+                          onClick={() => guardarCurriculum(cs.contexto, cs.numero_sesion)}
+                          disabled={guardandoCurriculum === key}
                           style={{ alignSelf: 'flex-end', padding: '6px 14px', background: 'rgba(212,175,55,0.12)', border: `1px solid ${C.borderHi}`, borderRadius: 6, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}
                         >
-                          {guardandoCurriculum === cs.numero_sesion ? 'GUARDANDO...' : 'GUARDAR'}
+                          {guardandoCurriculum === key ? 'GUARDANDO...' : 'GUARDAR'}
                         </button>
                       </div>
                     );
                   })
                 )}
                 <button
-                  onClick={agregarNumeroSesionCurriculum}
+                  onClick={() => agregarNumeroSesionCurriculum(curriculumContextoActivo)}
                   style={{ alignSelf: 'flex-start', padding: '7px 14px', background: 'transparent', border: `1px dashed ${C.border}`, borderRadius: 6, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}
                 >
                   + AGREGAR SIGUIENTE NÚMERO DE SESIÓN
@@ -2416,8 +2636,18 @@ const cargarSellosCodigos = useCallback(async () => {
                 style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', color: C.text, fontSize: 11, fontFamily: 'Cinzel, serif' }}
               >
                 <option value="todas">Sesión: todas</option>
-                {Array.from(new Set(juntasMeet.map(j => j.numero_sesion).filter(n => n != null))).sort((a, b) => a - b).map(n => (
-                  <option key={n} value={n}>Sesión {n}</option>
+                {Array.from(
+                  new Map(
+                    juntasMeet
+                      .filter(j => j.numero_sesion != null)
+                      .map(j => {
+                        const key = `${j.participante_tipo || 'sin_tipo'}::${j.numero_sesion}`;
+                        const etiquetaTipo = j.participante_tipo === 'interesado' ? 'Entrevista' : j.participante_tipo === 'aliado' ? 'Mentoría' : 'Sin tipo';
+                        return [key, `Sesión ${j.numero_sesion} — ${etiquetaTipo}`];
+                      })
+                  ).entries()
+                ).sort((a, b) => a[1].localeCompare(b[1])).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
                 ))}
               </select>
               {(filtroParticipanteJunta !== 'todos' || filtroSesionJunta !== 'todas') && (
@@ -2439,7 +2669,7 @@ const cargarSellosCodigos = useCallback(async () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {juntasMeet
                 .filter(j => filtroParticipanteJunta === 'todos' || (j.participante_id ? `${j.participante_tipo}:${j.participante_id}` : `nombre:${j.participante_nombre}`) === filtroParticipanteJunta)
-                .filter(j => filtroSesionJunta === 'todas' || String(j.numero_sesion) === filtroSesionJunta)
+                .filter(j => filtroSesionJunta === 'todas' || `${j.participante_tipo || 'sin_tipo'}::${j.numero_sesion}` === filtroSesionJunta)
                 .map(j => {
                 const abierta = juntaAbierta === j.id;
                 const duracionMin = j.fecha_inicio && j.fecha_fin
@@ -2632,6 +2862,25 @@ const cargarSellosCodigos = useCallback(async () => {
                             {j.temas.cobertura_curriculum && (
                               <div>
                                 <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.gold, marginBottom: 6 }}>📚 COBERTURA DEL CURRÍCULUM</div>
+                                {(() => {
+                                  const nCub = (j.temas.cobertura_curriculum.cubiertos || []).length;
+                                  const nFalt = (j.temas.cobertura_curriculum.faltantes || []).length;
+                                  const total = nCub + nFalt;
+                                  if (total === 0) return null;
+                                  const pct = Math.round((nCub / total) * 100);
+                                  const colorBarra = pct >= 80 ? C.green : pct >= 50 ? C.gold : C.red;
+                                  return (
+                                    <div style={{ marginBottom: 10 }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: colorBarra, letterSpacing: 1 }}>{pct}% CUBIERTO</span>
+                                        <span style={{ fontSize: 10, color: C.muted }}>{nCub}/{total} puntos</span>
+                                      </div>
+                                      <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+                                        <div style={{ height: '100%', width: `${pct}%`, background: colorBarra, borderRadius: 4 }} />
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
                                 {j.temas.cobertura_curriculum.nota && (
                                   <p style={{ fontSize: 11, color: C.muted, margin: '0 0 8px' }}>{j.temas.cobertura_curriculum.nota}</p>
                                 )}
