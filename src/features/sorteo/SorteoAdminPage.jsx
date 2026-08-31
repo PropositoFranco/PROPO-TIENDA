@@ -56,6 +56,15 @@ function QRCode({ url, size = 160 }) {
   );
 }
 
+// ── Color consistente por responsable (cuenta_google), para distinguir a simple vista ──
+const PALETA_RESPONSABLES = ['#9b59ff', '#D4AF37', '#44ccff', '#ff9944', '#ff4466', '#44ff88'];
+function colorParaResponsable(cuentaGoogle) {
+  if (!cuentaGoogle) return '#888';
+  let hash = 0;
+  for (let i = 0; i < cuentaGoogle.length; i++) hash = (hash * 31 + cuentaGoogle.charCodeAt(i)) >>> 0;
+  return PALETA_RESPONSABLES[hash % PALETA_RESPONSABLES.length];
+}
+
 // ── Badge de estado ────────────────────────────────────────────────────────────
 function Badge({ activo }) {
   return (
@@ -141,10 +150,20 @@ export default function SorteoAdminPage() {
     const { data, error } = await supabase.rpc('camino_recomendaciones_recurrentes');
     if (!error) setPatronesRecurrentes(data);
   }, []);
+  // Métricas separadas por cuenta de Google (Franco / Gerente) — nunca se mezclan entre sí.
+  const [metricasPorResponsable, setMetricasPorResponsable] = useState([]);
+  const cargarMetricasPorResponsable = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('v_metricas_juntas_por_responsable')
+      .select('*')
+      .order('responsable_etiqueta');
+    if (!error) setMetricasPorResponsable(data || []);
+  }, []);
   const [loadingJuntas,  setLoadingJuntas]  = useState(false);
   const [juntaAbierta,   setJuntaAbierta]   = useState(null);
   const [sincronizando,  setSincronizando]  = useState(false);
   const [msgSync,        setMsgSync]        = useState('');
+  const [filtroResponsableJunta,  setFiltroResponsableJunta]  = useState('todos');
   const [filtroParticipanteJunta, setFiltroParticipanteJunta] = useState('todos');
   const [filtroSesionJunta,       setFiltroSesionJunta]       = useState('todas');
   const [procesandoJuntaId,       setProcesandoJuntaId]       = useState(null);
@@ -295,8 +314,11 @@ const cargarSellosCodigos = useCallback(async () => {
 
   const cargarJuntasMeet = useCallback(async () => {
     setLoadingJuntas(true);
+    // v_juntas_meet_categorizadas trae las mismas columnas que camino_juntas_meet
+    // más "responsable_etiqueta" (Franco / Gerente) ya resuelta desde camino_meet_cuentas,
+    // para que nunca se mezclen las transcripciones de una cuenta con las de otra.
     const { data, error } = await supabase
-      .from('camino_juntas_meet')
+      .from('v_juntas_meet_categorizadas')
       .select('*')
       .order('fecha_inicio', { ascending: false });
     if (!error) setJuntasMeet(data || []);
@@ -553,8 +575,8 @@ const cargarSellosCodigos = useCallback(async () => {
 
   useEffect(() => {
     if (tabActiva === 'sellos') cargarSellosCodigos();
-    if (tabActiva === 'juntas') { cargarJuntasMeet(); cargarCurriculum(); cargarMetricasProspeccion(); cargarMetricasMentoria(); cargarPatronesRecurrentes(); }
-  }, [tabActiva, cargarSellosCodigos, cargarJuntasMeet, cargarCurriculum, cargarMetricasProspeccion, cargarMetricasMentoria, cargarPatronesRecurrentes]);
+    if (tabActiva === 'juntas') { cargarJuntasMeet(); cargarCurriculum(); cargarMetricasProspeccion(); cargarMetricasMentoria(); cargarPatronesRecurrentes(); cargarMetricasPorResponsable(); }
+  }, [tabActiva, cargarSellosCodigos, cargarJuntasMeet, cargarCurriculum, cargarMetricasProspeccion, cargarMetricasMentoria, cargarPatronesRecurrentes, cargarMetricasPorResponsable]);
 
   const slugify = (texto) =>
     texto.toLowerCase().trim()
@@ -2607,9 +2629,60 @@ const cargarSellosCodigos = useCallback(async () => {
             )}
           </div>
 
+          {/* ── MÉTRICAS POR RESPONSABLE (no se mezclan entre cuentas) ── */}
+          {metricasPorResponsable.length > 0 && (
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {metricasPorResponsable.map(m => (
+                <div
+                  key={m.cuenta_google}
+                  style={{
+                    background: C.card, border: `1px solid ${C.border}`, borderRadius: 12,
+                    padding: '10px 16px', flex: '1 1 200px', minWidth: 180,
+                  }}
+                >
+                  <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: C.gold, fontWeight: 900, marginBottom: 6 }}>
+                    {m.responsable_etiqueta.toUpperCase()}
+                  </div>
+                  <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, marginBottom: 2 }}>{m.cuenta_google}</div>
+                  <div style={{ display: 'flex', gap: 14, marginTop: 6, flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: 18, color: C.text, fontWeight: 900 }}>{m.total_juntas}</div>
+                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted }}>TOTAL</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 18, color: C.green, fontWeight: 900 }}>{m.juntas_analizadas}</div>
+                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted }}>ANALIZADAS</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 18, color: C.muted, fontWeight: 900 }}>{m.juntas_sin_transcript}</div>
+                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted }}>SIN TRANSCRIPT</div>
+                    </div>
+                  </div>
+                  {m.ultima_junta && (
+                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted, marginTop: 6 }}>
+                      ÚLTIMA: {new Date(m.ultima_junta).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* ── FILTROS ── */}
           {juntasMeet.length > 0 && (
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <select
+                value={filtroResponsableJunta}
+                onChange={e => setFiltroResponsableJunta(e.target.value)}
+                style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', color: C.text, fontSize: 11, fontFamily: 'Cinzel, serif' }}
+              >
+                <option value="todos">Cuenta: todas</option>
+                {Array.from(
+                  new Map(juntasMeet.map(j => [j.cuenta_google, j.responsable_etiqueta || j.cuenta_google])).entries()
+                ).sort((a, b) => a[1].localeCompare(b[1])).map(([email, etiqueta]) => (
+                  <option key={email} value={email}>{etiqueta}</option>
+                ))}
+              </select>
               <select
                 value={filtroParticipanteJunta}
                 onChange={e => setFiltroParticipanteJunta(e.target.value)}
@@ -2650,9 +2723,9 @@ const cargarSellosCodigos = useCallback(async () => {
                   <option key={key} value={key}>{label}</option>
                 ))}
               </select>
-              {(filtroParticipanteJunta !== 'todos' || filtroSesionJunta !== 'todas') && (
+              {(filtroResponsableJunta !== 'todos' || filtroParticipanteJunta !== 'todos' || filtroSesionJunta !== 'todas') && (
                 <button
-                  onClick={() => { setFiltroParticipanteJunta('todos'); setFiltroSesionJunta('todas'); }}
+                  onClick={() => { setFiltroResponsableJunta('todos'); setFiltroParticipanteJunta('todos'); setFiltroSesionJunta('todas'); }}
                   style={{ background: 'transparent', border: 'none', color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, cursor: 'pointer', letterSpacing: 1 }}
                 >
                   ✕ LIMPIAR FILTROS
@@ -2668,6 +2741,7 @@ const cargarSellosCodigos = useCallback(async () => {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {juntasMeet
+                .filter(j => filtroResponsableJunta === 'todos' || j.cuenta_google === filtroResponsableJunta)
                 .filter(j => filtroParticipanteJunta === 'todos' || (j.participante_id ? `${j.participante_tipo}:${j.participante_id}` : `nombre:${j.participante_nombre}`) === filtroParticipanteJunta)
                 .filter(j => filtroSesionJunta === 'todas' || `${j.participante_tipo || 'sin_tipo'}::${j.numero_sesion}` === filtroSesionJunta)
                 .map(j => {
@@ -2702,12 +2776,24 @@ const cargarSellosCodigos = useCallback(async () => {
                           {j.temas?.resumen_ejecutivo ? `${j.temas.resumen_ejecutivo.slice(0, 70)}${j.temas.resumen_ejecutivo.length > 70 ? '…' : ''}` : ''}
                         </div>
                       </div>
-                      <span style={{
-                        fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: estadoInfo.color,
-                        border: `1px solid ${estadoInfo.color}55`, borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap',
-                      }}>
-                        {estadoInfo.label}
-                      </span>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                        {j.responsable_etiqueta && (
+                          <span style={{
+                            fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1.5,
+                            color: colorParaResponsable(j.cuenta_google),
+                            border: `1px solid ${colorParaResponsable(j.cuenta_google)}55`,
+                            borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap',
+                          }}>
+                            👤 {j.responsable_etiqueta.toUpperCase()}
+                          </span>
+                        )}
+                        <span style={{
+                          fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: estadoInfo.color,
+                          border: `1px solid ${estadoInfo.color}55`, borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap',
+                        }}>
+                          {estadoInfo.label}
+                        </span>
+                      </div>
                     </div>
 
                     {abierta && (
