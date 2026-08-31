@@ -259,12 +259,27 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
       return compacto ? { completo: 150, minimo: 56, rango: 55 } : { completo: 230, minimo: 90, rango: 70 };
     }
     let t = tamanos();
+    let compactado = false;
+    function enviarVideo(metodo) {
+      const iframe = videoLoop.querySelector('iframe');
+      try {
+        iframe?.contentWindow?.postMessage(JSON.stringify({ method: metodo }), 'https://player.vimeo.com');
+      } catch { /* no-op */ }
+    }
     function actualizar() {
       const y = scrollEl.scrollTop || 0;
       const ratio = Math.max(0, Math.min(1, y / t.rango));
       const alto = t.completo - ratio * (t.completo - t.minimo);
       videoLoop.style.height = alto + 'px';
       ventanaHeader.classList.toggle('is-compact', ratio > 0.65);
+      // El video queda reducido a una franja casi invisible cuando ratio
+      // está cerca de 1 — ahí lo pausamos para no seguir decodificando
+      // video de fondo sin necesidad; se reanuda solo al volver a subir.
+      const debeEstarCompactado = ratio > 0.97;
+      if (debeEstarCompactado !== compactado) {
+        compactado = debeEstarCompactado;
+        enviarVideo(compactado ? 'pause' : 'play');
+      }
     }
     let pendiente = false;
     const onScroll = () => {
@@ -354,6 +369,21 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
+  }, [open]);
+
+  // ── Blindaje: el chat nunca necesita el Fullscreen nativo del
+  //    navegador (nuestro overlay ya cubre toda la pantalla solo, vía
+  //    position:fixed + inset:0) — y el Fullscreen nativo es precisamente
+  //    lo que oculta el cursor del sistema. Si algo lo activa mientras
+  //    el chat está abierto, lo cerramos al instante. ──
+  useEffect(() => {
+    if (!open) return;
+    const salirDeFullscreen = () => {
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    };
+    salirDeFullscreen();
+    document.addEventListener('fullscreenchange', salirDeFullscreen);
+    return () => document.removeEventListener('fullscreenchange', salirDeFullscreen);
   }, [open]);
 
   // ── ESC para cerrar ──
@@ -614,7 +644,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
                 <iframe
                   src="https://player.vimeo.com/video/1218704734?autoplay=1&loop=1&muted=1&background=1&autopause=0&controls=0"
                   title="Video del Guardián del Templo"
-                  allow="autoplay; fullscreen; picture-in-picture"
+                  allow="autoplay"
                   loading="eager"
                   referrerPolicy="strict-origin-when-cross-origin"
                 />
@@ -744,17 +774,30 @@ const CSS = `
   padding:0 14px 24px;
   position:relative;
 }
-.gc-esfera{ position:fixed; top:50%; left:50%; border-radius:50%; pointer-events:none; z-index:-1; filter:blur(95px); mix-blend-mode:screen; opacity:0.95; will-change:transform; transform:translateZ(0); }
-.gc-esfera.naranja{ width:780px; height:780px; background:radial-gradient(circle, #FA9238 0%, rgba(250,146,56,0) 72%); animation:gcMoverNaranja 34s ease-in-out infinite; }
-.gc-esfera.amarillo{ width:680px; height:680px; background:radial-gradient(circle, #F7BD21 0%, rgba(247,189,33,0) 72%); animation:gcMoverAmarillo 47s ease-in-out infinite; animation-delay:-9s; }
-.gc-esfera.cian{ width:820px; height:820px; background:radial-gradient(circle, #5FDCFD 0%, rgba(95,220,253,0) 72%); animation:gcMoverCian 41s ease-in-out infinite; animation-delay:-21s; }
-.gc-esfera.morado{ width:720px; height:720px; background:radial-gradient(circle, #6141D5 0%, rgba(97,65,213,0) 72%); animation:gcMoverMorado 26s ease-in-out infinite; animation-delay:-4s; }
-/* El costo de "blur" en GPU escala con el área del elemento, así que en
-   pantallas chicas (celulares) achicamos las esferas y bajamos el radio
-   de blur bastante — se ve prácticamente igual (son manchas de color muy
-   difuminadas de fondo) pero piden muchísimos menos recursos. */
+/* Antes estas 4 esferas usaban filter:blur(95px) para verse difuminadas.
+   blur() a ese radio es de las operaciones más caras que existen en CSS
+   — el costo no depende tanto de qué tan potente sea la GPU, sino de que
+   el navegador tiene que recalcular un desenfoque real sobre un área
+   enorme en CADA frame, para siempre, mientras el chat está abierto. Por
+   eso se sentía trabado incluso en una PC gamer potente (Ryzen 7 3700X +
+   RX 6700 XT): no era un problema de "poca potencia", era una operación
+   estructuralmente cara sin importar el hardware.
+   Ahora usamos el mismo truco que usa cualquier fondo "glow" bien
+   optimizado: el desenfoque queda "horneado" directo en el degradado
+   (varias paradas de color que se van apagando de a poco), así el
+   navegador solo tiene que pintar un radial-gradient normal — igual de
+   barato que pintar un color plano — y se ve prácticamente igual de
+   suave, sin pagar el costo del filtro en cada frame. */
+.gc-esfera{ position:fixed; top:50%; left:50%; border-radius:50%; pointer-events:none; z-index:-1; mix-blend-mode:screen; opacity:0.95; will-change:transform; }
+.gc-esfera.naranja{ width:780px; height:780px; background:radial-gradient(circle, rgba(250,146,56,1) 0%, rgba(250,146,56,0.85) 10%, rgba(250,146,56,0.55) 28%, rgba(250,146,56,0.28) 48%, rgba(250,146,56,0.1) 70%, rgba(250,146,56,0) 100%); animation:gcMoverNaranja 34s ease-in-out infinite; }
+.gc-esfera.amarillo{ width:680px; height:680px; background:radial-gradient(circle, rgba(247,189,33,1) 0%, rgba(247,189,33,0.85) 10%, rgba(247,189,33,0.55) 28%, rgba(247,189,33,0.28) 48%, rgba(247,189,33,0.1) 70%, rgba(247,189,33,0) 100%); animation:gcMoverAmarillo 47s ease-in-out infinite; animation-delay:-9s; }
+.gc-esfera.cian{ width:820px; height:820px; background:radial-gradient(circle, rgba(95,220,253,1) 0%, rgba(95,220,253,0.85) 10%, rgba(95,220,253,0.55) 28%, rgba(95,220,253,0.28) 48%, rgba(95,220,253,0.1) 70%, rgba(95,220,253,0) 100%); animation:gcMoverCian 41s ease-in-out infinite; animation-delay:-21s; }
+.gc-esfera.morado{ width:720px; height:720px; background:radial-gradient(circle, rgba(97,65,213,1) 0%, rgba(97,65,213,0.85) 10%, rgba(97,65,213,0.55) 28%, rgba(97,65,213,0.28) 48%, rgba(97,65,213,0.1) 70%, rgba(97,65,213,0) 100%); animation:gcMoverMorado 26s ease-in-out infinite; animation-delay:-4s; }
+/* En pantallas chicas (celulares) igual achicamos las esferas — pintar un
+   radial-gradient también cuesta según el área que cubre, aunque mucho
+   menos que un blur, así que esto sigue ayudando a los equipos más
+   chicos y débiles. */
 @media (max-width:768px){
-  .gc-esfera{ filter:blur(48px); }
   .gc-esfera.naranja{ width:420px; height:420px; }
   .gc-esfera.amarillo{ width:380px; height:380px; }
   .gc-esfera.cian{ width:440px; height:440px; }
@@ -768,9 +811,7 @@ const CSS = `
 @media (prefers-reduced-motion:reduce){
   .gc-esfera{ animation:none !important; }
 }
-/* Equipos detectados como gama baja: un escalón más abajo. Sigue viéndose
-   el mismo fondo de manchas de color, solo más liviano de renderizar. */
-.gc-overlay.gc-perf-low .gc-esfera{ filter:blur(30px); }
+/* Equipos detectados como gama baja: un escalón más abajo. */
 .gc-overlay.gc-perf-low .gc-esfera.naranja,
 .gc-overlay.gc-perf-low .gc-esfera.amarillo,
 .gc-overlay.gc-perf-low .gc-esfera.cian,
