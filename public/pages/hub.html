@@ -3047,9 +3047,28 @@ body.oraculo-mobile .oraculo-cta{ padding:9px 10px !important; font-size:9.5px !
    más lento y sin la capa de brillo pulsante, para aligerar aún más. */
 body.perf-low .guardian-circle-wrap::before { animation-duration: 7s; }
 body.perf-low .guardian-circle-wrap .guardian-glow { animation: none; opacity: 0.6; }
+/* El "drop-shadow" doble del aro giratorio es la parte más cara de este
+   botón (un filtro de desenfoque recalculado sobre un gradiente que
+   además está rotando sin parar) — y en celular el botón se dibuja casi
+   2x más grande que en PC (ver bloque móvil más abajo), así que ese
+   filtro pesa proporcionalmente más justo donde el equipo es más débil.
+   En gama baja lo quitamos y dejamos el aro de color sólo (se sigue
+   viendo el giro perfectamente, solo sin el halo difuminado). */
+body.perf-low .guardian-circle-wrap::before { filter: none; }
 @media (prefers-reduced-motion: reduce) {
   .guardian-circle-wrap::before,
   .guardian-circle-wrap .guardian-glow { animation: none !important; }
+}
+/* Mientras el chat del Guardián está abierto, este botón queda 100%
+   tapado por la pantalla completa del chat — pero sus 3 animaciones
+   infinitas (aro girando, brillo pulsando, destello recorriendo) seguían
+   corriendo igual todo ese tiempo, sin que nadie las viera. Las pausamos
+   por completo mientras el chat está abierto (ver script más abajo, que
+   agrega/quita esta clase) y se reanudan solas al cerrar. */
+body.guardian-chat-open .guardian-circle-wrap::before,
+body.guardian-chat-open .guardian-circle-wrap .guardian-glow,
+body.guardian-chat-open .guardian-circle-wrap .guardian-btn-core::after {
+  animation-play-state: paused !important;
 }
 .guardian-circle-wrap .guardian-btn-core {
   width: 100%; height: 100%; border-radius: 50%;
@@ -3169,9 +3188,19 @@ body.perf-low .guardian-circle-wrap .guardian-btn-core::after { animation-durati
   const btn = document.getElementById('guardian-nav-item');
   if (btn) {
     btn.addEventListener('click', function () {
+      document.body.classList.add('guardian-chat-open');
       window.parent.postMessage({ type: 'guardian-modal', data: { open: true } }, '*');
     });
   }
+  // React (HubPage.jsx) nos reenvía el mismo mensaje 'guardian-modal'
+  // cuando el chat se cierra (por el botón ✕, ESC, etc.) para que
+  // podamos reanudar las animaciones del botón.
+  window.addEventListener('message', function (event) {
+    const { type, data } = event.data || {};
+    if (type === 'guardian-modal' && data && data.open === false) {
+      document.body.classList.remove('guardian-chat-open');
+    }
+  });
 })();
 </script>
 

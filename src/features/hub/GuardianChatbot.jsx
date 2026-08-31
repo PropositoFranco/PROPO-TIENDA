@@ -112,6 +112,24 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     };
   }, []);
 
+  // ── Detección de gama baja (mismo criterio que ya usa hub.html: cores/
+  //    RAM + qué tan rápido responde el primer frame) para bajarle un
+  //    escalón más a las esferas animadas del fondo solo en esos equipos ──
+  useEffect(() => {
+    if (!open) return;
+    const root = overlayRef.current;
+    if (!root) return;
+    const cores = navigator.hardwareConcurrency || 4;
+    const ram = navigator.deviceMemory;
+    let low = ram !== undefined ? ram <= 2 : cores <= 4 && window.matchMedia('(max-width:768px)').matches;
+    const t0 = performance.now();
+    const id = requestAnimationFrame(() => {
+      if (performance.now() - t0 > 50) low = true;
+      root.classList.toggle('gc-perf-low', low);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [open]);
+
   function nuevoId() {
     return 'm' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
   }
@@ -268,20 +286,74 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   }, [open]);
 
   // ── Brillo de borde que sigue al cursor (solo PC con mouse) ──
+  // Antes: en CADA pixel de movimiento del mouse se hacía querySelectorAll
+  // sobre todo el panel (hasta ~15 elementos: ventana, chips, acciones,
+  // textarea, botón enviar) y se leía getBoundingClientRect() de cada uno
+  // — eso es "layout thrashing" puro, docenas de lecturas de layout por
+  // frame, siempre, sin importar dónde estuviera el cursor. Eso es lo que
+  // hacía que la pestaña se sintiera "forzada"/caliente en PC y, muy
+  // probablemente, lo que provocaba que el cursor del sistema se viera
+  // raro/desaparecido: con el hilo de composición saturado, el navegador
+  // deja de poder dibujar el cursor con fluidez.
+  // Ahora: un solo listener sobre el panel (no sobre todo el documento),
+  // se calcula SOLO el elemento que está justo debajo del cursor
+  // (delegación con closest), una sola lectura de layout, y el resultado
+  // se aplica como máximo una vez por frame con requestAnimationFrame.
   useEffect(() => {
+    if (!open) return;
     if (!window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
     const root = overlayRef.current;
     if (!root) return;
     const SELECTOR_BRILLO = '.gc-ventana, .gc-chip, .gc-accion, .gc-textarea, .gc-enviar';
-    const onMove = (e) => {
-      root.querySelectorAll(SELECTOR_BRILLO).forEach(el => {
-        const r = el.getBoundingClientRect();
-        el.style.setProperty('--lx', (e.clientX - r.left) + 'px');
-        el.style.setProperty('--ly', (e.clientY - r.top) + 'px');
-      });
+
+    let rafId = null;
+    let lastX = 0, lastY = 0, lastEl = null;
+
+    const aplicar = () => {
+      rafId = null;
+      if (!lastEl) return;
+      const r = lastEl.getBoundingClientRect();
+      lastEl.style.setProperty('--lx', (lastX - r.left) + 'px');
+      lastEl.style.setProperty('--ly', (lastY - r.top) + 'px');
     };
-    document.addEventListener('mousemove', onMove, { passive: true });
-    return () => document.removeEventListener('mousemove', onMove);
+
+    const onMove = (e) => {
+      const el = e.target?.closest ? e.target.closest(SELECTOR_BRILLO) : null;
+      if (!el) { lastEl = null; return; }
+      lastX = e.clientX; lastY = e.clientY; lastEl = el;
+      if (rafId == null) rafId = requestAnimationFrame(aplicar);
+    };
+
+    root.addEventListener('mousemove', onMove, { passive: true });
+    return () => {
+      root.removeEventListener('mousemove', onMove);
+      if (rafId != null) cancelAnimationFrame(rafId);
+    };
+  }, [open]);
+
+  // ── Pausar fondo animado + video cuando la pestaña no está visible ──
+  // Antes las 4 esferas (con blur pesado) y el video de Vimeo seguían
+  // animando/reproduciéndose aunque el usuario cambiara de pestaña o
+  // minimizara la app — puro gasto de batería/CPU/GPU sin que nadie lo
+  // viera. Ahora se pausan al perder visibilidad y se reanudan al volver.
+  useEffect(() => {
+    if (!open) return;
+    const root = overlayRef.current;
+    if (!root) return;
+    const onVis = () => {
+      root.classList.toggle('gc-pausado', document.hidden);
+      const iframe = root.querySelector('.gc-video-loop iframe');
+      if (iframe) {
+        try {
+          iframe.contentWindow?.postMessage(
+            JSON.stringify({ method: document.hidden ? 'pause' : 'play' }),
+            'https://player.vimeo.com'
+          );
+        } catch { /* si Vimeo no responde al mensaje, no pasa nada grave */ }
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
   }, [open]);
 
   // ── ESC para cerrar ──
@@ -672,11 +744,37 @@ const CSS = `
   padding:0 14px 24px;
   position:relative;
 }
-.gc-esfera{ position:fixed; top:50%; left:50%; border-radius:50%; pointer-events:none; z-index:-1; filter:blur(95px); mix-blend-mode:screen; opacity:0.95; will-change:transform; }
+.gc-esfera{ position:fixed; top:50%; left:50%; border-radius:50%; pointer-events:none; z-index:-1; filter:blur(95px); mix-blend-mode:screen; opacity:0.95; will-change:transform; transform:translateZ(0); }
 .gc-esfera.naranja{ width:780px; height:780px; background:radial-gradient(circle, #FA9238 0%, rgba(250,146,56,0) 72%); animation:gcMoverNaranja 34s ease-in-out infinite; }
 .gc-esfera.amarillo{ width:680px; height:680px; background:radial-gradient(circle, #F7BD21 0%, rgba(247,189,33,0) 72%); animation:gcMoverAmarillo 47s ease-in-out infinite; animation-delay:-9s; }
 .gc-esfera.cian{ width:820px; height:820px; background:radial-gradient(circle, #5FDCFD 0%, rgba(95,220,253,0) 72%); animation:gcMoverCian 41s ease-in-out infinite; animation-delay:-21s; }
 .gc-esfera.morado{ width:720px; height:720px; background:radial-gradient(circle, #6141D5 0%, rgba(97,65,213,0) 72%); animation:gcMoverMorado 26s ease-in-out infinite; animation-delay:-4s; }
+/* El costo de "blur" en GPU escala con el área del elemento, así que en
+   pantallas chicas (celulares) achicamos las esferas y bajamos el radio
+   de blur bastante — se ve prácticamente igual (son manchas de color muy
+   difuminadas de fondo) pero piden muchísimos menos recursos. */
+@media (max-width:768px){
+  .gc-esfera{ filter:blur(48px); }
+  .gc-esfera.naranja{ width:420px; height:420px; }
+  .gc-esfera.amarillo{ width:380px; height:380px; }
+  .gc-esfera.cian{ width:440px; height:440px; }
+  .gc-esfera.morado{ width:400px; height:400px; }
+}
+/* Pestaña oculta (usuario cambió de app/pestaña) → pausar todo lo animado
+   del fondo; se reanuda solo al volver. Cero costo mientras no se ve. */
+.gc-overlay.gc-pausado .gc-esfera,
+.gc-overlay.gc-pausado .gc-chispa,
+.gc-overlay.gc-pausado .gc-thinking span{ animation-play-state:paused !important; }
+@media (prefers-reduced-motion:reduce){
+  .gc-esfera{ animation:none !important; }
+}
+/* Equipos detectados como gama baja: un escalón más abajo. Sigue viéndose
+   el mismo fondo de manchas de color, solo más liviano de renderizar. */
+.gc-overlay.gc-perf-low .gc-esfera{ filter:blur(30px); }
+.gc-overlay.gc-perf-low .gc-esfera.naranja,
+.gc-overlay.gc-perf-low .gc-esfera.amarillo,
+.gc-overlay.gc-perf-low .gc-esfera.cian,
+.gc-overlay.gc-perf-low .gc-esfera.morado{ width:300px; height:300px; }
 @keyframes gcMoverNaranja{
   0%,100%{ transform:translate(calc(-50% - 22vw), calc(-50% - 18vh)) scale(1); }
   18%{ transform:translate(calc(-50% - 32vw), calc(-50% - 6vh)) scale(1.15); }

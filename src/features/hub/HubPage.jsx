@@ -326,6 +326,10 @@ useEffect(() => {
           // para que vuelva a mostrar su barra superior — es el mismo
           // mensaje que antes mandaba hub.html al cerrar su modal interno.
           window.postMessage({ type: 'guardian-modal', data: { open: false } }, window.location.origin);
+          // Y se lo reenviamos también al iframe del hub, para que el
+          // botón "Pregúntale al Guardián" reanude sus animaciones (las
+          // tiene pausadas mientras el chat lo tapa por completo).
+          sendToFrame('guardian-modal', { open: false });
         }}
       />
 
