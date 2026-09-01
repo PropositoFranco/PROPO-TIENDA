@@ -84,6 +84,28 @@ function mensajeBienvenida(nombreUsuario) {
   );
 }
 
+// ── Detección de equipo/red modestos, síncrona (sin esperar a medir fps
+//    en vivo). Cualquiera de estas señales ya es suficiente para no
+//    arriesgarnos a cargar el video de fondo desde el primer render:
+//    - hardwareConcurrency: pocos núcleos de CPU.
+//    - deviceMemory: poca RAM (Chrome/Android la expone; iOS Safari no,
+//      así que en iPhone esta señal en particular simplemente no aplica
+//      y no afecta nada — el resto de señales sigue funcionando igual).
+//    - connection.saveData / effectiveType lento: el usuario o su red ya
+//      están pidiendo consumir menos datos/batería.
+//    - prefers-reduced-motion: el propio sistema operativo ya nos dice
+//      que el usuario prefiere menos animación.
+function detectarGamaBajaSincrona() {
+  if (typeof navigator === 'undefined') return false;
+  const pocosNucleos = (navigator.hardwareConcurrency || 8) <= 4;
+  const pocaRam = typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 4;
+  const conexion = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const redLimitada = !!(conexion && (conexion.saveData || /^(slow-2g|2g|3g)$/.test(conexion.effectiveType || '')));
+  const movimientoReducido = typeof window !== 'undefined' &&
+    window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return pocosNucleos || pocaRam || redLimitada || movimientoReducido;
+}
+
 export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   const entradaRef = useRef(null);
   const ventanaHeaderRef = useRef(null);
@@ -107,20 +129,40 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   const [bloqueado, setBloqueado] = useState(false);
   const [contador, setContador] = useState(0);
   const [inited, setInited] = useState(false);
-  // Se activa solo si detectamos, en el propio equipo, que le cuesta
-  // trabajo sostener 60fps o que tiene pocos núcleos de CPU. Al
-  // activarse, el CSS de abajo apaga los efectos más pesados (esferas
-  // de fondo con blur, brillo de borde animado) para que el chat se
-  // sienta fluido incluso en equipos con gráficos integrados/débiles,
-  // sin depender de que se actualicen drivers en cada PC.
-  const [modoLigero, setModoLigero] = useState(false);
+  // Se activa si, ya sea de entrada (núcleos de CPU, RAM del equipo, modo
+  // ahorro de datos) o después de medir fps en vivo, detectamos que el
+  // equipo no va a sostenerse bien. Al activarse, el CSS de abajo apaga los
+  // efectos más pesados (esferas de fondo con blur, brillo de borde
+  // animado) Y, más importante para equipos de gama baja/media como un
+  // Motorola One Zoom, el video de fondo NUNCA se llega a cargar — el
+  // video (decodificación continua) es, con mucha diferencia, lo más caro
+  // de sostener en un procesador modesto, más caro que cualquier CSS.
+  const [modoLigero, setModoLigero] = useState(detectarGamaBajaSincrona);
   const [tecladoAbierto, setTecladoAbierto] = useState(false);
+  // Se apaga el video (entre otras cosas) mientras el usuario cambia de
+  // app o bloquea el celular. Sin esto, un video "en pausa visual" pero
+  // técnicamente montado sigue existiendo en el DOM mientras la app está
+  // en segundo plano, listo para que el sistema operativo decida que es
+  // un buen candidato para matar el proceso por uso de batería/memoria
+  // en segundo plano.
+  const [pantallaOculta, setPantallaOculta] = useState(
+    typeof document !== 'undefined' ? document.hidden : false
+  );
+
+  useEffect(() => {
+    const onVisibilidad = () => setPantallaOculta(document.hidden);
+    document.addEventListener('visibilitychange', onVisibilidad);
+    return () => document.removeEventListener('visibilitychange', onVisibilidad);
+  }, []);
 
   // ── Precalentar la conexión con Vimeo desde que carga el hub (no solo
   //    cuando se abre el chat), para que al abrir el chatbot el video no
   //    pierda tiempo en la conexión inicial y empiece a reproducirse más
-  //    rápido. No cambia nada de layout, tamaño ni calidad del video ──
+  //    rápido. No cambia nada de layout, tamaño ni calidad del video.
+  //    En equipos de gama baja no hacemos ni esto: no tiene sentido
+  //    reservar DNS/conexión para un video que ya decidimos no mostrar ──
   useEffect(() => {
+    if (modoLigero) return;
     const dominios = ['https://player.vimeo.com', 'https://i.vimeocdn.com', 'https://f.vimeocdn.com'];
     const agregados = [];
     dominios.forEach(href => {
@@ -227,16 +269,54 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     if (!open) return;
     const vv = window.visualViewport;
     if (!vv) return;
-    const actualizar = () => {
+    let rafPendiente = false;
+    let scrollTimeoutId = null;
+    const aplicar = () => {
+      rafPendiente = false;
       const diferencia = window.innerHeight - vv.height;
       setTecladoAbierto(diferencia > 120);
-      if (overlayRef.current) overlayRef.current.style.height = vv.height + 'px';
+      // CLAVE: no basta con achicar el alto del panel al alto del
+      // viewport visual (vv.height). El panel es `position:fixed;
+      // inset:0`, que lo ancla al viewport de LAYOUT, no al visual. En
+      // cuanto el teclado abre, iOS desplaza el viewport visual hacia
+      // abajo/lateral (vv.offsetTop / vv.offsetLeft dejan de ser 0) para
+      // mantener visible el campo enfocado — sobre todo en horizontal,
+      // donde el teclado ocupa una porción enorme de la pantalla. Si solo
+      // corregimos el alto y no ese desplazamiento, el panel queda
+      // "flotando" fuera del área realmente visible: por eso se veía
+      // cortado de formas distintas y nunca se veía lo que escribías.
+      // Sincronizamos alto + posición con el viewport visual real, tal
+      // como hace cualquier app nativa (WhatsApp incluido).
+      if (overlayRef.current) {
+        overlayRef.current.style.height = vv.height + 'px';
+        overlayRef.current.style.width = vv.width + 'px';
+        overlayRef.current.style.top = vv.offsetTop + 'px';
+        overlayRef.current.style.left = vv.offsetLeft + 'px';
+      }
       if (document.activeElement === entradaRef.current) {
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'auto' });
-        setTimeout(() => {
+        // Un solo timeout "vivo" a la vez: si llega otro evento de resize/
+        // scroll antes de que se cumpla, cancelamos el anterior en vez de
+        // apilar timeouts. Mientras el teclado se abre, iOS puede disparar
+        // este evento muchas veces seguidas; apilar timeouts (cada uno
+        // leyendo scrollHeight y forzando scroll) es trabajo de más justo
+        // cuando el equipo ya está bajo presión de memoria por el video.
+        if (scrollTimeoutId) clearTimeout(scrollTimeoutId);
+        scrollTimeoutId = setTimeout(() => {
+          scrollTimeoutId = null;
           scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'auto' });
         }, 250);
       }
+    };
+    // Agrupamos ráfagas de eventos 'resize'/'scroll' del visualViewport en
+    // un solo cálculo por frame con requestAnimationFrame, en lugar de
+    // ejecutar el cálculo completo (que incluye lecturas de layout) cada
+    // vez que el navegador dispara el evento — durante la animación del
+    // teclado eso puede ser muy seguido.
+    const actualizar = () => {
+      if (rafPendiente) return;
+      rafPendiente = true;
+      requestAnimationFrame(aplicar);
     };
     vv.addEventListener('resize', actualizar);
     vv.addEventListener('scroll', actualizar);
@@ -244,7 +324,13 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     return () => {
       vv.removeEventListener('resize', actualizar);
       vv.removeEventListener('scroll', actualizar);
-      if (overlayRef.current) overlayRef.current.style.height = '';
+      if (scrollTimeoutId) clearTimeout(scrollTimeoutId);
+      if (overlayRef.current) {
+        overlayRef.current.style.height = '';
+        overlayRef.current.style.width = '';
+        overlayRef.current.style.top = '';
+        overlayRef.current.style.left = '';
+      }
     };
   }, [open]);
 
@@ -632,13 +718,26 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
                 <span className="gc-etiqueta">La Cámara del Guardián</span>
               </div>
               <div className="gc-video-loop" ref={videoLoopRef}>
-                <iframe
-                  src="https://player.vimeo.com/video/1218704734?autoplay=1&loop=1&muted=1&background=1&autopause=0&controls=0"
-                  title="Video del Guardián del Templo"
-                  allow="autoplay; fullscreen; picture-in-picture"
-                  loading="eager"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                />
+                {/* El video solo se monta cuando de verdad aporta algo: NO
+                    mientras el teclado está abierto (no se ve y sobrecarga
+                    el layout justo cuando más importa la fluidez), NO en
+                    equipos de gama baja/red limitada (el video es lo más
+                    caro de sostener en un procesador modesto, mucho más
+                    que cualquier CSS), y NO mientras la app está en
+                    segundo plano (evita que quede "vivo" gastando batería
+                    y aumentando el riesgo de que el sistema mate la app).
+                    Cuando no se monta, el propio fondo con degradado del
+                    contenedor (ver CSS de .gc-video-loop) se ve bien solo,
+                    así que nunca queda un hueco vacío o roto. */}
+                {!tecladoAbierto && !modoLigero && !pantallaOculta && (
+                  <iframe
+                    src="https://player.vimeo.com/video/1218704734?autoplay=1&loop=1&muted=1&background=1&autopause=0&controls=0"
+                    title="Video del Guardián del Templo"
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    loading="eager"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                  />
+                )}
                 <div className="gc-video-vineta" aria-hidden="true"></div>
               </div>
             </div>
@@ -901,6 +1000,11 @@ const CSS = `
 .gc-overlay.gc-teclado-abierto .gc-acciones{ display:none; }
 .gc-overlay.gc-teclado-abierto .gc-preguntas{ display:none; }
 .gc-overlay.gc-teclado-abierto .gc-chat{ padding-top:8px; }
+/* Refuerzo extra de memoria/CPU: mientras el teclado está abierto (el
+   momento más delicado, justo cuando iOS puede matar el WebView por
+   presión de memoria), pausamos las esferas de fondo animadas — ya no
+   se ven de todos modos porque el resto del panel también se compacta. */
+.gc-overlay.gc-teclado-abierto .gc-esfera{ animation-play-state:paused !important; }
 
 @media (max-height:520px){
   .gc-scroll{ padding:0 10px 20px; }
@@ -926,13 +1030,16 @@ const CSS = `
 }
 
 /* ================= MODO LIGERO =================
-   Se activa automáticamente (ver el efecto de medición de fps en el
-   componente) cuando el equipo no sostiene ~45fps o tiene pocos
-   núcleos de CPU. Apaga los efectos más caros de componer (blur
-   grande, brillo animado que sigue al cursor) para que el chat se
-   sienta fluido incluso en gráficos integrados o PC's débiles, sin
-   depender de arreglar nada en esa PC. */
-.gc-ligero .gc-esfera{ filter:blur(45px); opacity:.5; animation-duration: 60s; }
+   Se activa de entrada (pocos núcleos, poca RAM, red limitada o
+   "reducir movimiento" del sistema — ver detectarGamaBajaSincrona) y
+   además puede activarse después si la medición de fps en vivo detecta
+   que el equipo no sostiene ~45fps. Con esto: el video de fondo nunca
+   se llega a cargar (ver el JSX del iframe), y aquí en CSS se apagan
+   los efectos más caros de componer (blur, animación de las esferas,
+   brillo animado que sigue al cursor), para que el chat se sienta
+   fluido incluso en equipos modestos como un teléfono de gama
+   media/baja, sin depender de arreglar nada en ese equipo. */
+.gc-ligero .gc-esfera{ filter:none; opacity:.35; animation:none; will-change:auto; }
 .gc-ligero .gc-esfera.amarillo, .gc-ligero .gc-esfera.morado{ display:none; }
 .gc-ligero .gc-video-loop{ transition:none; }
 .gc-ligero .gc-ventana::before, .gc-ligero .gc-ventana::after,
