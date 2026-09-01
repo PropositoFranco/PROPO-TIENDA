@@ -131,13 +131,22 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   const [inited, setInited] = useState(false);
   // Se activa si, ya sea de entrada (núcleos de CPU, RAM del equipo, modo
   // ahorro de datos) o después de medir fps en vivo, detectamos que el
-  // equipo no va a sostenerse bien. Al activarse, el CSS de abajo apaga los
-  // efectos más pesados (esferas de fondo con blur, brillo de borde
-  // animado) Y, más importante para equipos de gama baja/media como un
-  // Motorola One Zoom, el video de fondo NUNCA se llega a cargar — el
-  // video (decodificación continua) es, con mucha diferencia, lo más caro
-  // de sostener en un procesador modesto, más caro que cualquier CSS.
+  // equipo no va a sostenerse bien. Solo controla efectos CSS (esferas de
+  // fondo con blur, brillo de borde animado) — puede prenderse en
+  // cualquier momento sin que eso "apague" nada que ya se estuviera
+  // viendo, porque solo afecta decoración, nunca contenido.
   const [modoLigero, setModoLigero] = useState(detectarGamaBajaSincrona);
+  // Señal de equipo/red débil capturada UNA SOLA VEZ al abrir, con datos
+  // de hardware confiables (núcleos, RAM, tipo de red) — a propósito NO
+  // se actualiza nunca más después de este primer cálculo. Esta es la
+  // que decide si el video se muestra o no. Antes esa decisión dependía
+  // de `modoLigero`, que también se actualiza con una medición de fps en
+  // vivo — y esa medición ocurre justo cuando el video pesado apenas
+  // empieza a cargar, así que podía "creer" erróneamente que el equipo
+  // era débil (por el propio arranque del video) y apagarlo a medio
+  // reproducir, sin volver a prenderlo nunca. Con una señal fija, una vez
+  // que el video se decide mostrar, ya no desaparece solo.
+  const gamaBajaInicialRef = useRef(detectarGamaBajaSincrona());
   const [tecladoAbierto, setTecladoAbierto] = useState(false);
   // Se apaga el video (entre otras cosas) mientras el usuario cambia de
   // app o bloquea el celular. Sin esto, un video "en pausa visual" pero
@@ -155,15 +164,15 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     return () => document.removeEventListener('visibilitychange', onVisibilidad);
   }, []);
 
-  // ── Precalentar la conexión con Vimeo desde que carga el hub (no solo
+  // ── Precalentar la conexión con Bunny desde que carga el hub (no solo
   //    cuando se abre el chat), para que al abrir el chatbot el video no
   //    pierda tiempo en la conexión inicial y empiece a reproducirse más
   //    rápido. No cambia nada de layout, tamaño ni calidad del video.
   //    En equipos de gama baja no hacemos ni esto: no tiene sentido
   //    reservar DNS/conexión para un video que ya decidimos no mostrar ──
   useEffect(() => {
-    if (modoLigero) return;
-    const dominios = ['https://player.vimeo.com', 'https://i.vimeocdn.com', 'https://f.vimeocdn.com'];
+    if (gamaBajaInicialRef.current) return;
+    const dominios = ['https://player.mediadelivery.net', 'https://video.bunnycdn.com', 'https://iframe.mediadelivery.net'];
     const agregados = [];
     dominios.forEach(href => {
       if (document.querySelector(`link[data-guardian-preconnect="${href}"]`)) return;
@@ -273,20 +282,17 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     let scrollTimeoutId = null;
     const aplicar = () => {
       rafPendiente = false;
-      const diferencia = window.innerHeight - vv.height;
-      setTecladoAbierto(diferencia > 120);
-      // CLAVE: no basta con achicar el alto del panel al alto del
-      // viewport visual (vv.height). El panel es `position:fixed;
-      // inset:0`, que lo ancla al viewport de LAYOUT, no al visual. En
-      // cuanto el teclado abre, iOS desplaza el viewport visual hacia
-      // abajo/lateral (vv.offsetTop / vv.offsetLeft dejan de ser 0) para
-      // mantener visible el campo enfocado — sobre todo en horizontal,
-      // donde el teclado ocupa una porción enorme de la pantalla. Si solo
-      // corregimos el alto y no ese desplazamiento, el panel queda
-      // "flotando" fuera del área realmente visible: por eso se veía
-      // cortado de formas distintas y nunca se veía lo que escribías.
-      // Sincronizamos alto + posición con el viewport visual real, tal
-      // como hace cualquier app nativa (WhatsApp incluido).
+      // ANTES aquí también decidíamos `tecladoAbierto` según cuánto se
+      // achicaba la pantalla (window.innerHeight - vv.height > 120). Esa
+      // medición varía según CÓMO se animó el teclado en cada caso —tocar
+      // una pregunta amarilla vs. tocar la barra directamente disparan
+      // este evento en momentos ligeramente distintos— así que a veces
+      // "llegaba a tiempo" con el valor correcto y a veces no, y por eso
+      // el layout se veía bien unas veces y roto otras (justo lo que
+      // reportaste). Ahora `tecladoAbierto` se decide aparte, de forma
+      // inmediata y siempre igual, por el foco del campo de texto (ver
+      // onEntradaFocus/onEntradaBlur) — este efecto solo se encarga de la
+      // geometría (alto/ancho/posición), no de esa decisión.
       if (overlayRef.current) {
         overlayRef.current.style.height = vv.height + 'px';
         overlayRef.current.style.width = vv.width + 'px';
@@ -635,6 +641,12 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   }
 
   function onEntradaFocus() {
+    // `tecladoAbierto` ya NO se decide midiendo cuánto se achica la
+    // pantalla (esa medición dependía de cómo animaba el teclado cada
+    // vez, y por eso el layout se veía bien unas veces y roto otras).
+    // Se decide aquí mismo, por el foco del campo de texto: inmediato y
+    // 100% consistente, sin depender de ningún evento del sistema.
+    setTecladoAbierto(true);
     // Mismo ajuste que onChipClick, pero para cuando el usuario toca
     // el textarea directamente para escribir a mano.
     const irAlFondo = () => {
@@ -642,6 +654,14 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     };
     requestAnimationFrame(irAlFondo);
     setTimeout(irAlFondo, 350);
+  }
+
+  function onEntradaBlur() {
+    // Contraparte de onEntradaFocus: en cuanto el campo pierde el foco
+    // (el usuario cerró el teclado con el botón nativo, envió el mensaje,
+    // o tocó fuera del campo), volvemos a mostrar video/encabezado/
+    // preguntas de inmediato.
+    setTecladoAbierto(false);
   }
 
   function nuevaSesion() {
@@ -721,19 +741,20 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
                 {/* El video solo se monta cuando de verdad aporta algo: NO
                     mientras el teclado está abierto (no se ve y sobrecarga
                     el layout justo cuando más importa la fluidez), NO en
-                    equipos de gama baja/red limitada (el video es lo más
-                    caro de sostener en un procesador modesto, mucho más
-                    que cualquier CSS), y NO mientras la app está en
-                    segundo plano (evita que quede "vivo" gastando batería
-                    y aumentando el riesgo de que el sistema mate la app).
+                    equipos de gama baja/red limitada detectados AL ABRIR
+                    (gamaBajaInicialRef — señal fija, no se re-evalúa con
+                    mediciones en vivo que podrían fallar por el propio
+                    video cargando), y NO mientras la app está en segundo
+                    plano (evita que quede "vivo" gastando batería y
+                    aumentando el riesgo de que el sistema mate la app).
                     Cuando no se monta, el propio fondo con degradado del
                     contenedor (ver CSS de .gc-video-loop) se ve bien solo,
                     así que nunca queda un hueco vacío o roto. */}
-                {!tecladoAbierto && !modoLigero && !pantallaOculta && (
+                {!tecladoAbierto && !gamaBajaInicialRef.current && !pantallaOculta && (
                   <iframe
-                    src="https://player.vimeo.com/video/1218704734?autoplay=1&loop=1&muted=1&background=1&autopause=0&controls=0"
+                    src="https://player.mediadelivery.net/embed/741310/b2cf3f89-a2b3-4969-a208-ac24a8301608?autoplay=true&loop=true&muted=true&preload=true&playsinline=true"
                     title="Video del Guardián del Templo"
-                    allow="autoplay; fullscreen; picture-in-picture"
+                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
                     loading="eager"
                     referrerPolicy="strict-origin-when-cross-origin"
                   />
@@ -812,6 +833,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
                     onChange={onInputChange}
                     onKeyDown={onEntradaKeyDown}
                     onFocus={onEntradaFocus}
+                    onBlur={onEntradaBlur}
                   />
                   <button
                     className="gc-enviar"
