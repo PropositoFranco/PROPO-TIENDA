@@ -2777,6 +2777,14 @@ const cargarSellosCodigos = useCallback(async () => {
                           {duracionMin ? ` · ${duracionMin} min` : ''}
                           {j.participante_nombre ? ` · con ${j.participante_nombre}` : ''}
                         </div>
+                        {j.primer_en_unirse && (
+                          <div
+                            title="Quién se unió primero a la llamada, según la hora real que da Google Meet. Es la mejor pista disponible de quién organizó/creó la reunión — Google no manda un dato de 'creador' como tal."
+                            style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1, color: C.gold, fontWeight: 700, marginTop: 4 }}
+                          >
+                            🕐 Primero en unirse: {j.primer_en_unirse}
+                          </div>
+                        )}
                         <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: C.muted, marginTop: 2 }}>
                           {j.temas?.resumen_ejecutivo ? `${j.temas.resumen_ejecutivo.slice(0, 70)}${j.temas.resumen_ejecutivo.length > 70 ? '…' : ''}` : ''}
                         </div>
@@ -3002,6 +3010,20 @@ const cargarSellosCodigos = useCallback(async () => {
                                     <li key={i} style={{ fontSize: 11.5, color: C.text }}>{r}</li>
                                   ))}
                                 </ul>
+                              </div>
+                            )}
+
+                            {j.primer_en_unirse && (
+                              <div style={{
+                                background: 'rgba(212,175,55,0.06)', border: `1px solid ${C.border}`, borderRadius: 10,
+                                padding: '10px 12px', marginBottom: 4,
+                              }}>
+                                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.gold, fontWeight: 700 }}>
+                                  🕐 PRIMERO EN UNIRSE: {j.primer_en_unirse.toUpperCase()}
+                                </div>
+                                <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>
+                                  Según la hora real en que cada quien entró a la llamada (dato de Google Meet). Es la mejor pista disponible de quién organizó la reunión — Google no manda un campo de "creador" como tal.
+                                </div>
                               </div>
                             )}
 
