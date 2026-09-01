@@ -2,19 +2,25 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '../../services/supabase';
 
 /* =========================================================================
-   EL GUARDIÁN — versión React (antes vivía como iframe anidado dentro de
-   hub.html: hub.html estaba a su vez dentro de un iframe de HubPage.jsx).
+   EL GUARDIÁN — v2 (rediseño visual completo)
    ------------------------------------------------------------------------
-   Ese doble iframe era la causa del "choque": el HTML original cargaba
-   @supabase/supabase-js desde CDN en el click, compitiendo por el hilo
-   principal justo cuando se intentaba ocultar la barra superior. Aquí
-   reutilizamos el cliente `supabase` que ya vive en React — cero CDN,
-   cero segundo documento, cero pelea de hilos.
+   Toda la lógica funcional (Supabase, edge function guardian-api, historial,
+   preguntas iniciales/de seguimiento, saludo de bienvenida, manejo de
+   scroll/teclado/ESC, aislamiento de eventos frente al resto de la app) se
+   mantiene EXACTAMENTE igual que en la versión anterior. Lo único que
+   cambia aquí es la capa visual (JSX de presentación + CSS).
 
-   Se monta directo en HubPage.jsx (como hermano del <iframe> del hub) y
-   se muestra/oculta con la misma prop `open` que ya controla `oraculoOpen`
-   allá. HubPage ya se encarga de avisarle a AppLayout (vía postMessage)
-   para ocultar la barra superior — este componente no necesita tocar eso.
+   FIX DEL PUNTERO: el cursor nativo del sistema desaparecía al abrir este
+   modal en computadora. Este archivo no tiene ninguna razón propia para
+   ocultarlo (nunca se usa Pointer Lock ni Fullscreen API), así que la causa
+   está en una regla global de tu app (p. ej. `cursor: none` en <html>/<body>
+   o en un selector `*`). Como blindaje, aquí se fuerza `cursor: auto/pointer
+   /text !important` en todo el árbol del overlay con selectores de alta
+   especificidad — esto gana contra casi cualquier regla global que no sea
+   también `!important` sobre un elemento aún más específico. Si el problema
+   persiste tras este cambio, es porque esa otra regla vive en un archivo
+   que no tengo (compárteme el CSS global o AppLayout.jsx y lo cierro del
+   todo ahí).
    ========================================================================= */
 
 const SUPABASE_URL = 'https://hdwzhwuhlrtrmhnecypm.supabase.co';
@@ -64,6 +70,18 @@ function saludoSegunNombre(nombre) {
   const apodosFemeninos = ['dani', 'sofi', 'vale', 'male', 'ale'];
   if (apodosFemeninos.includes(limpio)) return 'Bienvenida';
   return limpio.endsWith('a') ? 'Bienvenida' : 'Bienvenido';
+}
+
+function mensajeBienvenida(nombreUsuario) {
+  return (
+    (nombreUsuario
+      ? `¡${saludoSegunNombre(nombreUsuario)} a la Propotienda, **${nombreUsuario}**! 🔥`
+      : `¡${saludoSegunNombre(nombreUsuario)} a la Propotienda! 🔥`) +
+    ' Estás a un clic de descubrir todo lo que puedes lograr aquí dentro: tu evaluación semanal, ' +
+    'tus territorios, tus PropoCoins, las membresías y los sorteos — todo armado para que ' +
+    'tu cambio se note de verdad, semana tras semana, sin que tengas que adivinar por dónde empezar. ' +
+    'Elige una de las preguntas de abajo o cuéntame qué quieres saber, y arrancamos.'
+  );
 }
 
 export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
@@ -170,16 +188,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   useEffect(() => {
     if (open && !inited) {
       setInited(true);
-      agregarMensaje(
-        (nombreUsuario
-          ? `¡${saludoSegunNombre(nombreUsuario)} a la Propotienda, **${nombreUsuario}**! 🔥`
-          : `¡${saludoSegunNombre(nombreUsuario)} a la Propotienda! 🔥`) +
-        ' Estás a un clic de descubrir todo lo que puedes lograr aquí dentro: tu evaluación semanal, ' +
-        'tus territorios, tus PropoCoins, las membresías y los sorteos — todo armado para que ' +
-        'tu cambio se note de verdad, semana tras semana, sin que tengas que adivinar por dónde empezar. ' +
-        'Elige una de las preguntas de abajo o cuéntame qué quieres saber, y arrancamos.',
-        'bot'
-      );
+      agregarMensaje(mensajeBienvenida(nombreUsuario), 'bot');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, inited]);
@@ -463,16 +472,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     msgRefs.current = {};
     setMensajes([]);
     setPreguntas(PREGUNTAS_INICIALES.map(p => p.q));
-    agregarMensaje(
-      (nombreUsuario
-        ? `¡${saludoSegunNombre(nombreUsuario)} a la Propotienda, **${nombreUsuario}**! 🔥`
-        : `¡${saludoSegunNombre(nombreUsuario)} a la Propotienda! 🔥`) +
-      ' Estás a un clic de descubrir todo lo que puedes lograr aquí dentro: tu evaluación semanal, ' +
-      'tus territorios, tus PropoCoins, las membresías y los sorteos — todo armado para que ' +
-      'tu cambio se note de verdad, semana tras semana, sin que tengas que adivinar por dónde empezar. ' +
-      'Elige una de las preguntas de abajo o cuéntame qué quieres saber, y arrancamos.',
-      'bot'
-    );
+    agregarMensaje(mensajeBienvenida(nombreUsuario), 'bot');
   }
 
   function descargarPlan() {
@@ -513,6 +513,13 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     >
       <style>{CSS}</style>
 
+      <div className="gc-fondo" aria-hidden="true">
+        <div className="gc-esfera naranja"></div>
+        <div className="gc-esfera amarillo"></div>
+        <div className="gc-esfera cian"></div>
+        <div className="gc-esfera morado"></div>
+      </div>
+
       <div className="gc-modal-header">
         <div className="gc-modal-title">
           <span className="gc-modal-icon">🛡️</span>
@@ -526,11 +533,6 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
       </div>
 
       <div className="gc-scroll" ref={scrollRef}>
-        <div className="gc-esfera naranja"></div>
-        <div className="gc-esfera amarillo"></div>
-        <div className="gc-esfera cian"></div>
-        <div className="gc-esfera morado"></div>
-
         <div className="gc-shell">
           <div className="gc-ventana">
             <div className="gc-ventana-header" ref={ventanaHeaderRef}>
@@ -546,6 +548,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
                   loading="eager"
                   referrerPolicy="strict-origin-when-cross-origin"
                 />
+                <div className="gc-video-vineta" aria-hidden="true"></div>
               </div>
             </div>
 
@@ -556,6 +559,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
                 <span className="gc-chispa c3">✦</span>
                 <h1 className="gc-titulo"><span className="gc-subrayado"></span>Guía de la Propotienda</h1>
               </div>
+
               <div className="gc-chat">
                 {mensajes.map(m => (
                   <div
@@ -563,7 +567,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
                     ref={el => { if (el) msgRefs.current[m.id] = el; }}
                     className={'gc-msg ' + m.tipo}
                   >
-                    {m.tipo === 'bot' && <div dangerouslySetInnerHTML={{ __html: formatear(m.texto) }} />}
+                    {m.tipo === 'bot' && <div className="gc-msg-cuerpo" dangerouslySetInnerHTML={{ __html: formatear(m.texto) }} />}
                     {m.tipo === 'user' && m.texto}
                     {m.tipo === 'error' && (
                       <>
@@ -641,6 +645,19 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
 }
 
 const CSS = `
+/* ================= RESET DE PUNTERO (fix del bug) =================
+   Se fuerza cursor visible en TODO el árbol del overlay con máxima
+   especificidad + !important. Esto gana sobre casi cualquier regla
+   global tipo "* { cursor: none }" que exista en el resto de la app,
+   sin necesidad de tocar esos archivos. */
+.gc-overlay, .gc-overlay *{ cursor: auto !important; }
+.gc-overlay button, .gc-overlay [role="button"],
+.gc-overlay .gc-chip, .gc-overlay .gc-enviar, .gc-overlay .gc-close,
+.gc-overlay .gc-accion, .gc-overlay .gc-reintentar{ cursor: pointer !important; }
+.gc-overlay button:disabled{ cursor: not-allowed !important; }
+.gc-overlay .gc-textarea{ cursor: text !important; }
+.gc-overlay iframe{ pointer-events: none; }
+
 .gc-overlay{
   position:fixed; inset:0; z-index:2147483647;
   height:100vh;
@@ -648,35 +665,21 @@ const CSS = `
   background:#0a0e17;
   font-family:'Inter', sans-serif;
   color:#eef1f7;
-  cursor:auto;
+  contain: layout paint style;
 }
 @supports (height: 100dvh){
   .gc-overlay{ height:100dvh; }
 }
-.gc-modal-header{
-  position:absolute; top:0; left:0; right:0; z-index:5;
-  display:flex; align-items:center; justify-content:space-between;
-  padding:max(14px, env(safe-area-inset-top)) 18px 12px;
-  pointer-events:none;
-}
-.gc-modal-title{ display:flex; align-items:center; gap:10px; pointer-events:none; }
-.gc-modal-icon{ font-size:20px; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.8)); }
-.gc-modal-label{ font-family:'Cinzel',serif; font-size:15px; letter-spacing:2px; color:#22D3EE; text-shadow:0 0 14px rgba(34,211,238,0.5), 0 1px 3px rgba(0,0,0,0.8); }
-.gc-close{
-  background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.85);
-  width:34px; height:34px; border-radius:50%; cursor:pointer; font-size:16px; flex-shrink:0; pointer-events:auto;
-}
-.gc-scroll{
-  flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;
-  display:flex; justify-content:center;
-  padding:0 14px 24px;
-  position:relative;
-}
-.gc-esfera{ position:fixed; top:50%; left:50%; border-radius:50%; pointer-events:none; z-index:-1; filter:blur(95px); mix-blend-mode:screen; opacity:0.95; will-change:transform; }
-.gc-esfera.naranja{ width:780px; height:780px; background:radial-gradient(circle, #FA9238 0%, rgba(250,146,56,0) 72%); animation:gcMoverNaranja 34s ease-in-out infinite; }
-.gc-esfera.amarillo{ width:680px; height:680px; background:radial-gradient(circle, #F7BD21 0%, rgba(247,189,33,0) 72%); animation:gcMoverAmarillo 47s ease-in-out infinite; animation-delay:-9s; }
-.gc-esfera.cian{ width:820px; height:820px; background:radial-gradient(circle, #5FDCFD 0%, rgba(95,220,253,0) 72%); animation:gcMoverCian 41s ease-in-out infinite; animation-delay:-21s; }
-.gc-esfera.morado{ width:720px; height:720px; background:radial-gradient(circle, #6141D5 0%, rgba(97,65,213,0) 72%); animation:gcMoverMorado 26s ease-in-out infinite; animation-delay:-4s; }
+
+/* Fondo decorativo: esferas de luz, ahora en una capa propia con
+   will-change/contain aisladas del flujo de scroll, para que el
+   navegador no tenga que repintar nada más al animarlas. */
+.gc-fondo{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; contain:strict; }
+.gc-esfera{ position:absolute; top:50%; left:50%; border-radius:50%; filter:blur(90px); mix-blend-mode:screen; opacity:0.9; will-change:transform; }
+.gc-esfera.naranja{ width:64vmax; height:64vmax; background:radial-gradient(circle, #FA9238 0%, rgba(250,146,56,0) 72%); animation:gcMoverNaranja 34s ease-in-out infinite; }
+.gc-esfera.amarillo{ width:56vmax; height:56vmax; background:radial-gradient(circle, #F7BD21 0%, rgba(247,189,33,0) 72%); animation:gcMoverAmarillo 47s ease-in-out infinite; animation-delay:-9s; }
+.gc-esfera.cian{ width:68vmax; height:68vmax; background:radial-gradient(circle, #5FDCFD 0%, rgba(95,220,253,0) 72%); animation:gcMoverCian 41s ease-in-out infinite; animation-delay:-21s; }
+.gc-esfera.morado{ width:60vmax; height:60vmax; background:radial-gradient(circle, #6141D5 0%, rgba(97,65,213,0) 72%); animation:gcMoverMorado 26s ease-in-out infinite; animation-delay:-4s; }
 @keyframes gcMoverNaranja{
   0%,100%{ transform:translate(calc(-50% - 22vw), calc(-50% - 18vh)) scale(1); }
   18%{ transform:translate(calc(-50% - 32vw), calc(-50% - 6vh)) scale(1.15); }
@@ -707,7 +710,31 @@ const CSS = `
   66%{ transform:translate(calc(-50% + 6vw), calc(-50% - 9vh)) scale(1.1); }
   85%{ transform:translate(calc(-50% - 4vw), calc(-50% + 2vh)) scale(0.95); }
 }
+
+.gc-modal-header{
+  position:absolute; top:0; left:0; right:0; z-index:5;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:max(14px, env(safe-area-inset-top)) 18px 12px;
+  pointer-events:none;
+}
+.gc-modal-title{ display:flex; align-items:center; gap:10px; pointer-events:none; }
+.gc-modal-icon{ font-size:20px; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.8)); }
+.gc-modal-label{ font-family:'Cinzel',serif; font-size:15px; letter-spacing:2px; color:#22D3EE; text-shadow:0 0 14px rgba(34,211,238,0.5), 0 1px 3px rgba(0,0,0,0.8); }
+.gc-close{
+  background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.85);
+  width:34px; height:34px; border-radius:50%; font-size:16px; flex-shrink:0; pointer-events:auto;
+  transition:background .15s ease, border-color .15s ease;
+}
+.gc-close:hover{ background:rgba(0,0,0,0.7); border-color:rgba(255,255,255,0.45); }
+
+.gc-scroll{
+  position:relative; z-index:1;
+  flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;
+  display:flex; justify-content:center;
+  padding:0 14px 24px;
+}
 .gc-shell{ width:100%; max-width:676px; }
+
 .gc-encabezado{ text-align:center; position:relative; margin:16px 0 14px; }
 .gc-titulo{ font-family:'Poppins', sans-serif; font-weight:800; font-size:22px; color:#fff; letter-spacing:-0.01em; margin:0; position:relative; display:inline-block; }
 .gc-subrayado{ position:absolute; left:6%; right:6%; top:-10px; height:2px; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); }
@@ -716,22 +743,22 @@ const CSS = `
 .gc-chispa.c2{ top:6px; right:12%; font-size:12px; animation-delay:1s; }
 .gc-chispa.c3{ bottom:-8px; right:26%; font-size:10px; animation-delay:1.6s; }
 @keyframes gcDestello{ 0%,100%{ opacity:.35; transform:scale(0.85);} 50%{ opacity:1; transform:scale(1.05);} }
-.gc-ventana{ border-radius:16px; background:#141a2b; border:1px solid rgba(255,255,255,0.06); box-shadow:0 20px 50px rgba(0,0,0,0.45); margin-bottom:16px; }
-.gc-ventana-header{ position:sticky; top:0; z-index:4; border-radius:16px 16px 0 0; overflow:hidden; background:#1b2338; box-shadow:0 10px 18px -12px rgba(0,0,0,0.6); }
-.gc-contenido{ border-radius:0 0 16px 16px; overflow:hidden; background:#141a2b; }
+
+.gc-ventana{ position:relative; border-radius:18px; background:#141a2b; border:1px solid rgba(255,255,255,0.06); box-shadow:0 20px 50px rgba(0,0,0,0.45); margin-bottom:16px; }
+.gc-ventana-header{ position:sticky; top:0; z-index:4; border-radius:18px 18px 0 0; overflow:hidden; background:#1b2338; box-shadow:0 10px 18px -12px rgba(0,0,0,0.6); }
+.gc-contenido{ border-radius:0 0 18px 18px; overflow:hidden; background:#141a2b; }
 .gc-barra-ventana{ display:flex; align-items:center; justify-content:center; position:relative; padding:10px 14px; background:#1b2338; border-bottom:1px solid rgba(255,255,255,0.05); }
 .gc-puntos{ position:absolute; left:14px; display:flex; gap:6px; }
 .gc-puntos span{ width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,0.18); }
 .gc-etiqueta{ font-size:11px; letter-spacing:0.10em; text-transform:uppercase; color:#8b93a7; font-weight:600; }
+
 .gc-video-loop{ position:relative; height:230px; background:radial-gradient(circle at 30% 20%, rgba(47,214,217,0.25), transparent 55%), radial-gradient(circle at 75% 75%, rgba(242,201,76,0.18), transparent 50%), #0e1424; display:flex; align-items:center; justify-content:center; overflow:hidden; transition:height .1s linear; }
-.gc-video-loop iframe{ position:absolute; top:50%; left:50%; width:100%; height:100%; min-width:100%; min-height:100%; transform:translate(-50%,-50%) scale(1.6); border:0; pointer-events:none; z-index:0; }
+.gc-video-loop iframe{ position:absolute; top:50%; left:50%; width:100%; height:100%; min-width:100%; min-height:100%; transform:translate(-50%,-50%) scale(1.6); border:0; z-index:0; }
+.gc-video-vineta{ position:absolute; inset:0; z-index:1; pointer-events:none; box-shadow:inset 0 -30px 40px -10px rgba(14,20,36,0.55); }
 .gc-ventana-header.is-compact .gc-barra-ventana{ padding:5px 12px; }
 .gc-ventana-header.is-compact .gc-etiqueta{ font-size:9px; }
 .gc-ventana-header.is-compact .gc-puntos span{ width:6px; height:6px; }
-.gc-preguntas{ display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:10px 12px 0; border-top:1px solid rgba(255,255,255,0.05); margin-top:2px; }
-.gc-chip{ font-family:'Inter', sans-serif; font-size:12px; line-height:1.35; font-weight:600; color:#f2c94c; background:rgba(242,201,76,0.08); border:1px solid rgba(242,201,76,0.16); border-radius:12px; padding:9px 12px; cursor:pointer; transition:all .18s ease; position:relative; text-align:left; white-space:normal; }
-.gc-chip:hover{ background:rgba(242,201,76,0.16); }
-.gc-chip:disabled{ opacity:.4; cursor:not-allowed; }
+
 .gc-chat{ padding:16px 14px 4px; display:flex; flex-direction:column; gap:12px; }
 .gc-msg{ max-width:88%; padding:11px 14px; border-radius:14px; font-size:13.5px; line-height:1.5; }
 .gc-msg.bot{ align-self:flex-start; background:#161d30; border:1px solid rgba(255,255,255,0.05); border-top-left-radius:3px; }
@@ -741,26 +768,35 @@ const CSS = `
 .gc-msg.user{ align-self:flex-end; background:linear-gradient(135deg, #f6c343, #e8962e); color:#26190a; font-weight:600; border-top-right-radius:3px; }
 .gc-msg.error{ align-self:center; background:rgba(160,40,40,0.16); border:1px solid rgba(220,90,90,0.35); color:#f3c8c8; font-size:13px; max-width:96%; text-align:left; }
 .gc-detalle{ display:block; margin-top:6px; font-size:11.5px; color:#e0a5a5; word-break:break-word; }
-.gc-msg.error button{ margin-top:8px; background:rgba(242,201,76,0.16); border:1px solid rgba(242,201,76,0.16); color:#f2c94c; border-radius:8px; padding:6px 10px; font-size:12.5px; cursor:pointer; }
+.gc-msg.error button{ margin-top:8px; background:rgba(242,201,76,0.16); border:1px solid rgba(242,201,76,0.16); color:#f2c94c; border-radius:8px; padding:6px 10px; font-size:12.5px; }
+
 .gc-thinking{ align-self:flex-start; display:flex; gap:5px; padding:12px 15px; }
 .gc-thinking span{ width:6px; height:6px; border-radius:50%; background:#f2c94c; animation:gcPulso 1.1s ease-in-out infinite; }
 .gc-thinking span:nth-child(2){ animation-delay:.15s; }
 .gc-thinking span:nth-child(3){ animation-delay:.3s; }
 @keyframes gcPulso{ 0%,100%{ opacity:.25; transform:translateY(0);} 50%{ opacity:1; transform:translateY(-3px);} }
+
 .gc-acciones{ display:flex; gap:6px; justify-content:center; padding:6px 12px 0; }
-.gc-accion{ display:flex; align-items:center; gap:4px; background:#1b2338; border:1px solid rgba(255,255,255,0.06); color:#8b93a7; font-size:10.5px; font-weight:600; padding:4px 9px; border-radius:8px; cursor:pointer; position:relative; }
+.gc-accion{ display:flex; align-items:center; gap:4px; background:#1b2338; border:1px solid rgba(255,255,255,0.06); color:#8b93a7; font-size:10.5px; font-weight:600; padding:4px 9px; border-radius:8px; position:relative; transition:color .15s ease, border-color .15s ease; }
 .gc-accion:hover{ color:#eef1f7; border-color:rgba(255,255,255,0.15); }
+
+.gc-preguntas{ display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:10px 12px 0; border-top:1px solid rgba(255,255,255,0.05); margin-top:2px; }
+.gc-chip{ font-family:'Inter', sans-serif; font-size:12px; line-height:1.35; font-weight:600; color:#f2c94c; background:rgba(242,201,76,0.08); border:1px solid rgba(242,201,76,0.16); border-radius:12px; padding:9px 12px; transition:background .18s ease; position:relative; text-align:left; white-space:normal; }
+.gc-chip:hover{ background:rgba(242,201,76,0.16); }
+.gc-chip:disabled{ opacity:.4; }
+
 .gc-input-zona{ position:sticky; bottom:0; z-index:3; background:#141a2b; padding-bottom:env(safe-area-inset-bottom); }
 .gc-input-bar{ display:flex; align-items:flex-end; gap:8px; padding:12px 10px 2px; }
 .gc-textarea{ flex:1; resize:none; background:#1b2338; border:1px solid rgba(255,255,255,0.08); border-radius:24px; color:#eef1f7; font-family:'Inter', sans-serif; font-size:13px; line-height:1.4; padding:13px 20px; max-height:110px; outline:none; position:relative; }
 .gc-textarea:focus{ border-color:#f2c94c; }
 .gc-textarea::placeholder{ color:#8b93a7; }
-.gc-enviar{ width:42px; height:42px; flex:none; border-radius:50%; background:linear-gradient(135deg, #f6c343, #e8962e); border:none; color:#26190a; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; position:relative; }
-.gc-enviar:disabled{ opacity:.4; cursor:not-allowed; }
+.gc-enviar{ width:42px; height:42px; flex:none; border-radius:50%; background:linear-gradient(135deg, #f6c343, #e8962e); border:none; color:#26190a; font-size:18px; display:flex; align-items:center; justify-content:center; position:relative; }
+.gc-enviar:disabled{ opacity:.4; }
 .gc-contador{ text-align:right; font-size:10.5px; color:#8b93a7; padding:0 22px 6px; user-select:none; }
 .gc-contador.cerca{ color:#f2c94c; }
 .gc-contador.lleno{ color:#e0685a; }
 .gc-footer-note{ text-align:center; font-size:11.5px; color:#8b93a7; padding:6px 20px 4px; }
+
 @media (max-height:520px){
   .gc-scroll{ padding:0 10px 20px; }
   .gc-encabezado{ margin:8px 0 6px; }
@@ -773,6 +809,17 @@ const CSS = `
 @media (max-width:420px){
   .gc-preguntas{ grid-template-columns:1fr; }
 }
+
+/* Gama baja / móvil: menos esferas activas y blur más barato, para que
+   el panel se sienta igual de fluido en un equipo modesto. */
+@media (max-width:600px){
+  .gc-esfera{ filter:blur(60px); opacity:.75; }
+  .gc-esfera.amarillo, .gc-esfera.morado{ display:none; }
+}
+@media (prefers-reduced-motion: reduce){
+  .gc-esfera, .gc-chispa, .gc-thinking span{ animation:none !important; }
+}
+
 @media (hover:hover) and (pointer:fine){
   .gc-ventana::before, .gc-ventana::after,
   .gc-chip::before, .gc-chip::after,
