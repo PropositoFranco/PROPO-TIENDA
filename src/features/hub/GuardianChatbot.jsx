@@ -1,3154 +1,805 @@
-/**
- * SorteoAdminPage.jsx — Templo del Propósito
- * Ruta: /admin/sorteos  (ADMIN)
- * Crear Eventos de rifa continua, ver links/QR, monitorear en vivo
- */
-
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '../../services/supabase';
-import LtvComisionesTab from './LtvComisionesTab';
 
-const C = {
-  bg:      '#07040f',
-  card:    '#0e0818',
-  border:  'rgba(212,175,55,0.15)',
-  borderHi:'rgba(212,175,55,0.4)',
-  gold:    '#D4AF37',
-  goldDim: 'rgba(212,175,55,0.5)',
-  purple:  '#9b59ff',
-  text:    '#f0eaff',
-  muted:   'rgba(240,234,255,0.45)',
-  green:   '#44ff88',
-  red:     '#ff4466',
-};
+/* =========================================================================
+   EL GUARDIÁN — versión React (antes vivía como iframe anidado dentro de
+   hub.html: hub.html estaba a su vez dentro de un iframe de HubPage.jsx).
+   ------------------------------------------------------------------------
+   Ese doble iframe era la causa del "choque": el HTML original cargaba
+   @supabase/supabase-js desde CDN en el click, compitiendo por el hilo
+   principal justo cuando se intentaba ocultar la barra superior. Aquí
+   reutilizamos el cliente `supabase` que ya vive en React — cero CDN,
+   cero segundo documento, cero pelea de hilos.
 
-const BASE_URL = window.location.origin;
+   Se monta directo en HubPage.jsx (como hermano del <iframe> del hub) y
+   se muestra/oculta con la misma prop `open` que ya controla `oraculoOpen`
+   allá. HubPage ya se encarga de avisarle a AppLayout (vía postMessage)
+   para ocultar la barra superior — este componente no necesita tocar eso.
+   ========================================================================= */
 
-// ── Utilidades ─────────────────────────────────────────────────────────────────
-function copiarAlPortapapeles(texto) {
-  navigator.clipboard?.writeText(texto).catch(() => {});
+const SUPABASE_URL = 'https://hdwzhwuhlrtrmhnecypm.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkd3pod3VobHJ0cm1obmVjeXBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyMTUxMjQsImV4cCI6MjA5Mzc5MTEyNH0.bTgW5aIQpslxbtZdKcacvMUMAKUSwcb3StA-OumIUmw';
+const GUARDIAN_API_URL = SUPABASE_URL + '/functions/v1/guardian-api';
+const LIMITE_CARACTERES = 450;
+
+const PREGUNTAS_INICIALES = [
+  { q: '¿Qué es el Templo del Propósito y qué transformación real puedo esperar si me comprometo con la plataforma?', label: '¿Qué voy a lograr aquí?' },
+  { q: '¿Cómo es el proceso cuando entro por primera vez y qué debo hacer para empezar a ver cambios reales?', label: '¿Por dónde empiezo?' },
+  { q: '¿Cómo funciona la evaluación semanal y los territorios, y cómo me ayuda a saber exactamente en qué enfocar mi esfuerzo cada semana?', label: '¿En qué debo enfocarme?' },
+  { q: '¿Cómo gano PropoCoins y qué puedo hacer con ellos para acelerar mi propia transformación?', label: '¿Cómo acelero mi cambio?' },
+  { q: '¿Qué es la Activación Templaria (el sello que doy al terminar mi ejercicio semanal) y qué recompensa me da al completarlo?', label: '¿Cómo veo mi progreso?' },
+  { q: '¿Cómo funciona el ranking semanal y cómo me ayuda a comprobar que mi constancia sí se está notando?', label: '¿Voy avanzando de verdad?' },
+  { q: '¿Cómo funcionan las membresías y qué significa realmente comprometerme con este proceso de 6 meses?', label: '¿Qué tan en serio es esto?' },
+  { q: '¿El Templo del Propósito es una secta, un MLM disfrazado, o algo raro?', label: '¿Es esto un MLM o algo raro?' },
+  { q: '¿Qué es 100 Templarios Dijeron y cómo me ayuda a seguir avanzando sin que se sienta como tarea?', label: '¿Cómo lo hago divertido?' },
+  { q: '¿De qué formas puedo invitar a otras personas a la Propotienda, y qué gano yo por hacerlo?', label: '¿Cómo invito a alguien?' },
+  { q: "No tengo un 'gasto típico' confirmado con datos históricos todavía, pero explícame de forma honesta cuánto podría llegar a costarme todo esto en 6 meses considerando la membresía y lo que es opcional.", label: '¿Cuánto cuesta todo esto realmente?' },
+  { q: '¿Qué pasa si una semana no completo mi ejercicio o no entro a la plataforma?', label: '¿Qué pasa si no completo mi ejercicio?' },
+];
+
+function escaparHTML(t) {
+  return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-async function descargarQR(qrUrl, filename) {
-  try {
-    const res = await fetch(qrUrl);
-    const blob = await res.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(blobUrl);
-  } catch (e) {
-    window.open(qrUrl, '_blank');
-  }
+function formatear(texto) {
+  const escapado = escaparHTML(texto);
+  const lineas = escapado.split('\n');
+  let html = '';
+  let dentroLista = false;
+  lineas.forEach(linea => {
+    const esBullet = linea.trim().startsWith('- ');
+    if (esBullet && !dentroLista) { html += '<ul>'; dentroLista = true; }
+    if (!esBullet && dentroLista) { html += '</ul>'; dentroLista = false; }
+    if (esBullet) html += '<li>' + linea.trim().slice(2) + '</li>';
+    else if (linea.trim() === '') html += '<br>';
+    else html += linea + '<br>';
+  });
+  if (dentroLista) html += '</ul>';
+  return html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 }
 
-// ── Componente QR via API pública ─────────────────────────────────────────────
-function QRCode({ url, size = 160 }) {
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&bgcolor=07040f&color=D4AF37&margin=10`;
-  return (
-    <img
-      src={qrUrl}
-      alt="QR"
-      style={{ width: size, height: size, borderRadius: 8, border: `1px solid ${C.border}` }}
-    />
-  );
+function saludoSegunNombre(nombre) {
+  if (!nombre) return 'Bienvenido';
+  const limpio = nombre.trim().toLowerCase();
+  const apodosFemeninos = ['dani', 'sofi', 'vale', 'male', 'ale'];
+  if (apodosFemeninos.includes(limpio)) return 'Bienvenida';
+  return limpio.endsWith('a') ? 'Bienvenida' : 'Bienvenido';
 }
 
-// ── Color consistente por responsable (cuenta_google), para distinguir a simple vista ──
-const PALETA_RESPONSABLES = ['#9b59ff', '#D4AF37', '#44ccff', '#ff9944', '#ff4466', '#44ff88'];
-function colorParaResponsable(cuentaGoogle) {
-  if (!cuentaGoogle) return '#888';
-  let hash = 0;
-  for (let i = 0; i < cuentaGoogle.length; i++) hash = (hash * 31 + cuentaGoogle.charCodeAt(i)) >>> 0;
-  return PALETA_RESPONSABLES[hash % PALETA_RESPONSABLES.length];
-}
+export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
+  const entradaRef = useRef(null);
+  const ventanaHeaderRef = useRef(null);
+  const videoLoopRef = useRef(null);
+  const overlayRef = useRef(null);
+  const scrollRef = useRef(null);
+  const pensandoRef = useRef(null);
+  const msgRefs = useRef({});
 
-// ── Badge de estado ────────────────────────────────────────────────────────────
-function Badge({ activo }) {
-  return (
-    <span style={{
-      fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2,
-      color: activo ? C.green : C.muted,
-      border: `1px solid ${activo ? 'rgba(68,255,136,0.3)' : 'rgba(255,255,255,0.1)'}`,
-      borderRadius: 20, padding: '3px 10px',
-    }}>
-      {activo ? '● ACTIVO' : '○ INACTIVO'}
-    </span>
-  );
-}
+  const historialRef = useRef([]);
+  const ultimaPreguntaFallidaRef = useRef(null);
+  const savedScrollYRef = useRef(0);
 
-// ══════════════════════════════════════════════════════════════════════════════
-export default function SorteoAdminPage() {
-  const [eventos,       setEventos]       = useState([]);
-  const [visitasPorEvento, setVisitasPorEvento] = useState({});
-  const [eventoAbierto, setEventoAbierto] = useState(null);
-  const [rondas,        setRondas]        = useState({});
-  const [loading,       setLoading]       = useState(true);
-  const [creando,       setCreando]       = useState(false);
-  const [form,          setForm]          = useState({ nombre: '', cupo: 10 });
-  const [errForm,       setErrForm]       = useState('');
-  const [copiado,       setCopiado]       = useState('');
-  const [masterStats,   setMasterStats]   = useState(null);
-  const [tabActiva,     setTabActiva]     = useState(() => localStorage.getItem('sorteosAdminTab') || 'sorteos');
-  const [metricas,      setMetricas]      = useState(null);
-  const [loadingMetricas, setLoadingMetricas] = useState(false);
-  const [aliados,       setAliados]       = useState([]);
-  const [loadingAliados, setLoadingAliados] = useState(false);
-  const [formAliado,    setFormAliado]    = useState({ nombre: '', slug: '', rol: '', comision_pct: '', manager_aliado_id: '' });
-  const [guardandoComision, setGuardandoComision] = useState(null); // id del aliado que se está guardando inline
-  const [errAliado,     setErrAliado]     = useState('');
-  const [creandoAliado, setCreandoAliado] = useState(false);
-  const [copiadoAliado, setCopiadoAliado] = useState('');
-  const [eventosActivos, setEventosActivos] = useState([]);
-  const [eventoGlobal,  setEventoGlobal]  = useState('');
-  const [guardandoGlobal, setGuardandoGlobal] = useState(false);
-  const [qrModal, setQrModal] = useState(null);
-  const [qrFisicos,     setQrFisicos]     = useState([]);
-  const [loadingQrF,    setLoadingQrF]    = useState(false);
-  const [qrFModal,      setQrFModal]      = useState(null); // { id } para descargar QR
-  const [reportes,      setReportes]      = useState([]);
-  const [loadingReportes, setLoadingReportes] = useState(false);
-  const [actualizandoReporte, setActualizandoReporte] = useState(null); // id del reporte que se está guardando
+  // Los mensajes viven en estado de React (no insertados a mano en el DOM),
+  // así que sobreviven a que el chatbot se oculte y se vuelva a mostrar.
+  // Solo "Nueva sesión" debe vaciar esta lista.
+  const [mensajes, setMensajes] = useState([]);
+  const [pensando, setPensando] = useState(false);
 
-  // ── CAMINO A LÍDER DIGITAL (interesados) ─────────────────────────────────────
-  const [interesadosCamino, setInteresadosCamino] = useState([]);
-  const [loadingInteresados, setLoadingInteresados] = useState(false);
-  const [aceptandoCamino, setAceptandoCamino] = useState(null);
-  const [fechaInicioCamino, setFechaInicioCamino] = useState('2026-08-24');
-  const [codigoGeneradoModal, setCodigoGeneradoModal] = useState(null);
-  const [copiadoCamino, setCopiadoCamino] = useState('');
-  const [metricasLideres, setMetricasLideres] = useState([]);
-  const [loadingMetricasLideres, setLoadingMetricasLideres] = useState(false);
-  const [errMetricasLideres, setErrMetricasLideres] = useState('');
-  const [filtroEstadoLider, setFiltroEstadoLider] = useState('todos');
-  const [buscaLider, setBuscaLider] = useState('');
+  const [preguntas, setPreguntas] = useState(PREGUNTAS_INICIALES.map(p => p.q));
+  const [bloqueado, setBloqueado] = useState(false);
+  const [contador, setContador] = useState(0);
+  const [inited, setInited] = useState(false);
 
-  // ── SELLOS (códigos de sesión del Camino) ────────────────────────────────────
-  const [sellosCodigos,  setSellosCodigos]  = useState([]);
-  const [loadingSellos,  setLoadingSellos]  = useState(false);
-  const [guardandoSello, setGuardandoSello] = useState(null); // id en proceso
-  const [errSello,       setErrSello]       = useState('');
-    const [editsSellos,    setEditsSellos]    = useState({}); // { [id]: valor editado }
-
-  // ── JUNTAS MEET (análisis automático de sesiones) ────────────────────────────
-  const [juntasMeet,     setJuntasMeet]     = useState([]);
-  const [metricasProspeccion, setMetricasProspeccion] = useState(null);
-
-  const cargarMetricasProspeccion = useCallback(async () => {
-    const { data, error } = await supabase.rpc('camino_metricas_prospeccion');
-    if (!error) setMetricasProspeccion(data);
-  }, []);
-  const [metricasMentoria, setMetricasMentoria] = useState(null);
-  const cargarMetricasMentoria = useCallback(async () => {
-    const { data, error } = await supabase.rpc('camino_metricas_mentoria');
-    if (!error) setMetricasMentoria(data);
-  }, []);
-  const [patronesRecurrentes, setPatronesRecurrentes] = useState(null);
-  const cargarPatronesRecurrentes = useCallback(async () => {
-    const { data, error } = await supabase.rpc('camino_recomendaciones_recurrentes');
-    if (!error) setPatronesRecurrentes(data);
-  }, []);
-  // Métricas separadas por cuenta de Google (Franco / Gerente) — nunca se mezclan entre sí.
-  const [metricasPorResponsable, setMetricasPorResponsable] = useState([]);
-  const cargarMetricasPorResponsable = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('v_metricas_juntas_por_responsable')
-      .select('*')
-      .order('responsable_etiqueta');
-    if (!error) setMetricasPorResponsable(data || []);
-  }, []);
-  const [loadingJuntas,  setLoadingJuntas]  = useState(false);
-  const [juntaAbierta,   setJuntaAbierta]   = useState(null);
-  const [sincronizando,  setSincronizando]  = useState(false);
-  const [msgSync,        setMsgSync]        = useState('');
-  const [filtroResponsableJunta,  setFiltroResponsableJunta]  = useState('todos');
-  const [filtroParticipanteJunta, setFiltroParticipanteJunta] = useState('todos');
-  const [filtroSesionJunta,       setFiltroSesionJunta]       = useState('todas');
-  const [procesandoJuntaId,       setProcesandoJuntaId]       = useState(null);
-  const [editandoJuntaId,         setEditandoJuntaId]         = useState(null);
-  const [editJuntaValores,        setEditJuntaValores]        = useState({ titulo: '', numero_sesion: '' });
-  const [vinculandoJuntaId,       setVinculandoJuntaId]       = useState(null);
-  const [nombreMeetVinculo,       setNombreMeetVinculo]       = useState('');
-  const [busquedaVinculo,         setBusquedaVinculo]         = useState('');
-  const [personasVinculables,     setPersonasVinculables]     = useState([]);
-  const [loadingPersonasVinculo,  setLoadingPersonasVinculo]  = useState(false);
-  const [guardandoVinculoId,      setGuardandoVinculoId]      = useState(null);
-
-  // ── CURRÍCULUM DE SESIONES (qué se espera cubrir en cada número) ─────────────
-  const [curriculumSesiones, setCurriculumSesiones] = useState([]);
-  const [loadingCurriculum,  setLoadingCurriculum]  = useState(false);
-  const [editsCurriculum,    setEditsCurriculum]    = useState({});
-  const [guardandoCurriculum,setGuardandoCurriculum] = useState(null);
-  const [curriculumAbierto,  setCurriculumAbierto]  = useState(false);
-  const [curriculumContextoActivo, setCurriculumContextoActivo] = useState('interesado');
-
-
-  // ── FIRMAS (acuerdos digitales de líderes/gerentes) ──────────────────────────
-  const [firmas,        setFirmas]        = useState([]);
-  const [loadingFirmas, setLoadingFirmas]  = useState(false);
-  const [generandoFirma,setGenerandoFirma] = useState(null); // aliado_id en proceso
-  const [copiadoFirma,  setCopiadoFirma]   = useState('');
-  const [firmaImgModal, setFirmaImgModal]  = useState(null); // { src, nombre } para ver la firma en grande
-  const [generandoCodigo, setGenerandoCodigo] = useState(null); // aliado_id en proceso
-  const [copiadoCodigo,   setCopiadoCodigo]   = useState('');
-
+  // ── Precalentar la conexión con Vimeo desde que carga el hub (no solo
+  //    cuando se abre el chat), para que al abrir el chatbot el video no
+  //    pierda tiempo en la conexión inicial y empiece a reproducirse más
+  //    rápido. No cambia nada de layout, tamaño ni calidad del video ──
   useEffect(() => {
-    const handler = () => {
-      setQrModal({ url: window.__qrModalUrl, label: window.__qrModalLabel, icon: window.__qrModalIcon });
+    const dominios = ['https://player.vimeo.com', 'https://i.vimeocdn.com', 'https://f.vimeocdn.com'];
+    const agregados = [];
+    dominios.forEach(href => {
+      if (document.querySelector(`link[data-guardian-preconnect="${href}"]`)) return;
+      const link = document.createElement('link');
+      link.rel = 'preconnect';
+      link.href = href;
+      link.crossOrigin = 'anonymous';
+      link.setAttribute('data-guardian-preconnect', href);
+      document.head.appendChild(link);
+      agregados.push(link);
+    });
+    return () => {
+      agregados.forEach(link => link.remove());
     };
-    window.addEventListener('abrir-qr-modal', handler);
-    return () => window.removeEventListener('abrir-qr-modal', handler);
   }, []);
 
-  // ── CSS ──────────────────────────────────────────────────────────────────────
+  function nuevoId() {
+    return 'm' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+  }
+
+  // ── Abrir/cerrar: bloqueo de scroll del body + alto real de viewport ──
   useEffect(() => {
-    const s = document.createElement('style');
-    s.textContent = `
-      @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@700;900&display=swap');
-      @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-      @keyframes pulse  { 0%,100%{opacity:.6} 50%{opacity:1} }
-      input::placeholder { color: rgba(212,175,55,0.25); }
-      input:focus { border-color: rgba(212,175,55,0.5) !important; outline: none !important; }
-    `;
-    document.head.appendChild(s);
-    return () => document.head.removeChild(s);
-  }, []);
+    if (open) {
+      savedScrollYRef.current = window.scrollY || window.pageYOffset || 0;
+      document.documentElement.style.height = '100%';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${savedScrollYRef.current}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+    } else {
+      // Muy importante: si el usuario estaba escribiendo y cierra sin
+      // enviar, el teclado se queda "fantasma" abierto si no soltamos el
+      // foco a propósito. Como HubPage.jsx calcula el alto del hub con el
+      // mismo dato de pantalla visible (visualViewport), un teclado
+      // fantasma hace que el hub se vea encogido o con una franja negra
+      // abajo. Por eso soltamos el foco explícitamente antes de cerrar.
+      entradaRef.current?.blur();
+      if (document.activeElement && document.activeElement !== document.body) {
+        document.activeElement.blur();
+      }
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      document.documentElement.style.height = '';
+      window.scrollTo(0, savedScrollYRef.current);
+      // Auto-corrección: una vez que el chat terminó de cerrarse y la
+      // pantalla ya se asentó, le avisamos al resto de la app (HubPage)
+      // que vuelva a medir el tamaño real de la pantalla, disparando el
+      // mismo evento nativo que ya usa para eso. Esto evita que el hub se
+      // quede con una medida equivocada, sin importar la causa.
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 400);
+    }
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      document.documentElement.style.height = '';
+    };
+  }, [open]);
 
-  // ── Cargar eventos ───────────────────────────────────────────────────────────
-  const cargarEventos = useCallback(async () => {
-    setLoading(true);
-    const { data } = await supabase
-      .from('sorteo_eventos')
-      .select('*')
-      .order('created_at', { ascending: false });
-    setEventos(data || []);
-    setLoading(false);
+  // ── Mensaje de bienvenida (una sola vez, al primer open) ──
+  useEffect(() => {
+    if (open && !inited) {
+      setInited(true);
+      agregarMensaje(
+        (nombreUsuario
+          ? `¡${saludoSegunNombre(nombreUsuario)} a la Propotienda, **${nombreUsuario}**! 🔥`
+          : `¡${saludoSegunNombre(nombreUsuario)} a la Propotienda! 🔥`) +
+        ' Estás a un clic de descubrir todo lo que puedes lograr aquí dentro: tu evaluación semanal, ' +
+        'tus territorios, tus PropoCoins, las membresías y los sorteos — todo armado para que ' +
+        'tu cambio se note de verdad, semana tras semana, sin que tengas que adivinar por dónde empezar. ' +
+        'Elige una de las preguntas de abajo o cuéntame qué quieres saber, y arrancamos.',
+        'bot'
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, inited]);
 
-    // Visitas por evento (llegadas reales a la página, para conversión real del funnel)
-    const { data: visitasRaw } = await supabase.from('sorteo_visitas').select('evento_id');
-    const conteo = {};
-    (visitasRaw || []).forEach(v => { conteo[v.evento_id] = (conteo[v.evento_id] || 0) + 1; });
-    setVisitasPorEvento(conteo);
-  }, []);
+  // ── Al reabrir: si ya hubo conversación (al menos una pregunta del
+  //    usuario), mostrar el final tal como quedó. Si es la primera vez
+  //    (solo el saludo, sin preguntas), se deja la vista inicial de
+  //    siempre (arriba, con el video y las preguntas sugeridas) ──
+  useEffect(() => {
+    if (!open) return;
+    const hayConversacion = mensajes.some(m => m.tipo === 'user');
+    if (hayConversacion) {
+      requestAnimationFrame(() => {
+        const el = scrollRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
-  useEffect(() => { cargarEventos(); }, [cargarEventos]);
-
-  // ── Cargar reportes de problemas de usuarios ─────────────────────────────────
-  const cargarReportes = useCallback(async () => {
-    setLoadingReportes(true);
-    const { data } = await supabase
-      .from('sorteo_reportes')
-      .select(`
-        id, email, mensaje, status, created_at,
-        sorteo_participantes (
-          nombre, es_ganador, tipo_premio, cupon_aceptado,
-          sorteos ( numero_ronda, estado, sorteo_eventos ( nombre ) )
-        )
-      `)
-      .order('created_at', { ascending: false });
-    setReportes(data || []);
-    setLoadingReportes(false);
-  }, []);
-
-  useEffect(() => { cargarReportes(); }, [cargarReportes]);
-
-  // ── Cargar interesados del Camino a Líder Digital ────────────────────────────
-  const cargarInteresadosCamino = useCallback(async () => {
-    setLoadingInteresados(true);
-    const { data } = await supabase
-      .from('camino_interesados')
-      .select('*')
-      .order('created_at', { ascending: false });
-    setInteresadosCamino(data || []);
-    setLoadingInteresados(false);
-  }, []);
-
-  const aceptarInteresadoCamino = async (interesado) => {
-    setAceptandoCamino(interesado.id);
-    const { data, error } = await supabase.rpc('aceptar_interesado_camino', {
-      p_interesado_id: interesado.id,
-      p_fecha_inicio: fechaInicioCamino,
-      p_cohorte: null,
-    });
-    setAceptandoCamino(null);
-    if (error) { alert('Error al aceptar: ' + error.message); return; }
-    const nuevo = data?.[0];
-    if (nuevo) { setCodigoGeneradoModal(nuevo); cargarInteresadosCamino(); }
-  };
-
-  const descartarInteresadoCamino = async (id) => {
-    await supabase.from('camino_interesados').update({ estado: 'descartado' }).eq('id', id);
-    cargarInteresadosCamino();
-  };
-
-  // ── Métricas en vivo de los Líderes Digitales activos (RPC camino_metricas_gestor) ──
-  const cargarMetricasLideres = useCallback(async () => {
-    setLoadingMetricasLideres(true);
-    setErrMetricasLideres('');
-    const { data, error } = await supabase.rpc('camino_metricas_gestor');
-    if (error) setErrMetricasLideres(error.message);
-    setMetricasLideres(data || []);
-    setLoadingMetricasLideres(false);
-  }, []);
-
-const cargarSellosCodigos = useCallback(async () => {
-    setLoadingSellos(true);
-    setErrSello('');
-    const { data, error } = await supabase.rpc('camino_admin_ver_codigos');
-    if (error) {
-      setErrSello(error.message || 'No autorizado para ver los códigos.');
-      setLoadingSellos(false);
+  // ── Auto-scroll: cuando llega la respuesta del bot, deja arriba la
+  //    última pregunta del usuario; si es un mensaje del usuario o un
+  //    error, se muestra ese mismo mensaje arriba. IMPORTANTE: si el
+  //    mensaje es del bot pero no existe ninguna pregunta previa del
+  //    usuario (o sea, es solo el saludo inicial), NO se hace scroll —
+  //    así la primera apertura siempre se queda arriba del todo, con el
+  //    video a tamaño completo y el saludo visible ──
+  useEffect(() => {
+    if (!mensajes.length) return;
+    const ultimo = mensajes[mensajes.length - 1];
+    if (ultimo.tipo === 'bot') {
+      let idPregunta = null;
+      for (let i = mensajes.length - 2; i >= 0; i--) {
+        if (mensajes[i].tipo === 'user') { idPregunta = mensajes[i].id; break; }
+      }
+      if (idPregunta) {
+        msgRefs.current[idPregunta]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
       return;
     }
-    const porSesion = Object.fromEntries((data || []).map(s => [s.numero_sesion, s]));
-    const slots = Array.from({ length: 8 }, (_, i) => {
-      const n = i + 1;
-      return porSesion[n] || { numero_sesion: n, codigo: '', actualizado_at: null };
-    });
-    setSellosCodigos(slots);
-    setEditsSellos(Object.fromEntries(slots.map(s => [s.numero_sesion, s.codigo || ''])));
-    setLoadingSellos(false);
-  }, []);
-
-  const cargarJuntasMeet = useCallback(async () => {
-    setLoadingJuntas(true);
-    // v_juntas_meet_categorizadas trae las mismas columnas que camino_juntas_meet
-    // más "responsable_etiqueta" (Franco / Gerente) ya resuelta desde camino_meet_cuentas,
-    // para que nunca se mezclen las transcripciones de una cuenta con las de otra.
-    const { data, error } = await supabase
-      .from('v_juntas_meet_categorizadas')
-      .select('*')
-      .order('fecha_inicio', { ascending: false });
-    if (!error) setJuntasMeet(data || []);
-    setLoadingJuntas(false);
-  }, []);
-
-  const sincronizarJuntasMeet = async () => {
-    setSincronizando(true);
-    setMsgSync('');
-    const { data, error } = await supabase.functions.invoke('camino-meet-sync');
-    setSincronizando(false);
-    if (error) { setMsgSync('Error al sincronizar: ' + error.message); return; }
-    const r = data?.resumen;
-    setMsgSync(r ? `Listo — ${r.revisadas} revisadas, ${r.nuevas_guardadas} nuevas, ${r.analizadas} analizadas, ${r.vinculadas || 0} vinculadas a alguien conocido.` : 'Sincronizado.');
-    cargarJuntasMeet();
-  };
-
-  const reintentarAnalisisJunta = async (juntaId) => {
-    setProcesandoJuntaId(juntaId);
-    const { data, error } = await supabase.functions.invoke('camino-meet-sync', { body: { reintentar_id: juntaId } });
-    setProcesandoJuntaId(null);
-    if (error || data?.ok === false) { alert('No se pudo reintentar: ' + (error?.message || data?.error)); return; }
-    cargarJuntasMeet();
-  };
-
-  const revincularJunta = async (juntaId) => {
-    setProcesandoJuntaId(juntaId);
-    const { data, error } = await supabase.functions.invoke('camino-meet-sync', { body: { revincular_id: juntaId } });
-    setProcesandoJuntaId(null);
-    if (error || data?.ok === false) { alert('No se pudo vincular: ' + (error?.message || data?.error)); return; }
-    cargarJuntasMeet();
-  };
-
-  const abrirEdicionJunta = (j) => {
-    setEditandoJuntaId(j.id);
-    setEditJuntaValores({ titulo: j.titulo || '', numero_sesion: j.numero_sesion ?? '' });
-  };
-
-  const cargarPersonasVinculables = useCallback(async () => {
-    if (personasVinculables.length > 0) return;
-    setLoadingPersonasVinculo(true);
-    const [rAliados, rParticipantes] = await Promise.all([
-      supabase.from('aliados').select('id, nombre, rol').order('nombre'),
-      supabase.from('camino_participantes').select('id, nombre').order('nombre'),
-    ]);
-    const lista = [
-      ...(rAliados.data || []).map(a => ({ id: a.id, nombre: a.nombre, tipo: 'aliado', etiqueta: a.rol || 'aliado' })),
-      ...(rParticipantes.data || []).map(p => ({ id: p.id, nombre: p.nombre, tipo: 'camino', etiqueta: 'Camino 30 días' })),
-    ];
-    setPersonasVinculables(lista);
-    setLoadingPersonasVinculo(false);
-  }, [personasVinculables.length]);
-
-  const abrirVinculoManual = (j) => {
-    setVinculandoJuntaId(j.id);
-    const nombres = (j.todos_los_participantes || []).filter(Boolean);
-    setNombreMeetVinculo(nombres[nombres.length - 1] || j.participante_nombre || '');
-    setBusquedaVinculo('');
-    cargarPersonasVinculables();
-  };
-
-  const guardarVinculoManual = async (juntaId, persona) => {
-    if (!nombreMeetVinculo.trim()) { alert('Escribe el nombre exacto como aparece en Meet.'); return; }
-    setGuardandoVinculoId(juntaId);
-    const { data, error } = await supabase.rpc('camino_guardar_alias_y_revincular', {
-      p_nombre_meet: nombreMeetVinculo.trim(),
-      p_tipo: persona.tipo,
-      p_participante_id: persona.id,
-    });
-    setGuardandoVinculoId(null);
-    if (error || data?.ok === false) { alert('No se pudo vincular: ' + (error?.message || data?.error)); return; }
-    setVinculandoJuntaId(null);
-    alert(`Vinculado a ${data.participante_nombre}. ${data.juntas_actualizadas} junta(s) actualizadas — de ahora en adelante cualquier junta futura con el nombre "${nombreMeetVinculo.trim()}" se va a vincular sola.`);
-    cargarJuntasMeet();
-  };
-  const guardarEdicionJunta = async (juntaId) => {
-    const numero_sesion = editJuntaValores.numero_sesion === '' ? null : parseInt(editJuntaValores.numero_sesion, 10);
-    await supabase.from('camino_juntas_meet').update({ titulo: editJuntaValores.titulo || null, numero_sesion }).eq('id', juntaId);
-    setEditandoJuntaId(null);
-    cargarJuntasMeet();
-  };
-
-  const cargarCurriculum = useCallback(async () => {
-    setLoadingCurriculum(true);
-    const { data, error } = await supabase.from('camino_curriculum_sesiones').select('*').order('contexto').order('numero_sesion');
-    if (!error) {
-      setCurriculumSesiones(data || []);
-      setEditsCurriculum(Object.fromEntries((data || []).map(cs => [`${cs.contexto}::${cs.numero_sesion}`, {
-        titulo: cs.titulo || '', objetivo: cs.objetivo || '', temas_texto: (cs.temas_esperados || []).join(', '),
-      }])));
-    }
-    setLoadingCurriculum(false);
-  }, []);
-
-  const guardarCurriculum = async (contexto, numeroSesion) => {
-    const key = `${contexto}::${numeroSesion}`;
-    const edit = editsCurriculum[key] || { titulo: '', objetivo: '', temas_texto: '' };
-    const temas_esperados = edit.temas_texto.split(',').map(t => t.trim()).filter(Boolean);
-    setGuardandoCurriculum(key);
-    await supabase.from('camino_curriculum_sesiones').upsert({
-      numero_sesion: numeroSesion, contexto, titulo: edit.titulo, objetivo: edit.objetivo, temas_esperados,
-      actualizado_at: new Date().toISOString(),
-    }, { onConflict: 'numero_sesion,contexto' });
-    setGuardandoCurriculum(null);
-    cargarCurriculum();
-  };
-
-  const agregarNumeroSesionCurriculum = async (contexto) => {
-    const deEsteContexto = curriculumSesiones.filter(cs => cs.contexto === contexto);
-    const siguiente = (deEsteContexto[deEsteContexto.length - 1]?.numero_sesion || 0) + 1;
-    await supabase.from('camino_curriculum_sesiones').insert({ numero_sesion: siguiente, contexto, titulo: `Sesión ${siguiente}`, temas_esperados: [], objetivo: '' });
-    cargarCurriculum();
-  };
-
-  const guardarSello = async (numeroSesion) => {
-    const nuevoCodigo = (editsSellos[numeroSesion] || '').trim().toUpperCase();
-    if (!nuevoCodigo) { alert('El código no puede estar vacío.'); return; }
-    setGuardandoSello(numeroSesion);
-    const { data, error } = await supabase.rpc('camino_admin_set_codigo', { p_numero_sesion: numeroSesion, p_codigo: nuevoCodigo });
-    setGuardandoSello(null);
-    if (error || !data?.ok) { alert('Error al guardar: ' + (error?.message || 'no autorizado')); return; }
-    setSellosCodigos(prev => prev.map(s => s.numero_sesion === numeroSesion ? { ...s, codigo: nuevoCodigo, actualizado_at: new Date().toISOString() } : s));
-    setEditsSellos(prev => ({ ...prev, [numeroSesion]: nuevoCodigo }));
-  };
-
-  const generarCodigoSello = (numeroSesion) => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin O/0 ni I/1, para que no se confundan al leerlo
-    let codigo = '';
-    for (let i = 0; i < 6; i++) codigo += chars[Math.floor(Math.random() * chars.length)];
-    setEditsSellos(prev => ({ ...prev, [numeroSesion]: codigo }));
-  };
-
-  const marcarReporteAtendido = async (id, nuevoStatus) => {
-    setActualizandoReporte(id);
-    const { error } = await supabase.from('sorteo_reportes').update({ status: nuevoStatus }).eq('id', id);
-    setActualizandoReporte(null);
-    if (error) { alert('No se pudo actualizar. Intenta de nuevo.'); return; }
-    setReportes(prev => prev.map(r => r.id === id ? { ...r, status: nuevoStatus } : r));
-  };
-
-
-  // ── Cargar rondas de un evento ───────────────────────────────────────────────
-  const cargarRondas = useCallback(async (eventoId) => {
-    const { data } = await supabase
-      .from('sorteos')
-      .select(`
-        id, numero_ronda, cupo, estado,
-        sorteo_participantes(id, nombre, email, es_ganador, cupon_code, cupon_aceptado, premio_visto, premio_entregado, tipo_premio)
-      `)
-      .eq('evento_id', eventoId)
-      .order('numero_ronda', { ascending: false })
-      .limit(20);
-    setRondas(prev => ({ ...prev, [eventoId]: data || [] }));
-  }, []);
-
-  // ── Realtime por evento abierto ──────────────────────────────────────────────
-  useEffect(() => {
-    if (!eventoAbierto) return;
-    cargarRondas(eventoAbierto);
-    const canal = supabase
-      .channel(`admin-evento-${eventoAbierto}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sorteos', filter: `evento_id=eq.${eventoAbierto}` }, () => cargarRondas(eventoAbierto))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sorteo_participantes' }, () => cargarRondas(eventoAbierto))
-      .subscribe();
-    return () => supabase.removeChannel(canal);
-  }, [eventoAbierto, cargarRondas]);
-
-  // ── Crear evento ─────────────────────────────────────────────────────────────
-  const crearEvento = async () => {
-    if (!form.nombre.trim()) { setErrForm('Pon un nombre al evento.'); return; }
-    if (!form.cupo || form.cupo < 2 || form.cupo > 100) { setErrForm('El cupo debe ser entre 2 y 100.'); return; }
-    setErrForm('');
-    setCreando(true);
-
-    const { data, error } = await supabase
-      .from('sorteo_eventos')
-      .insert({ nombre: form.nombre.trim(), cupo_por_ronda: Number(form.cupo), activo: true })
-      .select()
-      .single();
-
-    setCreando(false);
-    if (error) { setErrForm('Error al crear. Intenta de nuevo.'); return; }
-
-    setForm({ nombre: '', cupo: 10 });
-    setEventos(prev => [data, ...prev]);
-    setEventoAbierto(data.id);
-  };
-
-  // ── Pausar / activar evento ──────────────────────────────────────────────────
-  const toggleEvento = async (id, activo) => {
-    await supabase.from('sorteo_eventos').update({ activo: !activo }).eq('id', id);
-    setEventos(prev => prev.map(e => e.id === id ? { ...e, activo: !activo } : e));
-  };
-
-  // ── Copiar link ───────────────────────────────────────────────────────────────
-  const copiarLink = (eventoId) => {
-    const link = `${BASE_URL}/sorteo/${eventoId}`;
-    copiarAlPortapapeles(link);
-    setCopiado(eventoId);
-    setTimeout(() => setCopiado(''), 2000);
-  };
-  
-  
-
-  // ── Aliados ───────────────────────────────────────────────────────────────────
-  const SUPABASE_URL = 'https://hdwzhwuhlrtrmhnecypm.supabase.co';
-
-  const cargarAliados = useCallback(async () => {
-    setLoadingAliados(true);
-    const { data } = await supabase
-      .from('aliados')
-      .select('*, sorteo_eventos(nombre)')
-      .order('scan_count', { ascending: false });
-    setAliados(data || []);
-    setLoadingAliados(false);
-  }, []);
-
-  const cargarEventosActivos = useCallback(async () => {
-    const [{ data: evs }, { data: cfg }] = await Promise.all([
-      supabase.from('sorteo_eventos').select('id, nombre').eq('activo', true).order('created_at', { ascending: false }),
-      supabase.from('config').select('value').eq('key', 'sorteo_activo_global').single(),
-    ]);
-    setEventosActivos(evs || []);
-    if (cfg?.value) setEventoGlobal(cfg.value);
-  }, []);
+    msgRefs.current[ultimo.id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [mensajes]);
 
   useEffect(() => {
-    if (tabActiva === 'metricas') {
-      setLoadingMetricas(true);
-      (async () => {
-        const [{ data: porAliado }, { data: porDia }, { data: scans }, { data: porUtm }] = await Promise.all([
-          supabase.rpc('metricas_por_aliado'),
-          supabase.from('sorteo_participantes')
-            .select('nombre, email, aliado_origen_slug, utm_source, registered_at, es_ganador')
-            .order('registered_at', { ascending: false }),
-          supabase.from('aliado_scans')
-            .select('aliado_id, device_type, scanned_at')
-            .order('scanned_at', { ascending: false }),
-          supabase.rpc('metricas_por_utm'),
-        ]);
-        setMetricas({ porAliado: porAliado || [], registros: porDia || [], scans: scans || [], porUtm: porUtm || [] });
-        setLoadingMetricas(false);
-      })();
+    if (pensando) {
+      pensandoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
-    if (tabActiva === 'aliados') {
-      cargarAliados();
-      cargarEventosActivos();
-    }
-  }, [tabActiva, cargarAliados, cargarEventosActivos]);
+  }, [pensando]);
 
+  // ── Video encogible al hacer scroll dentro del panel ──
   useEffect(() => {
-    localStorage.setItem('sorteosAdminTab', tabActiva);
-  }, [tabActiva]);
+    const scrollEl = scrollRef.current;
+    const ventanaHeader = ventanaHeaderRef.current;
+    const videoLoop = videoLoopRef.current;
+    if (!scrollEl || !ventanaHeader || !videoLoop) return;
 
-  useEffect(() => {
-    if (tabActiva === 'sellos') cargarSellosCodigos();
-    if (tabActiva === 'juntas') { cargarJuntasMeet(); cargarCurriculum(); cargarMetricasProspeccion(); cargarMetricasMentoria(); cargarPatronesRecurrentes(); cargarMetricasPorResponsable(); }
-  }, [tabActiva, cargarSellosCodigos, cargarJuntasMeet, cargarCurriculum, cargarMetricasProspeccion, cargarMetricasMentoria, cargarPatronesRecurrentes, cargarMetricasPorResponsable]);
-
-  const slugify = (texto) =>
-    texto.toLowerCase().trim()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '')
-      .slice(0, 30);
-
-  const crearAliado = async () => {
-    const slug = slugify(formAliado.slug || formAliado.nombre);
-    if (!formAliado.nombre.trim()) { setErrAliado('El nombre es obligatorio.'); return; }
-    if (!slug) { setErrAliado('El slug no puede estar vacío.'); return; }
-    setErrAliado('');
-    setCreandoAliado(true);
-    const { error } = await supabase.from('aliados').insert({
-      nombre: formAliado.nombre.trim(),
-      slug,
-      activo: true,
-      rol: formAliado.rol || null,
-      comision_pct: formAliado.comision_pct === '' ? null : Number(formAliado.comision_pct),
-      manager_aliado_id: formAliado.manager_aliado_id || null,
-    });
-    setCreandoAliado(false);
-    if (error) {
-      setErrAliado(error.code === '23505' ? 'Ese slug ya existe. Elige otro nombre.' : 'Error al crear. Intenta de nuevo.');
-      return;
+    function tamanos() {
+      const compacto = window.matchMedia('(max-height:520px)').matches;
+      return compacto ? { completo: 150, minimo: 56, rango: 55 } : { completo: 230, minimo: 90, rango: 70 };
     }
-    setFormAliado({ nombre: '', slug: '', rol: '', comision_pct: '', manager_aliado_id: '' });
-    cargarAliados();
-  };
+    let t = tamanos();
+    function actualizar() {
+      const y = scrollEl.scrollTop || 0;
+      const ratio = Math.max(0, Math.min(1, y / t.rango));
+      const alto = t.completo - ratio * (t.completo - t.minimo);
+      videoLoop.style.height = alto + 'px';
+      ventanaHeader.classList.toggle('is-compact', ratio > 0.65);
+    }
+    let pendiente = false;
+    const onScroll = () => {
+      if (!pendiente) {
+        requestAnimationFrame(() => { actualizar(); pendiente = false; });
+        pendiente = true;
+      }
+    };
+    const onResize = () => { t = tamanos(); actualizar(); };
+    scrollEl.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    actualizar();
+    return () => {
+      scrollEl.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, [open]);
 
-  // Edita rol / % comisión / gerente de un aliado ya existente (inline, sin recargar la página)
-  const actualizarComisionAliado = async (id, cambios) => {
-    setGuardandoComision(id);
-    const { error } = await supabase.from('aliados').update(cambios).eq('id', id);
-    setGuardandoComision(null);
-    if (error) { alert('Error al guardar. Intenta de nuevo.'); return; }
-    setAliados(prev => prev.map(a => a.id === id ? { ...a, ...cambios } : a));
-  };
+  // ── Brillo de borde que sigue al cursor (solo PC con mouse) ──
+  useEffect(() => {
+    if (!window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+    const root = overlayRef.current;
+    if (!root) return;
+    const SELECTOR_BRILLO = '.gc-ventana, .gc-chip, .gc-accion, .gc-textarea, .gc-enviar';
+    const onMove = (e) => {
+      root.querySelectorAll(SELECTOR_BRILLO).forEach(el => {
+        const r = el.getBoundingClientRect();
+        el.style.setProperty('--lx', (e.clientX - r.left) + 'px');
+        el.style.setProperty('--ly', (e.clientY - r.top) + 'px');
+      });
+    };
+    document.addEventListener('mousemove', onMove, { passive: true });
+    return () => document.removeEventListener('mousemove', onMove);
+  }, [open]);
 
-  const guardarEventoGlobal = async (nuevoId) => {
-    setGuardandoGlobal(true);
-    await supabase.from('config').update({ value: nuevoId, updated_at: new Date().toISOString() }).eq('key', 'sorteo_activo_global');
-    setEventoGlobal(nuevoId);
-    setGuardandoGlobal(false);
-  };
+  // ── ESC para cerrar ──
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') { entradaRef.current?.blur(); onClose?.(); } };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
-  const toggleAliado = async (id, activo) => {
-    await supabase.from('aliados').update({ activo: !activo }).eq('id', id);
-    setAliados(prev => prev.map(a => a.id === id ? { ...a, activo: !activo } : a));
-  };
+  function agregarMensaje(texto, tipo) {
+    const id = nuevoId();
+    setMensajes(prev => [...prev, { id, tipo, texto }]);
+    return id;
+  }
 
-  const cambiarSorteoAliado = async (id, sorteoEventoId) => {
-    await supabase.from('aliados').update({ sorteo_activo_id: sorteoEventoId }).eq('id', id);
-    setAliados(prev => prev.map(a => a.id === id ? { ...a, sorteo_activo_id: sorteoEventoId } : a));
-  };
+  function agregarMensajeError(detalleTecnico) {
+    setMensajes(prev => [...prev, { id: nuevoId(), tipo: 'error', detalle: detalleTecnico || null }]);
+  }
 
-  const copiarQRAliado = (slug) => {
-    const url = `${SUPABASE_URL}/functions/v1/r/${slug}`;
-    copiarAlPortapapeles(url);
-    setCopiadoAliado(slug);
-    setTimeout(() => setCopiadoAliado(''), 2000);
-  };
+  function mostrarPensando() {
+    setPensando(true);
+  }
+  function quitarPensando() {
+    setPensando(false);
+  }
 
-  const cargarMasterStats = useCallback(async () => {
-    const [
-      { count: totalEventos },
-      { count: totalRondas },
-      { count: totalRegistrados },
-      { count: totalGanadores },
-      { count: totalEntregados },
-      { count: totalAceptaron },
-      { count: totalVieron },
-      { count: totalVisitas },
-    ] = await Promise.all([
-      supabase.from('sorteo_eventos').select('id', { count: 'exact', head: true }),
-      supabase.from('sorteos').select('id', { count: 'exact', head: true }),
-      supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }),
-      supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }).eq('es_ganador', true),
-      supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }).eq('premio_entregado', true),
-      supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }).eq('cupon_aceptado', true),
-      supabase.from('sorteo_participantes').select('id', { count: 'exact', head: true }).eq('premio_visto', true),
-      supabase.from('sorteo_visitas').select('id', { count: 'exact', head: true }),
-    ]);
-    const convRate = totalGanadores > 0 ? Math.round((totalAceptaron / totalGanadores) * 100) : 0;
-    // Conversión REAL del funnel: cuántos de los que llegaron a la página se registraron
-    const convVisitaRegistro = totalVisitas > 0 ? Math.round((totalRegistrados / totalVisitas) * 100) : 0;
-    setMasterStats({ totalEventos, totalRondas, totalRegistrados, totalGanadores, totalEntregados, totalAceptaron, totalVieron, convRate, totalVisitas, convVisitaRegistro });
-  }, []);
+  async function obtenerAccessToken() {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error || !data?.session?.access_token) return null;
+      return data.session.access_token;
+    } catch {
+      return null;
+    }
+  }
 
-  useEffect(() => { cargarMasterStats(); }, [cargarMasterStats]);
-
-  // ── FIRMAS: cargar acuerdos ────────────────────────────────────────────────────
-  const cargarFirmas = useCallback(async () => {
-    setLoadingFirmas(true);
-    const { data } = await supabase
-      .from('firmas_aliados')
-      .select('id, aliado_id, token, nombre_firmante, firma_data, fecha_firma, created_at, aliados(nombre, rol, slug)')
-      .order('created_at', { ascending: false });
-    setFirmas(data || []);
-    setLoadingFirmas(false);
-  }, []);
-
-  // ── FIRMAS: generar (o reusar) el link de firma para un aliado ────────────────
-  const generarToken = () => {
-    const bytes = crypto.getRandomValues(new Uint8Array(16));
-    return Array.from(bytes, b => b.toString(36)).join('').slice(0, 20);
-  };
-
-  const generarLinkFirma = async (aliadoId) => {
-    setGenerandoFirma(aliadoId);
-
-    // Si ya existe una firma (pendiente o firmada) para este aliado, reusar ese link.
-    const existente = firmas.find(f => f.aliado_id === aliadoId);
-    let token = existente?.token;
-
-    if (!token) {
-      token = generarToken();
-      const { data, error } = await supabase
-        .from('firmas_aliados')
-        .insert({ aliado_id: aliadoId, token })
-        .select('id, aliado_id, token, nombre_firmante, firma_data, fecha_firma, created_at, aliados(nombre, rol, slug)')
-        .single();
-      if (error) {
-        setGenerandoFirma(null);
-        alert('No se pudo generar el link. Intenta de nuevo.');
+  const consultarGuardian = useCallback(async () => {
+    setBloqueado(true);
+    mostrarPensando();
+    try {
+      const token = await obtenerAccessToken();
+      if (!token) {
+        quitarPensando();
+        ultimaPreguntaFallidaRef.current = true;
+        agregarMensajeError('No pude verificar tu sesión. Cierra y vuelve a abrir el Guardián (o recarga la página) para intentar de nuevo.');
         return;
       }
-      setFirmas(prev => [data, ...prev]);
-    }
-
-    const link = `${BASE_URL}/firma/${token}`;
-    copiarAlPortapapeles(link);
-    setCopiadoFirma(aliadoId);
-    setTimeout(() => setCopiadoFirma(''), 2500);
-    setGenerandoFirma(null);
-  };
-
-  // ── CÓDIGO DE ACCESO: generar (o reusar) el codigo_acceso de un líder/gerente ──
-  const generarCodigoAcceso = async (aliado) => {
-    setGenerandoCodigo(aliado.id);
-    let codigo = aliado.codigo_acceso;
-
-    if (!codigo) {
-      const prefijo = aliado.rol === 'gerente' ? 'GER' : 'LIDER';
-      const bloque = () => {
-        const bytes = crypto.getRandomValues(new Uint8Array(6));
-        return Array.from(bytes, b => b.toString(36)).join('').toUpperCase().slice(0, 4);
+      const historial = historialRef.current;
+      const cuerpo = {
+        modo: 'chat',
+        mensaje: historial[historial.length - 1]?.content || '',
+        historial: historial.slice(0, -1).slice(-10),
       };
-      codigo = `${prefijo}-${bloque()}-${bloque()}`;
-
-      const { error } = await supabase.from('aliados').update({ codigo_acceso: codigo }).eq('id', aliado.id);
-      if (error) {
-        setGenerandoCodigo(null);
-        alert('No se pudo generar el código. Intenta de nuevo.');
-        return;
+      const response = await fetch(GUARDIAN_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + token,
+          apikey: SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify(cuerpo),
+      });
+      const crudo = await response.text();
+      let data;
+      try {
+        data = JSON.parse(crudo);
+      } catch {
+        throw new Error('Respuesta no era JSON válido: ' + crudo.slice(0, 200));
       }
-      setAliados(prev => prev.map(a => a.id === aliado.id ? { ...a, codigo_acceso: codigo } : a));
+      if (!response.ok || !data.ok) throw new Error(data?.error || 'HTTP ' + response.status);
+
+      const textoResp = (data.respuesta || '').trim();
+      quitarPensando();
+      ultimaPreguntaFallidaRef.current = null;
+      if (!textoResp) {
+        agregarMensajeError('La respuesta llegó vacía.');
+      } else {
+        agregarMensaje(textoResp, 'bot');
+        historial.push({ role: 'assistant', content: textoResp });
+        generarPreguntasDeSeguimiento();
+      }
+    } catch (err) {
+      console.error('Error al consultar al Guardián:', err);
+      quitarPensando();
+      ultimaPreguntaFallidaRef.current = true;
+      agregarMensajeError((err?.name ? err.name + ': ' : '') + (err?.message || String(err)));
+    } finally {
+      setBloqueado(false);
+      entradaRef.current?.focus();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    const rolLabel = aliado.rol === 'gerente' ? 'gerente' : 'líder';
-    const mensaje = `¡Hola, ${aliado.nombre}! Ya está listo tu acceso de ${rolLabel} en el Templo del Propósito.\n\nEntra aquí: ${BASE_URL}/lider\nTu código: ${codigo}\n\nGuárdalo, es tuyo — no lo compartas con nadie.`;
+  function reintentarUltimoEnvio() {
+    if (ultimaPreguntaFallidaRef.current) consultarGuardian();
+  }
 
-    copiarAlPortapapeles(mensaje);
-    setCopiadoCodigo(aliado.id);
-    setTimeout(() => setCopiadoCodigo(''), 2500);
-    setGenerandoCodigo(null);
-  };
+  async function generarPreguntasDeSeguimiento() {
+    try {
+      const token = await obtenerAccessToken();
+      if (!token) return;
+      const response = await fetch(GUARDIAN_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + token,
+          apikey: SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ modo: 'seguimiento', historial: historialRef.current.slice(-6) }),
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (!data.ok || !Array.isArray(data.preguntas) || !data.preguntas.length) return;
+      setPreguntas(data.preguntas.slice(0, 3));
+    } catch (e) {
+      console.warn('No se pudieron generar preguntas de seguimiento, se dejan las anteriores:', e);
+    }
+  }
 
-  // ── Estadísticas de un evento ─────────────────────────────────────────────────
-  const statsEvento = (eventoId) => {
-    const rs = rondas[eventoId] || [];
-    const completadas = rs.filter(r => r.estado === 'completado');
-    const todasRondas = rs; // incluye abierta
-    const todosParticipantes = todasRondas.flatMap(r => r.sorteo_participantes || []);
-    const totalRegistrados = todosParticipantes.length;
-    const totalGanadores = todosParticipantes.filter(p => p.es_ganador).length;
-    const totalEntregados = todosParticipantes.filter(p => p.premio_entregado).length;
-    const totalAceptaron = todosParticipantes.filter(p => p.es_ganador && p.cupon_aceptado).length;
-    const totalVieron = todosParticipantes.filter(p => p.es_ganador && p.premio_visto).length;
-    const mediaAceptacion = totalGanadores > 0 ? Math.round((totalAceptaron / totalGanadores) * 100) : 0;
-    const rondaActiva = rs.find(r => r.estado === 'abierto');
-    const totalVisitas = visitasPorEvento[eventoId] || 0;
-    const convVisitaRegistro = totalVisitas > 0 ? Math.round((totalRegistrados / totalVisitas) * 100) : 0;
-    return { completadas: completadas.length, totalRondas: rs.length, totalRegistrados, totalGanadores, totalEntregados, totalAceptaron, totalVieron, mediaAceptacion, rondaActiva, totalVisitas, convVisitaRegistro };
-  };
+  async function enviarPregunta(textoCrudo) {
+    const texto = (textoCrudo || '').trim();
+    if (!texto) return;
+    agregarMensaje(texto, 'user');
+    historialRef.current.push({ role: 'user', content: texto });
+    if (entradaRef.current) {
+      entradaRef.current.value = '';
+      entradaRef.current.style.height = 'auto';
+      entradaRef.current.blur();
+    }
+    setContador(0);
+    await consultarGuardian();
+  }
 
-  // ── RENDER ───────────────────────────────────────────────────────────────────
+  function actualizarContadorDesdeInput() {
+    const largo = entradaRef.current?.value.length || 0;
+    setContador(largo);
+  }
+
+  function onInputChange() {
+    const el = entradaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 110) + 'px';
+    actualizarContadorDesdeInput();
+  }
+
+  function onEntradaKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      enviarPregunta(entradaRef.current?.value || '');
+    }
+  }
+
+  function onChipClick(texto) {
+    if (bloqueado) return;
+    if (entradaRef.current) {
+      entradaRef.current.value = texto;
+      entradaRef.current.style.height = 'auto';
+      entradaRef.current.style.height = Math.min(entradaRef.current.scrollHeight, 110) + 'px';
+      entradaRef.current.focus();
+    }
+    actualizarContadorDesdeInput();
+    // Aseguramos manualmente que la barra de escribir quede visible
+    // arriba del teclado: el navegador a veces falla en hacer ese scroll
+    // automático justo cuando el textarea cambia de alto (por el texto
+    // largo de la pregunta) en el mismo instante en que se abre el
+    // teclado. Lo intentamos de inmediato y una vez más un poco después,
+    // por si el teclado tarda en terminar de abrirse.
+    const irAlFondo = () => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    };
+    requestAnimationFrame(irAlFondo);
+    setTimeout(irAlFondo, 350);
+  }
+
+  function nuevaSesion() {
+    historialRef.current = [];
+    msgRefs.current = {};
+    setMensajes([]);
+    setPreguntas(PREGUNTAS_INICIALES.map(p => p.q));
+    agregarMensaje(
+      (nombreUsuario
+        ? `¡${saludoSegunNombre(nombreUsuario)} a la Propotienda, **${nombreUsuario}**! 🔥`
+        : `¡${saludoSegunNombre(nombreUsuario)} a la Propotienda! 🔥`) +
+      ' Estás a un clic de descubrir todo lo que puedes lograr aquí dentro: tu evaluación semanal, ' +
+      'tus territorios, tus PropoCoins, las membresías y los sorteos — todo armado para que ' +
+      'tu cambio se note de verdad, semana tras semana, sin que tengas que adivinar por dónde empezar. ' +
+      'Elige una de las preguntas de abajo o cuéntame qué quieres saber, y arrancamos.',
+      'bot'
+    );
+  }
+
+  function descargarPlan() {
+    const contenido = historialRef.current
+      .map(m => (m.role === 'user' ? (nombreUsuario || 'Tú') : 'El Guardián') + ': ' + m.content)
+      .join('\n\n');
+    const blob = new Blob([contenido || 'Aún no hay conversación con el Guardián.'], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plan-templo-del-proposito.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  if (!open) return null;
+
+  const cercaDelLimite = contador >= LIMITE_CARACTERES * 0.85 && contador < LIMITE_CARACTERES;
+  const lleno = contador >= LIMITE_CARACTERES;
+
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, padding: 'clamp(20px,4vw,40px)', fontFamily: 'sans-serif' }}>
+    <div
+      ref={overlayRef}
+      className="gc-overlay"
+      // El chatbot debe comportarse como una pestaña totalmente aislada:
+      // nada de lo que se toque aquí adentro debe "escapar" hacia
+      // listeners globales de `window` del resto de la app (por ejemplo,
+      // el que intenta activar pantalla completa en AppLayout con el
+      // primer toque en cualquier parte de la pantalla). Frenamos la
+      // propagación en fase de burbuja: los botones internos (enviar,
+      // cerrar, preguntas, textarea) reciben el clic con total
+      // normalidad primero; solo evitamos que siga subiendo más allá
+      // de este overlay hacia el resto de la app.
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <style>{CSS}</style>
 
-      {/* Cabecera */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 5, color: C.goldDim, marginBottom: 6 }}>
-          TEMPLO DEL PROPÓSITO · ADMIN
+      <div className="gc-modal-header">
+        <div className="gc-modal-title">
+          <span className="gc-modal-icon">🛡️</span>
+          <span className="gc-modal-label">EL GUARDIÁN</span>
         </div>
-        <h1 style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 'clamp(20px,4vw,32px)', color: C.gold, margin: 0, letterSpacing: 2 }}>
-          🎲 SISTEMA DE RIFAS
-        </h1>
-        <p style={{ color: C.muted, fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>
-          Crea eventos de rifa continua — cada QR abre rondas automáticas sin parar.
-        </p>
-        <a
-          href="https://camino.propotienda.com/camino"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12,
-            padding: '8px 16px', background: 'linear-gradient(135deg,#9b59ff,#4a1a8a)',
-            border: '1px solid rgba(155,89,255,0.4)', borderRadius: 8, color: '#fff',
-            fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 10.5, letterSpacing: 1,
-            textDecoration: 'none', boxShadow: '0 3px 16px rgba(155,89,255,0.4)',
-          }}
-        >🗺️ IR AL REACT DE CAMINO</a>
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-          {[
-            { id: 'sorteos',   label: '🎲 SORTEOS' },
-            { id: 'aliados',   label: '🤝 ALIADOS' },
-            { id: 'qrfisicos', label: '📦 QR FÍSICOS' },
-            { id: 'firmas',    label: '✍️ FIRMAS' },
-            { id: 'metricas',  label: '📊 MÉTRICAS' },
-            { id: 'ltv',       label: '💰 LTV' },
-            { id: 'reportes',  label: `🆘 REPORTES${reportes.filter(r => r.status === 'pendiente').length > 0 ? ` (${reportes.filter(r => r.status === 'pendiente').length})` : ''}` },
-            { id: 'camino',    label: `🗺️ CAMINO${interesadosCamino.filter(i => i.estado === 'pendiente').length > 0 ? ` (${interesadosCamino.filter(i => i.estado === 'pendiente').length})` : ''}` },
-            { id: 'sellos',    label: '🔑 SELLOS' },
-            { id: 'juntas',    label: '🎥 JUNTAS' },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setTabActiva(tab.id);
-                if (tab.id === 'qrfisicos') {
-                  setLoadingQrF(true);
-                  Promise.all([
-                    supabase.from('qr_fisicos').select('id, activo, aliado_id, aliados(nombre, slug)').order('id'),
-                    aliados.length === 0 ? supabase.from('aliados').select('id, nombre, slug').eq('activo', true).order('nombre') : Promise.resolve({ data: null }),
-                  ]).then(([{ data: qrs }, { data: als }]) => {
-                    setQrFisicos(qrs || []);
-                    if (als) setAliados(als);
-                    setLoadingQrF(false);
-                  });
-                }
-                if (tab.id === 'firmas') {
-                  cargarFirmas();
-                  if (aliados.length === 0) cargarAliados();
-                }
-                if (tab.id === 'reportes') cargarReportes();
-                if (tab.id === 'camino') { cargarInteresadosCamino(); cargarMetricasLideres(); }
-                if (tab.id === 'sellos') cargarSellosCodigos();
-                if (tab.id === 'juntas') { cargarJuntasMeet(); cargarCurriculum(); }
-              }}
-              style={{
-                padding: '9px 20px',
-                background: tabActiva === tab.id ? `linear-gradient(135deg,${C.gold},#9a7a00)` : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${tabActiva === tab.id ? C.gold : C.border}`,
-                borderRadius: 8, cursor: 'pointer',
-                color: tabActiva === tab.id ? '#0a0614' : C.muted,
-                fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, fontWeight: 900,
-                transition: 'all .2s',
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <button
+          className="gc-close"
+          onClick={() => { entradaRef.current?.blur(); onClose?.(); }}
+          aria-label="Cerrar"
+        >✕</button>
       </div>
 
-      {/* ══ TAB: SORTEOS ══ */}
-      {tabActiva === 'sorteos' && (<>
+      <div className="gc-scroll" ref={scrollRef}>
+        <div className="gc-esfera naranja"></div>
+        <div className="gc-esfera amarillo"></div>
+        <div className="gc-esfera cian"></div>
+        <div className="gc-esfera morado"></div>
 
-      {/* Master Stats */}
-      {masterStats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 10, marginBottom: 28 }}>
-          {[
-            { label: 'VISITAS',      value: masterStats.totalVisitas,    icon: '👣', color: C.muted },
-            { label: 'EVENTOS',      value: masterStats.totalEventos,    icon: '🎲', color: C.gold },
-            { label: 'RONDAS',       value: masterStats.totalRondas,     icon: '🔁', color: C.goldDim },
-            { label: 'REGISTRADOS',  value: masterStats.totalRegistrados,icon: '⚔️', color: C.text },
-            { label: 'CONV. VISITA→REGISTRO', value: `${masterStats.convVisitaRegistro}%`, icon: '🎯', color: masterStats.convVisitaRegistro > 30 ? C.green : masterStats.convVisitaRegistro > 10 ? C.gold : C.red },
-            { label: 'GANADORES',    value: masterStats.totalGanadores,  icon: '👑', color: C.gold },
-            { label: 'ENTREGADOS',   value: masterStats.totalEntregados, icon: '📦', color: '#60A5FA' },
-            { label: 'ACEPTARON',    value: masterStats.totalAceptaron,  icon: '✅', color: C.green },
-            { label: 'VIERON',       value: masterStats.totalVieron,     icon: '👁', color: C.purple },
-            { label: 'CONVERSIÓN',   value: `${masterStats.convRate}%`,  icon: '📈', color: masterStats.convRate > 50 ? C.green : masterStats.convRate > 20 ? C.gold : C.red },
-          ].map(s => (
-            <div key={s.label} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 12px', textAlign: 'center' }}>
-              <div style={{ fontSize: 20, marginBottom: 6 }}>{s.icon}</div>
-              <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 22, color: s.color, lineHeight: 1 }}>{s.value}</div>
-              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 7, letterSpacing: 2, color: C.muted, marginTop: 5 }}>{s.label}</div>
+        <div className="gc-shell">
+          <div className="gc-ventana">
+            <div className="gc-ventana-header" ref={ventanaHeaderRef}>
+              <div className="gc-barra-ventana">
+                <div className="gc-puntos"><span></span><span></span><span></span></div>
+                <span className="gc-etiqueta">La Cámara del Guardián</span>
+              </div>
+              <div className="gc-video-loop" ref={videoLoopRef}>
+                <iframe
+                  src="https://player.vimeo.com/video/1218704734?autoplay=1&loop=1&muted=1&background=1&autopause=0&controls=0"
+                  title="Video del Guardián del Templo"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  loading="eager"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                />
+              </div>
             </div>
-          ))}
-        </div>
-      )}
 
-      {/* Formulario crear evento */}
-      <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: 'clamp(20px,4vw,28px)', marginBottom: 32, animation: 'fadeIn .4s ease both' }}>
-        <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.gold, margin: '0 0 20px' }}>
-          + NUEVO EVENTO
-        </h2>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div style={{ flex: 2, minWidth: 200 }}>
-            <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>
-              NOMBRE DEL EVENTO
-            </label>
-            <input
-              type="text"
-              value={form.nombre}
-              onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
-              onKeyDown={e => e.key === 'Enter' && crearEvento()}
-              placeholder="Ej: Rifa Principal — Zona VIP"
-              style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 12 }}
-            />
-          </div>
-          <div style={{ minWidth: 120 }}>
-            <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>
-              CUPO POR RONDA
-            </label>
-            <input
-              type="number"
-              value={form.cupo}
-              min={2} max={100}
-              onChange={e => setForm(f => ({ ...f, cupo: e.target.value }))}
-              style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 14, textAlign: 'center' }}
-            />
-          </div>
-          <button
-            onClick={crearEvento}
-            disabled={creando}
-            style={{ padding: '11px 24px', background: `linear-gradient(135deg,${C.gold},#9a7a00)`, border: 'none', borderRadius: 8, color: '#0a0614', fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 2, fontWeight: 900, cursor: creando ? 'not-allowed' : 'pointer', opacity: creando ? 0.6 : 1, whiteSpace: 'nowrap' }}
-          >
-            {creando ? 'CREANDO...' : '⚔️ CREAR'}
-          </button>
-        </div>
-        {errForm && <p style={{ color: C.red, fontFamily: 'Cinzel, serif', fontSize: 10, marginTop: 10, letterSpacing: 1 }}>⚠ {errForm}</p>}
-      </div>
-
-      {/* Lista de eventos */}
-      {loading ? (
-        <p style={{ color: C.goldDim, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, textAlign: 'center', animation: 'pulse 1.5s ease-in-out infinite' }}>
-          CARGANDO EVENTOS...
-        </p>
-      ) : eventos.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, color: C.muted }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🎲</div>
-          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 2 }}>NO HAY EVENTOS AÚN</p>
-          <p style={{ fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>Crea el primero arriba para generar tu primer QR.</p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {eventos.map(evento => {
-            const link = `${BASE_URL}/sorteo/${evento.id}`;
-            const abierto = eventoAbierto === evento.id;
-            const stats = statsEvento(evento.id);
-            const rs = rondas[evento.id] || [];
-
-            return (
-              <div key={evento.id} style={{ background: C.card, border: `1px solid ${abierto ? C.borderHi : C.border}`, borderRadius: 16, overflow: 'hidden', transition: 'border-color .3s', animation: 'fadeIn .4s ease both' }}>
-
-                {/* Header del evento */}
-                <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: 200 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                      <span style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 'clamp(13px,2.5vw,17px)', color: C.gold }}>
-                        {evento.nombre}
-                      </span>
-                      <Badge activo={evento.activo} />
-                    </div>
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 1 }}>
-                        {evento.cupo_por_ronda} cupos / ronda
-                      </span>
-                      {abierto && rs.length > 0 && (
-                        <>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 1 }}>
-                            ⚔️ {stats.totalRegistrados} registrados
-                          </span>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.gold, letterSpacing: 1 }}>
-                            👑 {stats.totalGanadores} ganadores
-                          </span>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.green, letterSpacing: 1 }}>
-                            ✅ {stats.totalAceptaron}/{stats.totalGanadores} aceptaron ({stats.mediaAceptacion}%)
-                          </span>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: '#60A5FA', letterSpacing: 1 }}>
-                            📦 {stats.totalEntregados} entregados
-                          </span>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.purple, letterSpacing: 1 }}>
-                            👁 {stats.totalVieron} vieron
-                          </span>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 1 }}>
-                            🔁 {stats.totalRondas} rondas
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Botones */}
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <button
-                      onClick={() => { copiarLink(evento.id); }}
-                      style={{ padding: '8px 14px', background: copiado === evento.id ? 'rgba(68,255,136,0.12)' : 'rgba(212,175,55,0.08)', border: `1px solid ${copiado === evento.id ? 'rgba(68,255,136,0.4)' : C.border}`, borderRadius: 8, color: copiado === evento.id ? C.green : C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer', transition: 'all .2s' }}
-                    >
-                      {copiado === evento.id ? '✓ COPIADO' : '🔗 LINK'}
-                    </button>
-                    <button
-                      onClick={() => setEventoAbierto(abierto ? null : evento.id)}
-                      style={{ padding: '8px 14px', background: abierto ? 'rgba(155,89,255,0.15)' : 'rgba(255,255,255,0.04)', border: `1px solid ${abierto ? 'rgba(155,89,255,0.4)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 8, color: abierto ? C.purple : C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                    >
-                      {abierto ? '▲ CERRAR' : '▼ VER'}
-                    </button>
-                    <button
-                      onClick={() => toggleEvento(evento.id, evento.activo)}
-                      style={{ padding: '8px 14px', background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 8, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                    >
-                      {evento.activo ? 'PAUSAR' : 'ACTIVAR'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Panel expandido */}
-                {abierto && (
-                  <div style={{ borderTop: `1px solid ${C.border}`, padding: '24px', animation: 'fadeIn .3s ease both' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 32, alignItems: 'start' }}>
-
-                      {/* QR */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-                        <QRCode url={link} size={160} />
-                        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, textAlign: 'center' }}>
-                          ESCANEAR PARA ENTRAR
-                        </p>
-                        <div style={{ background: 'rgba(212,175,55,0.06)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '8px 12px', maxWidth: 160, wordBreak: 'break-all' }}>
-                          <p style={{ fontFamily: 'monospace', fontSize: 9, color: C.goldDim, margin: 0 }}>{link}</p>
-                        </div>
+            <div className="gc-contenido">
+              <div className="gc-encabezado">
+                <span className="gc-chispa c1">✦</span>
+                <span className="gc-chispa c2">✧</span>
+                <span className="gc-chispa c3">✦</span>
+                <h1 className="gc-titulo"><span className="gc-subrayado"></span>Guía de la Propotienda</h1>
+              </div>
+              <div className="gc-chat">
+                {mensajes.map(m => (
+                  <div
+                    key={m.id}
+                    ref={el => { if (el) msgRefs.current[m.id] = el; }}
+                    className={'gc-msg ' + m.tipo}
+                  >
+                    {m.tipo === 'bot' && <div dangerouslySetInnerHTML={{ __html: formatear(m.texto) }} />}
+                    {m.tipo === 'user' && m.texto}
+                    {m.tipo === 'error' && (
+                      <>
+                        Hubo un problema para conectar con el Guardián. Revisa tu conexión e inténtalo de nuevo.
+                        {m.detalle && <span className="gc-detalle">Detalle técnico: {m.detalle}</span>}
+                        <br />
                         <button
-                          onClick={() => copiarLink(evento.id)}
-                          style={{ padding: '8px 16px', background: `linear-gradient(135deg,${C.gold},#9a7a00)`, border: 'none', borderRadius: 6, color: '#0a0614', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, fontWeight: 900, cursor: 'pointer', width: '100%' }}
+                          className="gc-reintentar"
+                          onClick={() => {
+                            setMensajes(prev => prev.filter(x => x.id !== m.id));
+                            reintentarUltimoEnvio();
+                          }}
                         >
-                          📋 COPIAR LINK
+                          Reintentar
                         </button>
-                      </div>
-
-                      {/* Rondas en vivo */}
-                      <div>
-                        {/* Ronda activa */}
-                        {stats.rondaActiva && (
-                          <div style={{ background: 'rgba(212,175,55,0.05)', border: `1px solid ${C.borderHi}`, borderRadius: 12, padding: '16px', marginBottom: 16 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700, color: C.gold, letterSpacing: 2 }}>
-                                RONDA #{stats.rondaActiva.numero_ronda} — EN VIVO
-                              </span>
-                              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.green, animation: 'pulse 1.5s ease-in-out infinite' }}>
-                                ● {stats.rondaActiva.sorteo_participantes?.length || 0}/{stats.rondaActiva.cupo}
-                              </span>
-                            </div>
-                            {/* Barra de progreso */}
-                            <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden', marginBottom: 12 }}>
-                              <div style={{ height: '100%', borderRadius: 2, width: `${Math.min(((stats.rondaActiva.sorteo_participantes?.length || 0) / stats.rondaActiva.cupo) * 100, 100)}%`, background: `linear-gradient(90deg,${C.gold},${C.purple})`, transition: 'width .5s ease' }} />
-                            </div>
-                            {/* Participantes */}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                              {(stats.rondaActiva.sorteo_participantes || []).map((p, i) => (
-                                <span key={p.id} style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 20, padding: '3px 10px', animation: 'fadeIn .3s ease both', animationDelay: `${i * 0.04}s` }}>
-                                  {p.nombre}
-                                </span>
-                              ))}
-                              {(stats.rondaActiva.sorteo_participantes?.length || 0) === 0 && (
-                                <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: 'rgba(255,255,255,0.15)', fontStyle: 'italic' }}>
-                                  Esperando participantes...
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Sin ronda activa todavía */}
-                        {!stats.rondaActiva && rs.length === 0 && (
-                          <div style={{ textAlign: 'center', padding: '20px', color: C.muted }}>
-                            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2 }}>SIN RONDAS AÚN</p>
-                            <p style={{ fontSize: 12, marginTop: 6, fontStyle: 'italic' }}>
-                              Comparte el QR — la primera ronda abre cuando alguien se registre.
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Historial de rondas completadas */}
-                        {rs.filter(r => r.estado === 'completado').length > 0 && (
-                          <div>
-                            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3, color: C.goldDim, marginBottom: 10 }}>
-                              RONDAS COMPLETADAS
-                            </p>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 340, overflowY: 'auto', paddingRight: 4 }}>
-                              {rs.filter(r => r.estado === 'completado').map(ronda => {
-                                const ganador = ronda.sorteo_participantes?.find(p => p.es_ganador);
-                                return (
-                                  <div key={ronda.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                                    <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.goldDim, minWidth: 80 }}>
-                                      RONDA #{ronda.numero_ronda}
-                                    </span>
-                                    <span style={{ fontFamily: 'Cinzel, serif', fontSize: 7, color: 'rgba(212,175,55,0.3)', border: '1px solid rgba(212,175,55,0.12)', borderRadius: 3, padding: '2px 6px', letterSpacing: 1 }}>
-                                      SELLADA
-                                    </span>
-                                    {ganador && (
-                                      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.gold, fontWeight: 700 }}>
-                                        👑 {ganador.nombre}
-                                      </span>
-                                    )}
-                                    {ganador?.cupon_code && (
-                                      <span style={{ fontFamily: 'monospace', fontSize: 10, color: C.goldDim, background: 'rgba(212,175,55,0.08)', padding: '2px 8px', borderRadius: 4 }}>
-                                        {ganador.cupon_code}
-                                      </span>
-                                    )}
-                                    <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, marginLeft: 'auto' }}>
-                                      {ronda.sorteo_participantes?.length || 0} guerreros
-                                      {(() => {
-                                        const ganadores = ronda.sorteo_participantes?.filter(p => p.es_ganador) || [];
-                                        const aceptaron = ganadores.filter(p => p.cupon_aceptado).length;
-                                        const vieron = ganadores.filter(p => p.premio_visto).length;
-                                        return ganadores.length > 0 ? ` · ✅${aceptaron}/${ganadores.length} · 👁${vieron}` : '';
-                                      })()}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                      </>
+                    )}
                   </div>
+                ))}
+                {pensando && (
+                  <div className="gc-thinking" ref={pensandoRef}><span></span><span></span><span></span></div>
                 )}
               </div>
-            );
-          })}
-        </div>
-      )}
-    </>)}
 
-      {/* ══ TAB: MÉTRICAS ══ */}
-      {tabActiva === 'metricas' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          {loadingMetricas ? (
-            <div style={{ color: C.muted, fontFamily: 'Cinzel,serif', fontSize: 11, letterSpacing: 3, textAlign: 'center', padding: 60 }}>CARGANDO MÉTRICAS...</div>
-          ) : metricas ? (<>
-
-            {/* ── KPIs estilo Skool ── */}
-            {(() => {
-              const total = metricas.porAliado.reduce((acc, a) => ({
-                scans: acc.scans + (a.scan_count || 0),
-                registros: acc.registros + Number(a.registros || 0),
-                ganadores: acc.ganadores + Number(a.ganadores || 0),
-                aceptados: acc.aceptados + Number(a.cupones_aceptados || 0),
-                entregados: acc.entregados + Number(a.premios_entregados || 0),
-              }), { scans: 0, registros: 0, ganadores: 0, aceptados: 0, entregados: 0 });
-              const totalReg = metricas.registros.length || 0;
-              const convGlobal = total.scans ? `${Math.round(total.registros / total.scans * 100)}%` : `${totalReg > 0 ? '—' : '0%'}`;
-              const kpis = [
-                { label: 'VISITANTES (QR)', value: total.scans, color: '#CC44FF', icon: '📡' },
-                { label: 'REGISTROS', value: totalReg, color: C.gold, icon: '⚔️' },
-                { label: 'CONV. GLOBAL', value: convGlobal, color: '#4ade80', icon: '📈' },
-                { label: 'GANADORES', value: total.ganadores, color: '#f0c040', icon: '👑' },
-                { label: 'CUPONES ACTIVOS', value: total.aceptados, color: '#60a5fa', icon: '🎟️' },
-                { label: 'PREMIOS ENTREGADOS', value: total.entregados, color: '#86efac', icon: '🏆' },
-              ];
-              return (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
-                  {kpis.map((k, i) => (
-                    <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '20px 16px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-                      <div style={{ position: 'absolute', top: 8, right: 10, fontSize: 18, opacity: 0.18 }}>{k.icon}</div>
-                      <div style={{ fontSize: 32, fontWeight: 900, color: k.color, fontFamily: 'Cinzel,serif', lineHeight: 1 }}>{k.value}</div>
-                      <div style={{ fontSize: 7, letterSpacing: 2, color: C.muted, fontFamily: 'Cinzel,serif', marginTop: 8, lineHeight: 1.4 }}>{k.label}</div>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
-
-            {/* ── Fila: Pastel UTM + Barras por aliado ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 16 }}>
-
-              {/* Pastel — ¿De dónde vienen? */}
-              <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '20px 20px 16px' }}>
-                <div style={{ fontFamily: 'Cinzel,serif', fontSize: 10, letterSpacing: 3, color: C.gold, marginBottom: 16 }}>🌐 ORIGEN DE REGISTROS</div>
-                {(() => {
-                  const data = metricas.porUtm || [];
-                  const total = data.reduce((s, d) => s + Number(d.registros || 0), 0);
-                  if (total === 0) return <div style={{ color: C.muted, fontSize: 11, textAlign: 'center', padding: '20px 0' }}>Sin datos aún</div>;
-                  const COLORS = ['#D4AF37','#CC44FF','#E1306C','#69C9D0','#4285F4','#FF0000','#4ade80','#f87171'];
-                  // SVG pastel
-                  const CANAL_ICON = {
-                    'QR Aliado': '📡', 'Instagram': '📸', 'TikTok': '🎵',
-                    'Facebook': '👥', 'YouTube': '▶️', 'Google': '🔍',
-                    'Directo': '🔗',
-                  };
-                  // Construir conic-gradient para el donut
-                  const slices = [];
-                  let acc = 0;
-                  data.forEach((d, i) => {
-                    const pct = Number(d.pct);
-                    slices.push({ color: COLORS[i % COLORS.length], from: acc, to: acc + pct, label: d.canal, pct: d.pct, registros: d.registros });
-                    acc += pct;
-                  });
-                  const conicParts = slices.map(s => `${s.color} ${s.from}% ${s.to}%`).join(', ');
-                  return (
-                    <div>
-                      <div style={{ position: 'relative', width: 140, height: 140, margin: '0 auto 14px', borderRadius: '50%', background: `conic-gradient(${conicParts})` }}>
-                        <div style={{
-                          position: 'absolute', top: '50%', left: '50%',
-                          transform: 'translate(-50%,-50%)',
-                          width: 76, height: 76, borderRadius: '50%',
-                          background: C.card,
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          <span style={{ fontFamily: 'Cinzel,serif', fontWeight: 900, fontSize: 22, color: C.gold, lineHeight: 1 }}>{total}</span>
-                          <span style={{ fontFamily: 'Cinzel,serif', fontSize: 6, letterSpacing: 1.5, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>REGISTROS</span>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                        {slices.map((s, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flexShrink: 0 }} />
-                            <span style={{ fontSize: 13, marginRight: 2 }}>{CANAL_ICON[s.label] || '🌐'}</span>
-                            <span style={{ flex: 1, fontFamily: 'Cinzel,serif', fontSize: 9, letterSpacing: 0.5, color: C.text }}>{s.label}</span>
-                            <span style={{ fontSize: 11, color: s.color, fontWeight: 700, fontFamily: 'Cinzel,serif' }}>{s.registros}</span>
-                            <span style={{ fontSize: 9, color: C.muted, minWidth: 32, textAlign: 'right' }}>{s.pct}%</span>
-                          </div>
-                        ))}
-                      </div>
-                      {/* Links + QR para redes */}
-                      {(() => {
-                        const REDES = [
-                          { label: 'Instagram', utm: 'instagram', icon: '📸' },
-                          { label: 'TikTok',    utm: 'tiktok',    icon: '🎵' },
-                          { label: 'Facebook',  utm: 'facebook',  icon: '👥' },
-                          { label: 'YouTube',   utm: 'youtube',   icon: '▶️' },
-                          { label: 'Google',    utm: 'google',    icon: '🔍' },
-                        ];
-                        const [qrAbierto, setQrAbierto] = [window.__qrAbierto, window.__setQrAbierto];
-                        return (
-                          <div style={{ marginTop: 14, padding: '10px 12px', background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.15)', borderRadius: 8 }}>
-                            <div style={{ fontFamily: 'Cinzel,serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 8 }}>LINKS PARA REDES SOCIALES</div>
-                            {REDES.map((red) => {
-                              const fullUrl = `${BASE_URL}/sorteo?utm_source=${red.utm}`;
-                              return (
-                                <div key={red.utm} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
-                                  <span style={{ fontSize: 13 }}>{red.icon}</span>
-                                  <span style={{ fontFamily: 'monospace', fontSize: 8, color: 'rgba(255,255,255,0.45)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {fullUrl}
-                                  </span>
-                                  <button
-                                    onClick={() => { copiarAlPortapapeles(fullUrl); }}
-                                    style={{ flexShrink: 0, padding: '3px 8px', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: 5, color: C.gold, fontFamily: 'Cinzel,serif', fontSize: 7, letterSpacing: 1, cursor: 'pointer' }}
-                                  >
-                                    COPIAR
-                                  </button>
-                                  <button
-                                    onClick={() => { window.__qrModalUrl = fullUrl; window.__qrModalLabel = red.label; window.__qrModalIcon = red.icon; window.dispatchEvent(new Event('abrir-qr-modal')); }}
-                                    style={{ flexShrink: 0, padding: '3px 8px', background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 5, color: C.purple, fontFamily: 'Cinzel,serif', fontSize: 7, letterSpacing: 1, cursor: 'pointer' }}
-                                  >
-                                    QR
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  );
-                })()}
+              <div className="gc-acciones">
+                <button className="gc-accion" onClick={descargarPlan}>⬇ Descargar plan</button>
+                <button className="gc-accion" onClick={nuevaSesion}>↻ Nueva sesión</button>
               </div>
 
-              {/* Barras por aliado */}
-              <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '20px 20px 16px' }}>
-                <div style={{ fontFamily: 'Cinzel,serif', fontSize: 10, letterSpacing: 3, color: C.gold, marginBottom: 16 }}>📍 RENDIMIENTO POR ALIADO</div>
-                {metricas.porAliado.length === 0 ? (
-                  <div style={{ color: C.muted, fontSize: 11, textAlign: 'center', padding: '20px 0' }}>Sin aliados activos</div>
-                ) : (() => {
-                  const max = Math.max(...metricas.porAliado.map(a => Number(a.registros || 0)), 1);
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                      {metricas.porAliado.map((a, i) => (
-                        <div key={i}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontSize: 9, fontFamily: 'Cinzel,serif', letterSpacing: 1, color: a.activo ? '#4ade80' : C.muted }}>
-                                {a.activo ? '●' : '○'}
-                              </span>
-                              <span style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{a.nombre}</span>
-                              <span style={{ fontSize: 9, color: C.muted, fontFamily: 'monospace' }}>/{a.slug}</span>
-                            </div>
-                            <span style={{ fontSize: 11, color: C.gold, fontWeight: 700 }}>{a.registros || 0} reg</span>
-                          </div>
-                          <div style={{ height: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 6, overflow: 'hidden', marginBottom: 5 }}>
-                            <div style={{ height: '100%', width: `${(Number(a.registros || 0) / max) * 100}%`, background: `linear-gradient(90deg,#CC44FF,${C.gold})`, borderRadius: 6 }} />
-                          </div>
-                          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontFamily: 'Cinzel,serif' }}>{a.scan_count || 0} scans</span>
-                            <span style={{ fontSize: 9, color: (a.conversion_pct || 0) >= 30 ? '#4ade80' : (a.conversion_pct || 0) >= 10 ? C.gold : '#f87171', fontFamily: 'Cinzel,serif' }}>{a.conversion_pct || 0}% conv</span>
-                            <span style={{ fontSize: 9, color: '#f0c040', fontFamily: 'Cinzel,serif' }}>{a.ganadores || 0} 👑</span>
-                            <span style={{ fontSize: 9, color: '#60a5fa', fontFamily: 'Cinzel,serif' }}>{a.cupones_aceptados || 0} cupones</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-
-            {/* ── Embudo global ── */}
-            {(() => {
-              const t = metricas.porAliado.reduce((acc, a) => ({
-                scans: acc.scans + (a.scan_count || 0),
-                registros: acc.registros + Number(a.registros || 0),
-                ganadores: acc.ganadores + Number(a.ganadores || 0),
-                vistos: acc.vistos + Number(a.cupones_vistos || 0),
-                aceptados: acc.aceptados + Number(a.cupones_aceptados || 0),
-                entregados: acc.entregados + Number(a.premios_entregados || 0),
-              }), { scans: 0, registros: 0, ganadores: 0, vistos: 0, aceptados: 0, entregados: 0 });
-              const totalReg = metricas.registros.length || 0;
-              const pasos = [
-                { label: 'SCANS QR', val: t.scans, color: '#CC44FF' },
-                { label: 'REGISTROS TOTALES', val: totalReg, color: C.gold },
-                { label: 'GANADORES', val: t.ganadores, color: '#f0c040' },
-                { label: 'VIERON PREMIO', val: t.vistos, color: '#60a5fa' },
-                { label: 'ACEPTARON CUPÓN', val: t.aceptados, color: '#4ade80' },
-                { label: 'PREMIO ENTREGADO', val: t.entregados, color: '#86efac' },
-              ];
-              const maxVal = Math.max(...pasos.map(p => p.val), 1);
-              return (
-                <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '20px 24px' }}>
-                  <div style={{ fontFamily: 'Cinzel,serif', fontSize: 10, letterSpacing: 3, color: C.gold, marginBottom: 20 }}>⚔️ EMBUDO COMPLETO</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '8px 32px' }}>
-                    {pasos.map((p, i) => (
-                      <div key={i} style={{ marginBottom: 4 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <span style={{ fontSize: 9, fontFamily: 'Cinzel,serif', letterSpacing: 2, color: C.muted }}>{p.label}</span>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: p.color }}>{p.val}</span>
-                        </div>
-                        <div style={{ height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${(p.val / maxVal) * 100}%`, background: p.color, borderRadius: 4, opacity: 0.85 }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* ── Últimos 50 registros ── */}
-            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden' }}>
-              <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}`, fontFamily: 'Cinzel,serif', fontSize: 10, letterSpacing: 3, color: C.gold }}>
-                🧾 ÚLTIMOS 50 REGISTROS
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
-                  <thead>
-                    <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
-                      {['FECHA','NOMBRE','EMAIL','CANAL','ESTADO'].map(h => (
-                        <th key={h} style={{ padding: '10px 16px', fontFamily: 'Cinzel,serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, textAlign: 'left', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {metricas.registros.slice(0, 50).map((r, i) => {
-                      const canal = r.aliado_origen_slug
-                        ? `📡 ${r.aliado_origen_slug}`
-                        : r.utm_source
-                          ? `🌐 ${r.utm_source}`
-                          : '· directo';
-                      const canalColor = r.aliado_origen_slug ? C.gold : r.utm_source ? '#CC44FF' : C.muted;
-                      return (
-                        <tr key={i} style={{ borderBottom: `1px solid rgba(255,255,255,0.04)` }}>
-                          <td style={{ padding: '10px 16px', color: C.muted, fontSize: 11, whiteSpace: 'nowrap' }}>
-                            {new Date(r.registered_at).toLocaleDateString('es-MX', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
-                          </td>
-                          <td style={{ padding: '10px 16px', color: C.text, fontSize: 12 }}>{r.nombre}</td>
-                          <td style={{ padding: '10px 16px', color: C.muted, fontSize: 11 }}>{r.email}</td>
-                          <td style={{ padding: '10px 16px' }}>
-                            <span style={{ fontSize: 10, fontFamily: 'Cinzel,serif', letterSpacing: 1, color: canalColor }}>{canal}</span>
-                          </td>
-                          <td style={{ padding: '10px 16px' }}>
-                            <span style={{ fontSize: 9, fontFamily: 'Cinzel,serif', letterSpacing: 1, color: r.es_ganador ? '#f0c040' : C.muted }}>
-                              {r.es_ganador ? '👑 GANADOR' : '· participante'}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-          </>) : null}
-        </div>
-      )}
-
-      {/* ══ TAB: ALIADOS ══ */}
-      {tabActiva === 'aliados' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-
-          {/* Formulario nuevo aliado */}
-          <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: 'clamp(20px,4vw,28px)', animation: 'fadeIn .4s ease both' }}>
-            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.gold, margin: '0 0 20px' }}>
-              + NUEVO ALIADO
-            </h2>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div style={{ flex: 2, minWidth: 180 }}>
-                <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>NOMBRE DEL NEGOCIO</label>
-                <input
-                  type="text"
-                  value={formAliado.nombre}
-                  onChange={e => setFormAliado(f => ({ ...f, nombre: e.target.value, slug: slugify(e.target.value) }))}
-                  placeholder="Ej: FuerZa Box Gym"
-                  style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 12 }}
-                />
-              </div>
-              <div style={{ minWidth: 140 }}>
-                <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>SLUG (URL del QR)</label>
-                <input
-                  type="text"
-                  value={formAliado.slug}
-                  onChange={e => setFormAliado(f => ({ ...f, slug: slugify(e.target.value) }))}
-                  placeholder="fuerzabox"
-                  style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'monospace', fontSize: 12 }}
-                />
-              </div>
-              
-              <div style={{ minWidth: 130 }}>
-                <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>ROL (COMISIÓN)</label>
-                <select
-                  value={formAliado.rol}
-                  onChange={e => setFormAliado(f => ({ ...f, rol: e.target.value }))}
-                  style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 11 }}
-                >
-                  <option value="">— Sin comisión —</option>
-                  <option value="punto_aliado">Punto Aliado (0%)</option>
-                  <option value="lider">Líder</option>
-                  <option value="gerente">Gerente</option>
-                </select>
-              </div>
-              {(formAliado.rol === 'lider' || formAliado.rol === 'gerente') && (
-                <div style={{ minWidth: 90 }}>
-                  <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>% COMISIÓN</label>
-                  <input
-                    type="number" step="0.01" min="0" max="100"
-                    value={formAliado.comision_pct}
-                    onChange={e => setFormAliado(f => ({ ...f, comision_pct: e.target.value }))}
-                    placeholder="15"
-                    style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'monospace', fontSize: 12 }}
-                  />
-                </div>
-              )}
-              {formAliado.rol === 'lider' && (
-                <div style={{ minWidth: 160 }}>
-                  <label style={{ display: 'block', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.goldDim, marginBottom: 6 }}>REPORTA A GERENTE</label>
-                  <select
-                    value={formAliado.manager_aliado_id}
-                    onChange={e => setFormAliado(f => ({ ...f, manager_aliado_id: e.target.value }))}
-                    style={{ width: '100%', padding: '11px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: 'Cinzel, serif', fontSize: 11 }}
-                  >
-                    <option value="">— Ninguno —</option>
-                    {aliados.filter(a => a.rol === 'gerente').map(g => (
-                      <option key={g.id} value={g.id}>{g.nombre}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <button
-                onClick={crearAliado}
-                disabled={creandoAliado}
-                style={{ padding: '11px 24px', background: `linear-gradient(135deg,${C.gold},#9a7a00)`, border: 'none', borderRadius: 8, color: '#0a0614', fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 2, fontWeight: 900, cursor: creandoAliado ? 'not-allowed' : 'pointer', opacity: creandoAliado ? 0.6 : 1, whiteSpace: 'nowrap' }}
-              >
-                {creandoAliado ? 'CREANDO...' : '⚔️ CREAR'}
-              </button>
-            </div>
-            {errAliado && <p style={{ color: C.red, fontFamily: 'Cinzel, serif', fontSize: 10, marginTop: 10, letterSpacing: 1 }}>⚠ {errAliado}</p>}
-            {formAliado.slug && (
-              <p style={{ fontFamily: 'monospace', fontSize: 10, color: C.goldDim, marginTop: 10 }}>
-                🔗 QR apuntará a: <span style={{ color: C.gold }}>{SUPABASE_URL}/functions/v1/r/{formAliado.slug}</span>
-              </p>
-            )}
-          </div>
-
-          {/* Selector de evento global */}
-          <div style={{ background: C.card, border: `1px solid ${C.borderHi}`, borderRadius: 14, padding: '18px 24px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 3, color: C.goldDim, marginBottom: 6 }}>
-                🌐 SORTEO ACTIVO GLOBAL — todos los QR apuntan aquí
-              </div>
-              <select
-                value={eventoGlobal}
-                onChange={e => guardarEventoGlobal(e.target.value)}
-                style={{ width: '100%', padding: '10px 14px', background: '#07040f', border: `1px solid ${C.borderHi}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700 }}
-              >
-                <option value="">— Sin evento activo —</option>
-                {eventosActivos.map(ev => (
-                  <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: guardandoGlobal ? C.goldDim : C.green, letterSpacing: 2, minWidth: 80, textAlign: 'right' }}>
-              {guardandoGlobal ? '⏳ GUARDANDO...' : eventoGlobal ? '✓ ACTIVO' : '⚠ SIN EVENTO'}
-            </div>
-          </div>
-
-          {/* Lista de aliados */}
-          {loadingAliados ? (
-            <p style={{ color: C.goldDim, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, textAlign: 'center', animation: 'pulse 1.5s ease-in-out infinite' }}>
-              CARGANDO ALIADOS...
-            </p>
-          ) : aliados.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 60, color: C.muted }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🤝</div>
-              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 2 }}>SIN ALIADOS AÚN</p>
-              <p style={{ fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>Crea el primero arriba para generar su QR permanente.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {aliados.map(aliado => {
-                const qrUrl = `${SUPABASE_URL}/functions/v1/r/${aliado.slug}`;
-                
-                return (
-                  <div key={aliado.id} style={{ background: C.card, border: `1px solid ${aliado.activo ? C.borderHi : C.border}`, borderRadius: 14, padding: '18px 22px', animation: 'fadeIn .3s ease both', display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
-
-                    {/* QR miniatura */}
-                    <div style={{ flexShrink: 0 }}>
-                      <QRCode url={qrUrl} size={80} />
-                    </div>
-
-                    {/* Info */}
-                    <div style={{ flex: 1, minWidth: 180 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                        <input
-                          defaultValue={aliado.nombre}
-                          onBlur={e => {
-                            const v = e.target.value.trim();
-                            if (v && v !== aliado.nombre) actualizarComisionAliado(aliado.id, { nombre: v });
-                          }}
-                          title="Nombre real de referencia — solo visual, no afecta el QR ni las comisiones"
-                          style={{ background: 'transparent', border: 'none', borderBottom: `1px dashed ${C.border}`, fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 14, color: C.gold, padding: '2px 0', minWidth: 90 }}
-                        />
-                        <Badge activo={aliado.activo} />
-                      </div>
-                      <p style={{ fontFamily: 'monospace', fontSize: 10, color: C.goldDim, margin: '0 0 4px' }}>/{aliado.slug}</p>
-                      {aliado.rol === 'lider' && aliado.manager_aliado_id && (
-                        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.purple, margin: '0 0 4px' }}>
-                          👤 Gerente: {aliados.find(a => a.id === aliado.manager_aliado_id)?.nombre || '—'}
-                        </p>
-                      )}
-                      <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, margin: 0 }}>📊 {aliado.scan_count || 0} scans</p>
-                    </div>
-
-                    {/* Comisión: rol / % / gerente — editable inline */}
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', minWidth: 260 }}>
-                      <select
-                        value={aliado.rol || ''}
-                        onChange={e => actualizarComisionAliado(aliado.id, { rol: e.target.value || null })}
-                        disabled={guardandoComision === aliado.id}
-                        style={{ padding: '7px 10px', background: '#07040f', border: `1px solid ${aliado.rol ? C.borderHi : C.border}`, borderRadius: 7, color: aliado.rol ? C.text : C.muted, fontFamily: 'Cinzel, serif', fontSize: 9 }}
-                      >
-                        <option value="">— Sin comisión —</option>
-                        <option value="punto_aliado">Punto Aliado</option>
-                        <option value="lider">Líder</option>
-                        <option value="gerente">Gerente</option>
-                      </select>
-                      {(aliado.rol === 'lider' || aliado.rol === 'gerente') && (
-                        <>
-                          <input
-                            type="number" step="0.01" min="0" max="100"
-                            defaultValue={aliado.comision_pct ?? ''}
-                            onBlur={e => {
-                              const v = e.target.value === '' ? null : Number(e.target.value);
-                              if (v !== aliado.comision_pct) actualizarComisionAliado(aliado.id, { comision_pct: v });
-                            }}
-                            placeholder="%"
-                            title="% de comisión"
-                            style={{ width: 56, padding: '7px 8px', background: '#07040f', border: `1px solid ${aliado.comision_pct != null ? C.borderHi : C.border}`, borderRadius: 7, color: C.gold, fontFamily: 'monospace', fontSize: 10 }}
-                          />
-                          {aliado.rol === 'lider' && (
-                            <select
-                              value={aliado.manager_aliado_id || ''}
-                              onChange={e => actualizarComisionAliado(aliado.id, { manager_aliado_id: e.target.value || null })}
-                              disabled={guardandoComision === aliado.id}
-                              title="Reporta a gerente"
-                              style={{ padding: '7px 10px', background: '#07040f', border: `1px solid ${C.border}`, borderRadius: 7, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9 }}
-                            >
-                              <option value="">— Sin gerente —</option>
-                              {aliados.filter(a => a.rol === 'gerente' && a.id !== aliado.id).map(g => (
-                                <option key={g.id} value={g.id}>{g.nombre}</option>
-                              ))}
-                            </select>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    {/* Botones */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <button
-                        onClick={() => copiarQRAliado(aliado.slug)}
-                        style={{ padding: '7px 14px', background: copiadoAliado === aliado.slug ? 'rgba(68,255,136,0.12)' : 'rgba(212,175,55,0.08)', border: `1px solid ${copiadoAliado === aliado.slug ? 'rgba(68,255,136,0.4)' : C.border}`, borderRadius: 7, color: copiadoAliado === aliado.slug ? C.green : C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer', transition: 'all .2s' }}
-                      >
-                        {copiadoAliado === aliado.slug ? '✓ COPIADO' : '🔗 COPIAR QR'}
-                      </button>
-                      <button
-                        onClick={() => descargarQR(`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrUrl)}&bgcolor=FFFFFF&color=000000&margin=10`, `qr-${aliado.slug}-blanco.png`)}
-                        style={{ padding: '7px 14px', background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 7, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                      >
-                        ⬇ QR BLANCO
-                      </button>
-                      <button
-                        onClick={() => toggleAliado(aliado.id, aliado.activo)}
-                        style={{ padding: '7px 14px', background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 7, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                      >
-                        {aliado.activo ? 'PAUSAR' : 'ACTIVAR'}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-    {/* ══ TAB: QR FÍSICOS ══ */}
-      {tabActiva === 'qrfisicos' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-          {/* Header info */}
-          <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: '20px 24px' }}>
-            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.gold, margin: '0 0 8px' }}>
-              📦 QR FÍSICOS — TMP-001 a TMP-100
-            </h2>
-            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.muted, letterSpacing: 1, margin: 0 }}>
-              Asigna cada código físico a un aliado. El QR impreso redirige automáticamente a su página.
-            </p>
-          </div>
-
-          {/* Lista */}
-          {loadingQrF ? (
-            <p style={{ color: C.goldDim, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, textAlign: 'center' }}>CARGANDO...</p>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-              {qrFisicos.map(qr => {
-                const asignado = !!qr.aliado_id;
-                const qrUrlReal = `${SUPABASE_URL}/functions/v1/r/${qr.id}`;
-                return (
-                  <div key={qr.id} style={{
-                    background: C.card,
-                    border: `1px solid ${asignado ? C.borderHi : C.border}`,
-                    borderRadius: 12, padding: '16px 18px',
-                    display: 'flex', flexDirection: 'column', gap: 10,
-                  }}>
-                    {/* ID + estado */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 14, color: C.gold }}>{qr.id}</span>
-                      <span style={{
-                        fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2,
-                        color: asignado ? C.green : C.muted,
-                        border: `1px solid ${asignado ? 'rgba(68,255,136,0.3)' : 'rgba(255,255,255,0.1)'}`,
-                        borderRadius: 20, padding: '3px 10px',
-                      }}>
-                        {asignado ? '● ASIGNADO' : '○ LIBRE'}
-                      </span>
-                    </div>
-
-                    {/* Aliado asignado o selector */}
-                    <select
-                      value={qr.aliado_id || ''}
-                      onChange={async (e) => {
-                        const aliadoId = e.target.value;
-                        const { error } = await supabase.from('qr_fisicos').update({ aliado_id: aliadoId || null }).eq('id', qr.id);
-                        if (error) { alert('Error al guardar. Intenta de nuevo.'); return; }
-                        const aliadoData = aliados.find(a => a.id === aliadoId) || null;
-                        setQrFisicos(prev => prev.map(q => q.id === qr.id ? { ...q, aliado_id: aliadoId || null, aliados: aliadoData } : q));
-                      }}
-                      style={{ width: '100%', padding: '8px 12px', background: '#07040f', border: `1px solid ${asignado ? C.borderHi : C.border}`, borderRadius: 8, color: asignado ? C.text : C.muted, fontFamily: 'Cinzel, serif', fontSize: 10 }}
-                    >
-                      <option value="">— Sin asignar —</option>
-                      {aliados.map(a => (
-                        <option key={a.id} value={a.id}>{a.nombre} (/{a.slug})</option>
-                      ))} 
-                    </select>
-
-                    {/* Botones QR */}
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        onClick={() => setQrFModal({ id: qr.id, url: qrUrlReal })}
-                        style={{ flex: 1, padding: '7px 0', background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 7, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                      >
-                        VER QR
-                      </button>
-                      <button
-                        onClick={() => descargarQR(`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrUrlReal)}&bgcolor=07040f&color=D4AF37&margin=10`, `qr-${qr.id}.png`)}
-                        style={{ flex: 1, padding: '7px 0', background: 'rgba(155,89,255,0.1)', border: '1px solid rgba(155,89,255,0.25)', borderRadius: 7, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                      >
-                        DESCARGAR
-                      </button>
-                      <button
-                        onClick={() => descargarQR(`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrUrlReal)}&bgcolor=07040f&color=FFFFFF&margin=10`, `qr-${qr.id}-blanco.png`)}
-                        style={{ flex: 1, padding: '7px 0', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 7, color: '#FFFFFF', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                      >
-                        BLANCO
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ══ TAB: REPORTES ══ */}
-      {tabActiva === 'reportes' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.gold, margin: 0 }}>
-              🆘 REPORTES DE USUARIOS
-            </h2>
-            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.muted, letterSpacing: 1 }}>
-              {reportes.filter(r => r.status === 'pendiente').length} pendiente(s) · {reportes.length} total
-            </span>
-          </div>
-
-          {loadingReportes ? (
-            <p style={{ color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 11, textAlign: 'center', padding: 30 }}>Cargando…</p>
-          ) : reportes.length === 0 ? (
-            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 40, textAlign: 'center' }}>
-              <div style={{ fontSize: 28, marginBottom: 10 }}>✨</div>
-              <p style={{ color: C.muted, fontFamily: 'Crimson Text, serif', fontSize: 14, fontStyle: 'italic' }}>
-                No hay reportes por ahora.
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {reportes.map(r => {
-                const p = r.sorteo_participantes;
-                const pendiente = r.status === 'pendiente';
-                return (
-                  <div key={r.id} style={{
-                    background: C.card,
-                    border: `1.5px solid ${pendiente ? 'rgba(255,68,102,0.4)' : C.border}`,
-                    borderRadius: 14, padding: '18px 20px',
-                    display: 'flex', flexDirection: 'column', gap: 12,
-                    animation: 'fadeIn .3s ease both',
-                  }}>
-                    {/* Encabezado: estado + fecha */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                      <span style={{
-                        fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, fontWeight: 900,
-                        color: pendiente ? C.red : C.green,
-                        border: `1px solid ${pendiente ? 'rgba(255,68,102,0.35)' : 'rgba(68,255,136,0.3)'}`,
-                        borderRadius: 20, padding: '4px 12px',
-                      }}>
-                        {pendiente ? '🔴 PENDIENTE' : '🟢 ATENDIDO'}
-                      </span>
-                      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 1 }}>
-                        {new Date(r.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-
-                    {/* Correo + contexto de su registro */}
-                    <div>
-                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: C.text }}>
-                        {p?.nombre || '— Nombre no disponible —'}
-                      </div>
-                      <div style={{ fontFamily: 'monospace', fontSize: 11, color: C.goldDim, marginTop: 2 }}>
-                        {r.email}
-                      </div>
-                    </div>
-
-                    {/* Contexto de su participación, si se encontró */}
-                    {p ? (
-                      <div style={{
-                        display: 'flex', flexWrap: 'wrap', gap: 8,
-                        fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 0.5,
-                      }}>
-                        <span style={{ background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '4px 10px', color: C.gold }}>
-                          {p.sorteos?.sorteo_eventos?.nombre || 'Evento —'}
-                        </span>
-                        <span style={{ background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '4px 10px', color: C.muted }}>
-                          Ronda #{p.sorteos?.numero_ronda ?? '—'}
-                        </span>
-                        <span style={{ background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '4px 10px', color: p.es_ganador ? C.green : C.muted }}>
-                          {p.sorteos?.estado !== 'completado' ? 'Sorteo pendiente' : p.es_ganador ? `🏆 Ganó (${p.tipo_premio || 'premio'})` : 'No ganó'}
-                        </span>
-                        <span style={{ background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '4px 10px', color: p.cupon_aceptado ? C.green : C.muted }}>
-                          {p.cupon_aceptado ? 'Cupón aceptado' : 'Cupón sin aceptar'}
-                        </span>
-                      </div>
-                    ) : (
-                      <div style={{
-                        background: 'rgba(255,68,102,0.08)', border: '1px solid rgba(255,68,102,0.25)',
-                        borderRadius: 8, padding: '8px 12px',
-                        fontFamily: 'Crimson Text, serif', fontSize: 12, color: 'rgba(255,150,170,0.9)', fontStyle: 'italic',
-                      }}>
-                        ⚠ No encontramos ningún registro de sorteo con este correo — puede que nunca haya completado su registro.
-                      </div>
-                    )}
-
-                    {/* Mensaje del usuario */}
-                    <div style={{
-                      background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '12px 14px',
-                      fontFamily: 'Crimson Text, serif', fontSize: 14, color: C.text, lineHeight: 1.5,
-                    }}>
-                      "{r.mensaje}"
-                    </div>
-
-                    {/* Acciones */}
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        onClick={() => copiarAlPortapapeles(r.email)}
-                        style={{ flex: 1, padding: '9px 0', background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                      >
-                        COPIAR CORREO
-                      </button>
-                      <button
-                        onClick={() => marcarReporteAtendido(r.id, pendiente ? 'atendido' : 'pendiente')}
-                        disabled={actualizandoReporte === r.id}
-                        style={{
-                          flex: 1, padding: '9px 0', borderRadius: 8, border: 'none',
-                          cursor: actualizandoReporte === r.id ? 'not-allowed' : 'pointer',
-                          background: pendiente ? 'linear-gradient(135deg,#44ff88,#1a9a52)' : 'rgba(255,255,255,0.08)',
-                          color: pendiente ? '#07040f' : C.muted,
-                          fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, fontWeight: 900,
-                        }}
-                      >
-                        {actualizandoReporte === r.id ? '...' : pendiente ? '✓ MARCAR ATENDIDO' : '↺ REABRIR'}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ══ TAB: FIRMAS (acuerdos digitales de líderes/gerentes) ══ */}
-      {tabActiva === 'firmas' && (
-        <div style={{ animation: 'fadeIn .4s ease both' }}>
-          <p style={{ color: C.muted, fontSize: 13, fontStyle: 'italic', marginBottom: 24 }}>
-            Genera el link de firma para un líder o gerente, mándaselo por WhatsApp, y aquí ves si ya lo firmó.
-          </p>
-
-          {/* Lista de aliados para generar/copiar su link */}
-          <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: 'clamp(18px,4vw,24px)', marginBottom: 28 }}>
-            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: C.gold, margin: '0 0 16px' }}>
-              GENERAR LINK POR ALIADO
-            </h2>
-            {loadingAliados ? (
-              <p style={{ color: C.muted, fontSize: 12 }}>Cargando aliados...</p>
-            ) : aliados.length === 0 ? (
-              <p style={{ color: C.muted, fontSize: 12 }}>No hay aliados creados todavía — ve a la tab 🤝 ALIADOS.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {aliados.map(a => {
-                  const firma = firmas.find(f => f.aliado_id === a.id);
-                  const firmado = !!firma?.fecha_firma;
-                  return (
-                    <div key={a.id} style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-                      background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', flexWrap: 'wrap',
-                    }}>
-                      <div>
-                        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: C.text, fontWeight: 700 }}>{a.nombre}</div>
-                        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted, marginTop: 2 }}>
-                          {(a.rol || 'sin rol').toUpperCase()} · @{a.slug}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        {firma && (
-                          <span style={{
-                            fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, padding: '4px 9px', borderRadius: 20,
-                            color: firmado ? C.green : C.gold,
-                            border: `1px solid ${firmado ? 'rgba(68,255,136,0.3)' : 'rgba(212,175,55,0.3)'}`,
-                          }}>
-                            {firmado ? `✓ FIRMADO ${new Date(firma.fecha_firma).toLocaleDateString('es-MX')}` : '⏳ PENDIENTE'}
-                          </span>
-                        )}
-                        <button
-                          onClick={() => generarLinkFirma(a.id)}
-                          disabled={generandoFirma === a.id}
-                          style={{
-                            padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                            background: firmado ? 'rgba(255,255,255,0.08)' : `linear-gradient(135deg,${C.gold},#9a7a00)`,
-                            color: firmado ? C.muted : '#0a0614',
-                            fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, fontWeight: 900,
-                          }}
-                        >
-                          {generandoFirma === a.id ? '...' : copiadoFirma === a.id ? '✓ COPIADO' : firma ? '🔗 COPIAR LINK' : '✍️ GENERAR LINK'}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Código de acceso al dashboard /lider — solo líderes y gerentes */}
-          <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: 'clamp(18px,4vw,24px)', marginBottom: 28 }}>
-            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: C.gold, margin: '0 0 16px' }}>
-              CÓDIGO DE ACCESO A /LIDER
-            </h2>
-            <p style={{ color: C.muted, fontSize: 11, fontStyle: 'italic', margin: '0 0 4px' }}>
-              Genera el código una sola vez por persona. El botón copia el link + código listos para pegar en WhatsApp.
-            </p>
-            <p style={{ color: C.gold, fontSize: 11, fontFamily: "'Courier New', monospace", margin: '0 0 16px' }}>
-              {BASE_URL}/lider
-            </p>
-            {(() => {
-              const equipo = aliados.filter(a => a.rol === 'lider' || a.rol === 'gerente');
-              if (loadingAliados) return <p style={{ color: C.muted, fontSize: 12 }}>Cargando aliados...</p>;
-              if (equipo.length === 0) return <p style={{ color: C.muted, fontSize: 12 }}>No hay líderes ni gerentes creados todavía.</p>;
-              return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {equipo.map(a => (
-                    <div key={a.id} style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-                      background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', flexWrap: 'wrap',
-                    }}>
-                      <div>
-                        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: C.text, fontWeight: 700 }}>{a.nombre}</div>
-                        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted, marginTop: 2 }}>
-                          {a.rol.toUpperCase()} · @{a.slug}
-                          {a.codigo_acceso && <span style={{ color: C.gold }}> · {a.codigo_acceso}</span>}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => generarCodigoAcceso(a)}
-                        disabled={generandoCodigo === a.id}
-                        style={{
-                          padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                          background: a.codigo_acceso ? 'rgba(255,255,255,0.08)' : `linear-gradient(135deg,${C.gold},#9a7a00)`,
-                          color: a.codigo_acceso ? C.muted : '#0a0614',
-                          fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, fontWeight: 900,
-                        }}
-                      >
-                        {generandoCodigo === a.id ? '...' : copiadoCodigo === a.id ? '✓ COPIADO' : a.codigo_acceso ? '📋 COPIAR MENSAJE' : '🔑 GENERAR Y COPIAR'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
-          </div>
-
-          {/* Historial de firmas */}
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 'clamp(18px,4vw,24px)' }}>
-            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: C.gold, margin: '0 0 16px' }}>
-              HISTORIAL DE ACUERDOS
-            </h2>
-            {loadingFirmas ? (
-              <p style={{ color: C.muted, fontSize: 12 }}>Cargando...</p>
-            ) : firmas.length === 0 ? (
-              <p style={{ color: C.muted, fontSize: 12 }}>Todavía no se ha generado ningún link de firma.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {firmas.map(f => (
-                  <div key={f.id} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-                    background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '10px 14px', flexWrap: 'wrap',
-                  }}>
-                    <div>
-                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: C.text }}>
-                        {f.aliados?.nombre || '—'}
-                        {f.nombre_firmante && f.nombre_firmante !== f.aliados?.nombre && (
-                          <span style={{ color: C.muted, fontSize: 10 }}> (firmó como "{f.nombre_firmante}")</span>
-                        )}
-                      </div>
-                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted, marginTop: 2 }}>
-                        {f.fecha_firma
-                          ? `FIRMADO EL ${new Date(f.fecha_firma).toLocaleString('es-MX')}`
-                          : `LINK GENERADO EL ${new Date(f.created_at).toLocaleDateString('es-MX')} · SIN FIRMAR`}
-                      </div>
-                    </div>
-                    {f.firma_data && (
-                      <button
-                        onClick={() => setFirmaImgModal({ src: f.firma_data, nombre: f.aliados?.nombre || f.nombre_firmante })}
-                        style={{ padding: '6px 12px', background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 8, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                      >
-                        👁 VER FIRMA
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Modal ver imagen de firma */}
-      {firmaImgModal && (
-        <div onClick={() => setFirmaImgModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(4,2,14,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fdfaf2', border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: 20, textAlign: 'center', maxWidth: 340, width: '90%' }}>
-            <img src={firmaImgModal.src} alt="Firma" style={{ width: '100%', borderRadius: 8 }} />
-            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1, color: '#1a1030', marginTop: 10 }}>{firmaImgModal.nombre}</div>
-            <button onClick={() => setFirmaImgModal(null)} style={{ marginTop: 12, background: 'none', border: 'none', color: '#6b5a3f', fontFamily: 'Cinzel, serif', fontSize: 9, cursor: 'pointer', letterSpacing: 1 }}>CERRAR</button>
-          </div>
-        </div>
-      )}
-
-      {/* ══ TAB: LTV / COMISIONES ══ */}
-      {tabActiva === 'ltv' && <LtvComisionesTab />}
-
-      {/* ══ TAB: CAMINO A LÍDER DIGITAL ══ */}
-      {tabActiva === 'camino' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 'clamp(18px,4vw,24px)' }}>
-            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: C.gold, margin: '0 0 8px' }}>
-              🗺️ INTERESADOS · CAMINO A LÍDER DIGITAL
-            </h2>
-            <p style={{ color: C.muted, fontSize: 11.5, marginBottom: 16 }}>
-              Prospectos que llenaron el formulario de interés. Acéptalos después de tu junta 1 a 1 — se genera su código y tú (o quien coordinó la junta) se lo mandas por WhatsApp.
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-              <label style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: C.muted }}>FECHA DE INICIO PARA NUEVOS ACEPTADOS</label>
-              <input
-                type="date"
-                value={fechaInicioCamino}
-                onChange={e => setFechaInicioCamino(e.target.value)}
-                style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '6px 10px', color: C.text, fontFamily: 'Cinzel, serif', fontSize: 11 }}
-              />
-            </div>
-            {loadingInteresados ? (
-              <p style={{ color: C.muted, fontSize: 12 }}>Cargando...</p>
-            ) : interesadosCamino.filter(i => i.estado === 'pendiente').length === 0 ? (
-              <p style={{ color: C.muted, fontSize: 12 }}>No hay interesados pendientes.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {interesadosCamino.filter(i => i.estado === 'pendiente').map(i => (
-                  <div key={i.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '12px 14px', flexWrap: 'wrap' }}>
-                    <div>
-                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: C.text }}>{i.nombre}</div>
-                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: C.muted, marginTop: 2 }}>
-                        📱 {i.telefono} · {new Date(i.created_at).toLocaleString('es-MX')}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        onClick={() => aceptarInteresadoCamino(i)}
-                        disabled={aceptandoCamino === i.id}
-                        style={{ padding: '8px 14px', background: 'rgba(68,255,136,0.12)', border: '1px solid rgba(68,255,136,0.35)', borderRadius: 8, color: C.green, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer', opacity: aceptandoCamino === i.id ? 0.5 : 1 }}
-                      >
-                        {aceptandoCamino === i.id ? 'GENERANDO...' : '✓ ACEPTAR'}
-                      </button>
-                      <button
-                        onClick={() => descartarInteresadoCamino(i.id)}
-                        style={{ padding: '8px 14px', background: 'rgba(255,68,102,0.1)', border: '1px solid rgba(255,68,102,0.3)', borderRadius: 8, color: C.red, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                      >
-                        DESCARTAR
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* ── LÍDERES DIGITALES ACTIVOS · resumen + filtros + tabla ── */}
-          {(() => {
-            const total = metricasLideres.length;
-            const alDia = metricasLideres.filter(m => m.estado === 'al_dia').length;
-            const atrasados = metricasLideres.filter(m => m.estado === 'atrasado').length;
-            const enRiesgo = metricasLideres.filter(m => m.estado === 'en_riesgo').length;
-            const checklistProm = total > 0 ? Math.round(metricasLideres.reduce((a, m) => a + Number(m.checklist_pct || 0), 0) / total) : 0;
-            const modulo1Listo = metricasLideres.filter(m => m.modulo1_estado === 'confirmado').length;
-            const seguidoresGanados = metricasLideres.reduce((a, m) => a + Number(m.seguidores_ganados || 0), 0);
-            const vendidoTotal = metricasLideres.reduce((a, m) => a + Number(m.vendido_usd || 0), 0);
-            const estadoInfo = {
-              al_dia:    { label: '🟢 AL DÍA',     color: C.green },
-              atrasado:  { label: '🟡 ATRASADO',   color: C.gold },
-              en_riesgo: { label: '🔴 EN RIESGO',  color: C.red },
-            };
-            const filtrados = metricasLideres
-              .filter(m => filtroEstadoLider === 'todos' || m.estado === filtroEstadoLider)
-              .filter(m => {
-                const q = buscaLider.trim().toLowerCase();
-                if (!q) return true;
-                return (m.nombre || '').toLowerCase().includes(q)
-                  || (m.telefono || '').toLowerCase().includes(q)
-                  || (m.gestor_nombre || '').toLowerCase().includes(q);
-              });
-
-            return (
-              <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: 'clamp(18px,4vw,24px)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 6 }}>
-                  <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: C.gold, margin: 0 }}>
-                    ⚔️ LÍDERES DIGITALES ACTIVOS
-                  </h2>
+              <div className="gc-preguntas">
+                {preguntas.map((q, i) => (
                   <button
-                    onClick={cargarMetricasLideres}
-                    disabled={loadingMetricasLideres}
-                    style={{ padding: '6px 12px', background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 8, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer', opacity: loadingMetricasLideres ? 0.5 : 1 }}
+                    key={i}
+                    className="gc-chip"
+                    disabled={bloqueado}
+                    onClick={() => onChipClick(q)}
                   >
-                    {loadingMetricasLideres ? 'ACTUALIZANDO...' : '↻ ACTUALIZAR'}
+                    {q}
+                  </button>
+                ))}
+              </div>
+
+              <div className="gc-input-zona">
+                <div className="gc-input-bar">
+                  <textarea
+                    ref={entradaRef}
+                    className="gc-textarea"
+                    rows={1}
+                    maxLength={LIMITE_CARACTERES}
+                    placeholder="Escríbele al Guardián..."
+                    disabled={bloqueado}
+                    onChange={onInputChange}
+                    onKeyDown={onEntradaKeyDown}
+                  />
+                  <button
+                    className="gc-enviar"
+                    disabled={bloqueado}
+                    onClick={() => enviarPregunta(entradaRef.current?.value || '')}
+                  >
+                    ↑
                   </button>
                 </div>
-                <p style={{ color: C.muted, fontSize: 11.5, marginBottom: 18 }}>
-                  Racha, checklist, seguidores y ventas de cada participante activo del Camino — en vivo desde sus check-ins.
-                </p>
-
-                {errMetricasLideres && (
-                  <p style={{ color: C.red, fontSize: 11, marginBottom: 12 }}>⚠️ {errMetricasLideres}</p>
-                )}
-
-                {loadingMetricasLideres ? (
-                  <p style={{ color: C.muted, fontSize: 12 }}>Cargando métricas...</p>
-                ) : total === 0 ? (
-                  <p style={{ color: C.muted, fontSize: 12 }}>Todavía no hay Líderes Digitales activos — acepta un interesado arriba para empezar su Camino.</p>
-                ) : (
-                  <>
-                    {/* Resumen */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 18 }}>
-                      {[
-                        { label: 'ACTIVOS',      valor: total,                                     color: C.text },
-                        { label: 'AL DÍA',       valor: alDia,                                     color: C.green },
-                        { label: 'ATRASADOS',    valor: atrasados,                                 color: C.gold },
-                        { label: 'EN RIESGO',    valor: enRiesgo,                                  color: C.red },
-                        { label: 'CHECKLIST',    valor: `${checklistProm}%`,                       color: C.purple },
-                        { label: 'MÓDULO 1',     valor: total ? `${Math.round((modulo1Listo/total)*100)}%` : '0%', color: C.green },
-                        { label: 'SEGUIDORES +', valor: `+${seguidoresGanados.toLocaleString('es-MX')}`, color: C.green },
-                        { label: 'VENDIDO',      valor: `$${vendidoTotal.toLocaleString('es-MX')}`, color: C.gold },
-                      ].map((s, i) => (
-                        <div key={i} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
-                          <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 18, color: s.color }}>{s.valor}</div>
-                          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1.5, color: C.muted, marginTop: 3 }}>{s.label}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Filtros */}
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-                      {[
-                        { id: 'todos', label: `TODOS (${total})` },
-                        { id: 'al_dia', label: `🟢 AL DÍA (${alDia})` },
-                        { id: 'atrasado', label: `🟡 ATRASADOS (${atrasados})` },
-                        { id: 'en_riesgo', label: `🔴 EN RIESGO (${enRiesgo})` },
-                      ].map(f => (
-                        <button
-                          key={f.id}
-                          onClick={() => setFiltroEstadoLider(f.id)}
-                          style={{
-                            padding: '6px 12px',
-                            background: filtroEstadoLider === f.id ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.03)',
-                            border: `1px solid ${filtroEstadoLider === f.id ? C.borderHi : C.border}`,
-                            borderRadius: 20, color: filtroEstadoLider === f.id ? C.gold : C.muted,
-                            fontFamily: 'Cinzel, serif', fontSize: 8.5, letterSpacing: 1, cursor: 'pointer',
-                          }}
-                        >
-                          {f.label}
-                        </button>
-                      ))}
-                      <input
-                        type="text"
-                        value={buscaLider}
-                        onChange={e => setBuscaLider(e.target.value)}
-                        placeholder="Buscar por nombre, teléfono o gestor..."
-                        style={{ marginLeft: 'auto', minWidth: 200, flex: '1 1 200px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 12px', color: C.text, fontFamily: 'Cinzel, serif', fontSize: 10 }}
-                      />
-                    </div>
-
-                    {/* Tabla */}
-                    {filtrados.length === 0 ? (
-                      <p style={{ color: C.muted, fontSize: 12 }}>Ningún líder coincide con ese filtro.</p>
-                    ) : (
-                      <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
-                          <thead>
-                            <tr>
-                              {['LÍDER', 'DÍA', 'ÚLTIMO CHECK-IN', 'RACHA', 'CHECKLIST', 'MÓDULO 1', 'SEGUIDORES', 'VENDIDO', 'GESTOR', 'ESTADO'].map(h => (
-                                <th key={h} style={{ textAlign: 'left', fontFamily: 'Cinzel, serif', fontSize: 8.5, letterSpacing: 1.5, color: C.muted, padding: '0 10px 8px', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' }}>{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filtrados.map(m => (
-                              <tr key={m.participante_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                                <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
-                                  <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: C.text }}>{m.nombre}</div>
-                                  <div style={{ fontFamily: 'monospace', fontSize: 9, color: C.muted }}>{m.telefono}</div>
-                                </td>
-                                <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 11, color: C.text }}>Día {m.dia_actual}</td>
-                                <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 11, color: C.text, whiteSpace: 'nowrap' }}>
-                                  {m.ultimo_dia_checkin > 0 ? `Día ${m.ultimo_dia_checkin} · hace ${m.dias_sin_checkin}d` : 'Sin check-ins'}
-                                </td>
-                                <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 11, color: C.text }}>
-                                  {m.racha_actual > 0 ? `🔥 ${m.racha_actual}` : '—'} <span style={{ color: C.muted, fontSize: 9 }}>({m.checkins_totales} tot.)</span>
-                                </td>
-                                <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 11, color: C.purple }}>{m.checklist_pct}%</td>
-                                <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
-                                  {(() => {
-                                    const mod1 = {
-                                      confirmado: { label: '📜 Listo', color: C.green },
-                                      descargado: { label: '📜 A medias', color: C.gold },
-                                      pendiente:  { label: '📜 Pendiente', color: C.red },
-                                    }[m.modulo1_estado] || { label: m.modulo1_estado || '—', color: C.muted };
-                                    return (
-                                      <span style={{
-                                        fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 0.5,
-                                        color: mod1.color, border: `1px solid ${mod1.color}55`,
-                                        borderRadius: 20, padding: '3px 9px',
-                                      }}>{mod1.label}</span>
-                                    );
-                                  })()}
-                                </td>
-                                <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 11, color: C.green }}>
-                                  {m.seguidores_actuales}
-                                  {Number(m.seguidores_ganados) !== 0 && <span style={{ color: C.muted, fontSize: 9 }}> ({m.seguidores_ganados >= 0 ? '+' : ''}{m.seguidores_ganados})</span>}
-                                </td>
-                                <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 11, color: C.gold }}>${Number(m.vendido_usd || 0).toLocaleString('es-MX')}</td>
-                                <td style={{ padding: '10px', fontFamily: 'Cinzel, serif', fontSize: 10, color: C.muted, whiteSpace: 'nowrap' }}>{m.gestor_nombre || '—'}</td>
-                                <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
-                                  <span style={{
-                                    fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1,
-                                    color: (estadoInfo[m.estado] || {}).color || C.muted,
-                                    border: `1px solid ${(estadoInfo[m.estado] || {}).color || C.border}55`,
-                                    borderRadius: 20, padding: '3px 10px',
-                                  }}>
-                                    {(estadoInfo[m.estado] || {}).label || m.estado}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            );
-          })()}
-
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 'clamp(18px,4vw,24px)' }}>
-            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: C.gold, margin: '0 0 16px' }}>
-              HISTORIAL
-            </h2>
-            {interesadosCamino.filter(i => i.estado !== 'pendiente').length === 0 ? (
-              <p style={{ color: C.muted, fontSize: 12 }}>Todavía no hay historial.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {interesadosCamino.filter(i => i.estado !== 'pendiente').map(i => (
-                  <div key={i.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '10px 14px', flexWrap: 'wrap' }}>
-                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: C.text }}>{i.nombre}</div>
-                    <span style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: i.estado === 'aceptado' ? C.green : C.muted, border: `1px solid ${i.estado === 'aceptado' ? 'rgba(68,255,136,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 20, padding: '3px 10px' }}>
-                      {i.estado === 'aceptado' ? '✓ ACEPTADO' : '○ DESCARTADO'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ══ TAB: SELLOS ══ */}
-      {tabActiva === 'sellos' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-          <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: '20px 24px' }}>
-            <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.gold, margin: '0 0 8px' }}>
-              🔑 SELLOS — CÓDIGOS DE SESIÓN
-            </h2>
-            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.muted, letterSpacing: 1, margin: 0 }}>
-              Los 8 códigos que el participante canjea en su Pasaporte para desbloquear cada etapa del Camino.
-            </p>
-          </div>
-
-          {errSello && (
-            <div style={{ background: 'rgba(255,68,102,0.08)', border: '1px solid rgba(255,68,102,0.3)', borderRadius: 10, padding: '10px 14px', color: C.red, fontSize: 11 }}>
-              {errSello}
-            </div>
-          )}
-
-          {loadingSellos ? (
-            <p style={{ color: C.goldDim, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, textAlign: 'center' }}>CARGANDO...</p>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-              {sellosCodigos.map(s => {
-                const cambiado = (editsSellos[s.numero_sesion] ?? '') !== (s.codigo ?? '');
-                const tieneCodigo = !!s.codigo;
-                return (
-                  <div key={s.numero_sesion} style={{
-                    background: C.card, border: `1px solid ${tieneCodigo ? C.borderHi : C.border}`, borderRadius: 12,
-                    padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 12, color: C.gold, letterSpacing: 1 }}>
-                        SESIÓN {s.numero_sesion}
-                      </span>
-                      <span style={{
-                        fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2,
-                        color: tieneCodigo ? C.green : C.muted,
-                        border: `1px solid ${tieneCodigo ? 'rgba(68,255,136,0.3)' : 'rgba(255,255,255,0.1)'}`,
-                        borderRadius: 20, padding: '3px 10px',
-                      }}>
-                        {tieneCodigo ? '● CARGADO' : '○ VACÍO'}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <input
-                        value={editsSellos[s.numero_sesion] ?? ''}
-                        onChange={e => setEditsSellos(prev => ({ ...prev, [s.numero_sesion]: e.target.value }))}
-                        placeholder="CÓDIGO"
-                        style={{
-                          flex: 1, minWidth: 0, padding: '9px 12px', background: '#07040f',
-                          border: `1px solid ${C.borderHi}`, borderRadius: 8, color: C.text,
-                          fontFamily: 'monospace', fontSize: 13, letterSpacing: 2, textTransform: 'uppercase',
-                        }}
-                      />
-                      <button
-                        onClick={() => generarCodigoSello(s.numero_sesion)}
-                        title="Generar código al azar"
-                        style={{
-                          flexShrink: 0, width: 38, padding: '9px 0',
-                          background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)',
-                          borderRadius: 8, color: C.purple, fontSize: 14, cursor: 'pointer',
-                        }}
-                      >
-                        🎲
-                      </button>
-                    </div>
-                    <button
-                      onClick={() => guardarSello(s.numero_sesion)}
-                      disabled={guardandoSello === s.numero_sesion || !cambiado}
-                      style={{
-                        padding: '8px 0',
-                        background: cambiado ? 'rgba(212,175,55,0.12)' : 'rgba(255,255,255,0.03)',
-                        border: `1px solid ${cambiado ? C.borderHi : C.border}`,
-                        borderRadius: 7, color: cambiado ? C.gold : C.muted,
-                        fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1,
-                        cursor: cambiado ? 'pointer' : 'default',
-                      }}
-                    >
-                      {guardandoSello === s.numero_sesion ? 'GUARDANDO...' : cambiado ? 'GUARDAR' : '✓ GUARDADO'}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ══ TAB: JUNTAS MEET ══ */}
-      {tabActiva === 'juntas' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: '20px 24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-              <div>
-                <h2 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.gold, margin: '0 0 8px' }}>
-                  🎥 JUNTAS DE MEET — ANÁLISIS AUTOMÁTICO
-                </h2>
-                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.muted, letterSpacing: 1, margin: 0 }}>
-                  Transcripción y análisis con IA de cada sesión grabada en Meet. Se sincroniza sola cada 3 horas.
-                </p>
-              </div>
-              <button
-                onClick={sincronizarJuntasMeet}
-                disabled={sincronizando}
-                style={{
-                  padding: '9px 18px', background: 'rgba(212,175,55,0.12)', border: `1px solid ${C.borderHi}`,
-                  borderRadius: 8, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1,
-                  cursor: sincronizando ? 'default' : 'pointer', opacity: sincronizando ? 0.5 : 1, whiteSpace: 'nowrap',
-                }}
-              >
-                {sincronizando ? 'SINCRONIZANDO...' : '🔄 SINCRONIZAR AHORA'}
-              </button>
-            </div>
-           {msgSync && (
-              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.green, letterSpacing: 1, marginTop: 12 }}>{msgSync}</p>
-            )}
-          </div>
-
-          {/* ── PROSPECCIÓN: conversión real de juntas 1 con interesados ── */}
-          {metricasProspeccion && metricasProspeccion.prospectos_distintos > 0 && (
-            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '18px 20px' }}>
-              <h3 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 12, letterSpacing: 1.5, color: C.gold, margin: '0 0 4px' }}>
-                🎯 PROSPECCIÓN — ¿LAS JUNTAS 1 CONVIERTEN?
-              </h3>
-              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 0.5, margin: '0 0 16px' }}>
-                Comparación entre todas las juntas 1 con interesados y si terminaron aceptados.
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: 10, marginBottom: metricasProspeccion.detalle?.length ? 18 : 0 }}>
-                {[
-                  { label: 'PROSPECTOS CON JUNTA', valor: metricasProspeccion.prospectos_distintos },
-                  { label: 'CONVERTIDOS', valor: metricasProspeccion.convertidos, color: C.green },
-                  { label: 'TASA DE CONVERSIÓN', valor: metricasProspeccion.tasa_conversion_pct != null ? `${metricasProspeccion.tasa_conversion_pct}%` : '—', color: C.gold },
-                  { label: 'CON SEÑALES DE ALERTA', valor: metricasProspeccion.con_senales_de_alerta, color: metricasProspeccion.con_senales_de_alerta > 0 ? '#ff8080' : C.muted },
-                  { label: 'DURACIÓN PROM.', valor: `${metricasProspeccion.duracion_promedio_min} min` },
-                ].map((m) => (
-                  <div key={m.label} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: m.color || C.text }}>{m.valor}</div>
-                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 7, letterSpacing: 1, color: C.muted, marginTop: 4 }}>{m.label}</div>
-                  </div>
-                ))}
-              </div>
-              {metricasProspeccion.detalle?.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {metricasProspeccion.detalle.map((d) => (
-                    <div key={d.junta_id} style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                      <span style={{
-                        fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, padding: '3px 8px', borderRadius: 20,
-                        background: d.estado_prospecto === 'aceptado' ? 'rgba(68,255,136,0.12)' : 'rgba(255,255,255,0.06)',
-                        color: d.estado_prospecto === 'aceptado' ? C.green : C.muted,
-                        border: `1px solid ${d.estado_prospecto === 'aceptado' ? 'rgba(68,255,136,0.3)' : 'rgba(255,255,255,0.1)'}`,
-                      }}>
-                        {d.estado_prospecto === 'aceptado' ? '✓ CONVERTIDO' : (d.estado_prospecto || 'PENDIENTE').toUpperCase()}
-                      </span>
-                      <b style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: C.text }}>{d.prospecto}</b>
-                      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted }}>
-                        {new Date(d.fecha_junta).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })} · {d.duracion_min} min
-                      </span>
-                      {d.tiene_alertas && (
-                        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: '#ff8080' }}>
-                          ⚠ {d.num_alertas} alerta{d.num_alertas > 1 ? 's' : ''}
-                        </span>
-                      )}
-                      {d.resumen && (
-                        <p style={{ width: '100%', margin: '4px 0 0', fontSize: 10, color: C.muted, lineHeight: 1.4 }}>{d.resumen}</p>
-                      )}
-                    </div>
-                  ))}
+                <div className={`gc-contador ${cercaDelLimite ? 'cerca' : ''} ${lleno ? 'lleno' : ''}`}>
+                  {contador} / {LIMITE_CARACTERES}
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* ── PATRONES RECURRENTES: lo mismo que se repite entre juntas distintas ── */}
-          {patronesRecurrentes && Object.keys(patronesRecurrentes).length > 0 && (
-            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '18px 20px' }}>
-              <h3 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 12, letterSpacing: 1.5, color: C.gold, margin: '0 0 4px' }}>
-                🔁 PATRONES QUE SE REPITEN
-              </h3>
-              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 0.5, margin: '0 0 16px' }}>
-                Solo aparece aquí lo que se repitió 2 veces o más en juntas distintas — una sola mención no cuenta como patrón.
-              </p>
-              {Object.entries(patronesRecurrentes).map(([tipo, patrones]) => {
-                const etiquetasCategoria = {
-                  seguimiento_pendiente: 'Seguimiento pendiente', logistica_tecnica: 'Logística técnica',
-                  confirmar_asistencia: 'Confirmar asistencia', definir_metas: 'Definir metas',
-                  resolver_dudas_miedos: 'Dudas / miedos sin resolver', entregar_material: 'Falta entregar material',
-                  estructura_contenido: 'Estructura de contenido', constancia_habito: 'Constancia / hábito',
-                  reconocimiento_motivacion: 'Motivación / reconocimiento', claridad_explicacion: 'Falta claridad al explicar',
-                };
-                const tituloTipo = tipo === 'interesado' ? '🎯 En entrevistas' : tipo === 'aliado' ? '🎓 En mentoría' : tipo;
-                return (
-                  <div key={tipo} style={{ marginBottom: 14 }}>
-                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1.5, color: C.muted, marginBottom: 8 }}>{tituloTipo}</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {patrones.map((p, i) => (
-                        <div key={i} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.gold, fontWeight: 700 }}>
-                              {etiquetasCategoria[p.categoria] || p.categoria}
-                            </span>
-                            <span style={{ fontSize: 9, color: C.muted }}>× {p.veces} juntas</span>
-                          </div>
-                          {p.ejemplo && <p style={{ margin: '4px 0 0', fontSize: 10.5, color: C.text, lineHeight: 1.4 }}>{p.ejemplo}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* ── MENTORÍA: ¿las sesiones con aliados cubren lo que deben cubrir? ── */}
-          {metricasMentoria && metricasMentoria.total_juntas > 0 && (
-            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '18px 20px' }}>
-              <h3 style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 12, letterSpacing: 1.5, color: C.gold, margin: '0 0 4px' }}>
-                🎓 MENTORÍA — ¿LAS SESIONES CUBREN LO QUE DEBEN?
-              </h3>
-              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, letterSpacing: 0.5, margin: '0 0 16px' }}>
-                Cobertura de currículum, alertas y duración en tus sesiones de mentoría con aliados ya aceptados.
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: 10, marginBottom: 18 }}>
-                {[
-                  { label: 'JUNTAS ANALIZADAS', valor: metricasMentoria.total_juntas },
-                  { label: 'ALIADOS DISTINTOS', valor: metricasMentoria.aliados_distintos },
-                  { label: 'COBERTURA PROMEDIO', valor: `${metricasMentoria.cobertura_promedio_pct}%`, color: metricasMentoria.cobertura_promedio_pct >= 80 ? C.green : metricasMentoria.cobertura_promedio_pct >= 50 ? C.gold : C.red },
-                  { label: 'CON SEÑALES DE ALERTA', valor: metricasMentoria.con_senales_de_alerta, color: metricasMentoria.con_senales_de_alerta > 0 ? '#ff8080' : C.muted },
-                  { label: 'DURACIÓN PROM.', valor: `${metricasMentoria.duracion_promedio_min} min` },
-                ].map((m) => (
-                  <div key={m.label} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 10px', textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: m.color || C.text }}>{m.valor}</div>
-                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 7, letterSpacing: 1, color: C.muted, marginTop: 4 }}>{m.label}</div>
-                  </div>
-                ))}
               </div>
-
-              {metricasMentoria.por_sesion?.length > 0 && (
-                <div style={{ marginBottom: 18 }}>
-                  <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.gold, marginBottom: 8 }}>📊 COBERTURA POR SESIÓN</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {metricasMentoria.por_sesion.map(s => {
-                      const pct = s.cobertura_promedio_pct ?? 0;
-                      const color = pct >= 80 ? C.green : pct >= 50 ? C.gold : C.red;
-                      return (
-                        <div key={s.numero_sesion} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, width: 90, flexShrink: 0 }}>SESIÓN {s.numero_sesion} ({s.n_juntas})</span>
-                          <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 4 }} />
-                          </div>
-                          <span style={{ fontSize: 10, color, width: 34, textAlign: 'right' }}>{s.cobertura_promedio_pct != null ? `${pct}%` : '—'}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {metricasMentoria.temas_mas_faltantes?.length > 0 && (
-                <div style={{ marginBottom: 18 }}>
-                  <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.red, marginBottom: 8 }}>⚠ LO QUE MÁS SE SALTA</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {metricasMentoria.temas_mas_faltantes.map((t, i) => (
-                      <span key={i} style={{ fontSize: 10.5, color: C.text, background: 'rgba(255,128,128,0.08)', border: '1px solid rgba(255,128,128,0.25)', borderRadius: 20, padding: '4px 10px' }}>
-                        {t.tema} <span style={{ color: '#ff8080' }}>×{t.veces_faltante}</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {metricasMentoria.detalle?.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {metricasMentoria.detalle.map((d) => (
-                    <div key={d.junta_id} style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                      <b style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: C.text }}>{d.aliado}</b>
-                      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted }}>
-                        SESIÓN {d.numero_sesion ?? '—'} · {new Date(d.fecha_junta).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })} · {d.duracion_min} min
-                      </span>
-                      {d.cobertura_pct != null && (
-                        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: d.cobertura_pct >= 80 ? C.green : d.cobertura_pct >= 50 ? C.gold : C.red }}>
-                          {d.cobertura_pct}% CUBIERTO
-                        </span>
-                      )}
-                      {d.tiene_alertas && (
-                        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: '#ff8080' }}>
-                          ⚠ {d.num_alertas} alerta{d.num_alertas > 1 ? 's' : ''}
-                        </span>
-                      )}
-                      {d.resumen && (
-                        <p style={{ width: '100%', margin: '4px 0 0', fontSize: 10, color: C.muted, lineHeight: 1.4 }}>{d.resumen}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
-          )}
-
-          {/* ── CURRÍCULUM ESPERADO POR SESIÓN (por tipo de participante) ── */}
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px 18px' }}>
-            <div
-              onClick={() => setCurriculumAbierto(v => !v)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
-            >
-              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: C.gold }}>
-                📚 QUÉ DEBE CUBRIR CADA SESIÓN {curriculumAbierto ? '▲' : '▼'}
-              </span>
-              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 8, color: C.muted, letterSpacing: 1 }}>
-                {curriculumSesiones.length} sesiones definidas
-              </span>
-            </div>
-            {curriculumAbierto && (
-              <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <p style={{ fontSize: 10.5, color: C.muted, margin: 0 }}>
-                  Define aquí qué temas esperas en cada número de sesión, separado por tipo de participante. Cuando una junta se
-                  identifique como esa sesión y ese tipo, la IA compara la transcripción real contra esta lista y te dice qué faltó.
-                </p>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {[
-                    { id: 'interesado', label: '🎯 ENTREVISTA (INTERESADOS)' },
-                    { id: 'camino', label: '🎓 MENTORÍA (ALIADOS)' },
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setCurriculumContextoActivo(tab.id)}
-                      style={{
-                        padding: '6px 12px', borderRadius: 6, cursor: 'pointer',
-                        fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1,
-                        background: curriculumContextoActivo === tab.id ? 'rgba(212,175,55,0.15)' : 'transparent',
-                        border: `1px solid ${curriculumContextoActivo === tab.id ? C.borderHi : C.border}`,
-                        color: curriculumContextoActivo === tab.id ? C.gold : C.muted,
-                      }}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-                {loadingCurriculum ? (
-                  <p style={{ color: C.muted, fontSize: 10 }}>Cargando…</p>
-                ) : (
-                  curriculumSesiones.filter(cs => cs.contexto === curriculumContextoActivo).map(cs => {
-                    const key = `${cs.contexto}::${cs.numero_sesion}`;
-                    const edit = editsCurriculum[key] || { titulo: '', objetivo: '', temas_texto: '' };
-                    return (
-                      <div key={key} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: C.gold, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                            Sesión {cs.numero_sesion}
-                          </span>
-                          <input
-                            value={edit.titulo}
-                            onChange={e => setEditsCurriculum(p => ({ ...p, [key]: { ...edit, titulo: e.target.value } }))}
-                            placeholder="Título de la sesión"
-                            style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11 }}
-                          />
-                        </div>
-                        <input
-                          value={edit.objetivo}
-                          onChange={e => setEditsCurriculum(p => ({ ...p, [key]: { ...edit, objetivo: e.target.value } }))}
-                          placeholder="Objetivo de esta sesión"
-                          style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11 }}
-                        />
-                        <textarea
-                          value={edit.temas_texto}
-                          onChange={e => setEditsCurriculum(p => ({ ...p, [key]: { ...edit, temas_texto: e.target.value } }))}
-                          placeholder="Temas esperados, separados por coma (ej: definir marca personal, elegir 1 red social, primer post)"
-                          rows={2}
-                          style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11, resize: 'vertical' }}
-                        />
-                        <button
-                          onClick={() => guardarCurriculum(cs.contexto, cs.numero_sesion)}
-                          disabled={guardandoCurriculum === key}
-                          style={{ alignSelf: 'flex-end', padding: '6px 14px', background: 'rgba(212,175,55,0.12)', border: `1px solid ${C.borderHi}`, borderRadius: 6, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}
-                        >
-                          {guardandoCurriculum === key ? 'GUARDANDO...' : 'GUARDAR'}
-                        </button>
-                      </div>
-                    );
-                  })
-                )}
-                <button
-                  onClick={() => agregarNumeroSesionCurriculum(curriculumContextoActivo)}
-                  style={{ alignSelf: 'flex-start', padding: '7px 14px', background: 'transparent', border: `1px dashed ${C.border}`, borderRadius: 6, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}
-                >
-                  + AGREGAR SIGUIENTE NÚMERO DE SESIÓN
-                </button>
-              </div>
-            )}
           </div>
 
-          {/* ── MÉTRICAS POR RESPONSABLE (no se mezclan entre cuentas) ── */}
-          {metricasPorResponsable.length > 0 && (
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {metricasPorResponsable.map(m => (
-                <div
-                  key={m.cuenta_google}
-                  style={{
-                    background: C.card, border: `1px solid ${C.border}`, borderRadius: 12,
-                    padding: '10px 16px', flex: '1 1 200px', minWidth: 180,
-                  }}
-                >
-                  <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2, color: C.gold, fontWeight: 900, marginBottom: 6 }}>
-                    {m.responsable_etiqueta.toUpperCase()}
-                  </div>
-                  <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, marginBottom: 2 }}>{m.cuenta_google}</div>
-                  <div style={{ display: 'flex', gap: 14, marginTop: 6, flexWrap: 'wrap' }}>
-                    <div>
-                      <div style={{ fontSize: 18, color: C.text, fontWeight: 900 }}>{m.total_juntas}</div>
-                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted }}>TOTAL</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 18, color: C.green, fontWeight: 900 }}>{m.juntas_analizadas}</div>
-                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted }}>ANALIZADAS</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 18, color: C.muted, fontWeight: 900 }}>{m.juntas_sin_transcript}</div>
-                      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted }}>SIN TRANSCRIPT</div>
-                    </div>
-                  </div>
-                  {m.ultima_junta && (
-                    <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted, marginTop: 6 }}>
-                      ÚLTIMA: {new Date(m.ultima_junta).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ── FILTROS ── */}
-          {juntasMeet.length > 0 && (
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <select
-                value={filtroResponsableJunta}
-                onChange={e => setFiltroResponsableJunta(e.target.value)}
-                style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', color: C.text, fontSize: 11, fontFamily: 'Cinzel, serif' }}
-              >
-                <option value="todos">Cuenta: todas</option>
-                {Array.from(
-                  new Map(
-                    juntasMeet.flatMap(j =>
-                      (j.responsables_relacionados?.length ? j.responsables_relacionados : [{ email: j.cuenta_google, etiqueta: j.responsable_etiqueta || j.cuenta_google }])
-                        .map(r => [r.email, r.etiqueta])
-                    )
-                  ).entries()
-                ).sort((a, b) => a[1].localeCompare(b[1])).map(([email, etiqueta]) => (
-                  <option key={email} value={email}>{etiqueta}</option>
-                ))}
-              </select>
-              <select
-                value={filtroParticipanteJunta}
-                onChange={e => setFiltroParticipanteJunta(e.target.value)}
-                style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', color: C.text, fontSize: 11, fontFamily: 'Cinzel, serif' }}
-              >
-                <option value="todos">Con quién: todos</option>
-                {Array.from(
-                  new Map(
-                    juntasMeet
-                      .filter(j => j.participante_nombre)
-                      .map(j => {
-                        const key = j.participante_id ? `${j.participante_tipo}:${j.participante_id}` : `nombre:${j.participante_nombre}`;
-                        const label = j.participante_id && j.titulo ? j.titulo.split('—').pop().trim() : j.participante_nombre;
-                        return [key, label];
-                      })
-                  ).entries()
-                ).sort((a, b) => a[1].localeCompare(b[1])).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
-                ))}
-              </select>
-              <select
-                value={filtroSesionJunta}
-                onChange={e => setFiltroSesionJunta(e.target.value)}
-                style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', color: C.text, fontSize: 11, fontFamily: 'Cinzel, serif' }}
-              >
-                <option value="todas">Sesión: todas</option>
-                {Array.from(
-                  new Map(
-                    juntasMeet
-                      .filter(j => j.numero_sesion != null)
-                      .map(j => {
-                        const key = `${j.participante_tipo || 'sin_tipo'}::${j.numero_sesion}`;
-                        const etiquetaTipo = j.participante_tipo === 'interesado' ? 'Entrevista' : j.participante_tipo === 'aliado' ? 'Mentoría' : 'Sin tipo';
-                        return [key, `Sesión ${j.numero_sesion} — ${etiquetaTipo}`];
-                      })
-                  ).entries()
-                ).sort((a, b) => a[1].localeCompare(b[1])).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
-                ))}
-              </select>
-              {(filtroResponsableJunta !== 'todos' || filtroParticipanteJunta !== 'todos' || filtroSesionJunta !== 'todas') && (
-                <button
-                  onClick={() => { setFiltroResponsableJunta('todos'); setFiltroParticipanteJunta('todos'); setFiltroSesionJunta('todas'); }}
-                  style={{ background: 'transparent', border: 'none', color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, cursor: 'pointer', letterSpacing: 1 }}
-                >
-                  ✕ LIMPIAR FILTROS
-                </button>
-              )}
-            </div>
-          )}
-
-          {loadingJuntas ? (
-            <p style={{ color: C.goldDim, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 3, textAlign: 'center' }}>CARGANDO...</p>
-          ) : juntasMeet.length === 0 ? (
-            <p style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>Todavía no hay juntas sincronizadas.</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {juntasMeet
-                .filter(j => filtroResponsableJunta === 'todos' || (j.cuentas_relacionadas?.length ? j.cuentas_relacionadas.includes(filtroResponsableJunta) : j.cuenta_google === filtroResponsableJunta))
-                .filter(j => filtroParticipanteJunta === 'todos' || (j.participante_id ? `${j.participante_tipo}:${j.participante_id}` : `nombre:${j.participante_nombre}`) === filtroParticipanteJunta)
-                .filter(j => filtroSesionJunta === 'todas' || `${j.participante_tipo || 'sin_tipo'}::${j.numero_sesion}` === filtroSesionJunta)
-                .map(j => {
-                const abierta = juntaAbierta === j.id;
-                const duracionMin = j.fecha_inicio && j.fecha_fin
-                  ? Math.max(1, Math.round((new Date(j.fecha_fin) - new Date(j.fecha_inicio)) / 60000))
-                  : null;
-                const estadoInfo = {
-                  analizado:       { color: C.green,  label: '● ANALIZADO' },
-                  transcrito:      { color: C.gold,   label: '● TRANSCRITO' },
-                  sin_transcript:  { color: C.muted,  label: '○ SIN TRANSCRIPT' },
-                  error:           { color: C.red,    label: '✕ ERROR' },
-                  error_analisis:  { color: C.red,    label: '✕ ERROR DE ANÁLISIS' },
-                }[j.estado] || { color: C.muted, label: (j.estado || '—').toUpperCase() };
-
-                return (
-                  <div key={j.id} style={{ background: C.card, border: `1px solid ${abierta ? C.borderHi : C.border}`, borderRadius: 14, overflow: 'hidden' }}>
-                    <div
-                      onClick={() => setJuntaAbierta(abierta ? null : j.id)}
-                      style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, cursor: 'pointer', flexWrap: 'wrap' }}
-                    >
-                      <div>
-                        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: C.text, fontWeight: 700 }}>
-                          {j.titulo || (j.fecha_inicio ? new Date(j.fecha_inicio).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Sin fecha')}
-                        </div>
-                        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: C.muted, marginTop: 2 }}>
-                          {j.fecha_inicio ? new Date(j.fecha_inicio).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
-                          {duracionMin ? ` · ${duracionMin} min` : ''}
-                          {j.participante_nombre ? ` · con ${j.participante_nombre}` : ''}
-                        </div>
-                        {j.primer_en_unirse && (
-                          <div
-                            title="Quién se unió primero a la llamada, según la hora real que da Google Meet. Es la mejor pista disponible de quién organizó/creó la reunión — Google no manda un dato de 'creador' como tal."
-                            style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1, color: C.gold, fontWeight: 700, marginTop: 4 }}
-                          >
-                            🕐 Primero en unirse: {j.primer_en_unirse}
-                          </div>
-                        )}
-                        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: C.muted, marginTop: 2 }}>
-                          {j.temas?.resumen_ejecutivo ? `${j.temas.resumen_ejecutivo.slice(0, 70)}${j.temas.resumen_ejecutivo.length > 70 ? '…' : ''}` : ''}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                        {(j.responsables_relacionados?.length ? j.responsables_relacionados : [{ email: j.cuenta_google, etiqueta: j.responsable_etiqueta }])
-                          .filter(r => r.etiqueta)
-                          .map(r => (
-                            <span key={r.email} style={{
-                              fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1.5,
-                              color: colorParaResponsable(r.email),
-                              border: `1px solid ${colorParaResponsable(r.email)}55`,
-                              borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap',
-                            }}>
-                              👤 {r.etiqueta.toUpperCase()}
-                            </span>
-                          ))}
-                        <span style={{
-                          fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: estadoInfo.color,
-                          border: `1px solid ${estadoInfo.color}55`, borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap',
-                        }}>
-                          {estadoInfo.label}
-                        </span>
-                      </div>
-                    </div>
-
-                    {abierta && (
-                      <div style={{ padding: '0 18px 18px', borderTop: `1px solid ${C.border}` }}>
-                        <div style={{ marginTop: 14, marginBottom: 4, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                          {editandoJuntaId === j.id ? (
-                            <>
-                              <input
-                                value={editJuntaValores.titulo}
-                                onChange={e => setEditJuntaValores(v => ({ ...v, titulo: e.target.value }))}
-                                placeholder="Título (ej: Sesión 2 — Juan Pérez)"
-                                style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11, flex: 1, minWidth: 180 }}
-                              />
-                              <input
-                                type="number"
-                                value={editJuntaValores.numero_sesion}
-                                onChange={e => setEditJuntaValores(v => ({ ...v, numero_sesion: e.target.value }))}
-                                placeholder="Núm. sesión"
-                                style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11, width: 100 }}
-                              />
-                              <button onClick={() => guardarEdicionJunta(j.id)} style={{ padding: '6px 12px', background: 'rgba(68,255,136,0.12)', border: '1px solid rgba(68,255,136,0.35)', borderRadius: 6, color: C.green, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}>GUARDAR</button>
-                              <button onClick={() => setEditandoJuntaId(null)} style={{ padding: '6px 12px', background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}>CANCELAR</button>
-                            </>
-                          ) : (
-                            <>
-                              <button onClick={() => abrirEdicionJunta(j)} style={{ padding: '5px 10px', background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}>
-                                ✎ EDITAR TÍTULO / SESIÓN
-                              </button>
-                              <button
-                                onClick={() => revincularJunta(j.id)}
-                                disabled={procesandoJuntaId === j.id}
-                                style={{ padding: '5px 10px', background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}
-                              >
-                                {procesandoJuntaId === j.id ? '...' : '🔗 REINTENTAR VÍNCULO (SIN GASTAR IA)'}
-                              </button>
-                              <button
-                                onClick={() => vinculandoJuntaId === j.id ? setVinculandoJuntaId(null) : abrirVinculoManual(j)}
-                                style={{ padding: '5px 10px', background: 'rgba(155,89,255,0.1)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 6, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, cursor: 'pointer' }}
-                              >
-                                🔍 {vinculandoJuntaId === j.id ? 'CERRAR BUSCADOR' : 'VINCULAR A ALGUIEN DE MI LISTA'}
-                              </button>
-                            </>
-                          )}
-                        </div>
-
-                        {vinculandoJuntaId === j.id && (
-                          <div style={{ background: 'rgba(155,89,255,0.06)', border: '1px solid rgba(155,89,255,0.25)', borderRadius: 10, padding: 12, marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            <p style={{ fontSize: 10.5, color: C.muted, margin: 0 }}>
-                              Vincula esta junta a una persona real de tu lista. A partir de ahora, cualquier junta (pasada o futura) donde aparezca ese mismo nombre en Meet se va a vincular y numerar sola.
-                            </p>
-                            <div>
-                              <label style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1, color: C.muted }}>NOMBRE EXACTO EN MEET</label>
-                              <input
-                                value={nombreMeetVinculo}
-                                onChange={e => setNombreMeetVinculo(e.target.value)}
-                                placeholder="Nombre tal como aparece en Meet"
-                                style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11, marginTop: 4 }}
-                              />
-                            </div>
-                            <input
-                              value={busquedaVinculo}
-                              onChange={e => setBusquedaVinculo(e.target.value)}
-                              placeholder="Buscar aliado o participante del Camino..."
-                              style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', color: C.text, fontSize: 11 }}
-                            />
-                            {loadingPersonasVinculo ? (
-                              <p style={{ color: C.muted, fontSize: 10 }}>Cargando personas...</p>
-                            ) : (
-                              <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                {personasVinculables
-                                  .filter(p => p.nombre.toLowerCase().includes(busquedaVinculo.toLowerCase()))
-                                  .slice(0, 30)
-                                  .map(p => (
-                                    <button
-                                      key={`${p.tipo}-${p.id}`}
-                                      onClick={() => guardarVinculoManual(j.id, p)}
-                                      disabled={guardandoVinculoId === j.id}
-                                      style={{ textAlign: 'left', padding: '7px 10px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, fontSize: 11, cursor: 'pointer' }}
-                                    >
-                                      {p.nombre} <span style={{ color: C.muted, fontSize: 9 }}>· {p.etiqueta}</span>
-                                    </button>
-                                  ))}
-                                {personasVinculables.length > 0 && personasVinculables.filter(p => p.nombre.toLowerCase().includes(busquedaVinculo.toLowerCase())).length === 0 && (
-                                  <p style={{ color: C.muted, fontSize: 10 }}>Sin resultados.</p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {j.estado === 'error' || j.estado === 'error_analisis' ? (
-                          <>
-                            <p style={{ color: C.red, fontSize: 11, marginTop: 14 }}>{j.error_detalle || 'Error desconocido.'}</p>
-                            <button
-                              onClick={() => reintentarAnalisisJunta(j.id)}
-                              disabled={procesandoJuntaId === j.id}
-                              style={{ padding: '7px 14px', background: 'rgba(212,175,55,0.12)', border: `1px solid ${C.borderHi}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-                            >
-                              {procesandoJuntaId === j.id ? 'REINTENTANDO...' : '🔄 REINTENTAR ANÁLISIS'}
-                            </button>
-                          </>
-                        ) : j.estado === 'sin_transcript' ? (
-                          <p style={{ color: C.muted, fontSize: 11, marginTop: 14 }}>Esta llamada no generó transcripción (posiblemente muy corta o sin la opción activada).</p>
-                        ) : j.temas ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 14 }}>
-                            <div>
-                              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.gold, marginBottom: 4 }}>RESUMEN</div>
-                              <p style={{ fontSize: 12, color: C.text, margin: 0, lineHeight: 1.5 }}>{j.temas.resumen_ejecutivo}</p>
-                            </div>
-
-                            {Array.isArray(j.temas.puntos_tocados) && j.temas.puntos_tocados.length > 0 && (
-                              <div>
-                                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.gold, marginBottom: 6 }}>PUNTOS TOCADOS</div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                  {j.temas.puntos_tocados.map((p, i) => (
-                                    <div key={i} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                                        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: C.text, fontWeight: 700 }}>{p.tema}</span>
-                                        {p.tiempo_aprox_min != null && (
-                                          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: C.muted, whiteSpace: 'nowrap' }}>~{p.tiempo_aprox_min} min</span>
-                                        )}
-                                      </div>
-                                      {p.detalle && <p style={{ fontSize: 11, color: C.muted, margin: '4px 0 0' }}>{p.detalle}</p>}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {Array.isArray(j.temas.puntos_pendientes_o_sin_tiempo) && j.temas.puntos_pendientes_o_sin_tiempo.length > 0 && (
-                              <div>
-                                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.gold, marginBottom: 6 }}>QUEDÓ PENDIENTE</div>
-                                <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                  {j.temas.puntos_pendientes_o_sin_tiempo.map((p, i) => (
-                                    <li key={i} style={{ fontSize: 11.5, color: C.text }}>{p}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                            {Array.isArray(j.temas.senales_de_alerta) && j.temas.senales_de_alerta.length > 0 && (
-                              <div>
-                                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.red, marginBottom: 6 }}>⚠ SEÑALES DE ALERTA</div>
-                                <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                  {j.temas.senales_de_alerta.map((s, i) => (
-                                    <li key={i} style={{ fontSize: 11.5, color: C.text }}>{s}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                            {j.temas.cobertura_curriculum && (
-                              <div>
-                                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.gold, marginBottom: 6 }}>📚 COBERTURA DEL CURRÍCULUM</div>
-                                {(() => {
-                                  const nCub = (j.temas.cobertura_curriculum.cubiertos || []).length;
-                                  const nFalt = (j.temas.cobertura_curriculum.faltantes || []).length;
-                                  const total = nCub + nFalt;
-                                  if (total === 0) return null;
-                                  const pct = Math.round((nCub / total) * 100);
-                                  const colorBarra = pct >= 80 ? C.green : pct >= 50 ? C.gold : C.red;
-                                  return (
-                                    <div style={{ marginBottom: 10 }}>
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                                        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: colorBarra, letterSpacing: 1 }}>{pct}% CUBIERTO</span>
-                                        <span style={{ fontSize: 10, color: C.muted }}>{nCub}/{total} puntos</span>
-                                      </div>
-                                      <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
-                                        <div style={{ height: '100%', width: `${pct}%`, background: colorBarra, borderRadius: 4 }} />
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
-                                {j.temas.cobertura_curriculum.nota && (
-                                  <p style={{ fontSize: 11, color: C.muted, margin: '0 0 8px' }}>{j.temas.cobertura_curriculum.nota}</p>
-                                )}
-                                {Array.isArray(j.temas.cobertura_curriculum.cubiertos) && j.temas.cobertura_curriculum.cubiertos.length > 0 && (
-                                  <div style={{ marginBottom: 6 }}>
-                                    {j.temas.cobertura_curriculum.cubiertos.map((t, i) => (
-                                      <div key={i} style={{ fontSize: 11, color: C.green }}>✓ {t}</div>
-                                    ))}
-                                  </div>
-                                )}
-                                {Array.isArray(j.temas.cobertura_curriculum.faltantes) && j.temas.cobertura_curriculum.faltantes.length > 0 && (
-                                  <div>
-                                    {j.temas.cobertura_curriculum.faltantes.map((t, i) => (
-                                      <div key={i} style={{ fontSize: 11, color: C.red }}>✕ {t}</div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            {j.recomendaciones && (
-                              <div>
-                                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.gold, marginBottom: 6 }}>RECOMENDACIONES</div>
-                                <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                  {j.recomendaciones.split('\n').filter(Boolean).map((r, i) => (
-                                    <li key={i} style={{ fontSize: 11.5, color: C.text }}>{r}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                            {j.primer_en_unirse && (
-                              <div style={{
-                                background: 'rgba(212,175,55,0.06)', border: `1px solid ${C.border}`, borderRadius: 10,
-                                padding: '10px 12px', marginBottom: 4,
-                              }}>
-                                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2, color: C.gold, fontWeight: 700 }}>
-                                  🕐 PRIMERO EN UNIRSE: {j.primer_en_unirse.toUpperCase()}
-                                </div>
-                                <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>
-                                  Según la hora real en que cada quien entró a la llamada (dato de Google Meet). Es la mejor pista disponible de quién organizó la reunión — Google no manda un campo de "creador" como tal.
-                                </div>
-                              </div>
-                            )}
-
-                            <details>
-                              <summary style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, color: C.muted, cursor: 'pointer' }}>Ver transcripción completa</summary>
-                              <pre style={{ whiteSpace: 'pre-wrap', fontSize: 10, color: C.muted, marginTop: 8, maxHeight: 300, overflowY: 'auto', background: 'rgba(255,255,255,0.02)', padding: 10, borderRadius: 8 }}>
-                                {j.transcript_crudo}
-                              </pre>
-                            </details>
-                          </div>
-                        ) : (
-                          <p style={{ color: C.muted, fontSize: 11, marginTop: 14 }}>Transcrito, análisis pendiente.</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <p className="gc-footer-note">El Guardián solo responde con información confirmada del proyecto. Si algo no lo sabe con certeza, te lo dirá en vez de inventarlo.</p>
         </div>
-      )}
-
-      {/* Modal código generado · Camino */}
-      {codigoGeneradoModal && (
-        <div onClick={() => setCodigoGeneradoModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(4,2,14,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 20, padding: '32px 28px', textAlign: 'center', maxWidth: 340, width: '90%' }}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>🗺️</div>
-            <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 14, color: C.gold, letterSpacing: 2, marginBottom: 4 }}>ACCESO GENERADO</div>
-            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: C.text, marginBottom: 16 }}>{codigoGeneradoModal.nombre}</div>
-            <div style={{ fontFamily: 'monospace', fontSize: 20, letterSpacing: 2, color: C.gold, fontWeight: 900, background: 'rgba(212,175,55,0.08)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px', marginBottom: 16 }}>
-              {codigoGeneradoModal.codigo_acceso}
-            </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => { copiarAlPortapapeles(codigoGeneradoModal.codigo_acceso); setCopiadoCamino(codigoGeneradoModal.codigo_acceso); setTimeout(() => setCopiadoCamino(''), 1500); }}
-                style={{ padding: '10px 16px', background: 'rgba(212,175,55,0.1)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-              >
-                {copiadoCamino === codigoGeneradoModal.codigo_acceso ? '✓ COPIADO' : 'COPIAR CÓDIGO'}
-              </button>
-              <a
-                href={`https://wa.me/${(codigoGeneradoModal.telefono || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`¡Bienvenido/a al Camino a Líder Digital! 🗺️\n\nTu código de acceso es: ${codigoGeneradoModal.codigo_acceso}\n\nEntra aquí: ${BASE_URL}/camino/login`)}`}
-                target="_blank" rel="noreferrer"
-                style={{ padding: '10px 16px', background: 'rgba(68,255,136,0.12)', border: '1px solid rgba(68,255,136,0.35)', borderRadius: 8, color: C.green, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer', textDecoration: 'none' }}
-              >
-                💬 ABRIR WHATSAPP
-              </a>
-            </div>
-            <button onClick={() => setCodigoGeneradoModal(null)} style={{ marginTop: 16, background: 'none', border: 'none', color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, cursor: 'pointer', letterSpacing: 1 }}>CERRAR</button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal QR físico */}
-      {qrFModal && (
-        <div onClick={() => setQrFModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(4,2,14,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 20, padding: '32px 28px', textAlign: 'center', maxWidth: 320, width: '90%' }}>
-            <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 18, color: C.gold, letterSpacing: 3, marginBottom: 16 }}>{qrFModal.id}</div>
-            <QRCode url={qrFModal.url} size={200} />
-            <p style={{ fontFamily: 'monospace', fontSize: 8, color: C.muted, marginTop: 10, wordBreak: 'break-all' }}>{qrFModal.url}</p>
-            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
-              <button
-                onClick={() => copiarAlPortapapeles(qrFModal.url)}
-                style={{ padding: '8px 16px', background: 'rgba(212,175,55,0.1)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-              >COPIAR LINK</button>
-              <button
-                onClick={() => { const a = document.createElement('a'); a.href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrFModal.url)}&bgcolor=07040f&color=D4AF37&margin=10`; a.download = `qr-${qrFModal.id}.png`; a.click(); }}
-                style={{ padding: '8px 16px', background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 8, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-              >DESCARGAR</button>
-            </div>
-
-            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: C.muted, marginTop: 20, marginBottom: 8 }}>VERSIÓN BLANCA</div>
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrFModal.url)}&bgcolor=07040f&color=FFFFFF&margin=10`}
-              alt="QR blanco"
-              style={{ width: 200, height: 200, borderRadius: 8 }}
-            />
-            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
-              <button
-                onClick={() => descargarQR(`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrFModal.url)}&bgcolor=07040f&color=FFFFFF&margin=10`, `qr-${qrFModal.id}-blanco.png`)}
-                style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, color: '#FFFFFF', fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-              >DESCARGAR BLANCO</button>
-            </div>
-            <button onClick={() => setQrFModal(null)} style={{ marginTop: 12, background: 'none', border: 'none', color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9, cursor: 'pointer', letterSpacing: 1 }}>CERRAR</button>
-          </div>
-        </div>
-      )}
-
-    {/* Modal QR redes */}
-      {qrModal && (
-        <div
-          onClick={() => setQrModal(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(4,2,14,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 20, padding: '32px 28px', textAlign: 'center', maxWidth: 300, width: '90%', animation: 'fadeIn .25s ease both' }}
-          >
-            <div style={{ fontSize: 28, marginBottom: 4 }}>{qrModal.icon}</div>
-            <div style={{ fontFamily: 'Cinzel,serif', fontWeight: 900, fontSize: 14, color: C.gold, letterSpacing: 2, marginBottom: 16 }}>{qrModal.label.toUpperCase()}</div>
-            <QRCode url={qrModal.url} size={180} />
-            <p style={{ fontFamily: 'monospace', fontSize: 9, color: C.muted, marginTop: 12, wordBreak: 'break-all' }}>{qrModal.url}</p>
-            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
-              <button
-                onClick={() => copiarAlPortapapeles(qrModal.url)}
-                style={{ padding: '8px 16px', background: 'rgba(212,175,55,0.1)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.gold, fontFamily: 'Cinzel,serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-              >
-                COPIAR LINK
-              </button>
-              <button
-                onClick={() => { const a = document.createElement('a'); a.href = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qrModal.url)}&bgcolor=07040f&color=D4AF37&margin=10`; a.download = `qr-${qrModal.label.toLowerCase()}.png`; a.click(); }}
-                style={{ padding: '8px 16px', background: 'rgba(155,89,255,0.12)', border: '1px solid rgba(155,89,255,0.3)', borderRadius: 8, color: C.purple, fontFamily: 'Cinzel,serif', fontSize: 9, letterSpacing: 1, cursor: 'pointer' }}
-              >
-                DESCARGAR QR
-              </button>
-            </div>
-            <button
-              onClick={() => setQrModal(null)}
-              style={{ marginTop: 12, background: 'none', border: 'none', color: C.muted, fontFamily: 'Cinzel,serif', fontSize: 9, cursor: 'pointer', letterSpacing: 1 }}
-            >
-              CERRAR
-            </button>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
+
+const CSS = `
+.gc-overlay{
+  position:fixed; inset:0; z-index:2147483647;
+  height:100vh;
+  display:flex; flex-direction:column;
+  background:#0a0e17;
+  font-family:'Inter', sans-serif;
+  color:#eef1f7;
+  cursor:auto;
+}
+@supports (height: 100dvh){
+  .gc-overlay{ height:100dvh; }
+}
+.gc-modal-header{
+  position:absolute; top:0; left:0; right:0; z-index:5;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:max(14px, env(safe-area-inset-top)) 18px 12px;
+  pointer-events:none;
+}
+.gc-modal-title{ display:flex; align-items:center; gap:10px; pointer-events:none; }
+.gc-modal-icon{ font-size:20px; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.8)); }
+.gc-modal-label{ font-family:'Cinzel',serif; font-size:15px; letter-spacing:2px; color:#22D3EE; text-shadow:0 0 14px rgba(34,211,238,0.5), 0 1px 3px rgba(0,0,0,0.8); }
+.gc-close{
+  background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.85);
+  width:34px; height:34px; border-radius:50%; cursor:pointer; font-size:16px; flex-shrink:0; pointer-events:auto;
+}
+.gc-scroll{
+  flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;
+  display:flex; justify-content:center;
+  padding:0 14px 24px;
+  position:relative;
+}
+.gc-esfera{ position:fixed; top:50%; left:50%; border-radius:50%; pointer-events:none; z-index:-1; filter:blur(95px); mix-blend-mode:screen; opacity:0.95; will-change:transform; }
+.gc-esfera.naranja{ width:780px; height:780px; background:radial-gradient(circle, #FA9238 0%, rgba(250,146,56,0) 72%); animation:gcMoverNaranja 34s ease-in-out infinite; }
+.gc-esfera.amarillo{ width:680px; height:680px; background:radial-gradient(circle, #F7BD21 0%, rgba(247,189,33,0) 72%); animation:gcMoverAmarillo 47s ease-in-out infinite; animation-delay:-9s; }
+.gc-esfera.cian{ width:820px; height:820px; background:radial-gradient(circle, #5FDCFD 0%, rgba(95,220,253,0) 72%); animation:gcMoverCian 41s ease-in-out infinite; animation-delay:-21s; }
+.gc-esfera.morado{ width:720px; height:720px; background:radial-gradient(circle, #6141D5 0%, rgba(97,65,213,0) 72%); animation:gcMoverMorado 26s ease-in-out infinite; animation-delay:-4s; }
+@keyframes gcMoverNaranja{
+  0%,100%{ transform:translate(calc(-50% - 22vw), calc(-50% - 18vh)) scale(1); }
+  18%{ transform:translate(calc(-50% - 32vw), calc(-50% - 6vh)) scale(1.15); }
+  36%{ transform:translate(calc(-50% - 12vw), calc(-50% - 26vh)) scale(0.85); }
+  54%{ transform:translate(calc(-50% - 28vw), calc(-50% - 12vh)) scale(1.08); }
+  72%{ transform:translate(calc(-50% - 8vw), calc(-50% - 28vh)) scale(0.92); }
+  88%{ transform:translate(calc(-50% - 20vw), calc(-50% - 16vh)) scale(1.05); }
+}
+@keyframes gcMoverAmarillo{
+  0%,100%{ transform:translate(calc(-50% - 24vw), calc(-50% + 16vh)) scale(1); }
+  20%{ transform:translate(calc(-50% - 14vw), calc(-50% + 24vh)) scale(1.14); }
+  42%{ transform:translate(calc(-50% - 30vw), calc(-50% + 6vh)) scale(0.86); }
+  60%{ transform:translate(calc(-50% - 10vw), calc(-50% + 20vh)) scale(1.1); }
+  80%{ transform:translate(calc(-50% - 22vw), calc(-50% + 12vh)) scale(0.94); }
+}
+@keyframes gcMoverCian{
+  0%,100%{ transform:translate(calc(-50% + 24vw), calc(-50% - 10vh)) scale(1); }
+  16%{ transform:translate(calc(-50% + 34vw), calc(-50% - 20vh)) scale(1.16); }
+  34%{ transform:translate(calc(-50% + 14vw), calc(-50% + 8vh)) scale(0.86); }
+  52%{ transform:translate(calc(-50% + 30vw), calc(-50% - 4vh)) scale(1.1); }
+  70%{ transform:translate(calc(-50% + 18vw), calc(-50% - 18vh)) scale(0.9); }
+  86%{ transform:translate(calc(-50% + 26vw), calc(-50% + 2vh)) scale(1.04); }
+}
+@keyframes gcMoverMorado{
+  0%,100%{ transform:translate(calc(-50% - 6vw), calc(-50% - 6vh)) scale(1); }
+  22%{ transform:translate(calc(-50% + 8vw), calc(-50% + 5vh)) scale(1.15); }
+  44%{ transform:translate(calc(-50% - 10vw), calc(-50% + 8vh)) scale(0.88); }
+  66%{ transform:translate(calc(-50% + 6vw), calc(-50% - 9vh)) scale(1.1); }
+  85%{ transform:translate(calc(-50% - 4vw), calc(-50% + 2vh)) scale(0.95); }
+}
+.gc-shell{ width:100%; max-width:676px; }
+.gc-encabezado{ text-align:center; position:relative; margin:16px 0 14px; }
+.gc-titulo{ font-family:'Poppins', sans-serif; font-weight:800; font-size:22px; color:#fff; letter-spacing:-0.01em; margin:0; position:relative; display:inline-block; }
+.gc-subrayado{ position:absolute; left:6%; right:6%; top:-10px; height:2px; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); }
+.gc-chispa{ position:absolute; font-size:16px; color:#f2c94c; filter:drop-shadow(0 0 6px rgba(242,201,76,0.7)); animation:gcDestello 2.6s ease-in-out infinite; }
+.gc-chispa.c1{ top:-14px; left:14%; animation-delay:.2s; }
+.gc-chispa.c2{ top:6px; right:12%; font-size:12px; animation-delay:1s; }
+.gc-chispa.c3{ bottom:-8px; right:26%; font-size:10px; animation-delay:1.6s; }
+@keyframes gcDestello{ 0%,100%{ opacity:.35; transform:scale(0.85);} 50%{ opacity:1; transform:scale(1.05);} }
+.gc-ventana{ border-radius:16px; background:#141a2b; border:1px solid rgba(255,255,255,0.06); box-shadow:0 20px 50px rgba(0,0,0,0.45); margin-bottom:16px; }
+.gc-ventana-header{ position:sticky; top:0; z-index:4; border-radius:16px 16px 0 0; overflow:hidden; background:#1b2338; box-shadow:0 10px 18px -12px rgba(0,0,0,0.6); }
+.gc-contenido{ border-radius:0 0 16px 16px; overflow:hidden; background:#141a2b; }
+.gc-barra-ventana{ display:flex; align-items:center; justify-content:center; position:relative; padding:10px 14px; background:#1b2338; border-bottom:1px solid rgba(255,255,255,0.05); }
+.gc-puntos{ position:absolute; left:14px; display:flex; gap:6px; }
+.gc-puntos span{ width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,0.18); }
+.gc-etiqueta{ font-size:11px; letter-spacing:0.10em; text-transform:uppercase; color:#8b93a7; font-weight:600; }
+.gc-video-loop{ position:relative; height:230px; background:radial-gradient(circle at 30% 20%, rgba(47,214,217,0.25), transparent 55%), radial-gradient(circle at 75% 75%, rgba(242,201,76,0.18), transparent 50%), #0e1424; display:flex; align-items:center; justify-content:center; overflow:hidden; transition:height .1s linear; }
+.gc-video-loop iframe{ position:absolute; top:50%; left:50%; width:100%; height:100%; min-width:100%; min-height:100%; transform:translate(-50%,-50%) scale(1.6); border:0; pointer-events:none; z-index:0; }
+.gc-ventana-header.is-compact .gc-barra-ventana{ padding:5px 12px; }
+.gc-ventana-header.is-compact .gc-etiqueta{ font-size:9px; }
+.gc-ventana-header.is-compact .gc-puntos span{ width:6px; height:6px; }
+.gc-preguntas{ display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:10px 12px 0; border-top:1px solid rgba(255,255,255,0.05); margin-top:2px; }
+.gc-chip{ font-family:'Inter', sans-serif; font-size:12px; line-height:1.35; font-weight:600; color:#f2c94c; background:rgba(242,201,76,0.08); border:1px solid rgba(242,201,76,0.16); border-radius:12px; padding:9px 12px; cursor:pointer; transition:all .18s ease; position:relative; text-align:left; white-space:normal; }
+.gc-chip:hover{ background:rgba(242,201,76,0.16); }
+.gc-chip:disabled{ opacity:.4; cursor:not-allowed; }
+.gc-chat{ padding:16px 14px 4px; display:flex; flex-direction:column; gap:12px; }
+.gc-msg{ max-width:88%; padding:11px 14px; border-radius:14px; font-size:13.5px; line-height:1.5; }
+.gc-msg.bot{ align-self:flex-start; background:#161d30; border:1px solid rgba(255,255,255,0.05); border-top-left-radius:3px; }
+.gc-msg.bot strong{ color:#f2c94c; font-weight:700; }
+.gc-msg.bot ul{ margin:6px 0; padding-left:18px; }
+.gc-msg.bot li{ margin-bottom:4px; }
+.gc-msg.user{ align-self:flex-end; background:linear-gradient(135deg, #f6c343, #e8962e); color:#26190a; font-weight:600; border-top-right-radius:3px; }
+.gc-msg.error{ align-self:center; background:rgba(160,40,40,0.16); border:1px solid rgba(220,90,90,0.35); color:#f3c8c8; font-size:13px; max-width:96%; text-align:left; }
+.gc-detalle{ display:block; margin-top:6px; font-size:11.5px; color:#e0a5a5; word-break:break-word; }
+.gc-msg.error button{ margin-top:8px; background:rgba(242,201,76,0.16); border:1px solid rgba(242,201,76,0.16); color:#f2c94c; border-radius:8px; padding:6px 10px; font-size:12.5px; cursor:pointer; }
+.gc-thinking{ align-self:flex-start; display:flex; gap:5px; padding:12px 15px; }
+.gc-thinking span{ width:6px; height:6px; border-radius:50%; background:#f2c94c; animation:gcPulso 1.1s ease-in-out infinite; }
+.gc-thinking span:nth-child(2){ animation-delay:.15s; }
+.gc-thinking span:nth-child(3){ animation-delay:.3s; }
+@keyframes gcPulso{ 0%,100%{ opacity:.25; transform:translateY(0);} 50%{ opacity:1; transform:translateY(-3px);} }
+.gc-acciones{ display:flex; gap:6px; justify-content:center; padding:6px 12px 0; }
+.gc-accion{ display:flex; align-items:center; gap:4px; background:#1b2338; border:1px solid rgba(255,255,255,0.06); color:#8b93a7; font-size:10.5px; font-weight:600; padding:4px 9px; border-radius:8px; cursor:pointer; position:relative; }
+.gc-accion:hover{ color:#eef1f7; border-color:rgba(255,255,255,0.15); }
+.gc-input-zona{ position:sticky; bottom:0; z-index:3; background:#141a2b; padding-bottom:env(safe-area-inset-bottom); }
+.gc-input-bar{ display:flex; align-items:flex-end; gap:8px; padding:12px 10px 2px; }
+.gc-textarea{ flex:1; resize:none; background:#1b2338; border:1px solid rgba(255,255,255,0.08); border-radius:24px; color:#eef1f7; font-family:'Inter', sans-serif; font-size:13px; line-height:1.4; padding:13px 20px; max-height:110px; outline:none; position:relative; }
+.gc-textarea:focus{ border-color:#f2c94c; }
+.gc-textarea::placeholder{ color:#8b93a7; }
+.gc-enviar{ width:42px; height:42px; flex:none; border-radius:50%; background:linear-gradient(135deg, #f6c343, #e8962e); border:none; color:#26190a; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; position:relative; }
+.gc-enviar:disabled{ opacity:.4; cursor:not-allowed; }
+.gc-contador{ text-align:right; font-size:10.5px; color:#8b93a7; padding:0 22px 6px; user-select:none; }
+.gc-contador.cerca{ color:#f2c94c; }
+.gc-contador.lleno{ color:#e0685a; }
+.gc-footer-note{ text-align:center; font-size:11.5px; color:#8b93a7; padding:6px 20px 4px; }
+@media (max-height:520px){
+  .gc-scroll{ padding:0 10px 20px; }
+  .gc-encabezado{ margin:8px 0 6px; }
+  .gc-titulo{ font-size:19px; }
+  .gc-chispa{ display:none; }
+  .gc-barra-ventana{ padding:6px 12px; }
+  .gc-etiqueta{ font-size:9.5px; }
+  .gc-chat{ padding:12px 14px 4px; }
+}
+@media (max-width:420px){
+  .gc-preguntas{ grid-template-columns:1fr; }
+}
+@media (hover:hover) and (pointer:fine){
+  .gc-ventana::before, .gc-ventana::after,
+  .gc-chip::before, .gc-chip::after,
+  .gc-accion::before, .gc-accion::after,
+  .gc-textarea::before, .gc-textarea::after,
+  .gc-enviar::before, .gc-enviar::after{
+    content:""; position:absolute; inset:0; border-radius:inherit; padding:1.5px;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    opacity:0; pointer-events:none; animation-play-state: paused; z-index:3;
+  }
+  .gc-ventana::before, .gc-chip::before, .gc-accion::before, .gc-textarea::before, .gc-enviar::before{
+    background: radial-gradient(160px 160px at var(--lx,50%) var(--ly,50%), rgba(201,166,255,0.95), transparent 65%);
+    filter: drop-shadow(0 0 6px rgba(201,166,255,0.6));
+    animation: gcCicloBrilloMorado 6s ease-in-out infinite;
+  }
+  .gc-ventana::after, .gc-chip::after, .gc-accion::after, .gc-textarea::after, .gc-enviar::after{
+    background: radial-gradient(160px 160px at var(--lx,50%) var(--ly,50%), rgba(242,201,76,0.95), transparent 65%);
+    filter: drop-shadow(0 0 6px rgba(242,201,76,0.6));
+    animation: gcCicloBrilloDorado 6s ease-in-out infinite;
+    animation-delay: 3s;
+  }
+  .gc-ventana:hover::before, .gc-chip:hover::before, .gc-accion:hover::before, .gc-textarea:hover::before, .gc-enviar:hover::before,
+  .gc-ventana:hover::after, .gc-chip:hover::after, .gc-accion:hover::after, .gc-textarea:hover::after, .gc-enviar:hover::after{
+    animation-play-state: running;
+  }
+}
+@keyframes gcCicloBrilloMorado{ 0%,100%{ opacity:0; } 50%{ opacity:1; } }
+@keyframes gcCicloBrilloDorado{ 0%,100%{ opacity:0; } 50%{ opacity:1; } }
+`;
