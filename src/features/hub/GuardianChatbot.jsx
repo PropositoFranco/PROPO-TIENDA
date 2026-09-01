@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '../../services/supabase';
+import Player from '@vimeo/player';
 
 /* =========================================================================
    EL GUARDIÁN — versión React (antes vivía como iframe anidado dentro de
@@ -78,6 +79,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   const historialRef = useRef([]);
   const ultimaPreguntaFallidaRef = useRef(null);
   const savedScrollYRef = useRef(0);
+  const vimeoPlayerRef = useRef(null);
 
   // Los mensajes viven en estado de React (no insertados a mano en el DOM),
   // así que sobreviven a que el chatbot se oculte y se vuelva a mostrar.
@@ -89,6 +91,10 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   const [bloqueado, setBloqueado] = useState(false);
   const [contador, setContador] = useState(0);
   const [inited, setInited] = useState(false);
+  // Una vez que se abrió la primera vez, el árbol completo (incluido el
+  // video) se queda montado para siempre. Cerrar ya no destruye nada,
+  // solo oculta y pausa.
+  const [huboAbierto, setHuboAbierto] = useState(false);
 
   // ── Precalentar la conexión con Vimeo desde que carga el hub (no solo
   //    cuando se abre el chat), para que al abrir el chatbot el video no
@@ -112,27 +118,14 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     };
   }, []);
 
-  // ── Detección de gama baja (mismo criterio que ya usa hub.html: cores/
-  //    RAM + qué tan rápido responde el primer frame) para bajarle un
-  //    escalón más a las esferas animadas del fondo solo en esos equipos ──
-  useEffect(() => {
-    if (!open) return;
-    const root = overlayRef.current;
-    if (!root) return;
-    const cores = navigator.hardwareConcurrency || 4;
-    const ram = navigator.deviceMemory;
-    let low = ram !== undefined ? ram <= 2 : cores <= 4 && window.matchMedia('(max-width:768px)').matches;
-    const t0 = performance.now();
-    const id = requestAnimationFrame(() => {
-      if (performance.now() - t0 > 50) low = true;
-      root.classList.toggle('gc-perf-low', low);
-    });
-    return () => cancelAnimationFrame(id);
-  }, [open]);
-
   function nuevoId() {
     return 'm' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
   }
+
+  // ── Una vez que se abre por primera vez, se queda montado para siempre ──
+  useEffect(() => {
+    if (open) setHuboAbierto(true);
+  }, [open]);
 
   // ── Abrir/cerrar: bloqueo de scroll del body + alto real de viewport ──
   useEffect(() => {
@@ -259,27 +252,12 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
       return compacto ? { completo: 150, minimo: 56, rango: 55 } : { completo: 230, minimo: 90, rango: 70 };
     }
     let t = tamanos();
-    let compactado = false;
-    function enviarVideo(metodo) {
-      const iframe = videoLoop.querySelector('iframe');
-      try {
-        iframe?.contentWindow?.postMessage(JSON.stringify({ method: metodo }), 'https://player.vimeo.com');
-      } catch { /* no-op */ }
-    }
     function actualizar() {
       const y = scrollEl.scrollTop || 0;
       const ratio = Math.max(0, Math.min(1, y / t.rango));
       const alto = t.completo - ratio * (t.completo - t.minimo);
       videoLoop.style.height = alto + 'px';
       ventanaHeader.classList.toggle('is-compact', ratio > 0.65);
-      // El video queda reducido a una franja casi invisible cuando ratio
-      // está cerca de 1 — ahí lo pausamos para no seguir decodificando
-      // video de fondo sin necesidad; se reanuda solo al volver a subir.
-      const debeEstarCompactado = ratio > 0.97;
-      if (debeEstarCompactado !== compactado) {
-        compactado = debeEstarCompactado;
-        enviarVideo(compactado ? 'pause' : 'play');
-      }
     }
     let pendiente = false;
     const onScroll = () => {
@@ -301,89 +279,45 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   }, [open]);
 
   // ── Brillo de borde que sigue al cursor (solo PC con mouse) ──
-  // Antes: en CADA pixel de movimiento del mouse se hacía querySelectorAll
-  // sobre todo el panel (hasta ~15 elementos: ventana, chips, acciones,
-  // textarea, botón enviar) y se leía getBoundingClientRect() de cada uno
-  // — eso es "layout thrashing" puro, docenas de lecturas de layout por
-  // frame, siempre, sin importar dónde estuviera el cursor. Eso es lo que
-  // hacía que la pestaña se sintiera "forzada"/caliente en PC y, muy
-  // probablemente, lo que provocaba que el cursor del sistema se viera
-  // raro/desaparecido: con el hilo de composición saturado, el navegador
-  // deja de poder dibujar el cursor con fluidez.
-  // Ahora: un solo listener sobre el panel (no sobre todo el documento),
-  // se calcula SOLO el elemento que está justo debajo del cursor
-  // (delegación con closest), una sola lectura de layout, y el resultado
-  // se aplica como máximo una vez por frame con requestAnimationFrame.
   useEffect(() => {
     if (!open) return;
     if (!window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
     const root = overlayRef.current;
     if (!root) return;
     const SELECTOR_BRILLO = '.gc-ventana, .gc-chip, .gc-accion, .gc-textarea, .gc-enviar';
-
-    let rafId = null;
-    let lastX = 0, lastY = 0, lastEl = null;
-
-    const aplicar = () => {
-      rafId = null;
-      if (!lastEl) return;
-      const r = lastEl.getBoundingClientRect();
-      lastEl.style.setProperty('--lx', (lastX - r.left) + 'px');
-      lastEl.style.setProperty('--ly', (lastY - r.top) + 'px');
-    };
-
     const onMove = (e) => {
-      const el = e.target?.closest ? e.target.closest(SELECTOR_BRILLO) : null;
-      if (!el) { lastEl = null; return; }
-      lastX = e.clientX; lastY = e.clientY; lastEl = el;
-      if (rafId == null) rafId = requestAnimationFrame(aplicar);
+      root.querySelectorAll(SELECTOR_BRILLO).forEach(el => {
+        const r = el.getBoundingClientRect();
+        el.style.setProperty('--lx', (e.clientX - r.left) + 'px');
+        el.style.setProperty('--ly', (e.clientY - r.top) + 'px');
+      });
     };
+    document.addEventListener('mousemove', onMove, { passive: true });
+    return () => document.removeEventListener('mousemove', onMove);
+  }, [open]);
 
-    root.addEventListener('mousemove', onMove, { passive: true });
+  // ── Conectar el SDK oficial de Vimeo al iframe UNA sola vez, apenas se
+  //    abre por primera vez. Desde ahí el mismo player controla el video
+  //    de punta a punta — nunca se vuelve a crear otro ──
+  useEffect(() => {
+    if (!huboAbierto) return;
+    const iframe = videoLoopRef.current?.querySelector('iframe');
+    if (!iframe) return;
+    const player = new Player(iframe);
+    vimeoPlayerRef.current = player;
     return () => {
-      root.removeEventListener('mousemove', onMove);
-      if (rafId != null) cancelAnimationFrame(rafId);
+      player.destroy().catch(() => {});
+      vimeoPlayerRef.current = null;
     };
-  }, [open]);
+  }, [huboAbierto]);
 
-  // ── Pausar fondo animado + video cuando la pestaña no está visible ──
-  // Antes las 4 esferas (con blur pesado) y el video de Vimeo seguían
-  // animando/reproduciéndose aunque el usuario cambiara de pestaña o
-  // minimizara la app — puro gasto de batería/CPU/GPU sin que nadie lo
-  // viera. Ahora se pausan al perder visibilidad y se reanudan al volver.
+  // ── Pausar el video al cerrar, reanudarlo instantáneo al reabrir.
+  //    Nunca se recrea el iframe, así que no hay recarga ni buffering ──
   useEffect(() => {
-    if (!open) return;
-    const root = overlayRef.current;
-    if (!root) return;
-    const onVis = () => {
-      root.classList.toggle('gc-pausado', document.hidden);
-      const iframe = root.querySelector('.gc-video-loop iframe');
-      if (iframe) {
-        try {
-          iframe.contentWindow?.postMessage(
-            JSON.stringify({ method: document.hidden ? 'pause' : 'play' }),
-            'https://player.vimeo.com'
-          );
-        } catch { /* si Vimeo no responde al mensaje, no pasa nada grave */ }
-      }
-    };
-    document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
-  }, [open]);
-
-  // ── Blindaje: el chat nunca necesita el Fullscreen nativo del
-  //    navegador (nuestro overlay ya cubre toda la pantalla solo, vía
-  //    position:fixed + inset:0) — y el Fullscreen nativo es precisamente
-  //    lo que oculta el cursor del sistema. Si algo lo activa mientras
-  //    el chat está abierto, lo cerramos al instante. ──
-  useEffect(() => {
-    if (!open) return;
-    const salirDeFullscreen = () => {
-      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-    };
-    salirDeFullscreen();
-    document.addEventListener('fullscreenchange', salirDeFullscreen);
-    return () => document.removeEventListener('fullscreenchange', salirDeFullscreen);
+    const player = vimeoPlayerRef.current;
+    if (!player) return;
+    if (open) player.play().catch(() => {});
+    else player.pause().catch(() => {});
   }, [open]);
 
   // ── ESC para cerrar ──
@@ -590,7 +524,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     URL.revokeObjectURL(url);
   }
 
-  if (!open) return null;
+  if (!huboAbierto) return null;
 
   const cercaDelLimite = contador >= LIMITE_CARACTERES * 0.85 && contador < LIMITE_CARACTERES;
   const lleno = contador >= LIMITE_CARACTERES;
@@ -598,7 +532,8 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   return (
     <div
       ref={overlayRef}
-      className="gc-overlay"
+      className={'gc-overlay' + (open ? '' : ' gc-oculto')}
+      aria-hidden={!open}
       // El chatbot debe comportarse como una pestaña totalmente aislada:
       // nada de lo que se toque aquí adentro debe "escapar" hacia
       // listeners globales de `window` del resto de la app (por ejemplo,
@@ -644,7 +579,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
                 <iframe
                   src="https://player.vimeo.com/video/1218704734?autoplay=1&loop=1&muted=1&background=1&autopause=0&controls=0"
                   title="Video del Guardián del Templo"
-                  allow="autoplay"
+                  allow="autoplay; fullscreen; picture-in-picture"
                   loading="eager"
                   referrerPolicy="strict-origin-when-cross-origin"
                 />
@@ -755,6 +690,13 @@ const CSS = `
 @supports (height: 100dvh){
   .gc-overlay{ height:100dvh; }
 }
+.gc-overlay.gc-oculto{
+  visibility:hidden;
+  pointer-events:none;
+}
+.gc-overlay.gc-oculto *{
+  animation-play-state:paused !important;
+}
 .gc-modal-header{
   position:absolute; top:0; left:0; right:0; z-index:5;
   display:flex; align-items:center; justify-content:space-between;
@@ -774,48 +716,11 @@ const CSS = `
   padding:0 14px 24px;
   position:relative;
 }
-/* Antes estas 4 esferas usaban filter:blur(95px) para verse difuminadas.
-   blur() a ese radio es de las operaciones más caras que existen en CSS
-   — el costo no depende tanto de qué tan potente sea la GPU, sino de que
-   el navegador tiene que recalcular un desenfoque real sobre un área
-   enorme en CADA frame, para siempre, mientras el chat está abierto. Por
-   eso se sentía trabado incluso en una PC gamer potente (Ryzen 7 3700X +
-   RX 6700 XT): no era un problema de "poca potencia", era una operación
-   estructuralmente cara sin importar el hardware.
-   Ahora usamos el mismo truco que usa cualquier fondo "glow" bien
-   optimizado: el desenfoque queda "horneado" directo en el degradado
-   (varias paradas de color que se van apagando de a poco), así el
-   navegador solo tiene que pintar un radial-gradient normal — igual de
-   barato que pintar un color plano — y se ve prácticamente igual de
-   suave, sin pagar el costo del filtro en cada frame. */
-.gc-esfera{ position:fixed; top:50%; left:50%; border-radius:50%; pointer-events:none; z-index:-1; mix-blend-mode:screen; opacity:0.95; will-change:transform; }
-.gc-esfera.naranja{ width:780px; height:780px; background:radial-gradient(circle, rgba(250,146,56,1) 0%, rgba(250,146,56,0.85) 10%, rgba(250,146,56,0.55) 28%, rgba(250,146,56,0.28) 48%, rgba(250,146,56,0.1) 70%, rgba(250,146,56,0) 100%); animation:gcMoverNaranja 34s ease-in-out infinite; }
-.gc-esfera.amarillo{ width:680px; height:680px; background:radial-gradient(circle, rgba(247,189,33,1) 0%, rgba(247,189,33,0.85) 10%, rgba(247,189,33,0.55) 28%, rgba(247,189,33,0.28) 48%, rgba(247,189,33,0.1) 70%, rgba(247,189,33,0) 100%); animation:gcMoverAmarillo 47s ease-in-out infinite; animation-delay:-9s; }
-.gc-esfera.cian{ width:820px; height:820px; background:radial-gradient(circle, rgba(95,220,253,1) 0%, rgba(95,220,253,0.85) 10%, rgba(95,220,253,0.55) 28%, rgba(95,220,253,0.28) 48%, rgba(95,220,253,0.1) 70%, rgba(95,220,253,0) 100%); animation:gcMoverCian 41s ease-in-out infinite; animation-delay:-21s; }
-.gc-esfera.morado{ width:720px; height:720px; background:radial-gradient(circle, rgba(97,65,213,1) 0%, rgba(97,65,213,0.85) 10%, rgba(97,65,213,0.55) 28%, rgba(97,65,213,0.28) 48%, rgba(97,65,213,0.1) 70%, rgba(97,65,213,0) 100%); animation:gcMoverMorado 26s ease-in-out infinite; animation-delay:-4s; }
-/* En pantallas chicas (celulares) igual achicamos las esferas — pintar un
-   radial-gradient también cuesta según el área que cubre, aunque mucho
-   menos que un blur, así que esto sigue ayudando a los equipos más
-   chicos y débiles. */
-@media (max-width:768px){
-  .gc-esfera.naranja{ width:420px; height:420px; }
-  .gc-esfera.amarillo{ width:380px; height:380px; }
-  .gc-esfera.cian{ width:440px; height:440px; }
-  .gc-esfera.morado{ width:400px; height:400px; }
-}
-/* Pestaña oculta (usuario cambió de app/pestaña) → pausar todo lo animado
-   del fondo; se reanuda solo al volver. Cero costo mientras no se ve. */
-.gc-overlay.gc-pausado .gc-esfera,
-.gc-overlay.gc-pausado .gc-chispa,
-.gc-overlay.gc-pausado .gc-thinking span{ animation-play-state:paused !important; }
-@media (prefers-reduced-motion:reduce){
-  .gc-esfera{ animation:none !important; }
-}
-/* Equipos detectados como gama baja: un escalón más abajo. */
-.gc-overlay.gc-perf-low .gc-esfera.naranja,
-.gc-overlay.gc-perf-low .gc-esfera.amarillo,
-.gc-overlay.gc-perf-low .gc-esfera.cian,
-.gc-overlay.gc-perf-low .gc-esfera.morado{ width:300px; height:300px; }
+.gc-esfera{ position:fixed; top:50%; left:50%; border-radius:50%; pointer-events:none; z-index:-1; filter:blur(95px); mix-blend-mode:screen; opacity:0.95; will-change:transform; }
+.gc-esfera.naranja{ width:780px; height:780px; background:radial-gradient(circle, #FA9238 0%, rgba(250,146,56,0) 72%); animation:gcMoverNaranja 34s ease-in-out infinite; }
+.gc-esfera.amarillo{ width:680px; height:680px; background:radial-gradient(circle, #F7BD21 0%, rgba(247,189,33,0) 72%); animation:gcMoverAmarillo 47s ease-in-out infinite; animation-delay:-9s; }
+.gc-esfera.cian{ width:820px; height:820px; background:radial-gradient(circle, #5FDCFD 0%, rgba(95,220,253,0) 72%); animation:gcMoverCian 41s ease-in-out infinite; animation-delay:-21s; }
+.gc-esfera.morado{ width:720px; height:720px; background:radial-gradient(circle, #6141D5 0%, rgba(97,65,213,0) 72%); animation:gcMoverMorado 26s ease-in-out infinite; animation-delay:-4s; }
 @keyframes gcMoverNaranja{
   0%,100%{ transform:translate(calc(-50% - 22vw), calc(-50% - 18vh)) scale(1); }
   18%{ transform:translate(calc(-50% - 32vw), calc(-50% - 6vh)) scale(1.15); }
