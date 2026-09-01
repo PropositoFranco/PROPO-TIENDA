@@ -277,17 +277,33 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   }, [open]);
 
   // ── Brillo de borde que sigue al cursor (solo PC con mouse) ──
+  // Limitado a un cálculo por frame (requestAnimationFrame): algunos mouse
+  // disparan "mousemove" cientos de veces por segundo, y recalcular la
+  // posición de 5 elementos en cada uno de esos eventos es lo que causaba
+  // que el chat se sintiera lento/trabado en computadoras de gama baja.
   useEffect(() => {
     if (!window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
     const root = overlayRef.current;
     if (!root) return;
     const SELECTOR_BRILLO = '.gc-ventana, .gc-chip, .gc-accion, .gc-textarea, .gc-enviar';
-    const onMove = (e) => {
+    let ultimoEvento = null;
+    let pendiente = false;
+    const aplicarBrillo = () => {
+      pendiente = false;
+      if (!ultimoEvento) return;
+      const { clientX, clientY } = ultimoEvento;
       root.querySelectorAll(SELECTOR_BRILLO).forEach(el => {
         const r = el.getBoundingClientRect();
-        el.style.setProperty('--lx', (e.clientX - r.left) + 'px');
-        el.style.setProperty('--ly', (e.clientY - r.top) + 'px');
+        el.style.setProperty('--lx', (clientX - r.left) + 'px');
+        el.style.setProperty('--ly', (clientY - r.top) + 'px');
       });
+    };
+    const onMove = (e) => {
+      ultimoEvento = e;
+      if (!pendiente) {
+        pendiente = true;
+        requestAnimationFrame(aplicarBrillo);
+      }
     };
     document.addEventListener('mousemove', onMove, { passive: true });
     return () => document.removeEventListener('mousemove', onMove);
@@ -732,6 +748,13 @@ const CSS = `
   flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;
   display:flex; justify-content:center;
   padding:0 14px 24px;
+  /* Desactiva "scroll anchoring" del navegador: sin esto, Chrome/Edge en
+     PC intentan re-ajustar el scroll cada vez que el video cambia de
+     tamaño (al encogerse en el header sticky), lo que dispara de nuevo
+     el cálculo de tamaño y así en bucle — el video "vibra" chico/grande
+     sin parar. Con overflow-anchor:none el navegador deja de "corregir"
+     el scroll por su cuenta y el encogido queda estable. */
+  overflow-anchor: none;
 }
 .gc-shell{ width:100%; max-width:676px; }
 
@@ -745,14 +768,14 @@ const CSS = `
 @keyframes gcDestello{ 0%,100%{ opacity:.35; transform:scale(0.85);} 50%{ opacity:1; transform:scale(1.05);} }
 
 .gc-ventana{ position:relative; border-radius:18px; background:#141a2b; border:1px solid rgba(255,255,255,0.06); box-shadow:0 20px 50px rgba(0,0,0,0.45); margin-bottom:16px; }
-.gc-ventana-header{ position:sticky; top:0; z-index:4; border-radius:18px 18px 0 0; overflow:hidden; background:#1b2338; box-shadow:0 10px 18px -12px rgba(0,0,0,0.6); }
+.gc-ventana-header{ position:sticky; top:0; z-index:4; border-radius:18px 18px 0 0; overflow:hidden; background:#1b2338; box-shadow:0 10px 18px -12px rgba(0,0,0,0.6); overflow-anchor:none; }
 .gc-contenido{ border-radius:0 0 18px 18px; overflow:hidden; background:#141a2b; }
 .gc-barra-ventana{ display:flex; align-items:center; justify-content:center; position:relative; padding:10px 14px; background:#1b2338; border-bottom:1px solid rgba(255,255,255,0.05); }
 .gc-puntos{ position:absolute; left:14px; display:flex; gap:6px; }
 .gc-puntos span{ width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,0.18); }
 .gc-etiqueta{ font-size:11px; letter-spacing:0.10em; text-transform:uppercase; color:#8b93a7; font-weight:600; }
 
-.gc-video-loop{ position:relative; height:230px; background:radial-gradient(circle at 30% 20%, rgba(47,214,217,0.25), transparent 55%), radial-gradient(circle at 75% 75%, rgba(242,201,76,0.18), transparent 50%), #0e1424; display:flex; align-items:center; justify-content:center; overflow:hidden; transition:height .1s linear; }
+.gc-video-loop{ position:relative; height:230px; background:radial-gradient(circle at 30% 20%, rgba(47,214,217,0.25), transparent 55%), radial-gradient(circle at 75% 75%, rgba(242,201,76,0.18), transparent 50%), #0e1424; display:flex; align-items:center; justify-content:center; overflow:hidden; transition:height .1s linear; overflow-anchor:none; }
 .gc-video-loop iframe{ position:absolute; top:50%; left:50%; width:100%; height:100%; min-width:100%; min-height:100%; transform:translate(-50%,-50%) scale(1.6); border:0; z-index:0; }
 .gc-video-vineta{ position:absolute; inset:0; z-index:1; pointer-events:none; box-shadow:inset 0 -30px 40px -10px rgba(14,20,36,0.55); }
 .gc-ventana-header.is-compact .gc-barra-ventana{ padding:5px 12px; }
