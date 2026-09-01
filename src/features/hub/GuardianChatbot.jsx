@@ -284,22 +284,26 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   //    abierto (causa real: en PWA de iPhone, 100dvh no se achica
   //    cuando aparece el teclado; hay que medirlo con visualViewport) ──
   useEffect(() => {
-    if (!open) return;
-    // NUEVO: este efecto existe únicamente para compensar el teclado
-    // virtual en celular/tablet (donde 100dvh no se achica solo). En PC
-    // no hay teclado virtual, así que fijar el tamaño del overlay a mano
-    // con las medidas de visualViewport no resuelve nada — y si el
-    // navegador dispara eventos 'resize'/'scroll' de visualViewport por
-    // otras razones en PC (zoom de página, escalado de Windows, DevTools
-    // abriéndose/cerrándose, etc.), este código reescribía el alto/ancho/
-    // posición del overlay a mano una y otra vez, peleando con el
-    // `position:fixed; inset:0` normal del CSS. Eso es exactamente lo que
-    // producía la pantalla "parpadeando" al hacer scroll en PC y, en el
-    // peor caso, dejaba el overlay fijado a una medida vieja/incorrecta
-    // (a veces 0 o desplazado) — visualmente parecía que el chat se había
-    // cerrado solo, pero en realidad `open` seguía en true, así que el
-    // botón "Pregúntale al Guardián" del hub no volvía a hacer nada al
-    // dar clic (ya estaba "abierto", solo que invisible/mal ubicado).
+    // IMPORTANTE: este efecto solo debe correr MIENTRAS el teclado está
+    // realmente abierto (tecladoAbierto === true), no durante toda la
+    // sesión del chat. Antes dependía solo de `open`, así que una vez que
+    // tocabas la barra y el teclado se abría, los listeners de
+    // visualViewport se quedaban escuchando para siempre — incluyendo el
+    // momento en que el teclado se CIERRA (al tocar fuera de él), que en
+    // celular dispara una ráfaga de eventos 'resize'/'scroll' mientras el
+    // teclado se anima hacia abajo. Si uno de esos eventos intermedios
+    // traía una medida rara a mitad de la animación (una fracción de
+    // segundo con alto/posición incorrectos), ese valor se quedaba fijado
+    // en el overlay — el chatbot se volvía invisible o quedaba mal
+    // ubicado, pero `open` seguía en true por dentro, así que el botón
+    // "Pregúntale al Guardián" no volvía a hacer nada (ya estaba
+    // "abierto", solo que invisible). Al depender también de
+    // `tecladoAbierto`, en cuanto el teclado empieza a cerrarse (blur del
+    // textarea) React corre de inmediato la limpieza de este efecto —
+    // que resetea el overlay a su tamaño normal de pantalla completa—
+    // sin esperar a que esos eventos del sistema terminen de asentarse
+    // bien o mal.
+    if (!open || !tecladoAbierto) return;
     if (!tieneTecladoVirtualRef.current) return;
     const vv = window.visualViewport;
     if (!vv) return;
@@ -363,7 +367,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
         overlayRef.current.style.left = '';
       }
     };
-  }, [open]);
+  }, [open, tecladoAbierto]);
 
   // ── Mensaje de bienvenida (una sola vez, al primer open) ──
   useEffect(() => {
@@ -578,7 +582,14 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
       agregarMensajeError((err?.name ? err.name + ': ' : '') + (err?.message || String(err)));
     } finally {
       setBloqueado(false);
-      entradaRef.current?.focus();
+      // Solo re-enfocamos el campo automáticamente en PC (donde no existe
+      // teclado virtual, así que no pasa nada al hacerlo — solo deja el
+      // cursor listo para la siguiente pregunta). En celular/tablet esto
+      // NUNCA debe pasar: reabriría el teclado solo, sin que el usuario
+      // haya tocado la barra, justo lo que se pidió evitar. Eso además
+      // multiplicaba las oportunidades de toparse con el cierre de
+      // teclado en cada respuesta, no solo al elegir una pregunta.
+      if (!tieneTecladoVirtualRef.current) entradaRef.current?.focus();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
