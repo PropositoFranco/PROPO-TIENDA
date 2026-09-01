@@ -114,6 +114,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   // sienta fluido incluso en equipos con gráficos integrados/débiles,
   // sin depender de que se actualicen drivers en cada PC.
   const [modoLigero, setModoLigero] = useState(false);
+  const [tecladoAbierto, setTecladoAbierto] = useState(false);
 
   // ── Precalentar la conexión con Vimeo desde que carga el hub (no solo
   //    cuando se abre el chat), para que al abrir el chatbot el video no
@@ -215,6 +216,32 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
       document.body.style.width = '';
       document.body.style.overflow = '';
       document.documentElement.style.height = '';
+    };
+  }, [open]);
+
+  // ── Mantener la barra de escribir visible arriba del teclado en
+  //    celular, y ocultar la nota del pie mientras el teclado esté
+  //    abierto (causa real: en PWA de iPhone, 100dvh no se achica
+  //    cuando aparece el teclado; hay que medirlo con visualViewport) ──
+  useEffect(() => {
+    if (!open) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const actualizar = () => {
+      const diferencia = window.innerHeight - vv.height;
+      setTecladoAbierto(diferencia > 120);
+      if (overlayRef.current) overlayRef.current.style.height = vv.height + 'px';
+      if (document.activeElement === entradaRef.current) {
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'auto' });
+      }
+    };
+    vv.addEventListener('resize', actualizar);
+    vv.addEventListener('scroll', actualizar);
+    actualizar();
+    return () => {
+      vv.removeEventListener('resize', actualizar);
+      vv.removeEventListener('scroll', actualizar);
+      if (overlayRef.current) overlayRef.current.style.height = '';
     };
   }, [open]);
 
@@ -518,6 +545,16 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     setTimeout(irAlFondo, 350);
   }
 
+  function onEntradaFocus() {
+    // Mismo ajuste que onChipClick, pero para cuando el usuario toca
+    // el textarea directamente para escribir a mano.
+    const irAlFondo = () => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    };
+    requestAnimationFrame(irAlFondo);
+    setTimeout(irAlFondo, 350);
+  }
+
   function nuevaSesion() {
     historialRef.current = [];
     msgRefs.current = {};
@@ -547,7 +584,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   return (
     <div
       ref={overlayRef}
-      className={'gc-overlay' + (modoLigero ? ' gc-ligero' : '')}
+      className={'gc-overlay' + (modoLigero ? ' gc-ligero' : '') + (tecladoAbierto ? ' gc-teclado-abierto' : '')}
       // El chatbot debe comportarse como una pestaña totalmente aislada:
       // nada de lo que se toque aquí adentro debe "escapar" hacia
       // listeners globales de `window` del resto de la app (por ejemplo,
@@ -672,6 +709,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
                     disabled={bloqueado}
                     onChange={onInputChange}
                     onKeyDown={onEntradaKeyDown}
+                    onFocus={onEntradaFocus}
                   />
                   <button
                     className="gc-enviar"
@@ -854,6 +892,7 @@ const CSS = `
 .gc-contador.cerca{ color:#f2c94c; }
 .gc-contador.lleno{ color:#e0685a; }
 .gc-footer-note{ text-align:center; font-size:11.5px; color:#8b93a7; padding:6px 20px 4px; }
+.gc-overlay.gc-teclado-abierto .gc-footer-note{ display:none; }
 
 @media (max-height:520px){
   .gc-scroll{ padding:0 10px 20px; }
