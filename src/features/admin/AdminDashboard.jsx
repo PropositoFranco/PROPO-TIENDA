@@ -244,6 +244,441 @@ function KpiPanel({ kpiData, kpiLastUpdated, loadKpis }) {
     </div>
   );
 }
+// ══════════════════════════════════════════════════════════════════════════
+// ⚔ CALENDARIO DE OPERACIONES — TEMPLO DEL PROPÓSITO + LA HOSTEADORA
+// Persistencia real vía localStorage (no window.storage — eso es solo de
+// artifacts de Claude, aquí usamos el navegador real del admin).
+// ══════════════════════════════════════════════════════════════════════════
+const CAL_DAYS = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
+const CAL_DAYS_SHORT = ["LUN","MAR","MIÉ","JUE","VIE","SÁB","DOM"];
+const CAL_ALL_DIAS = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo","DIA_1","DIA_29"];
+
+const CAL_C = {
+  metricas:     { accent:"#4488FF", soft:"rgba(68,136,255,0.09)",  border:"rgba(68,136,255,0.45)",  tag:"rgba(68,136,255,0.18)"  },
+  liderazgo:    { accent:"#D4AF37", soft:"rgba(212,175,55,0.09)",  border:"rgba(212,175,55,0.45)",  tag:"rgba(212,175,55,0.18)"  },
+  reclutamiento:{ accent:"#CC44FF", soft:"rgba(204,68,255,0.09)",  border:"rgba(204,68,255,0.45)",  tag:"rgba(204,68,255,0.18)"  },
+  desarrollo:   { accent:"#44FF88", soft:"rgba(68,255,136,0.09)",  border:"rgba(68,255,136,0.45)",  tag:"rgba(68,255,136,0.18)"  },
+  operaciones:  { accent:"#44DDFF", soft:"rgba(68,221,255,0.09)",  border:"rgba(68,221,255,0.45)",  tag:"rgba(68,221,255,0.18)"  },
+  especial:     { accent:"#FF5555", soft:"rgba(255,85,85,0.09)",   border:"rgba(255,85,85,0.45)",   tag:"rgba(255,85,85,0.18)"   },
+  mensual:      { accent:"#44FF88", soft:"rgba(68,255,136,0.09)",  border:"rgba(68,255,136,0.4)",   tag:"rgba(68,255,136,0.18)"  },
+  hosteadora:   { accent:"#FF9933", soft:"rgba(255,153,51,0.09)",  border:"rgba(255,153,51,0.45)",  tag:"rgba(255,153,51,0.18)"  },
+  otro:         { accent:"#88AAFF", soft:"rgba(136,170,255,0.09)", border:"rgba(136,170,255,0.4)",  tag:"rgba(136,170,255,0.18)" },
+};
+
+const CAL_AREA_LABELS = {
+  especial:     { label:"⚔ FIJO",          color:"#FF5555" },
+  metricas:     { label:"📊 MÉTRICAS",      color:"#4488FF" },
+  liderazgo:    { label:"👑 LIDERAZGO",     color:"#D4AF37" },
+  reclutamiento:{ label:"🔍 RECLUTAMIENTO", color:"#CC44FF" },
+  desarrollo:   { label:"💬 DESARROLLO",    color:"#44FF88" },
+  operaciones:  { label:"⚙️ OPERACIONES",   color:"#44DDFF" },
+  hosteadora:   { label:"🏰 HOSTEADORA",    color:"#FF9933" },
+  mensual:      { label:"📅 MENSUAL",       color:"#44FF88" },
+  otro:         { label:"🔷 OTRO",          color:"#88AAFF" },
+};
+
+const CAL_AREA_ORDER = ["especial","metricas","liderazgo","reclutamiento","operaciones","hosteadora","desarrollo","mensual","otro"];
+
+const CAL_INIT_TASKS = [
+  { id:1,  area:"metricas",     tipo:"Métricas",     actividad:"Analizar métricas de la app",               horario:"10am – 1pm",            dias:["Miércoles"],                                                        justificacion:"Revisar retención, uso, bugs y áreas de oportunidad de propotienda.com.", icon:"📊" },
+  { id:3,  area:"metricas",     tipo:"Métricas",     actividad:"Mejoras de seguimiento digital",            horario:"10am – 1pm",            dias:["Martes","Jueves"],                                                  justificacion:"Implementar acciones de mejora post-junta de métricas.", icon:"🔧" },
+  { id:4,  area:"liderazgo",    tipo:"Liderazgo",    actividad:"Seguimiento a líderes digitales",           horario:"10am – 1pm",            dias:["Lunes","Miércoles","Viernes"],                                      justificacion:"Juntas y revisión de métricas con el equipo de líderes digitales de la red.", icon:"👑" },
+  { id:5,  area:"liderazgo",    tipo:"Liderazgo",    actividad:"Reconocimiento de esfuerzos",               horario:"5pm en adelante",       dias:["Viernes","Domingo"],                                               justificacion:"Enviar certificados digitales, mensajes o audios felicitando al equipo por sus logros y mejoras.", icon:"🏅" },
+  { id:6,  area:"liderazgo",    tipo:"Liderazgo",    actividad:"Estructuras de grabación para líderes",    horario:"5pm en adelante",       dias:["Jueves"],                                                           justificacion:"Adaptar guiones y formatos del curso premium (fórmula 100k) para entregarles un sistema fácil de replicar.", icon:"🎬" },
+  { id:7,  area:"reclutamiento",tipo:"Reclutamiento",actividad:"Reclutamiento de líderes digital",         horario:"5pm en adelante",       dias:["Lunes","Miércoles"],                                                justificacion:"Prospección activa en redes y grupos de Facebook para reclutamiento digital de nuevos líderes.", icon:"🔍" },
+  { id:8,  area:"reclutamiento",tipo:"Reclutamiento",actividad:"Validación reclutamiento físico",          horario:"Durante el día",        dias:["Sábado"],                                                           justificacion:"Trabajo de campo como director: plazas, pitch con pizarrón, stickers para abrir mercado.", icon:"🗺️" },
+  { id:9,  area:"desarrollo",   tipo:"Desarrollo",   actividad:"Hábito de empatía (5 mensajes positivos)", horario:"Tardes calurosas",      dias:["Martes","Viernes"], justificacion:"Enviar 5 mensajes constructivos a cualquier persona para nutrir el lado humano del liderazgo.", icon:"💬" },
+  { id:10, area:"operaciones",  tipo:"Operaciones",  actividad:"Revisar balances y optimización",          horario:"10am – 1pm",            dias:["Lunes"],                                                            justificacion:"Control de gastos (stickers, etc.) y desarrollo del Muro de Logros con filtros por persona.", icon:"💰" },
+  { id:11, area:"operaciones",  tipo:"Operaciones",  actividad:"Implementaciones y actualizaciones",       horario:"10am – 1pm",            dias:["Jueves","Viernes"],                                                 justificacion:"Ejecutar las mejoras basadas en métricas y análisis obtenidos durante la semana.", icon:"⚙️" },
+  { id:12, area:"especial",     tipo:"⚔ FIJO",       actividad:"Junta semanal de métricas y repartidores",  horario:"10:00 am FIJO",         dias:["Martes"],                                                           justificacion:"Junta obligatoria semanal: KPIs, seguimiento de líderes digitales y repartidores físicos, métricas, mejoras e ideas del equipo en campo.", icon:"🤝" },
+  { id:13, area:"mensual",      tipo:"Día 1",        actividad:"Revisión mensual de métricas",             horario:"Durante el día",        dias:["DIA_1"],                                                            justificacion:"Análisis completo de métricas del mes: retención, conversión, crecimiento y metas alcanzadas en propotienda.com.", icon:"📊" },
+  { id:14, area:"mensual",      tipo:"Día 1",        actividad:"Actualizar estrategia de reclutamiento",   horario:"Durante el día",        dias:["DIA_1"],                                                            justificacion:"Actualizar y optimizar la estrategia de reclutamiento digital y físico basada en los resultados del mes.", icon:"🚀" },
+  { id:15, area:"mensual",      tipo:"Día 29",       actividad:"Balance financiero y Muro de Logros",      horario:"Durante el día",        dias:["DIA_29"],                                                           justificacion:"Control completo de gastos del mes y actualización del Muro de Logros con logros y mejoras del equipo.", icon:"💎" },
+  { id:16, area:"mensual",      tipo:"Día 29",       actividad:"Preparación de reconocimientos del mes",   horario:"Durante el día",        dias:["DIA_29"],                                                           justificacion:"Preparar certificados y mensajes de reconocimiento para el equipo basados en el desempeño mensual.", icon:"🏆" },
+  { id:17, area:"hosteadora",   tipo:"Hosteadora",   actividad:"Construcción de La Hosteadora",            horario:"Bloque de 3h",          dias:["Martes","Miércoles","Sábado"],                                      justificacion:"Avance dedicado a La Hosteadora: repos de Directores, Panel/Portal, Stripe, Hub y todo lo pendiente del roadmap — 9 horas semanales repartidas en 3 bloques de 3 horas.", icon:"🏰" },
+  { id:18, area:"especial",     tipo:"⚔ FIJO",       actividad:"Junta con el gerente",                     horario:"1 hora FIJA",           dias:["Jueves"],                                                           justificacion:"Reunión semanal fija con el gerente: alineación de avances y prioridades entre Propotienda y La Hosteadora.", icon:"🎯" },
+];
+
+const CAL_ICONS_BY_AREA = {
+  metricas:     ["📊","📈","📉","🔧","💡","🎯","🔍","📋","⚡","🧮","📌","🗂️"],
+  liderazgo:    ["👑","🏅","🎬","🤝","📣","🏆","⚔️","🛡️","🌟","💎","🔑","📜"],
+  reclutamiento:["🔍","🗺️","🚀","💼","📱","🎯","💬","📡","🌐","🔗","📢","🤝"],
+  desarrollo:   ["💬","❤️","🌱","✨","🧠","💪","🌟","🔥","⭐","🙌","🌈","🎯"],
+  operaciones:  ["💰","⚙️","🛠️","📦","🗓️","📊","🔄","⚡","💳","🏗️","🔐","🪙"],
+  hosteadora:   ["🏰","🗝️","🛡️","🌐","🏗️","🔧","📡","⚙️","💠","🚪","🗺️","🏛️"],
+  otro:         ["⭐","🚀","🌀","🔑","💼","🧩","📦","🛠️","🎁","🏅","🧠","🌐","🪙"],
+};
+
+const CAL_AREA_OPTS = [
+  {v:"metricas",     label:"📊 Métricas"},
+  {v:"liderazgo",    label:"👑 Liderazgo"},
+  {v:"reclutamiento",label:"🔍 Reclutamiento"},
+  {v:"desarrollo",   label:"💬 Desarrollo"},
+  {v:"operaciones",  label:"⚙️ Operaciones"},
+  {v:"hosteadora",   label:"🏰 Hosteadora"},
+  {v:"otro",         label:"🔷 Otro"},
+];
+
+const cal_ck  = (id,day) => `${id}__${day}`;
+const cal_gc  = (area)   => CAL_C[area] || CAL_C.otro;
+const CAL_CD  = "'Cinzel Decorative','Cinzel',serif";
+const CAL_CI  = "'Cinzel',serif";
+const CAL_NU  = "'Nunito',system-ui,sans-serif";
+
+function CalLabel({children}) {
+  return <div style={{fontSize:8,fontWeight:700,color:"rgba(212,175,55,0.5)",letterSpacing:2,marginBottom:7,textTransform:"uppercase",fontFamily:CAL_CI}}>{children}</div>;
+}
+
+function CalAreaDot({area}) {
+  const info = CAL_AREA_LABELS[area]||CAL_AREA_LABELS.otro;
+  return (
+    <div style={{fontSize:8,fontWeight:800,fontFamily:CAL_CI,letterSpacing:1,textTransform:"uppercase",color:info.color,marginBottom:4,marginTop:5,display:"flex",alignItems:"center",gap:3,opacity:0.9}}>
+      <div style={{width:5,height:5,borderRadius:"50%",background:info.color,boxShadow:`0 0 5px ${info.color}`,flexShrink:0}}/>
+      {info.label}
+    </div>
+  );
+}
+
+function CalTaskCard({task,day,onClick,isChecked,onToggle}) {
+  const col = cal_gc(task.area);
+  const freq = task.dias.length;
+  const isFixed = task.tipo==="⚔ FIJO";
+  return (
+    <div onClick={()=>onClick(task)} style={{background:isChecked?"rgba(255,255,255,0.02)":`linear-gradient(135deg,rgba(4,2,14,0.97),${col.soft})`,border:`1px solid ${isChecked?"rgba(255,255,255,0.07)":col.border}`,borderLeft:`3px solid ${isChecked?"rgba(255,255,255,0.1)":col.accent}`,borderRadius:8,padding:"8px 9px 9px",marginBottom:5,cursor:"pointer",transition:"all 0.2s",boxShadow:isChecked?"none":freq>=7?`0 0 0 1px ${col.border},0 2px 10px ${col.accent}1a`:"0 2px 6px rgba(0,0,0,0.5)",opacity:isChecked?0.38:1,position:"relative",overflow:"hidden"}}
+      onMouseEnter={e=>{if(!isChecked){e.currentTarget.style.boxShadow=`0 0 20px ${col.accent}33,0 4px 14px rgba(0,0,0,0.7)`;e.currentTarget.style.transform="translateY(-1px)";}}}
+      onMouseLeave={e=>{e.currentTarget.style.boxShadow=isChecked?"none":freq>=7?`0 0 0 1px ${col.border},0 2px 10px ${col.accent}1a`:"0 2px 6px rgba(0,0,0,0.5)";e.currentTarget.style.transform="none";}}>
+      {!isChecked&&<div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at top left,${col.soft},transparent 70%)`,pointerEvents:"none"}}/>}
+      {isFixed&&<div style={{position:"absolute",top:4,right:4,background:"rgba(255,85,85,0.15)",border:"1px solid rgba(255,85,85,0.45)",borderRadius:4,padding:"1px 5px",fontSize:7,fontFamily:CAL_CI,color:"#FF7777",letterSpacing:1,zIndex:1}}>FIJO</div>}
+      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5,position:"relative"}}>
+        <div onClick={e=>{e.stopPropagation();onToggle(task.id,day);}} style={{width:18,height:18,borderRadius:4,flexShrink:0,border:`1.5px solid ${isChecked?"#44FF88":col.accent}`,background:isChecked?"rgba(68,255,136,0.15)":"rgba(4,2,14,0.9)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all 0.15s",boxShadow:isChecked?"0 0 8px rgba(68,255,136,0.4)":"none"}}>
+          {isChecked&&<span style={{color:"#44FF88",fontSize:11,fontWeight:900,lineHeight:1}}>✓</span>}
+        </div>
+        <span style={{fontSize:19,background:isChecked?"rgba(255,255,255,0.04)":col.tag,border:`1px solid ${isChecked?"rgba(255,255,255,0.08)":col.border}`,borderRadius:7,width:33,height:33,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:isChecked?"none":`0 0 9px ${col.accent}44`}}>{task.icon}</span>
+        <span style={{background:isChecked?"rgba(255,255,255,0.04)":col.tag,border:`1px solid ${isChecked?"rgba(255,255,255,0.08)":col.border}`,borderRadius:4,fontSize:7,fontWeight:800,padding:"2px 5px",letterSpacing:0.8,textTransform:"uppercase",fontFamily:CAL_CI,color:isChecked?"rgba(255,255,255,0.2)":col.accent}}>{task.tipo}</span>
+      </div>
+      <div style={{fontSize:11,fontWeight:700,fontFamily:CAL_NU,color:isChecked?"rgba(255,255,255,0.18)":"#ece4ff",lineHeight:1.4,textDecoration:isChecked?"line-through":"none",position:"relative"}}>{task.actividad}</div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:5,position:"relative"}}>
+        <div style={{fontSize:8,color:isChecked?"rgba(255,255,255,0.14)":col.accent,fontWeight:600,fontFamily:CAL_CI,letterSpacing:0.5,opacity:0.85}}>⏱ {task.horario}</div>
+        {!isChecked&&freq>=7&&<span style={{fontSize:7,fontWeight:800,background:col.tag,border:`1px solid ${col.border}`,borderRadius:20,padding:"1px 6px",color:col.accent,fontFamily:CAL_CI}}>🔁 DIARIA</span>}
+        {!isChecked&&freq>=4&&freq<7&&<span style={{fontSize:7,fontWeight:800,background:"rgba(255,130,0,0.12)",border:"1px solid rgba(255,130,0,0.35)",borderRadius:20,padding:"1px 6px",color:"#FF8822",fontFamily:CAL_CI}}>⚡ {freq}x sem</span>}
+        {!isChecked&&freq>=2&&freq<4&&!task.dias.some(d=>d.startsWith("DIA_"))&&<span style={{fontSize:7,fontWeight:800,background:"rgba(150,50,255,0.12)",border:"1px solid rgba(150,50,255,0.35)",borderRadius:20,padding:"1px 6px",color:"#AA66FF",fontFamily:CAL_CI}}>📌 {freq}x sem</span>}
+      </div>
+    </div>
+  );
+}
+
+function CalModal({task,onClose,onEdit,onDelete}) {
+  if(!task)return null;
+  const col=cal_gc(task.area);
+  const areaInfo=CAL_AREA_LABELS[task.area]||CAL_AREA_LABELS.otro;
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(2,0,10,0.9)",backdropFilter:"blur(10px)",zIndex:100000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onClose}>
+      <div style={{background:"linear-gradient(135deg,rgba(10,5,32,0.99),rgba(4,2,14,0.99))",border:`1.5px solid ${col.border}`,borderRadius:16,maxWidth:480,width:"100%",boxShadow:`0 0 70px ${col.accent}1a,0 20px 60px rgba(0,0,0,0.95)`,overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
+        <div style={{background:`linear-gradient(135deg,rgba(4,2,14,0.99),${col.soft})`,borderBottom:`1px solid ${col.border}`,padding:"22px 24px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+            <span style={{fontSize:28,background:col.tag,border:`2px solid ${col.border}`,borderRadius:10,width:52,height:52,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:`0 0 20px ${col.accent}44`}}>{task.icon}</span>
+            <div>
+              <div style={{fontSize:8,fontWeight:700,color:col.accent,letterSpacing:3,textTransform:"uppercase",fontFamily:CAL_CI,marginBottom:4}}>{areaInfo.label}</div>
+              <div style={{fontSize:15,fontWeight:800,color:"#ece4ff",lineHeight:1.3,fontFamily:CAL_CI,textShadow:`0 0 16px ${col.accent}44`}}>{task.actividad}</div>
+            </div>
+          </div>
+          <span style={{background:col.tag,border:`1px solid ${col.border}`,borderRadius:6,padding:"3px 10px",fontSize:8,fontWeight:700,fontFamily:CAL_CI,letterSpacing:1,textTransform:"uppercase",color:col.accent}}>{task.tipo}</span>
+        </div>
+        <div style={{padding:"20px 24px"}}>
+          {[
+            {lbl:"⏱ HORARIO",   body:<div style={{background:col.soft,border:`1px solid ${col.border}`,borderRadius:8,padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}><span>🕐</span><span style={{fontSize:14,fontWeight:700,color:col.accent,fontFamily:CAL_CI}}>{task.horario}</span></div>},
+            {lbl:"⚔ DÍAS",       body:<div style={{display:"flex",flexWrap:"wrap",gap:5}}>{task.dias.map(d=><span key={d} style={{background:col.tag,border:`1px solid ${col.border}`,borderRadius:6,padding:"4px 10px",fontSize:9,fontWeight:700,fontFamily:CAL_CI,color:col.accent}}>{d.replace("DIA_","Día ")}</span>)}</div>},
+            {lbl:"📜 DESCRIPCIÓN",body:<div style={{fontSize:13,color:"rgba(236,228,255,0.8)",lineHeight:1.6,background:col.soft,border:`1px solid ${col.border}`,borderLeft:`3px solid ${col.accent}`,borderRadius:8,padding:"12px 14px",fontFamily:CAL_NU}}>{task.justificacion}</div>},
+          ].map(({lbl,body})=><div key={lbl} style={{marginBottom:14}}><CalLabel>{lbl}</CalLabel>{body}</div>)}
+        </div>
+        <div style={{padding:"0 24px 20px",display:"flex",gap:8,justifyContent:"flex-end",flexWrap:"wrap"}}>
+          <button onClick={()=>onDelete(task)} style={{background:"rgba(255,85,85,0.1)",border:"1px solid rgba(255,85,85,0.4)",borderRadius:8,padding:"9px 16px",fontSize:9,fontWeight:700,fontFamily:CAL_CI,letterSpacing:1,color:"#FF7777",cursor:"pointer"}}>🗑 ELIMINAR</button>
+          <button onClick={()=>onEdit(task)} style={{background:col.tag,border:`1px solid ${col.border}`,borderRadius:8,padding:"9px 16px",fontSize:9,fontWeight:700,fontFamily:CAL_CI,letterSpacing:1,color:col.accent,cursor:"pointer"}}>✎ EDITAR</button>
+          <button onClick={onClose} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"9px 16px",fontSize:9,fontWeight:700,fontFamily:CAL_CI,letterSpacing:1,color:"rgba(255,255,255,0.4)",cursor:"pointer"}}>CERRAR ✕</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CalConfirmResetModal({onConfirm,onCancel}) {
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(2,0,10,0.93)",backdropFilter:"blur(10px)",zIndex:100001,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onCancel}>
+      <div style={{background:"linear-gradient(135deg,rgba(18,4,4,0.99),rgba(10,2,14,0.99))",border:"1.5px solid rgba(255,85,85,0.4)",borderRadius:16,maxWidth:360,width:"100%",overflow:"hidden",textAlign:"center",boxShadow:"0 0 60px rgba(255,85,85,0.1),0 20px 60px rgba(0,0,0,0.95)"}} onClick={e=>e.stopPropagation()}>
+        <div style={{background:"linear-gradient(135deg,rgba(24,5,5,0.99),rgba(14,2,2,0.99))",borderBottom:"1px solid rgba(255,85,85,0.2)",padding:"26px 24px"}}>
+          <div style={{fontSize:44,marginBottom:10}}>🔄</div>
+          <div style={{fontFamily:CAL_CD,fontSize:16,fontWeight:900,color:"#FF6666",textShadow:"0 0 20px rgba(255,85,85,0.5)",letterSpacing:2,marginBottom:6}}>¿REINICIAR?</div>
+          <div style={{fontFamily:CAL_NU,fontSize:12,color:"rgba(255,180,180,0.55)"}}>Se borrarán todas las tareas completadas del checklist</div>
+        </div>
+        <div style={{padding:"22px",display:"flex",gap:10,justifyContent:"center"}}>
+          <button onClick={onCancel} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:"9px 20px",fontSize:9,fontWeight:700,fontFamily:CAL_CI,letterSpacing:1,color:"rgba(255,255,255,0.35)",cursor:"pointer"}}>CANCELAR</button>
+          <button onClick={onConfirm} style={{background:"linear-gradient(135deg,rgba(160,20,20,0.8),rgba(200,40,40,0.6))",border:"1.5px solid rgba(255,85,85,0.55)",borderRadius:8,padding:"9px 20px",fontSize:9,fontWeight:900,fontFamily:CAL_CI,letterSpacing:1,color:"#FF8888",cursor:"pointer",boxShadow:"0 0 18px rgba(255,85,85,0.2)"}}>⚔ CONFIRMAR RESET</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CalNewTaskModal({onClose,onSave,onDelete,editing}) {
+  const [area,setArea]=useState(editing?.area||"metricas");
+  const [tipo,setTipo]=useState(editing?.tipo||"");
+  const [actividad,setActividad]=useState(editing?.actividad||"");
+  const [horario,setHorario]=useState(editing?.horario||"");
+  const [justif,setJustif]=useState(editing?.justificacion||"");
+  const [icon,setIcon]=useState(editing?.icon||"📊");
+  const [dias,setDias]=useState(editing?.dias||[]);
+  const col=cal_gc(area);
+  const icons=CAL_ICONS_BY_AREA[area]||CAL_ICONS_BY_AREA.otro;
+  const toggleDia=d=>setDias(p=>p.includes(d)?p.filter(x=>x!==d):[...p,d]);
+  const canSave=actividad.trim()&&dias.length>0&&tipo.trim();
+  const inp={width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${col.border}`,background:"rgba(4,2,14,0.9)",fontSize:12,fontWeight:600,color:"#ece4ff",outline:"none",boxSizing:"border-box",fontFamily:CAL_NU};
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(2,0,10,0.93)",backdropFilter:"blur(10px)",zIndex:100002,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onClose}>
+      <div style={{background:"linear-gradient(135deg,rgba(10,5,32,0.99),rgba(4,2,14,0.99))",border:`1.5px solid ${col.border}`,borderRadius:18,maxWidth:500,width:"100%",boxShadow:`0 0 60px ${col.accent}12,0 24px 60px rgba(0,0,0,0.95)`,overflow:"hidden",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{background:`linear-gradient(135deg,rgba(4,2,14,0.99),${col.soft})`,borderBottom:`1px solid ${col.border}`,padding:"18px 22px",position:"sticky",top:0,zIndex:10}}>
+          <div style={{fontSize:8,fontWeight:700,letterSpacing:3,color:"rgba(212,175,55,0.5)",textTransform:"uppercase",fontFamily:CAL_CI,marginBottom:3}}>{editing?"✎ EDITAR TAREA":"⚔ NUEVA TAREA"} · TEMPLO DEL PROPÓSITO</div>
+          <div style={{fontSize:17,fontWeight:900,fontFamily:CAL_CI,color:col.accent,textShadow:`0 0 16px ${col.accent}44`}}>{icon} {actividad||"Sin título aún..."}</div>
+        </div>
+        <div style={{padding:"18px 22px",display:"flex",flexDirection:"column",gap:14}}>
+          <div>
+            <CalLabel>ÁREA</CalLabel>
+            <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+              {CAL_AREA_OPTS.map(({v,label})=>{const c=cal_gc(v);const sel=area===v;return(
+                <button key={v} onClick={()=>{setArea(v);setIcon(CAL_ICONS_BY_AREA[v]?.[0]||"⭐");}} style={{padding:"6px 11px",borderRadius:8,border:`1.5px solid ${sel?c.border:"rgba(255,255,255,0.1)"}`,background:sel?c.soft:"rgba(255,255,255,0.02)",fontWeight:700,fontSize:10,fontFamily:CAL_CI,color:sel?c.accent:"rgba(255,255,255,0.35)",cursor:"pointer",boxShadow:sel?`0 0 10px ${c.accent}22`:"none",transition:"all 0.15s"}}>{label}</button>
+              );})}
+            </div>
+          </div>
+          <div><CalLabel>TIPO / CATEGORÍA</CalLabel><input value={tipo} onChange={e=>setTipo(e.target.value)} placeholder="ej. Métricas, Liderazgo, Fijo..." style={inp}/></div>
+          <div><CalLabel>NOMBRE DE LA ACTIVIDAD</CalLabel><input value={actividad} onChange={e=>setActividad(e.target.value)} placeholder="¿Qué hay que hacer?" style={inp}/></div>
+          <div><CalLabel>HORARIO</CalLabel><input value={horario} onChange={e=>setHorario(e.target.value)} placeholder="ej. 10am – 1pm, 5pm en adelante..." style={inp}/></div>
+          <div><CalLabel>DESCRIPCIÓN</CalLabel><textarea value={justif} onChange={e=>setJustif(e.target.value)} placeholder="¿Qué se hace exactamente?" style={{...inp,resize:"vertical",minHeight:65}}/></div>
+          <div>
+            <CalLabel>DÍAS <span style={{color:"#FF5555"}}>*</span></CalLabel>
+            <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+              {CAL_ALL_DIAS.map(d=>{const sel=dias.includes(d);return(
+                <button key={d} onClick={()=>toggleDia(d)} style={{padding:"4px 10px",borderRadius:7,fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:CAL_CI,border:`1.5px solid ${sel?col.accent:"rgba(255,255,255,0.1)"}`,background:sel?col.soft:"rgba(255,255,255,0.02)",color:sel?col.accent:"rgba(255,255,255,0.35)",boxShadow:sel?`0 0 8px ${col.accent}22`:"none"}}>{d.replace("DIA_","Día ")}</button>
+              );})}
+            </div>
+          </div>
+          <div>
+            <CalLabel>ÍCONO</CalLabel>
+            <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+              {icons.map(ic=>(
+                <button key={ic} onClick={()=>setIcon(ic)} style={{fontSize:17,width:36,height:36,borderRadius:8,border:`1.5px solid ${icon===ic?col.accent:"rgba(255,255,255,0.1)"}`,background:icon===ic?col.soft:"rgba(255,255,255,0.02)",cursor:"pointer",boxShadow:icon===ic?`0 0 8px ${col.accent}33`:"none",transition:"all 0.15s"}}>{ic}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div style={{padding:"0 22px 20px",display:"flex",gap:10,justifyContent:"flex-end",flexWrap:"wrap"}}>
+          {editing && <button onClick={()=>onDelete(editing)} style={{background:"rgba(255,85,85,0.1)",border:"1px solid rgba(255,85,85,0.4)",borderRadius:8,padding:"9px 16px",fontSize:9,fontWeight:700,fontFamily:CAL_CI,letterSpacing:1,color:"#FF7777",cursor:"pointer",marginRight:"auto"}}>🗑 ELIMINAR</button>}
+          <button onClick={onClose} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,padding:"9px 18px",fontSize:9,fontWeight:700,fontFamily:CAL_CI,letterSpacing:1,color:"rgba(255,255,255,0.35)",cursor:"pointer"}}>CANCELAR</button>
+          <button onClick={()=>{if(canSave)onSave({area,tipo,actividad:actividad.trim(),horario:horario||"Durante el día",justificacion:justif.trim()||"—",icon,dias},editing?.id);}} style={{background:canSave?col.tag:"rgba(255,255,255,0.03)",border:`1.5px solid ${canSave?col.border:"rgba(255,255,255,0.1)"}`,borderRadius:8,padding:"9px 20px",fontSize:9,fontWeight:900,fontFamily:CAL_CI,letterSpacing:1,color:canSave?col.accent:"rgba(255,255,255,0.2)",cursor:canSave?"pointer":"not-allowed",boxShadow:canSave?`0 0 16px ${col.accent}22`:"none"}}>{editing?"✦ ACTUALIZAR":"✦ GUARDAR TAREA"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CalendarioHosteadoraPanel() {
+  const [tasks,setTasks]=useState(()=>{
+    try { const raw = localStorage.getItem("templo_calendario_tasks"); return raw ? JSON.parse(raw) : CAL_INIT_TASKS; } catch { return CAL_INIT_TASKS; }
+  });
+  const [selected,setSelected]=useState(null);
+  const [editingTask,setEditingTask]=useState(null);
+  const [alertDismissed,setAlertDismissed]=useState(false);
+  const [checked,setChecked]=useState(()=>{
+    try { const raw = localStorage.getItem("templo_calendario_checks"); return raw ? JSON.parse(raw) : {}; } catch { return {}; }
+  });
+  const [showNewTask,setShowNewTask]=useState(false);
+  const [showReset,setShowReset]=useState(false);
+
+  useEffect(()=>{
+    if(!document.getElementById('tgf')){
+      const l=document.createElement('link');l.id='tgf';l.rel='stylesheet';
+      l.href='https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@700;900&family=Nunito:wght@400;700;900&display=swap';
+      document.head.appendChild(l);
+    }
+  },[]);
+
+  const toggleCheck=(tid,day)=>{const key=cal_ck(tid,day);setChecked(prev=>{const next={...prev,[key]:!prev[key]};try{localStorage.setItem("templo_calendario_checks",JSON.stringify(next));}catch{}return next;});};
+  const doReset=()=>{setChecked({});setShowReset(false);try{localStorage.setItem("templo_calendario_checks","{}");}catch{}};
+  const persistTasks=(u)=>{setTasks(u);try{localStorage.setItem("templo_calendario_tasks",JSON.stringify(u));}catch{}};
+
+  const saveTask=(nd,editId)=>{
+    if(editId){ persistTasks(tasks.map(t=>t.id===editId?{...nd,id:editId}:t)); }
+    else{ persistTasks([...tasks,{...nd,id:Date.now()}]); }
+    setShowNewTask(false); setEditingTask(null);
+  };
+
+  const deleteTask=(task)=>{
+    persistTasks(tasks.filter(t=>t.id!==task.id));
+    setChecked(prev=>{
+      const next={...prev};
+      Object.keys(next).forEach(k=>{if(k.startsWith(`${task.id}__`))delete next[k];});
+      try{localStorage.setItem("templo_calendario_checks",JSON.stringify(next));}catch{}
+      return next;
+    });
+    setSelected(null); setEditingTask(null); setShowNewTask(false);
+  };
+
+  const openEdit=(task)=>{setSelected(null);setEditingTask(task);setShowNewTask(true);};
+
+  const doneCount=Object.values(checked).filter(Boolean).length;
+  const today=new Date();const todayDay=today.getDate();
+  const isAlertDay=todayDay===1||todayDay===29;
+  const alertTasks=todayDay===29?tasks.filter(t=>t.dias.includes("DIA_29")):todayDay===1?tasks.filter(t=>t.dias.includes("DIA_1")):[];
+  const getDay=day=>tasks.filter(t=>t.dias.includes(day));
+  const getSpecial=code=>tasks.filter(t=>t.dias.includes(code));
+  const totalPD=CAL_DAYS.map(d=>getDay(d).length);
+
+  const groupByArea=ts=>{
+    const g={};ts.forEach(t=>{if(!g[t.area])g[t.area]=[];g[t.area].push(t);});
+    return CAL_AREA_ORDER.filter(a=>g[a]).map(a=>({area:a,ts:g[a]}));
+  };
+
+  return (
+    <div style={{position:"relative",fontFamily:CAL_NU}}>
+      {isAlertDay&&!alertDismissed&&(
+        <div style={{position:"fixed",inset:0,zIndex:100003,background:"rgba(2,0,10,0.93)",backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{background:"linear-gradient(135deg,rgba(10,5,32,0.99),rgba(4,2,14,0.99))",border:"1.5px solid rgba(68,255,136,0.35)",borderRadius:20,maxWidth:480,width:"100%",overflow:"hidden",boxShadow:"0 0 80px rgba(68,255,136,0.08),0 24px 70px rgba(0,0,0,0.98)"}}>
+            <div style={{background:"linear-gradient(135deg,rgba(4,14,8,0.99),rgba(4,20,10,0.99))",padding:"26px 28px",textAlign:"center"}}>
+              <div style={{fontSize:52,marginBottom:10}}>{todayDay===29?"📅":"🚀"}</div>
+              <div style={{fontSize:9,fontWeight:700,letterSpacing:4,color:"rgba(68,255,136,0.55)",textTransform:"uppercase",fontFamily:CAL_CI,marginBottom:4}}>⚔ MISIÓN MENSUAL ACTIVA</div>
+              <div style={{fontSize:28,fontWeight:900,fontFamily:CAL_CD,color:"#44FF88",textShadow:"0 0 20px rgba(68,255,136,0.7)",lineHeight:1}}>DÍA {todayDay}</div>
+              <div style={{marginTop:10,background:"rgba(68,255,136,0.12)",border:"1px solid rgba(68,255,136,0.28)",borderRadius:20,padding:"5px 16px",display:"inline-block",fontSize:10,fontFamily:CAL_CI,color:"#44FF88",letterSpacing:1}}>⚡ {alertTasks.length} MISIONES PENDIENTES</div>
+            </div>
+            <div style={{padding:"20px 24px"}}>
+              <div style={{fontSize:8,fontWeight:700,color:"rgba(212,175,55,0.5)",letterSpacing:2,textTransform:"uppercase",fontFamily:CAL_CI,marginBottom:12}}>✦ MISIONES DE HOY</div>
+              {alertTasks.map(t=>(
+                <div key={t.id} style={{display:"flex",alignItems:"flex-start",gap:12,background:"rgba(68,255,136,0.06)",borderRadius:10,border:"1px solid rgba(68,255,136,0.18)",borderLeft:"3px solid rgba(68,255,136,0.55)",padding:"10px 14px",marginBottom:8}}>
+                  <span style={{fontSize:20,background:"rgba(68,255,136,0.12)",borderRadius:8,width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:"1px solid rgba(68,255,136,0.25)"}}>{t.icon}</span>
+                  <div><div style={{fontSize:12,fontWeight:700,color:"#ece4ff",lineHeight:1.3,fontFamily:CAL_NU}}>{t.actividad}</div><div style={{fontSize:10,color:"rgba(68,255,136,0.55)",marginTop:3,fontFamily:CAL_CI,letterSpacing:0.5}}>{t.justificacion}</div></div>
+                </div>
+              ))}
+            </div>
+            <div style={{padding:"0 24px 22px",textAlign:"center"}}>
+              <button onClick={()=>setAlertDismissed(true)} style={{background:"linear-gradient(135deg,rgba(4,20,10,0.98),rgba(10,40,20,0.98))",border:"1.5px solid rgba(68,255,136,0.45)",borderRadius:10,padding:"12px 32px",fontSize:9,fontWeight:900,fontFamily:CAL_CI,letterSpacing:2,color:"#44FF88",cursor:"pointer",boxShadow:"0 0 18px rgba(68,255,136,0.18)"}}>⚔ ENTENDIDO · AL CAMPO</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{textAlign:"center",marginBottom:12}}>
+        <div style={{fontFamily:CAL_CD,fontSize:20,fontWeight:900,letterSpacing:5,color:"#FFE566",textShadow:"0 0 20px rgba(212,175,55,0.9),0 0 40px rgba(212,175,55,0.5),0 0 80px rgba(212,175,55,0.2)",lineHeight:1}}>✦ TEMPLO DEL PROPÓSITO ✦</div>
+        <div style={{fontFamily:CAL_CI,fontSize:8,letterSpacing:4,color:"rgba(212,175,55,0.4)",textTransform:"uppercase",marginTop:5}}>PROPOTIENDA.COM · CALENDARIO DE OPERACIONES</div>
+      </div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,flexWrap:"wrap",marginBottom:10}}>
+        <div style={{background:"rgba(212,175,55,0.07)",border:"1px solid rgba(212,175,55,0.22)",borderRadius:20,padding:"5px 14px",fontSize:9,fontFamily:CAL_CI,color:"#D4AF37",fontWeight:700,letterSpacing:1}}>✦ {doneCount} / {tasks.reduce((a,t)=>a+t.dias.length,0)} COMPLETADAS</div>
+        <button onClick={()=>{setEditingTask(null);setShowNewTask(true);}} style={{background:"rgba(212,175,55,0.07)",border:"1px solid rgba(212,175,55,0.28)",borderRadius:8,padding:"6px 14px",fontSize:8,fontWeight:700,fontFamily:CAL_CI,letterSpacing:1,color:"#D4AF37",cursor:"pointer"}}>＋ NUEVA TAREA</button>
+        <button onClick={()=>setShowReset(true)} style={{background:"rgba(255,85,85,0.07)",border:"1px solid rgba(255,85,85,0.28)",borderRadius:8,padding:"6px 14px",fontSize:8,fontWeight:700,fontFamily:CAL_CI,letterSpacing:1,color:"#FF7777",cursor:"pointer"}}>🔄 REINICIAR</button>
+      </div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center",marginBottom:16}}>
+        {Object.entries(CAL_AREA_LABELS).filter(([k])=>k!=="otro"&&k!=="mensual").map(([key,{label,color}])=>(
+          <div key={key} style={{display:"flex",alignItems:"center",gap:4,background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",borderRadius:20,padding:"2px 9px"}}>
+            <div style={{width:5,height:5,borderRadius:"50%",background:color,boxShadow:`0 0 5px ${color}`}}/>
+            <span style={{fontSize:7,fontWeight:700,fontFamily:CAL_CI,color:"rgba(255,255,255,0.35)",letterSpacing:0.5}}>{label}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{display:"flex",alignItems:"center",gap:12,background:"linear-gradient(90deg,rgba(10,5,30,0.95),rgba(4,2,14,0) 100%)",borderLeft:"3px solid rgba(212,175,55,0.5)",borderRadius:"0 8px 8px 0",padding:"12px 20px",marginBottom:14}}>
+        <span style={{fontSize:22}}>⚔</span>
+        <div>
+          <div style={{fontFamily:CAL_CD,fontSize:13,fontWeight:900,color:"#FFE566",letterSpacing:4,textShadow:"0 0 14px rgba(212,175,55,0.55)"}}>PROTOCOLO SEMANAL</div>
+          <div style={{fontFamily:CAL_CI,fontSize:8,color:"rgba(212,175,55,0.4)",letterSpacing:2}}>ACTIVIDADES RECURRENTES · LUNES A DOMINGO</div>
+        </div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:8}}>
+        {CAL_DAYS.map((day,i)=>{
+          const dayTasks=getDay(day);
+          const groups=groupByArea(dayTasks);
+          const dayDone=dayTasks.filter(t=>checked[cal_ck(t.id,day)]).length;
+          const allDone=dayTasks.length>0&&dayDone===dayTasks.length;
+          return (
+            <div key={day} style={{background:"rgba(4,2,14,0.88)",border:`1px solid ${allDone?"rgba(68,255,136,0.22)":"rgba(212,175,55,0.1)"}`,borderTop:`2px solid ${allDone?"rgba(68,255,136,0.4)":"rgba(212,175,55,0.22)"}`,borderRadius:10,overflow:"hidden",minHeight:280,boxShadow:allDone?"0 0 14px rgba(68,255,136,0.07)":"none",transition:"all 0.3s"}}>
+              <div style={{background:"linear-gradient(135deg,rgba(10,5,28,0.99),rgba(18,10,42,0.98))",padding:"9px 7px 7px",textAlign:"center",borderBottom:"1px solid rgba(212,175,55,0.08)"}}>
+                <div style={{fontFamily:CAL_CI,fontSize:7,fontWeight:700,letterSpacing:2.5,color:"rgba(212,175,55,0.38)",textTransform:"uppercase"}}>{CAL_DAYS_SHORT[i]}</div>
+                <div style={{fontFamily:CAL_CI,fontSize:13,fontWeight:900,color:allDone?"#44FF88":"#FFE566",textShadow:`0 0 8px ${allDone?"rgba(68,255,136,0.5)":"rgba(212,175,55,0.4)"}`}}>{day}</div>
+                <div style={{background:allDone?"rgba(68,255,136,0.14)":"rgba(212,175,55,0.07)",border:`1px solid ${allDone?"rgba(68,255,136,0.3)":"rgba(212,175,55,0.18)"}`,borderRadius:10,padding:"2px 7px",fontSize:7,fontFamily:CAL_CI,color:allDone?"#44FF88":"rgba(212,175,55,0.55)",display:"inline-block",marginTop:3}}>{dayDone}/{dayTasks.length} ✦</div>
+              </div>
+              <div style={{padding:7}}>
+                {groups.length===0&&<div style={{textAlign:"center",padding:"28px 8px",color:"rgba(212,175,55,0.18)",fontSize:10}}><div style={{fontSize:18,marginBottom:4,opacity:0.5}}>—</div><div style={{fontFamily:CAL_CI,fontSize:7,letterSpacing:1}}>LIBRE</div></div>}
+                {groups.map(({area,ts})=>(
+                  <div key={area}>
+                    <CalAreaDot area={area}/>
+                    {ts.map(t=><CalTaskCard key={t.id} task={t} day={day} onClick={setSelected} isChecked={!!checked[cal_ck(t.id,day)]} onToggle={toggleCheck}/>)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{marginTop:10,background:"rgba(4,2,14,0.7)",border:"1px solid rgba(212,175,55,0.09)",borderRadius:10,padding:"14px 18px"}}>
+        <div style={{fontSize:8,fontWeight:700,fontFamily:CAL_CI,color:"rgba(212,175,55,0.45)",letterSpacing:2,marginBottom:10,textTransform:"uppercase"}}>⚡ CARGA OPERATIVA POR DÍA</div>
+        <div style={{display:"flex",gap:7,alignItems:"flex-end"}}>
+          {CAL_DAYS.map((d,i)=>(
+            <div key={d} style={{flex:1,textAlign:"center"}}>
+              <div style={{fontSize:8,fontWeight:700,color:"#D4AF37",marginBottom:3,fontFamily:CAL_CI}}>{totalPD[i]}</div>
+              <div style={{height:Math.max(totalPD[i]*11,5),background:"linear-gradient(180deg,#FFE566,#D4AF37 60%,rgba(212,175,55,0.2))",borderRadius:"3px 3px 0 0",boxShadow:"0 0 6px rgba(212,175,55,0.28)"}}/>
+              <div style={{fontSize:7,color:"rgba(212,175,55,0.38)",marginTop:3,fontFamily:CAL_CI,letterSpacing:1}}>{CAL_DAYS_SHORT[i]}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{display:"flex",alignItems:"center",gap:14,margin:"24px 0"}}>
+        <div style={{flex:1,height:1,background:"linear-gradient(90deg,transparent,rgba(212,175,55,0.3),transparent)"}}/>
+        <div style={{background:"linear-gradient(135deg,rgba(10,5,30,0.98),rgba(20,10,50,0.99))",border:"1.5px solid rgba(212,175,55,0.3)",borderRadius:8,padding:"7px 18px",fontFamily:CAL_CD,fontSize:10,fontWeight:900,letterSpacing:3,color:"#FFE566",textShadow:"0 0 10px rgba(212,175,55,0.5)",boxShadow:"0 0 18px rgba(212,175,55,0.08)",display:"flex",alignItems:"center",gap:7,whiteSpace:"nowrap"}}>
+          <span style={{fontSize:15}}>👑</span> MISIONES MENSUALES
+        </div>
+        <div style={{flex:1,height:1,background:"linear-gradient(90deg,transparent,rgba(212,175,55,0.3),transparent)"}}/>
+      </div>
+
+      <div>
+        <div style={{display:"flex",alignItems:"center",gap:12,background:"linear-gradient(90deg,rgba(4,14,8,0.95),rgba(4,2,14,0) 100%)",borderLeft:"3px solid rgba(68,255,136,0.5)",borderRadius:"0 8px 8px 0",padding:"12px 20px",marginBottom:14}}>
+          <span style={{fontSize:22}}>🗓️</span>
+          <div>
+            <div style={{fontFamily:CAL_CD,fontSize:13,fontWeight:900,color:"#44FF88",letterSpacing:3,textShadow:"0 0 14px rgba(68,255,136,0.5)"}}>MISIONES MENSUALES</div>
+            <div style={{fontFamily:CAL_CI,fontSize:8,color:"rgba(68,255,136,0.4)",letterSpacing:2}}>TAREAS ESPECÍFICAS POR FECHA DEL MES</div>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+          {[
+            {code:"DIA_29",label:"DÍA 29",icon:"📅",desc:"Balance, cierre y reconocimientos"},
+            {code:"DIA_1", label:"DÍA 1", icon:"🚀",desc:"Revisión mensual y nueva estrategia"},
+          ].map(({code,label,icon,desc})=>{
+            const t=getSpecial(code);
+            const blkDone=t.filter(x=>checked[cal_ck(x.id,code)]).length;
+            const blkAll=t.length>0&&blkDone===t.length;
+            return (
+              <div key={code} style={{background:"rgba(4,2,14,0.88)",border:`1px solid ${blkAll?"rgba(68,255,136,0.28)":"rgba(68,255,136,0.14)"}`,borderTop:`2px solid ${blkAll?"rgba(68,255,136,0.45)":"rgba(68,255,136,0.25)"}`,borderRadius:12,overflow:"hidden",boxShadow:blkAll?"0 0 16px rgba(68,255,136,0.07)":"none",transition:"all 0.3s"}}>
+                <div style={{background:"linear-gradient(135deg,rgba(4,14,8,0.99),rgba(4,20,10,0.98))",padding:"15px 16px",borderBottom:"1px solid rgba(68,255,136,0.1)"}}>
+                  <div style={{fontSize:22,marginBottom:5}}>{icon}</div>
+                  <div style={{fontFamily:CAL_CD,fontSize:13,fontWeight:900,color:blkAll?"#44FF88":"#FFE566",letterSpacing:2,textShadow:`0 0 12px ${blkAll?"rgba(68,255,136,0.5)":"rgba(212,175,55,0.4)"}`}}>{label}</div>
+                  <div style={{fontFamily:CAL_CI,fontSize:8,color:"rgba(68,255,136,0.45)",marginTop:3,letterSpacing:1}}>{desc}</div>
+                  <div style={{background:blkAll?"rgba(68,255,136,0.18)":"rgba(68,255,136,0.07)",border:`1px solid ${blkAll?"rgba(68,255,136,0.38)":"rgba(68,255,136,0.18)"}`,borderRadius:20,display:"inline-block",padding:"3px 10px",fontSize:8,fontFamily:CAL_CI,color:blkAll?"#44FF88":"rgba(68,255,136,0.55)",marginTop:8,letterSpacing:0.5}}>
+                    {blkDone}/{t.length} COMPLETADAS ✦
+                  </div>
+                </div>
+                <div style={{padding:12}}>
+                  {t.map(task=><CalTaskCard key={task.id} task={task} day={code} onClick={setSelected} isChecked={!!checked[cal_ck(task.id,code)]} onToggle={toggleCheck}/>)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {showReset&&<CalConfirmResetModal onConfirm={doReset} onCancel={()=>setShowReset(false)}/>}
+      {showNewTask&&<CalNewTaskModal onClose={()=>{setShowNewTask(false);setEditingTask(null);}} onSave={saveTask} onDelete={deleteTask} editing={editingTask}/>}
+      <CalModal task={selected} onClose={()=>setSelected(null)} onEdit={openEdit} onDelete={deleteTask}/>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const pushToast = useUIStore((s) => s.pushToast);
   const { data: stats } = useSupabaseQuery(() => adminService.getDashboardStats(), []);
@@ -342,6 +777,9 @@ const [showTestimonios,    setShowTestimonios]    = useState(false);
 const [testimoniosData,    setTestimoniosData]    = useState([]);
 const [testimoniosLoading, setTestimoniosLoading] = useState(false);
 const [testimoniosFilter,  setTestimoniosFilter]  = useState('pendientes'); // pendientes | aprobados | todos
+
+// ── Calendario de Operaciones (Templo + La Hosteadora) ──────────────────────
+const [showCalendario, setShowCalendario] = useState(false);
 
 // ── Plantillas de respuesta ──────────────────────────────────────────────────
 const [showPlantillas, setShowPlantillas] = useState(false);
@@ -3627,6 +4065,21 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
             )}
           </button>
 
+          {/* ── CALENDARIO BUTTON ── */}
+          <button onClick={() => setShowCalendario(v => !v)} style={{
+            background: showCalendario
+              ? 'linear-gradient(135deg,#FF9933,#c2650c)'
+              : 'linear-gradient(135deg,rgba(255,153,51,0.15),rgba(255,153,51,0.05))',
+            color: showCalendario ? '#0a0614' : '#FF9933',
+            padding:'clamp(5px,1.5vw,9px) clamp(8px,2vw,16px)',
+            borderRadius:8, fontWeight:900, fontSize:'clamp(8px,2vw,11px)',
+            border:`1px solid rgba(255,153,51,${showCalendario ? '0.8' : '0.35'})`,
+            boxShadow: showCalendario ? '0 3px 16px rgba(255,153,51,0.5)' : '0 0 0 transparent',
+            cursor:'pointer', letterSpacing:1, whiteSpace:'nowrap',
+            display:'flex', alignItems:'center', gap:5,
+            transition:'all 0.2s',
+          }}>🏰 CALENDARIO</button>
+
           {/* ── PLANTILLAS BUTTON ── */}
           <button onClick={() => setShowPlantillas(v => !v)} style={{
             background: showPlantillas
@@ -3975,6 +4428,25 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
                 )}
 
               </div>
+            </div>,
+            document.body
+          )}
+
+          {/* ── CALENDARIO MODAL FULLSCREEN ── */}
+          {showCalendario && createPortal(
+            <div style={{
+              position:'fixed', inset:0, zIndex:99999,
+              background:'linear-gradient(180deg,#050215 0%,#0a0530 15%,#080320 50%,#04020e 100%)',
+              overflowY:'auto', padding:'24px 14px 40px',
+            }}>
+              <div style={{ position:'sticky', top:0, zIndex:5, display:'flex', justifyContent:'flex-end', marginBottom:-8 }}>
+                <button onClick={() => setShowCalendario(false)} style={{
+                  background:'rgba(255,153,51,0.12)', border:'1px solid rgba(255,153,51,0.4)',
+                  borderRadius:8, color:'#FF9933', fontFamily:'Cinzel,serif', fontSize:11,
+                  fontWeight:900, cursor:'pointer', padding:'0.5rem 1rem',
+                }}>CERRAR ✕</button>
+              </div>
+              <CalendarioHosteadoraPanel />
             </div>,
             document.body
           )}
