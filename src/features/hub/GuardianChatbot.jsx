@@ -645,24 +645,25 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
 
   function onChipClick(texto) {
     if (bloqueado) return;
+    // A propósito NO llamamos a .focus() aquí: seleccionar una pregunta
+    // solo debe escribir el texto en la barra, nunca abrir el teclado
+    // virtual. El teclado solo debe abrirse cuando el usuario toca la
+    // barra directamente (eso ya lo maneja onEntradaFocus, por separado).
     if (entradaRef.current) {
       entradaRef.current.value = texto;
       entradaRef.current.style.height = 'auto';
       entradaRef.current.style.height = Math.min(entradaRef.current.scrollHeight, 110) + 'px';
-      entradaRef.current.focus();
     }
     actualizarContadorDesdeInput();
-    // Aseguramos manualmente que la barra de escribir quede visible
-    // arriba del teclado: el navegador a veces falla en hacer ese scroll
-    // automático justo cuando el textarea cambia de alto (por el texto
-    // largo de la pregunta) en el mismo instante en que se abre el
-    // teclado. Lo intentamos de inmediato y una vez más un poco después,
-    // por si el teclado tarda en terminar de abrirse.
+    // Aseguramos manualmente que la barra de escribir quede visible: el
+    // textarea puede crecer de alto (por el texto largo de la pregunta),
+    // así que llevamos el scroll al fondo para que no quede tapada. Esto
+    // ya no depende de ningún evento de teclado, porque el teclado nunca
+    // se abre aquí.
     const irAlFondo = () => {
       scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     };
     requestAnimationFrame(irAlFondo);
-    setTimeout(irAlFondo, 350);
   }
 
   function onEntradaFocus() {
