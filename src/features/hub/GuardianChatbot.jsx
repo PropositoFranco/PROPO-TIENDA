@@ -233,6 +233,9 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
       if (overlayRef.current) overlayRef.current.style.height = vv.height + 'px';
       if (document.activeElement === entradaRef.current) {
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'auto' });
+        setTimeout(() => {
+          scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'auto' });
+        }, 250);
       }
     };
     vv.addEventListener('resize', actualizar);
@@ -893,6 +896,11 @@ const CSS = `
 .gc-contador.lleno{ color:#e0685a; }
 .gc-footer-note{ text-align:center; font-size:11.5px; color:#8b93a7; padding:6px 20px 4px; }
 .gc-overlay.gc-teclado-abierto .gc-footer-note{ display:none; }
+.gc-overlay.gc-teclado-abierto .gc-video-loop{ height:0 !important; min-height:0; }
+.gc-overlay.gc-teclado-abierto .gc-encabezado{ display:none; }
+.gc-overlay.gc-teclado-abierto .gc-acciones{ display:none; }
+.gc-overlay.gc-teclado-abierto .gc-preguntas{ display:none; }
+.gc-overlay.gc-teclado-abierto .gc-chat{ padding-top:8px; }
 
 @media (max-height:520px){
   .gc-scroll{ padding:0 10px 20px; }
