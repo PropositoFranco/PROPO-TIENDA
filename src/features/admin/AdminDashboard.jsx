@@ -246,7 +246,7 @@ function KpiPanel({ kpiData, kpiLastUpdated, loadKpis }) {
 }
 // ══════════════════════════════════════════════════════════════════════════
 // ⚔ CALENDARIO DE OPERACIONES — TEMPLO DEL PROPÓSITO + LA HOSTEADORA
-// Persistencia real vía localStorage (no window.storage — eso es solo de
+// Persistencia real vía Supabase (no window.storage — eso es solo de
 // artifacts de Claude, aquí usamos el navegador real del admin).
 // ══════════════════════════════════════════════════════════════════════════
 const CAL_DAYS = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
@@ -501,17 +501,15 @@ function CalNewTaskModal({onClose,onSave,onDelete,editing}) {
 }
 
 function CalendarioHosteadoraPanel() {
-  const [tasks,setTasks]=useState(()=>{
-    try { const raw = localStorage.getItem("templo_calendario_tasks"); return raw ? JSON.parse(raw) : CAL_INIT_TASKS; } catch { return CAL_INIT_TASKS; }
-  });
+  const [tasks,setTasks]=useState(CAL_INIT_TASKS);
   const [selected,setSelected]=useState(null);
   const [editingTask,setEditingTask]=useState(null);
   const [alertDismissed,setAlertDismissed]=useState(false);
-  const [checked,setChecked]=useState(()=>{
-    try { const raw = localStorage.getItem("templo_calendario_checks"); return raw ? JSON.parse(raw) : {}; } catch { return {}; }
-  });
+  const [checked,setChecked]=useState({});
   const [showNewTask,setShowNewTask]=useState(false);
   const [showReset,setShowReset]=useState(false);
+  const [calLoading,setCalLoading]=useState(true);
+  const [calError,setCalError]=useState(null);
 
   useEffect(()=>{
     if(!document.getElementById('tgf')){
@@ -521,25 +519,100 @@ function CalendarioHosteadoraPanel() {
     }
   },[]);
 
-  const toggleCheck=(tid,day)=>{const key=cal_ck(tid,day);setChecked(prev=>{const next={...prev,[key]:!prev[key]};try{localStorage.setItem("templo_calendario_checks",JSON.stringify(next));}catch{}return next;});};
-  const doReset=()=>{setChecked({});setShowReset(false);try{localStorage.setItem("templo_calendario_checks","{}");}catch{}};
-  const persistTasks=(u)=>{setTasks(u);try{localStorage.setItem("templo_calendario_tasks",JSON.stringify(u));}catch{}};
+  // Carga inicial desde Supabase (reemplaza el viejo localStorage: ahora el calendario
+  // persiste en la base de datos, igual en celular, otra compu, o si se borra caché).
+  useEffect(()=>{
+    let cancelled=false;
+    (async()=>{
+      try{
+        const { supabase } = await import('../../services/supabase.js');
+        const [{data:tRows,error:tErr},{data:cRows,error:cErr}]=await Promise.all([
+          supabase.from('templo_calendario_tareas').select('*').order('orden',{ascending:true}),
+          supabase.from('templo_calendario_checks').select('tarea_id,dia'),
+        ]);
+        if(tErr) throw tErr;
+        if(cErr) throw cErr;
+        if(cancelled) return;
+        if(tRows && tRows.length>0){
+          setTasks(tRows.map(r=>({id:r.id,area:r.area,tipo:r.tipo,actividad:r.actividad,horario:r.horario,dias:r.dias||[],justificacion:r.justificacion||"",icon:r.icon||"⭐"})));
+        }
+        const chk={};
+        (cRows||[]).forEach(r=>{chk[cal_ck(r.tarea_id,r.dia)]=true;});
+        setChecked(chk);
+      }catch(e){
+        console.error("Calendario: error cargando de Supabase, usando datos locales de respaldo.",e);
+        if(!cancelled) setCalError("No se pudo conectar con la base de datos — mostrando datos de respaldo (los cambios no se guardarán hasta reconectar).");
+      }finally{
+        if(!cancelled) setCalLoading(false);
+      }
+    })();
+    return ()=>{cancelled=true;};
+  },[]);
 
-  const saveTask=(nd,editId)=>{
-    if(editId){ persistTasks(tasks.map(t=>t.id===editId?{...nd,id:editId}:t)); }
-    else{ persistTasks([...tasks,{...nd,id:Date.now()}]); }
+  const toggleCheck=async(tid,day)=>{
+    const key=cal_ck(tid,day);
+    const wasChecked=!!checked[key];
+    setChecked(prev=>({...prev,[key]:!wasChecked}));
+    try{
+      const { supabase } = await import('../../services/supabase.js');
+      if(wasChecked){
+        await supabase.from('templo_calendario_checks').delete().eq('tarea_id',tid).eq('dia',day);
+      }else{
+        await supabase.from('templo_calendario_checks').upsert({tarea_id:tid,dia:day},{onConflict:'tarea_id,dia'});
+      }
+    }catch(e){
+      console.error("Calendario: no se pudo guardar el check en Supabase.",e);
+      setChecked(prev=>({...prev,[key]:wasChecked})); // revertir si falló
+    }
+  };
+
+  const doReset=async()=>{
+    const prevChecked=checked;
+    setChecked({}); setShowReset(false);
+    try{
+      const { supabase } = await import('../../services/supabase.js');
+      await supabase.from('templo_calendario_checks').delete().neq('tarea_id',-1);
+    }catch(e){
+      console.error("Calendario: no se pudo reiniciar en Supabase.",e);
+      setChecked(prevChecked);
+    }
+  };
+
+  const persistTasks=(u)=>{ setTasks(u); };
+
+  const saveTask=async(nd,editId)=>{
+    try{
+      const { supabase } = await import('../../services/supabase.js');
+      const row={area:nd.area,tipo:nd.tipo,actividad:nd.actividad,horario:nd.horario,dias:nd.dias,justificacion:nd.justificacion,icon:nd.icon,updated_at:new Date().toISOString()};
+      if(editId){
+        const {error}=await supabase.from('templo_calendario_tareas').update(row).eq('id',editId);
+        if(error) throw error;
+        persistTasks(tasks.map(t=>t.id===editId?{...nd,id:editId}:t));
+      }else{
+        const {data,error}=await supabase.from('templo_calendario_tareas').insert(row).select().single();
+        if(error) throw error;
+        persistTasks([...tasks,{...nd,id:data.id}]);
+      }
+    }catch(e){
+      console.error("Calendario: no se pudo guardar la tarea en Supabase.",e);
+    }
     setShowNewTask(false); setEditingTask(null);
   };
 
-  const deleteTask=(task)=>{
+  const deleteTask=async(task)=>{
     persistTasks(tasks.filter(t=>t.id!==task.id));
     setChecked(prev=>{
       const next={...prev};
       Object.keys(next).forEach(k=>{if(k.startsWith(`${task.id}__`))delete next[k];});
-      try{localStorage.setItem("templo_calendario_checks",JSON.stringify(next));}catch{}
       return next;
     });
     setSelected(null); setEditingTask(null); setShowNewTask(false);
+    try{
+      const { supabase } = await import('../../services/supabase.js');
+      await supabase.from('templo_calendario_tareas').delete().eq('id',task.id); // los checks se borran solos por ON DELETE CASCADE
+    }catch(e){
+      console.error("Calendario: no se pudo eliminar la tarea en Supabase.",e);
+    }
   };
 
   const openEdit=(task)=>{setSelected(null);setEditingTask(task);setShowNewTask(true);};
@@ -559,6 +632,8 @@ function CalendarioHosteadoraPanel() {
 
   return (
     <div style={{position:"relative",fontFamily:CAL_NU}}>
+      {calLoading&&<div style={{textAlign:"center",padding:"10px",fontSize:10,fontFamily:CAL_CI,color:"rgba(212,175,55,0.5)",letterSpacing:1}}>⏳ Cargando calendario desde la base de datos…</div>}
+      {calError&&<div style={{textAlign:"center",padding:"8px 14px",fontSize:9,fontFamily:CAL_CI,color:"#FF7777",background:"rgba(255,85,85,0.08)",border:"1px solid rgba(255,85,85,0.3)",borderRadius:8,margin:"0 0 10px"}}>⚠ {calError}</div>}
       {isAlertDay&&!alertDismissed&&(
         <div style={{position:"fixed",inset:0,zIndex:100003,background:"rgba(2,0,10,0.93)",backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
           <div style={{background:"linear-gradient(135deg,rgba(10,5,32,0.99),rgba(4,2,14,0.99))",border:"1.5px solid rgba(68,255,136,0.35)",borderRadius:20,maxWidth:480,width:"100%",overflow:"hidden",boxShadow:"0 0 80px rgba(68,255,136,0.08),0 24px 70px rgba(0,0,0,0.98)"}}>
