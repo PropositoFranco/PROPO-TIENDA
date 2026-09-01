@@ -147,6 +147,19 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   // reproducir, sin volver a prenderlo nunca. Con una señal fija, una vez
   // que el video se decide mostrar, ya no desaparece solo.
   const gamaBajaInicialRef = useRef(detectarGamaBajaSincrona());
+  // Señal fija (calculada una sola vez, igual que gamaBajaInicialRef) para
+  // distinguir un dispositivo que SÍ tiene teclado virtual (celular/tablet:
+  // sin mouse, sin hover real) de una PC (con mouse). Esto es necesario
+  // porque dar foco al campo de texto ocurre en AMBOS casos —en celular al
+  // tocarlo o al tocar una pregunta amarilla, y en PC al darles clic con el
+  // mouse—, pero SOLO en celular/tablet ese foco corresponde a que el
+  // teclado virtual realmente se abrió y tapa la pantalla. En PC no existe
+  // tal teclado, así que el foco no debe ocultar nada.
+  const tieneTecladoVirtualRef = useRef(
+    typeof window !== 'undefined' && window.matchMedia
+      ? !window.matchMedia('(hover:hover) and (pointer:fine)').matches
+      : false
+  );
   const [tecladoAbierto, setTecladoAbierto] = useState(false);
   // Se apaga el video (entre otras cosas) mientras el usuario cambia de
   // app o bloquea el celular. Sin esto, un video "en pausa visual" pero
@@ -646,7 +659,11 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     // vez, y por eso el layout se veía bien unas veces y roto otras).
     // Se decide aquí mismo, por el foco del campo de texto: inmediato y
     // 100% consistente, sin depender de ningún evento del sistema.
-    setTecladoAbierto(true);
+    // PERO solo en dispositivos que de verdad tienen teclado virtual
+    // (celular/tablet) — en PC, dar foco al campo (con el mouse, o al
+    // seleccionar una pregunta amarilla) no debe ocultar nada, porque
+    // ahí no existe ningún teclado virtual que vaya a tapar la pantalla.
+    if (tieneTecladoVirtualRef.current) setTecladoAbierto(true);
     // Mismo ajuste que onChipClick, pero para cuando el usuario toca
     // el textarea directamente para escribir a mano.
     const irAlFondo = () => {
@@ -660,7 +677,9 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     // Contraparte de onEntradaFocus: en cuanto el campo pierde el foco
     // (el usuario cerró el teclado con el botón nativo, envió el mensaje,
     // o tocó fuera del campo), volvemos a mostrar video/encabezado/
-    // preguntas de inmediato.
+    // preguntas de inmediato. En PC esto no hace nada (tecladoAbierto
+    // nunca llegó a activarse ahí), así que es inofensivo dejarlo sin
+    // condición.
     setTecladoAbierto(false);
   }
 
@@ -838,6 +857,22 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
                   <button
                     className="gc-enviar"
                     disabled={bloqueado}
+                    // Sin esto, al dar clic el botón le roba el foco al
+                    // textarea ANTES de que el propio clic termine de
+                    // procesarse. En celular/tablet eso dispara
+                    // onEntradaBlur a medio clic, lo que reacomoda todo el
+                    // layout (vuelve a mostrar video/preguntas) en el
+                    // instante exacto en que el dedo/mouse sigue sobre el
+                    // botón — y ese reacomodo corre el botón de lugar, así
+                    // que el primer toque termina "gastándose" solo en
+                    // cerrar el teclado, y hace falta un segundo toque
+                    // para que el clic caiga sobre el botón ya quieto.
+                    // Evitar el foco por defecto aquí deja que el envío
+                    // ocurra siempre desde el primer clic/toque, en PC,
+                    // tablet y celular por igual; el propio enviarPregunta
+                    // ya se encarga de quitar el foco del campo de forma
+                    // controlada una vez que el mensaje ya se envió.
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => enviarPregunta(entradaRef.current?.value || '')}
                   >
                     ↑
