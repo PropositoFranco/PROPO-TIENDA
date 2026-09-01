@@ -319,6 +319,27 @@ const CAL_AREA_OPTS = [
   {v:"otro",         label:"🔷 Otro"},
 ];
 
+// Convierte el texto libre de "horario" en minutos desde medianoche, para poder ordenar
+// las tareas de un día por hora real. Si no hay hora reconocible, se manda al final.
+function calStartMinutes(horario) {
+  if (!horario) return 9999;
+  const h = horario.toLowerCase();
+  const m = h.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/);
+  if (m) {
+    let hour = parseInt(m[1], 10);
+    const min = m[2] ? parseInt(m[2], 10) : 0;
+    const ampm = m[3];
+    if (ampm === "pm" && hour !== 12) hour += 12;
+    if (ampm === "am" && hour === 12) hour = 0;
+    return hour * 60 + min;
+  }
+  if (h.includes("mañana")) return 9 * 60;
+  if (h.includes("mediodía") || h.includes("mediodia")) return 12 * 60;
+  if (h.includes("tarde")) return 16 * 60;
+  if (h.includes("noche")) return 20 * 60;
+  if (h.includes("durante el día") || h.includes("durante el dia")) return 8.5 * 60;
+  return 9999; // "Bloque de 3h", "1 hora FIJA", etc. sin ancla de reloj → al final
+}
 const cal_ck  = (id,day) => `${id}__${day}`;
 const cal_gc  = (area)   => CAL_C[area] || CAL_C.otro;
 const CAL_CD  = "'Cinzel Decorative','Cinzel',serif";
@@ -527,7 +548,7 @@ function CalendarioHosteadoraPanel() {
   const today=new Date();const todayDay=today.getDate();
   const isAlertDay=todayDay===1||todayDay===29;
   const alertTasks=todayDay===29?tasks.filter(t=>t.dias.includes("DIA_29")):todayDay===1?tasks.filter(t=>t.dias.includes("DIA_1")):[];
-  const getDay=day=>tasks.filter(t=>t.dias.includes(day));
+  const getDay=day=>tasks.filter(t=>t.dias.includes(day)).sort((a,b)=>calStartMinutes(a.horario)-calStartMinutes(b.horario));
   const getSpecial=code=>tasks.filter(t=>t.dias.includes(code));
   const totalPD=CAL_DAYS.map(d=>getDay(d).length);
 
@@ -592,7 +613,6 @@ function CalendarioHosteadoraPanel() {
       <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:8}}>
         {CAL_DAYS.map((day,i)=>{
           const dayTasks=getDay(day);
-          const groups=groupByArea(dayTasks);
           const dayDone=dayTasks.filter(t=>checked[cal_ck(t.id,day)]).length;
           const allDone=dayTasks.length>0&&dayDone===dayTasks.length;
           return (
@@ -603,13 +623,20 @@ function CalendarioHosteadoraPanel() {
                 <div style={{background:allDone?"rgba(68,255,136,0.14)":"rgba(212,175,55,0.07)",border:`1px solid ${allDone?"rgba(68,255,136,0.3)":"rgba(212,175,55,0.18)"}`,borderRadius:10,padding:"2px 7px",fontSize:7,fontFamily:CAL_CI,color:allDone?"#44FF88":"rgba(212,175,55,0.55)",display:"inline-block",marginTop:3}}>{dayDone}/{dayTasks.length} ✦</div>
               </div>
               <div style={{padding:7}}>
-                {groups.length===0&&<div style={{textAlign:"center",padding:"28px 8px",color:"rgba(212,175,55,0.18)",fontSize:10}}><div style={{fontSize:18,marginBottom:4,opacity:0.5}}>—</div><div style={{fontFamily:CAL_CI,fontSize:7,letterSpacing:1}}>LIBRE</div></div>}
-                {groups.map(({area,ts})=>(
-                  <div key={area}>
-                    <CalAreaDot area={area}/>
-                    {ts.map(t=><CalTaskCard key={t.id} task={t} day={day} onClick={setSelected} isChecked={!!checked[cal_ck(t.id,day)]} onToggle={toggleCheck}/>)}
-                  </div>
-                ))}
+                {dayTasks.length===0&&<div style={{textAlign:"center",padding:"28px 8px",color:"rgba(212,175,55,0.18)",fontSize:10}}><div style={{fontSize:18,marginBottom:4,opacity:0.5}}>—</div><div style={{fontFamily:CAL_CI,fontSize:7,letterSpacing:1}}>LIBRE</div></div>}
+                {dayTasks.map((t,idx)=>{
+                  const prevNoHora=idx>0&&calStartMinutes(dayTasks[idx-1].horario)>=9999;
+                  const noHora=calStartMinutes(t.horario)>=9999;
+                  return (
+                    <div key={t.id}>
+                      {noHora&&!prevNoHora&&(
+                        <div style={{fontSize:7,fontWeight:700,color:"rgba(255,255,255,0.22)",letterSpacing:1.5,textTransform:"uppercase",fontFamily:CAL_CI,margin:"8px 0 4px",borderTop:"1px dashed rgba(255,255,255,0.08)",paddingTop:6}}>⏳ Sin hora fija</div>
+                      )}
+                      <CalAreaDot area={t.area}/>
+                      <CalTaskCard task={t} day={day} onClick={setSelected} isChecked={!!checked[cal_ck(t.id,day)]} onToggle={toggleCheck}/>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
