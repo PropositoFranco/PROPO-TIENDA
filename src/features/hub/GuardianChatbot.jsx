@@ -118,6 +118,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   const historialRef = useRef([]);
   const ultimaPreguntaFallidaRef = useRef(null);
   const savedScrollYRef = useRef(0);
+  const resizeDispatchTimeoutRef = useRef(null);
 
   // Los mensajes viven en estado de React (no insertados a mano en el DOM),
   // así que sobreviven a que el chatbot se oculte y se vuelva a mostrar.
@@ -136,19 +137,8 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   // cualquier momento sin que eso "apague" nada que ya se estuviera
   // viendo, porque solo afecta decoración, nunca contenido.
   const [modoLigero, setModoLigero] = useState(detectarGamaBajaSincrona);
-  // Señal de equipo/red débil capturada UNA SOLA VEZ al abrir, con datos
-  // de hardware confiables (núcleos, RAM, tipo de red) — a propósito NO
-  // se actualiza nunca más después de este primer cálculo. Esta es la
-  // que decide si el video se muestra o no. Antes esa decisión dependía
-  // de `modoLigero`, que también se actualiza con una medición de fps en
-  // vivo — y esa medición ocurre justo cuando el video pesado apenas
-  // empieza a cargar, así que podía "creer" erróneamente que el equipo
-  // era débil (por el propio arranque del video) y apagarlo a medio
-  // reproducir, sin volver a prenderlo nunca. Con una señal fija, una vez
-  // que el video se decide mostrar, ya no desaparece solo.
-  const gamaBajaInicialRef = useRef(detectarGamaBajaSincrona());
-  // Señal fija (calculada una sola vez, igual que gamaBajaInicialRef) para
-  // distinguir un dispositivo que SÍ tiene teclado virtual (celular/tablet:
+  // Señal fija (calculada una sola vez al montar) para distinguir un
+  // dispositivo que SÍ tiene teclado virtual (celular/tablet:
   // sin mouse, sin hover real) de una PC (con mouse). Esto es necesario
   // porque dar foco al campo de texto ocurre en AMBOS casos —en celular al
   // tocarlo o al tocar una pregunta amarilla, y en PC al darles clic con el
@@ -180,11 +170,8 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   // ── Precalentar la conexión con Bunny desde que carga el hub (no solo
   //    cuando se abre el chat), para que al abrir el chatbot el video no
   //    pierda tiempo en la conexión inicial y empiece a reproducirse más
-  //    rápido. No cambia nada de layout, tamaño ni calidad del video.
-  //    En equipos de gama baja no hacemos ni esto: no tiene sentido
-  //    reservar DNS/conexión para un video que ya decidimos no mostrar ──
+  //    rápido. No cambia nada de layout, tamaño ni calidad del video. ──
   useEffect(() => {
-    if (gamaBajaInicialRef.current) return;
     const dominios = ['https://player.mediadelivery.net', 'https://video.bunnycdn.com', 'https://iframe.mediadelivery.net'];
     const agregados = [];
     dominios.forEach(href => {
@@ -268,11 +255,20 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
       // que vuelva a medir el tamaño real de la pantalla, disparando el
       // mismo evento nativo que ya usa para eso. Esto evita que el hub se
       // quede con una medida equivocada, sin importar la causa.
-      setTimeout(() => {
+      resizeDispatchTimeoutRef.current = setTimeout(() => {
+        resizeDispatchTimeoutRef.current = null;
         window.dispatchEvent(new Event('resize'));
       }, 400);
     }
     return () => {
+      // Si el chat se vuelve a abrir o el componente se desmonta antes de
+      // que pasen los 400ms, cancelamos el aviso pendiente — un
+      // 'resize' disparado tarde, después de que ya cambió el estado, es
+      // trabajo de más y una fuente extra de recálculos innecesarios.
+      if (resizeDispatchTimeoutRef.current) {
+        clearTimeout(resizeDispatchTimeoutRef.current);
+        resizeDispatchTimeoutRef.current = null;
+      }
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.left = '';
@@ -289,6 +285,22 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   //    cuando aparece el teclado; hay que medirlo con visualViewport) ──
   useEffect(() => {
     if (!open) return;
+    // NUEVO: este efecto existe únicamente para compensar el teclado
+    // virtual en celular/tablet (donde 100dvh no se achica solo). En PC
+    // no hay teclado virtual, así que fijar el tamaño del overlay a mano
+    // con las medidas de visualViewport no resuelve nada — y si el
+    // navegador dispara eventos 'resize'/'scroll' de visualViewport por
+    // otras razones en PC (zoom de página, escalado de Windows, DevTools
+    // abriéndose/cerrándose, etc.), este código reescribía el alto/ancho/
+    // posición del overlay a mano una y otra vez, peleando con el
+    // `position:fixed; inset:0` normal del CSS. Eso es exactamente lo que
+    // producía la pantalla "parpadeando" al hacer scroll en PC y, en el
+    // peor caso, dejaba el overlay fijado a una medida vieja/incorrecta
+    // (a veces 0 o desplazado) — visualmente parecía que el chat se había
+    // cerrado solo, pero en realidad `open` seguía en true, así que el
+    // botón "Pregúntale al Guardián" del hub no volvía a hacer nada al
+    // dar clic (ya estaba "abierto", solo que invisible/mal ubicado).
+    if (!tieneTecladoVirtualRef.current) return;
     const vv = window.visualViewport;
     if (!vv) return;
     let rafPendiente = false;
@@ -759,17 +771,17 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
               <div className="gc-video-loop" ref={videoLoopRef}>
                 {/* El video solo se monta cuando de verdad aporta algo: NO
                     mientras el teclado está abierto (no se ve y sobrecarga
-                    el layout justo cuando más importa la fluidez), NO en
-                    equipos de gama baja/red limitada detectados AL ABRIR
-                    (gamaBajaInicialRef — señal fija, no se re-evalúa con
-                    mediciones en vivo que podrían fallar por el propio
-                    video cargando), y NO mientras la app está en segundo
-                    plano (evita que quede "vivo" gastando batería y
-                    aumentando el riesgo de que el sistema mate la app).
-                    Cuando no se monta, el propio fondo con degradado del
-                    contenedor (ver CSS de .gc-video-loop) se ve bien solo,
-                    así que nunca queda un hueco vacío o roto. */}
-                {!tecladoAbierto && !gamaBajaInicialRef.current && !pantallaOculta && (
+                    el layout justo cuando más importa la fluidez), y NO
+                    mientras la app está en segundo plano (evita que quede
+                    "vivo" gastando batería y aumentando el riesgo de que el
+                    sistema mate la app). Ya NO se bloquea por heurística de
+                    "gama baja" — el resto de la app reproduce videos igual
+                    o más pesados sin ese filtro, así que no tenía sentido
+                    aplicarlo solo aquí. Cuando no se monta, el propio fondo
+                    con degradado del contenedor (ver CSS de .gc-video-loop)
+                    se ve bien solo, así que nunca queda un hueco vacío o
+                    roto. */}
+                {!tecladoAbierto && !pantallaOculta && (
                   <iframe
                     src="https://player.mediadelivery.net/embed/741310/b2cf3f89-a2b3-4969-a208-ac24a8301608?autoplay=true&loop=true&muted=true&preload=true&playsinline=true"
                     title="Video del Guardián del Templo"
