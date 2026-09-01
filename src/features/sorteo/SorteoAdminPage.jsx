@@ -2678,7 +2678,12 @@ const cargarSellosCodigos = useCallback(async () => {
               >
                 <option value="todos">Cuenta: todas</option>
                 {Array.from(
-                  new Map(juntasMeet.map(j => [j.cuenta_google, j.responsable_etiqueta || j.cuenta_google])).entries()
+                  new Map(
+                    juntasMeet.flatMap(j =>
+                      (j.responsables_relacionados?.length ? j.responsables_relacionados : [{ email: j.cuenta_google, etiqueta: j.responsable_etiqueta || j.cuenta_google }])
+                        .map(r => [r.email, r.etiqueta])
+                    )
+                  ).entries()
                 ).sort((a, b) => a[1].localeCompare(b[1])).map(([email, etiqueta]) => (
                   <option key={email} value={email}>{etiqueta}</option>
                 ))}
@@ -2741,7 +2746,7 @@ const cargarSellosCodigos = useCallback(async () => {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {juntasMeet
-                .filter(j => filtroResponsableJunta === 'todos' || j.cuenta_google === filtroResponsableJunta)
+                .filter(j => filtroResponsableJunta === 'todos' || (j.cuentas_relacionadas?.length ? j.cuentas_relacionadas.includes(filtroResponsableJunta) : j.cuenta_google === filtroResponsableJunta))
                 .filter(j => filtroParticipanteJunta === 'todos' || (j.participante_id ? `${j.participante_tipo}:${j.participante_id}` : `nombre:${j.participante_nombre}`) === filtroParticipanteJunta)
                 .filter(j => filtroSesionJunta === 'todas' || `${j.participante_tipo || 'sin_tipo'}::${j.numero_sesion}` === filtroSesionJunta)
                 .map(j => {
@@ -2777,16 +2782,18 @@ const cargarSellosCodigos = useCallback(async () => {
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                        {j.responsable_etiqueta && (
-                          <span style={{
-                            fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1.5,
-                            color: colorParaResponsable(j.cuenta_google),
-                            border: `1px solid ${colorParaResponsable(j.cuenta_google)}55`,
-                            borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap',
-                          }}>
-                            👤 {j.responsable_etiqueta.toUpperCase()}
-                          </span>
-                        )}
+                        {(j.responsables_relacionados?.length ? j.responsables_relacionados : [{ email: j.cuenta_google, etiqueta: j.responsable_etiqueta }])
+                          .filter(r => r.etiqueta)
+                          .map(r => (
+                            <span key={r.email} style={{
+                              fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1.5,
+                              color: colorParaResponsable(r.email),
+                              border: `1px solid ${colorParaResponsable(r.email)}55`,
+                              borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap',
+                            }}>
+                              👤 {r.etiqueta.toUpperCase()}
+                            </span>
+                          ))}
                         <span style={{
                           fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2, color: estadoInfo.color,
                           border: `1px solid ${estadoInfo.color}55`, borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap',
