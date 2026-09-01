@@ -107,6 +107,13 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   const [bloqueado, setBloqueado] = useState(false);
   const [contador, setContador] = useState(0);
   const [inited, setInited] = useState(false);
+  // Se activa solo si detectamos, en el propio equipo, que le cuesta
+  // trabajo sostener 60fps o que tiene pocos núcleos de CPU. Al
+  // activarse, el CSS de abajo apaga los efectos más pesados (esferas
+  // de fondo con blur, brillo de borde animado) para que el chat se
+  // sienta fluido incluso en equipos con gráficos integrados/débiles,
+  // sin depender de que se actualicen drivers en cada PC.
+  const [modoLigero, setModoLigero] = useState(false);
 
   // ── Precalentar la conexión con Vimeo desde que carga el hub (no solo
   //    cuando se abre el chat), para que al abrir el chatbot el video no
@@ -133,6 +140,33 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   function nuevoId() {
     return 'm' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
   }
+
+  // ── Detección de equipo débil: al abrir, medimos cuántos frames por
+  //    segundo sostiene el navegador durante ~12 frames. Si va lento, o
+  //    si el equipo reporta pocos núcleos de CPU, activamos el modo
+  //    ligero automáticamente. Esto corre una sola vez por apertura y
+  //    no vuelve a medir de ahí en adelante (para no seguir gastando
+  //    recursos midiendo). ──
+  useEffect(() => {
+    if (!open) return;
+    let frames = 0;
+    let inicio = null;
+    let raf;
+    const medir = (t) => {
+      if (inicio === null) inicio = t;
+      frames++;
+      if (frames < 14) {
+        raf = requestAnimationFrame(medir);
+        return;
+      }
+      const duracionMs = t - inicio;
+      const fpsAprox = (frames / duracionMs) * 1000;
+      const pocosNucleos = (navigator.hardwareConcurrency || 8) <= 4;
+      if (fpsAprox < 45 || pocosNucleos) setModoLigero(true);
+    };
+    raf = requestAnimationFrame(medir);
+    return () => cancelAnimationFrame(raf);
+  }, [open]);
 
   // ── Abrir/cerrar: bloqueo de scroll del body + alto real de viewport ──
   useEffect(() => {
@@ -283,6 +317,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   // que el chat se sintiera lento/trabado en computadoras de gama baja.
   useEffect(() => {
     if (!window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+    if (modoLigero) return;
     const root = overlayRef.current;
     if (!root) return;
     const SELECTOR_BRILLO = '.gc-ventana, .gc-chip, .gc-accion, .gc-textarea, .gc-enviar';
@@ -307,7 +342,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     };
     document.addEventListener('mousemove', onMove, { passive: true });
     return () => document.removeEventListener('mousemove', onMove);
-  }, [open]);
+  }, [open, modoLigero]);
 
   // ── ESC para cerrar ──
   useEffect(() => {
@@ -512,7 +547,7 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
   return (
     <div
       ref={overlayRef}
-      className="gc-overlay"
+      className={'gc-overlay' + (modoLigero ? ' gc-ligero' : '')}
       // El chatbot debe comportarse como una pestaña totalmente aislada:
       // nada de lo que se toque aquí adentro debe "escapar" hacia
       // listeners globales de `window` del resto de la app (por ejemplo,
@@ -842,6 +877,22 @@ const CSS = `
 @media (prefers-reduced-motion: reduce){
   .gc-esfera, .gc-chispa, .gc-thinking span{ animation:none !important; }
 }
+
+/* ================= MODO LIGERO =================
+   Se activa automáticamente (ver el efecto de medición de fps en el
+   componente) cuando el equipo no sostiene ~45fps o tiene pocos
+   núcleos de CPU. Apaga los efectos más caros de componer (blur
+   grande, brillo animado que sigue al cursor) para que el chat se
+   sienta fluido incluso en gráficos integrados o PC's débiles, sin
+   depender de arreglar nada en esa PC. */
+.gc-ligero .gc-esfera{ filter:blur(45px); opacity:.5; animation-duration: 60s; }
+.gc-ligero .gc-esfera.amarillo, .gc-ligero .gc-esfera.morado{ display:none; }
+.gc-ligero .gc-video-loop{ transition:none; }
+.gc-ligero .gc-ventana::before, .gc-ligero .gc-ventana::after,
+.gc-ligero .gc-chip::before, .gc-ligero .gc-chip::after,
+.gc-ligero .gc-accion::before, .gc-ligero .gc-accion::after,
+.gc-ligero .gc-textarea::before, .gc-ligero .gc-textarea::after,
+.gc-ligero .gc-enviar::before, .gc-ligero .gc-enviar::after{ display:none; }
 
 @media (hover:hover) and (pointer:fine){
   .gc-ventana::before, .gc-ventana::after,
