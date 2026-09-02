@@ -1012,7 +1012,7 @@ const CSS = `
 .gc-etiqueta{ font-size:11px; letter-spacing:0.10em; text-transform:uppercase; color:#8b93a7; font-weight:600; }
 
 .gc-video-loop{ position:relative; height:230px; background:radial-gradient(circle at 30% 20%, rgba(47,214,217,0.25), transparent 55%), radial-gradient(circle at 75% 75%, rgba(242,201,76,0.18), transparent 50%), #0e1424; display:flex; align-items:center; justify-content:center; overflow:hidden; transition:height .1s linear; overflow-anchor:none; }
-.gc-video-loop video{ position:absolute; top:50%; left:50%; width:100%; height:100%; min-width:100%; min-height:100%; object-fit:cover; object-position:center 22%; transform:translate(-50%,-50%); border:0; z-index:0; }
+.gc-video-loop video{ position:absolute; top:44%; left:50%; width:88%; height:88%; object-fit:contain; object-position:center; transform:translate(-50%,-50%); border:0; z-index:0; }
 .gc-video-vineta{ position:absolute; inset:0; z-index:1; pointer-events:none; box-shadow:inset 0 -30px 40px -10px rgba(14,20,36,0.55); }
 .gc-ventana-header.is-compact .gc-barra-ventana{ padding:5px 12px; }
 .gc-ventana-header.is-compact .gc-etiqueta{ font-size:9px; }
