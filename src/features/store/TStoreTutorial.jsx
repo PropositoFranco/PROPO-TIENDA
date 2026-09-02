@@ -2035,7 +2035,14 @@ export default function TStoreTutorial({onComplete}) {
           // Autoplay bloqueado por el navegador: mientras tanto suena la
           // voz de respaldo, y el audio real se reintenta en la 1ª interacción.
           speakBackupTTS(text);
-          pendingRetryRef.current=()=>{ audioEl.play().catch(()=>{}); };
+          pendingRetryRef.current=()=>{
+            // Antes de meter el audio real, apagamos SIEMPRE la voz de
+            // respaldo — si no, quedan las dos sonando encimadas (bug real
+            // reportado: se oían dos voces al mismo tiempo solo en el paso 1).
+            stopTTS();
+            audioEl.currentTime=0;
+            audioEl.play().catch(()=>{});
+          };
         });
       }
     } else {
