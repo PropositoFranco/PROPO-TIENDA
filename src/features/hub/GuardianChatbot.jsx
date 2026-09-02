@@ -167,28 +167,6 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
     return () => document.removeEventListener('visibilitychange', onVisibilidad);
   }, []);
 
-  // ── Precalentar la conexión con Bunny desde que carga el hub (no solo
-  //    cuando se abre el chat), para que al abrir el chatbot el video no
-  //    pierda tiempo en la conexión inicial y empiece a reproducirse más
-  //    rápido. No cambia nada de layout, tamaño ni calidad del video. ──
-  useEffect(() => {
-    const dominios = ['https://player.mediadelivery.net', 'https://video.bunnycdn.com', 'https://iframe.mediadelivery.net'];
-    const agregados = [];
-    dominios.forEach(href => {
-      if (document.querySelector(`link[data-guardian-preconnect="${href}"]`)) return;
-      const link = document.createElement('link');
-      link.rel = 'preconnect';
-      link.href = href;
-      link.crossOrigin = 'anonymous';
-      link.setAttribute('data-guardian-preconnect', href);
-      document.head.appendChild(link);
-      agregados.push(link);
-    });
-    return () => {
-      agregados.forEach(link => link.remove());
-    };
-  }, []);
-
   function nuevoId() {
     return 'm' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
   }
@@ -794,12 +772,14 @@ export default function GuardianChatbot({ open, onClose, nombreUsuario = '' }) {
                     se ve bien solo, así que nunca queda un hueco vacío o
                     roto. */}
                 {!tecladoAbierto && !pantallaOculta && (
-                  <iframe
-                    src="https://player.mediadelivery.net/embed/741310/b2cf3f89-a2b3-4969-a208-ac24a8301608?autoplay=true&loop=true&muted=true&preload=true&playsinline=true"
-                    title="Video del Guardián del Templo"
-                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
-                    loading="eager"
-                    referrerPolicy="strict-origin-when-cross-origin"
+                  <video
+                    src={`${SUPABASE_URL}/storage/v1/object/public/t-store-assets/guardian/guardian-intro.mp4`}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="auto"
+                    aria-label="Video del Guardián del Templo"
                   />
                 )}
                 <div className="gc-video-vineta" aria-hidden="true"></div>
@@ -1032,7 +1012,7 @@ const CSS = `
 .gc-etiqueta{ font-size:11px; letter-spacing:0.10em; text-transform:uppercase; color:#8b93a7; font-weight:600; }
 
 .gc-video-loop{ position:relative; height:230px; background:radial-gradient(circle at 30% 20%, rgba(47,214,217,0.25), transparent 55%), radial-gradient(circle at 75% 75%, rgba(242,201,76,0.18), transparent 50%), #0e1424; display:flex; align-items:center; justify-content:center; overflow:hidden; transition:height .1s linear; overflow-anchor:none; }
-.gc-video-loop iframe{ position:absolute; top:50%; left:50%; width:100%; height:100%; min-width:100%; min-height:100%; transform:translate(-50%,-50%) scale(1.6); border:0; z-index:0; }
+.gc-video-loop video{ position:absolute; top:50%; left:50%; width:100%; height:100%; min-width:100%; min-height:100%; object-fit:cover; transform:translate(-50%,-50%) scale(1.6); border:0; z-index:0; }
 .gc-video-vineta{ position:absolute; inset:0; z-index:1; pointer-events:none; box-shadow:inset 0 -30px 40px -10px rgba(14,20,36,0.55); }
 .gc-ventana-header.is-compact .gc-barra-ventana{ padding:5px 12px; }
 .gc-ventana-header.is-compact .gc-etiqueta{ font-size:9px; }
