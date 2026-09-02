@@ -274,50 +274,32 @@ const NARRATION=[
   "¡El templo te espera, Templario! Recuerda: tu Evaluación Semanal es lo único que no puedes saltarte. Menos de cinco minutos, cada semana. Y si alguna vez tienes dudas, puedes volver a ver este tutorial completo desde el botón Tutorial, ahí abajo a la derecha de tu Lobby. ¡Vamos, este es tu momento!",
 ];
 
-function pickSpanishVoice(){
-  if(!window.speechSynthesis) return {voice:null,tier:99};
-  const voices=window.speechSynthesis.getVoices();
-  if(!voices.length) return {voice:null,tier:99};
-  // nombres de voces MASCULINAS en español que existen en los principales navegadores/sistemas
-  // (Jorge y Alonso primero: son las voces "Online Natural" de Edge/Windows para es-MX,
-  // consistentemente las más cálidas y expresivas disponibles gratis en Web Speech API)
-  const maleNames=/jorge|alonso|tomás|tomas|néstor|nestor|liam|diego|carlos|álvaro|alvaro|juan|miguel|pablo|enrique|raúl|raul|pedro|fernando|andrés|andres|male|hombre|reba|eddy/i;
-  // nombres de voces FEMENINAS conocidas, para descartarlas siempre
-  const femaleNames=/paulina|mónica|monica|helena|sabina|lucía|lucia|elvira|esperanza|marisol|catalina|angélica|angelica|lupe|isabela|isabella|camila|valentina|renata|inés|ines|carmen|rosa|dalia|conchita|female|mujer|laura|sofía|sofia|maría|maria|ximena|salomé|salome|fred/i;
-  // universo de voces en español, quitando cualquiera que suene a voz femenina
-  const esVoices=voices.filter(v=>/^es/i.test(v.lang)&&!femaleNames.test(v.name));
-  const priority=[
-    // 1) voz masculina explícita, natural/neural, en español latino
-    v=>maleNames.test(v.name)&&/es-MX|es-US|es-419/i.test(v.lang)&&/natural|online|neural/i.test(v.name),
-    // 2) voz masculina explícita, natural/neural, en cualquier español
-    v=>maleNames.test(v.name)&&/natural|online|neural/i.test(v.name),
-    // 3) voz masculina explícita en español latino
-    v=>maleNames.test(v.name)&&/es-MX|es-US|es-419/i.test(v.lang),
-    // 4) voz masculina explícita en cualquier español
-    v=>maleNames.test(v.name),
-    // 5) sin nombre reconocido como masculino, pero tampoco femenino: natural/neural en español latino
-    v=>/es-MX|es-US|es-419/i.test(v.lang)&&/natural|online|neural/i.test(v.name),
-    v=>/es-ES/i.test(v.lang)&&/natural|online|neural/i.test(v.name),
-    v=>/es-MX|es-US|es-419/i.test(v.lang),
-    v=>/es-ES/i.test(v.lang),
-  ];
-  for(let tier=0;tier<priority.length;tier++){
-    const found=esVoices.find(priority[tier]);
-    if(found) return {voice:found,tier};
-  }
-  // penúltimo recurso: si el dispositivo tiene una voz masculina identificada
-  // por nombre pero en OTRO idioma (p. ej. el celular no trae voces es-MX
-  // masculinas instaladas), se prefiere esa antes que resignarse a una voz
-  // femenina en español — sigue sonando a hombre, aunque el acento no sea
-  // perfecto en cada palabra.
-  const anyMaleVoice=voices.find(v=>maleNames.test(v.name));
-  if(anyMaleVoice) return {voice:anyMaleVoice,tier:98};
-  // último recurso real: solo si NO existe ninguna voz masculina identificable
-  // en todo el dispositivo, se usa cualquier voz en español disponible
-  // (podría ser femenina, pero ya no hay otra opción en el sistema).
-  const fallback=esVoices[0]||voices.find(v=>/^es/i.test(v.lang))||voices[0]||null;
-  return {voice:fallback,tier:99};
-}
+// ─── AUDIO DE NARRACIÓN (archivo real, NO la voz robótica del navegador) ──
+// El tutorial ya NO usa window.speechSynthesis. En su lugar reproduce un
+// archivo de audio real por cada paso — así la voz suena EXACTAMENTE
+// igual, con el mismo tono emocionante, en cualquier computadora,
+// celular o navegador, sin depender de qué voces traiga instaladas cada
+// dispositivo (esa dependencia era la causa de que sonara robótica en
+// unos equipos y bien en otros).
+//
+// CÓMO ACTIVARLO:
+// 1) Genera 14 archivos .mp3 (uno por paso, en el mismo orden que
+//    NARRATION/STEPS abajo) con la voz que quieras — usando como
+//    referencia la voz de tu video, pero exportando la pista SECA, sin
+//    reverb/eco/ambiente (ese eco que se escucha en tu video es un efecto
+//    de sala añadido en la mezcla, no la voz en sí; si lo dejas activado
+//    al generar el audio final, se va a notar todavía más al reproducirse
+//    dentro de la app).
+// 2) Súbelos a un bucket PÚBLICO de Supabase Storage (o cualquier CDN) y
+//    reemplaza AUDIO_BASE_URL por esa URL base.
+// 3) Si un paso todavía no tiene su archivo, el tutorial simplemente
+//    avanza en silencio, al ritmo correcto — nunca se rompe ni se acelera.
+const AUDIO_BASE_URL=""; // p.ej. "https://TU-PROYECTO.supabase.co/storage/v1/object/public/tutorial-audio"
+const NARRATION_AUDIO=[
+  "paso-00.mp3","paso-01.mp3","paso-02.mp3","paso-03.mp3","paso-04.mp3",
+  "paso-05.mp3","paso-06.mp3","paso-07.mp3","paso-08.mp3","paso-09.mp3",
+  "paso-10.mp3","paso-11.mp3","paso-12.mp3","paso-13.mp3",
+];
 
 // ─── TITLE SHIMMER ───────────────────────────────────────
 function TitleShimmer({mobile}) {
@@ -1931,80 +1913,69 @@ export default function TStoreTutorial({onComplete}) {
   const [selectedModule,setSelectedModule]=useState(null);
   const [coins]=useState(2850);
   const [voiceEnabled,setVoiceEnabled]=useState(true);
-  const chosenVoiceRef=useRef(null);
   const stepRef=useRef(0);
   const didMountRef=useRef(false);
   const initialSpokenRef=useRef(false);
-  const voicePollStartedRef=useRef(false);
+  const audioElRef=useRef(null);
+  const pendingPlayRef=useRef(null); // guarda un play() bloqueado por autoplay hasta la 1ª interacción
   const realSize=useWindowSize();
   const size={w:DESKTOP_W,h:DESKTOP_H};
   const tutorialScale=Math.min(realSize.w/DESKTOP_W,realSize.h/DESKTOP_H)||1;
 
   useEffect(()=>{ stepRef.current=step; },[step]);
 
-  // Reevalúa la mejor voz disponible en este momento y la guarda. Devuelve
-  // el "tier" (0 = mejor voz masculina neural encontrada ... 99 = no hay
-  // ninguna voz en español todavía). Se puede llamar varias veces: cada
-  // llamada simplemente ACTUALIZA chosenVoiceRef con lo mejor disponible
-  // hasta ese instante — así, si el navegador aún no ha terminado de cargar
-  // su lista completa de voces (típico justo después de refrescar la
-  // página), no nos quedamos pegados con la primera voz mediocre que
-  // encontremos.
-  const unlockVoice=()=>{
-    if(!window.speechSynthesis) return 99;
-    const {voice,tier}=pickSpanishVoice();
-    if(voice) chosenVoiceRef.current=voice;
-    return tier;
-  };
-  const GOOD_VOICE_TIER=3; // tier 0-3 = voz masculina explícita ya identificada (calidad buena)
+  if(!audioElRef.current&&typeof Audio!=="undefined"){
+    audioElRef.current=new Audio();
+    audioElRef.current.preload="auto";
+  }
 
-  const speakSessionRef=useRef(null); // {settled, keepAliveId, fallbackId} de la narración en curso
+  const speakSessionRef=useRef(null); // {settled, fallbackId} de la narración en curso
 
-  // Cierra por completo cualquier narración en curso: cancela el audio y
+  // Cierra por completo cualquier narración en curso: pausa el audio y
   // limpia sus temporizadores. Se llama SIEMPRE antes de arrancar una nueva
   // narración, así nunca hay dos audios sonando ni dos avances programados.
   const stopSpeaking=()=>{
     const s=speakSessionRef.current;
     if(s){
       s.settled=true;
-      if(s.keepAliveId) clearInterval(s.keepAliveId);
       if(s.fallbackId) clearTimeout(s.fallbackId);
       speakSessionRef.current=null;
     }
-    if(window.speechSynthesis) window.speechSynthesis.cancel();
+    const audioEl=audioElRef.current;
+    if(audioEl){
+      audioEl.onended=null;
+      audioEl.onerror=null;
+      audioEl.pause();
+    }
+    pendingPlayRef.current=null;
   };
 
-  // idx: paso a narrar. En cuanto termina el audio de ese paso, avanza AL
-  // INSTANTE al siguiente — como si se hubiera dado clic en "Continuar" —
-  // excepto en el último paso. Blindado en 3 capas para que el tutorial
-  // JAMÁS se quede detenido y NUNCA repita un audio ya reproducido:
-  //  1) onend / onerror del propio navegador → avanza al terminar el audio real.
-  //  2) Respaldo anti-atasco calculado según la duración real del texto de
-  //     ese paso (por si el navegador no llega a disparar onend/onerror).
-  //  3) Un flag "settled" por sesión asegura que, dispare lo que dispare
-  //     primero, el avance ocurre UNA sola vez — nunca duplicado.
+  // idx: paso a narrar. En cuanto el AUDIO REAL termina de sonar, avanza al
+  // siguiente paso — como si se hubiera dado clic en "Continuar" — excepto
+  // en el último paso. Blindado en 2 capas para que el tutorial JAMÁS se
+  // quede detenido, pero SIN el bug de avance instantáneo que tenía la voz
+  // del navegador:
+  //  1) "ended" del <audio> → avanza SOLO cuando el audio de verdad terminó
+  //     de sonar (nunca antes, nunca por una falla silenciosa).
+  //  2) Respaldo por tiempo, calculado según la duración estimada de lectura
+  //     del texto de ese paso — por si el archivo de audio aún no existe,
+  //     no carga, o el navegador bloquea la reproducción. Este respaldo es
+  //     el único que corre cuando NO hay audio, así el tutorial avanza a un
+  //     ritmo humano y nunca "se dispara" de golpe por todos los pasos.
+  //  Un flag "settled" por sesión asegura que, dispare lo que dispare
+  //  primero, el avance ocurre UNA sola vez — nunca duplicado.
   const doSpeak=(idx)=>{
-    if(!window.speechSynthesis) return;
     const text=NARRATION[idx];
     if(!text) return;
 
     stopSpeaking();
 
-    const session={settled:false,keepAliveId:null,fallbackId:null};
+    const session={settled:false,fallbackId:null};
     speakSessionRef.current=session;
 
-    const utter=new SpeechSynthesisUtterance(text);
-    utter.lang=(chosenVoiceRef.current&&chosenVoiceRef.current.lang)||"es-MX";
-    if(chosenVoiceRef.current) utter.voice=chosenVoiceRef.current;
-    // ritmo vivo y tono brillante: voz enérgica, alegre y animada, nunca apagada ni seria
-    utter.rate=1.12;
-    utter.pitch=1.18;
-    utter.volume=1;
-
     const finish=()=>{
-      if(session.settled) return; // ya se avanzó — el resto de las señales se ignora
+      if(session.settled) return; // ya se avanzó — se ignora cualquier señal tardía
       session.settled=true;
-      if(session.keepAliveId) clearInterval(session.keepAliveId);
       if(session.fallbackId) clearTimeout(session.fallbackId);
       // solo avanza si seguimos en el mismo paso en el que arrancó esta narración
       // (evita saltos de más si el usuario ya cambió de paso a mano)
@@ -2013,36 +1984,45 @@ export default function TStoreTutorial({onComplete}) {
       }
     };
 
-    utter.onend=finish;
-    utter.onerror=finish; // si la síntesis falla, igual avanza — nunca se queda trabado
-
-    // Chrome corta narraciones largas (~15s+) si el hilo de síntesis queda
-    // inactivo; este "latido" lo mantiene vivo sin reiniciar ni repetir el audio.
-    session.keepAliveId=setInterval(()=>{
-      if(!window.speechSynthesis.speaking){
-        clearInterval(session.keepAliveId);
-        return;
-      }
-      window.speechSynthesis.pause();
-      window.speechSynthesis.resume();
-    },4000);
-
-    // Respaldo anti-atasco: calculado con la duración real estimada de ESTE
-    // texto (según su número de palabras y la velocidad configurada), más un
-    // colchón amplio. Si el navegador nunca dispara onend/onerror, esto
-    // fuerza el avance para que el tutorial nunca deje de explicarse.
+    // Tope de seguridad calculado con la duración real estimada de ESTE
+    // texto (según su número de palabras), más un colchón. Es el ÚNICO
+    // temporizador que puede avanzar el paso cuando no hay audio sonando
+    // de verdad — por eso nunca se "acelera": siempre respeta el ritmo de
+    // lectura natural del texto de cada paso.
     const words=text.trim().split(/\s+/).length;
-    const estMs=(words/2.6)*1000/utter.rate + 4500;
-    session.fallbackId=setTimeout(finish,Math.max(6000,estMs));
+    const estMs=(words/2.6)*1000+1200;
+    session.fallbackId=setTimeout(finish,Math.max(4000,estMs));
 
-    window.speechSynthesis.speak(utter);
+    const url=(AUDIO_BASE_URL&&NARRATION_AUDIO[idx])
+      ?`${AUDIO_BASE_URL}/${NARRATION_AUDIO[idx]}`:null;
+    const audioEl=audioElRef.current;
+    if(!url||!audioEl){
+      // Todavía no hay archivo de audio para este paso: el tutorial avanza
+      // en silencio, al ritmo del respaldo por tiempo de arriba.
+      return;
+    }
+
+    audioEl.onended=finish; // única señal que avanza "de inmediato": el audio de verdad terminó
+    audioEl.onerror=()=>{}; // un error de carga NO adelanta nada: lo resuelve el respaldo por tiempo
+    audioEl.src=url;
+    audioEl.currentTime=0;
+    audioEl.volume=1;
+    const playPromise=audioEl.play();
+    if(playPromise&&playPromise.catch){
+      playPromise.catch(()=>{
+        // Autoplay bloqueado por el navegador (típico en el primer paso,
+        // antes de cualquier clic/tap del usuario). Se reintenta apenas
+        // ocurra la primera interacción; mientras tanto el respaldo por
+        // tiempo sigue avanzando el tutorial a su ritmo normal.
+        pendingPlayRef.current=()=>{ audioEl.play().catch(()=>{}); };
+      });
+    }
   };
 
   // ── NARRACIÓN DEL PRIMER PASO — UNA SOLA VEZ ────────────────
   // speakInitial() está blindada con initialSpokenRef: sin importar cuántas
   // veces se dispare, solo la PRIMERA llamada real habla — todas las demás
-  // no hacen nada. Así se elimina la voz duplicada y apagada que se
-  // escuchaba de fondo.
+  // no hacen nada. Así se elimina la voz duplicada que se escuchaba de fondo.
   const speakInitial=()=>{
     if(initialSpokenRef.current) return;
     if(!voiceEnabled) return;
@@ -2050,70 +2030,14 @@ export default function TStoreTutorial({onComplete}) {
     doSpeak(stepRef.current);
   };
 
-  // ── ESPERAR A LA MEJOR VOZ ANTES DE HABLAR POR PRIMERA VEZ ──
-  // Justo después de refrescar la página, el navegador NO ha terminado de
-  // cargar su lista completa de voces cuando este componente se monta —
-  // `getVoices()` ya devuelve algo (por eso antes se disparaba de inmediato),
-  // pero todavía sin las voces "Online/Natural/Neural" buenas, así que se
-  // elegía la primera voz mediocre disponible y esa quedaba fija para todo
-  // el tutorial. Si el tutorial se vuelve a abrir sin refrescar, el navegador
-  // ya tiene la lista completa cacheada y por eso sonaba bien.
-  // Este poll reintenta cada 150ms (hasta 12 veces ≈ 1.8s tope) reevaluando
-  // la mejor voz disponible, y solo habla en cuanto encuentra una voz de
-  // buena calidad — o, como máximo, tras el tope de tiempo, para que el
-  // tutorial NUNCA deje de sonar automáticamente.
-  const waitForGoodVoiceThenSpeak=(attempt=0)=>{
-    if(initialSpokenRef.current) return;
-    if(!window.speechSynthesis) return;
-    const tier=unlockVoice();
-    if(tier<=GOOD_VOICE_TIER||attempt>=12){
-      speakInitial();
-      return;
-    }
-    setTimeout(()=>waitForGoodVoiceThenSpeak(attempt+1),150);
-  };
-
-  const startVoicePolling=()=>{
-    if(voicePollStartedRef.current) return;
-    voicePollStartedRef.current=true;
-    waitForGoodVoiceThenSpeak(0);
-  };
-
   useEffect(()=>{
-    if(!window.speechSynthesis) return;
-
-    // ── "CALENTAMIENTO" DEL MOTOR DE VOZ (arreglo del silencio la primera vez) ──
-    // Bug conocido de Chrome/Android (WebView incluido): justo después de un
-    // arranque en frío de la app/página, la PRIMERA llamada real a .speak()
-    // en toda la sesión puede quedar muda — el motor de síntesis la usa para
-    // auto-inicializarse y no produce sonido, aunque no dispare ningún error.
-    // Las llamadas siguientes, dentro de esa misma sesión, sí suenan bien —
-    // por eso funcionaba al cerrar y reabrir el tutorial (ya no era la
-    // primera llamada de la sesión). Aquí "gastamos" esa primera llamada
-    // muda con un utterance vacío y silencioso ANTES de que arranque el
-    // poll de la mejor voz, así la narración real del paso 1 ya no es la
-    // que se pierde.
-    try{
-      const warm=new SpeechSynthesisUtterance(" ");
-      warm.volume=0;
-      window.speechSynthesis.speak(warm);
-      window.speechSynthesis.cancel();
-    }catch(e){/* si el navegador no lo soporta, seguimos igual con el flujo normal */}
-
-    startVoicePolling();
-    // el navegador dispara esto en cuanto termina de cargar TODAS las voces
-    // (incluidas las buenas "Online/Natural") — startVoicePolling ya está
-    // blindado con voicePollStartedRef, así que esto nunca duplica el audio,
-    // solo asegura que el poll de arriba también arranque si por lo que sea
-    // no lo hizo antes.
-    window.speechSynthesis.onvoiceschanged=startVoicePolling;
+    speakInitial();
 
     const tryOnInteraction=()=>{
-      startVoicePolling();
-      if(initialSpokenRef.current){
-        document.removeEventListener("click",tryOnInteraction);
-        document.removeEventListener("touchstart",tryOnInteraction);
-        document.removeEventListener("keydown",tryOnInteraction);
+      if(pendingPlayRef.current){
+        const run=pendingPlayRef.current;
+        pendingPlayRef.current=null;
+        run();
       }
     };
     document.addEventListener("click",tryOnInteraction);
@@ -2133,7 +2057,6 @@ export default function TStoreTutorial({onComplete}) {
   // entra en acción a partir del segundo paso en adelante (por avance
   // automático al terminar el audio, o por clic manual en el botón).
   useEffect(()=>{
-    if(!window.speechSynthesis) return;
     if(!didMountRef.current){
       didMountRef.current=true;
       return;
