@@ -22,6 +22,14 @@ export default function HubPage() {
   const [badgeTick, setBadgeTick] = useState(0);
   const [oraculoOpen, setOraculoOpen] = useState(false);
   const [guardianOpen, setGuardianOpen] = useState(false);
+  // El handler de 'resize'/visualViewport de más abajo se registra una
+  // sola vez (deps vacíos) y necesita saber, en cada evento, si el
+  // chatbot está abierto en ESE momento — no en el momento en que se
+  // registró el listener. Un estado de React normal quedaría "congelado"
+  // dentro de ese closure, así que usamos un ref que se mantiene
+  // sincronizado aparte.
+  const guardianOpenRef = useRef(false);
+  useEffect(() => { guardianOpenRef.current = guardianOpen; }, [guardianOpen]);
 const getVh = () => window.visualViewport?.height ?? window.innerHeight;
 const [vh, setVh] = useState(() => getVh());
 
@@ -40,6 +48,11 @@ useEffect(() => {
 
 useEffect(() => {
   const update = () => {
+    // Mientras el chatbot del Guardián está abierto, el HUB debe quedar
+    // completamente congelado detrás de él — el teclado virtual del
+    // chatbot NO es un cambio real de tamaño del HUB, así que ignoramos
+    // por completo cualquier evento de tamaño mientras esté abierto.
+    if (guardianOpenRef.current) return;
     setTimeout(() => setVh(getVh()), 350);
   };
   window.addEventListener('fullscreen-change', update);
@@ -55,6 +68,21 @@ useEffect(() => {
     window.removeEventListener('orientationchange', update);
   };
 }, []);
+
+// ── Al cerrar el chatbot, volvemos a medir el tamaño real del HUB una
+//    sola vez. Cubre el caso raro de que algo sí haya cambiado de verdad
+//    (p. ej. el usuario rotó el celular) mientras el chatbot lo tenía
+//    congelado — así el HUB queda al día apenas se vuelve a ver. Se
+//    ignora a propósito el montaje inicial (ahí ya se mide aparte, más
+//    arriba) — esto solo debe correr en una transición real de abierto a
+//    cerrado. ──
+const chatbotEstuvoAbiertoRef = useRef(false);
+useEffect(() => {
+  if (guardianOpen) { chatbotEstuvoAbiertoRef.current = true; return; }
+  if (!chatbotEstuvoAbiertoRef.current) return;
+  chatbotEstuvoAbiertoRef.current = false;
+  setTimeout(() => setVh(getVh()), 350);
+}, [guardianOpen]);
 
   useEffect(() => {
     const onStoreUpdate = () => setBadgeTick(t => t + 1);
@@ -326,10 +354,6 @@ useEffect(() => {
           // para que vuelva a mostrar su barra superior — es el mismo
           // mensaje que antes mandaba hub.html al cerrar su modal interno.
           window.postMessage({ type: 'guardian-modal', data: { open: false } }, window.location.origin);
-          // Y se lo reenviamos también al iframe del hub, para que el
-          // botón "Pregúntale al Guardián" reanude sus animaciones (las
-          // tiene pausadas mientras el chat lo tapa por completo).
-          sendToFrame('guardian-modal', { open: false });
         }}
       />
 
