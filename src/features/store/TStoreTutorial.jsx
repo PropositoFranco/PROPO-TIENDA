@@ -1897,6 +1897,7 @@ function MasterPanel({cur,step,total,onNext,mobile}) {
 // ─── ROOT ────────────────────────────────────────────────
 export default function TStoreTutorial({onComplete}) {
   const [step,setStep]=useState(0);
+  const [started,setStarted]=useState(false); // gate: exige 1 toque antes de reproducir CUALQUIER audio
   const [filterType,setFilterType]=useState("TODOS");
   const [filterT,setFilterT]=useState(null);
   const [selectedModule,setSelectedModule]=useState(null);
@@ -1905,9 +1906,7 @@ export default function TStoreTutorial({onComplete}) {
   const didMountRef=useRef(false);
   const initialSpokenRef=useRef(false);
   const audioElRef=useRef(null);
-  const chosenVoiceRef=useRef(null);      // mejor voz de respaldo (TTS) encontrada en este dispositivo
   const pendingRetryRef=useRef(null);     // reintento pendiente de sonido, bloqueado por autoplay
-  const ttsKeepAliveRef=useRef(null);
   const realSize=useWindowSize();
   const size={w:DESKTOP_W,h:DESKTOP_H};
   const tutorialScale=Math.min(realSize.w/DESKTOP_W,realSize.h/DESKTOP_H)||1;
@@ -1919,41 +1918,16 @@ export default function TStoreTutorial({onComplete}) {
     audioElRef.current.preload="auto";
   }
 
-  // Elige, de entre las voces que tenga el dispositivo, una masculina,
-  // enérgica y en español — SOLO se usa como respaldo mientras no subas el
-  // archivo de audio real de ese paso (ver AUDIO_BASE_URL arriba). En
-  // cuanto subas los .mp3, esta voz de respaldo deja de escucharse.
-  const pickBackupVoice=()=>{
-    if(!window.speechSynthesis) return null;
-    const voices=window.speechSynthesis.getVoices();
-    if(!voices.length) return null;
-    const maleNames=/jorge|alonso|tomás|tomas|néstor|nestor|liam|diego|carlos|álvaro|alvaro|juan|miguel|pablo|enrique|raúl|raul|pedro|fernando|andrés|andres|male|hombre|reba|eddy/i;
-    const femaleNames=/paulina|mónica|monica|helena|sabina|lucía|lucia|elvira|esperanza|marisol|catalina|angélica|angelica|lupe|isabela|isabella|camila|valentina|renata|inés|ines|carmen|rosa|dalia|conchita|female|mujer|laura|sofía|sofia|maría|maria|ximena|salomé|salome|fred/i;
-    const esVoices=voices.filter(v=>/^es/i.test(v.lang)&&!femaleNames.test(v.name));
-    const priority=[
-      v=>maleNames.test(v.name)&&/es-MX|es-US|es-419/i.test(v.lang)&&/natural|online|neural/i.test(v.name),
-      v=>maleNames.test(v.name)&&/natural|online|neural/i.test(v.name),
-      v=>maleNames.test(v.name)&&/es-MX|es-US|es-419/i.test(v.lang),
-      v=>maleNames.test(v.name),
-      v=>/es-MX|es-US|es-419/i.test(v.lang)&&/natural|online|neural/i.test(v.name),
-      v=>/es-ES/i.test(v.lang)&&/natural|online|neural/i.test(v.name),
-      v=>/es-MX|es-US|es-419/i.test(v.lang),
-      v=>/es-ES/i.test(v.lang),
-    ];
-    for(const test of priority){ const found=esVoices.find(test); if(found) return found; }
-    return voices.find(v=>maleNames.test(v.name))||esVoices[0]||voices.find(v=>/^es/i.test(v.lang))||voices[0]||null;
-  };
-
-  const stopTTS=()=>{
-    if(ttsKeepAliveRef.current){ clearInterval(ttsKeepAliveRef.current); ttsKeepAliveRef.current=null; }
-    if(window.speechSynthesis) window.speechSynthesis.cancel();
-  };
-
   const speakSessionRef=useRef(null); // {settled, fallbackId} de la narración en curso
 
-  // Cierra por completo cualquier narración en curso: pausa el audio/voz y
+  // Cierra por completo cualquier narración en curso: pausa el audio y
   // limpia sus temporizadores. Se llama SIEMPRE antes de arrancar una nueva
   // narración, así nunca hay dos audios sonando ni dos avances programados.
+  // NOTA: este tutorial ya NO usa voz sintética (speechSynthesis) bajo
+  // ninguna circunstancia — la única narración válida son los 14 .mp3
+  // reales subidos a AUDIO_BASE_URL. Si el audio real no puede sonar de
+  // inmediato (autoplay bloqueado), el tutorial se queda en silencio y
+  // reintenta ESE MISMO audio en la primera interacción del usuario.
   const stopSpeaking=()=>{
     const s=speakSessionRef.current;
     if(s){
@@ -1963,32 +1937,7 @@ export default function TStoreTutorial({onComplete}) {
     }
     const audioEl=audioElRef.current;
     if(audioEl){ audioEl.onended=null; audioEl.onerror=null; audioEl.pause(); }
-    stopTTS();
     pendingRetryRef.current=null;
-  };
-
-  // Reproduce la voz de respaldo (mientras no exista el .mp3 real de este
-  // paso) usando la voz del propio dispositivo, con tono enérgico y alegre.
-  const speakBackupTTS=(text)=>{
-    if(!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utter=new SpeechSynthesisUtterance(text);
-    if(chosenVoiceRef.current){ utter.voice=chosenVoiceRef.current; utter.lang=chosenVoiceRef.current.lang; }
-    else utter.lang="es-MX";
-    utter.rate=1.12; utter.pitch=1.18; utter.volume=1;
-    // El avance del paso NUNCA depende de estos eventos — solo del reloj
-    // de doSpeak() — así nunca vuelve a repetirse el bug de avance instantáneo.
-    utter.onend=()=>{}; utter.onerror=()=>{};
-    try{ window.speechSynthesis.speak(utter); }catch(e){/* se ignora: sigue el respaldo por tiempo */}
-    // Chrome corta narraciones largas si el hilo de síntesis queda inactivo;
-    // este "latido" lo mantiene vivo sin reiniciar ni repetir el audio.
-    ttsKeepAliveRef.current=setInterval(()=>{
-      if(!window.speechSynthesis||!window.speechSynthesis.speaking){
-        if(ttsKeepAliveRef.current){ clearInterval(ttsKeepAliveRef.current); ttsKeepAliveRef.current=null; }
-        return;
-      }
-      window.speechSynthesis.pause(); window.speechSynthesis.resume();
-    },4000);
   };
 
   // idx: paso a narrar. SIEMPRE intenta sonar — primero con tu archivo de
@@ -2032,50 +1981,42 @@ export default function TStoreTutorial({onComplete}) {
       const playPromise=audioEl.play();
       if(playPromise&&playPromise.catch){
         playPromise.catch(()=>{
-          // Autoplay bloqueado por el navegador: mientras tanto suena la
-          // voz de respaldo, y el audio real se reintenta en la 1ª interacción.
-          speakBackupTTS(text);
+          // Autoplay bloqueado por el navegador: NO metemos ninguna voz de
+          // respaldo (ni primaria ni secundaria) — nos quedamos en silencio
+          // y reintentamos el ÚNICO audio válido (tu .mp3 real) en la
+          // primera interacción del usuario. El avance de paso sigue su
+          // propio reloj (session.fallbackId), así que el tutorial nunca se
+          // traba aunque el audio se quede mudo hasta ese primer toque.
           pendingRetryRef.current=()=>{
-            // Antes de meter el audio real, apagamos SIEMPRE la voz de
-            // respaldo — si no, quedan las dos sonando encimadas (bug real
-            // reportado: se oían dos voces al mismo tiempo solo en el paso 1).
-            stopTTS();
             audioEl.currentTime=0;
             audioEl.play().catch(()=>{});
           };
         });
       }
-    } else {
-      speakBackupTTS(text);
     }
+    // Si no hay .mp3 para este paso (no debería pasar, hay 14 para 14
+    // pasos) simplemente no suena nada — jamás se usa voz sintética.
   };
 
   // ── NARRACIÓN DEL PRIMER PASO — UNA SOLA VEZ ────────────────
+  // Ya NO se dispara sola al montar: el navegador bloquea el autoplay de
+  // audio sin gesto del usuario, y no queremos ni un instante de silencio
+  // ni voces alternas. En vez de eso, este componente exige un toque
+  // inicial (ver el overlay "started" más abajo) y ES ESE TOQUE el que
+  // llama a speakInitial() de forma síncrona — así el navegador SIEMPRE
+  // permite el audio real desde el primer instante, sin excepción.
   const speakInitial=()=>{
     if(initialSpokenRef.current) return;
     initialSpokenRef.current=true;
     doSpeak(stepRef.current);
   };
 
-  useEffect(()=>{
-    if(!window.speechSynthesis){ speakInitial(); return; }
-    // "Calienta" el motor de voz del navegador (bug conocido de Chrome/
-    // Android: la primera llamada real a .speak() de toda la sesión puede
-    // quedar muda) y busca la mejor voz de respaldo disponible.
-    try{
-      const warm=new SpeechSynthesisUtterance(" ");
-      warm.volume=0;
-      window.speechSynthesis.speak(warm);
-      window.speechSynthesis.cancel();
-    }catch(e){/* seguimos igual con el flujo normal */}
-    const found=pickBackupVoice();
-    if(found) chosenVoiceRef.current=found;
-    window.speechSynthesis.onvoiceschanged=()=>{
-      const v=pickBackupVoice();
-      if(v) chosenVoiceRef.current=v;
-    };
+  const handleStart=()=>{
+    setStarted(true);
     speakInitial();
+  };
 
+  useEffect(()=>{
     const tryOnInteraction=()=>{
       if(pendingRetryRef.current){
         const run=pendingRetryRef.current;
@@ -2272,6 +2213,48 @@ export default function TStoreTutorial({onComplete}) {
         step={step} total={STEPS.length}
         onNext={advance}
         mobile={mobile}/>
+
+      {/* ── PORTÓN DE INICIO — exige 1 toque antes de reproducir audio ──
+          Los navegadores bloquean el autoplay de sonido sin un gesto real
+          del usuario. Este toque es ESE gesto: dispara speakInitial() de
+          forma síncrona dentro del propio evento de clic, así el .mp3 real
+          del paso 1 SIEMPRE suena, sin excepción y sin voz alterna. */}
+      {!started&&(
+        <div onClick={handleStart} style={{
+          position:"absolute",inset:0,zIndex:999,
+          display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+          gap:22,cursor:"pointer",
+          background:`radial-gradient(ellipse at 50% 45%,rgba(20,10,45,0.97) 0%,${C.bg} 75%)`,
+        }}>
+          <div style={{
+            fontFamily:"'Cinzel Decorative',serif",fontSize:mobile?22:32,fontWeight:900,
+            letterSpacing:mobile?3:6,color:C.goldBright,
+            textShadow:`0 0 16px ${C.gold}`,textAlign:"center",padding:"0 24px",
+          }}>✦ Propo-Tienda ✦</div>
+          <div style={{
+            fontFamily:"'Crimson Text',serif",fontSize:mobile?13:17,
+            color:"rgba(255,255,255,0.75)",textAlign:"center",maxWidth:520,padding:"0 28px",
+            lineHeight:1.5,
+          }}>
+            Tu Maestro Templario está listo para guiarte con voz real.
+          </div>
+          <motion.button
+            onClick={handleStart}
+            animate={{scale:[1,1.05,1],boxShadow:[
+              `0 0 14px ${C.goldGlow}`,`0 0 26px ${C.goldGlow}`,`0 0 14px ${C.goldGlow}`,
+            ]}}
+            transition={{duration:1.6,repeat:Infinity,ease:"easeInOut"}}
+            style={{
+              fontFamily:"'Cinzel',serif",fontWeight:700,letterSpacing:3,
+              fontSize:mobile?12:15,color:"#0a0614",
+              background:`linear-gradient(180deg,${C.goldBright},${C.gold})`,
+              border:"none",borderRadius:10,
+              padding:mobile?"12px 26px":"16px 38px",cursor:"pointer",
+            }}>
+            ✦ TOCA PARA COMENZAR ✦
+          </motion.button>
+        </div>
+      )}
       </div>
     </div>
   );
