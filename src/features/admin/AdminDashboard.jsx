@@ -1582,14 +1582,15 @@ const handleAwardPrizes = async () => {
       const profile = profileMap[player.id];
       if (!profile) continue;
       const { error } = await supabase.from('pending_rewards').insert({
-        user_id:      player.id,
-        category:     'templarios_ranking',
-        period:       'weekly',
-        period_key:   'weekly',
-        position:     prize.position,
-        coins_reward: prize.coins_reward || 0,
-        xp_reward:    prize.xp_reward    || 0,
-        claimed:      false,
+        user_id:       player.id,
+        category:      'templarios_ranking',
+        period:        'weekly',
+        period_key:    'weekly',
+        position:      prize.position,
+        coins_reward:  prize.coins_reward || 0,
+        xp_reward:     prize.xp_reward    || 0,
+        points_earned: player.weekly_points || 0,
+        claimed:       false,
       }).onConflict('user_id, category, period, claimed').ignore();
       if (!error) awarded.push({
         pos: prize.position,
@@ -1615,7 +1616,7 @@ const handleAwardPrizes = async () => {
   try {
     let q = supabase
       .from('pending_rewards')
-      .select('id, user_id, category, period, position, coins_reward, xp_reward, claimed, claimed_at, created_at', { count: 'exact' })
+      .select('id, user_id, category, period, position, coins_reward, xp_reward, points_earned, claimed, claimed_at, created_at', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
     if (filter !== 'all') q = q.eq('category', filter);
@@ -1848,14 +1849,15 @@ const handleAwardCommunityPrizes = async () => {
       const profile = profileMap[player.user_id];
       if (!profile) continue;
       const { error } = await supabase.from('pending_rewards').insert({
-        user_id:      player.user_id,
-        category:     'community_ranking',
-        period:       communityPeriod,
-        period_key:   communityPeriod,
-        position:     prize.position,
-        coins_reward: prize.coins_reward || 0,
-        xp_reward:    prize.xp_reward    || 0,
-        claimed:      false,
+        user_id:       player.user_id,
+        category:      'community_ranking',
+        period:        communityPeriod,
+        period_key:    communityPeriod,
+        position:      prize.position,
+        coins_reward:  prize.coins_reward || 0,
+        xp_reward:     prize.xp_reward    || 0,
+        points_earned: player[pointsCol] || 0,
+        claimed:       false,
       }).onConflict('user_id, category, period, claimed').ignore();
       if (!error) awarded.push({
         pos: prize.position,
@@ -3216,8 +3218,8 @@ return (
       ) : (
         <>
           {/* Headers */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 70px 80px 80px 80px 90px', gap:6, padding:'0 0.5rem' }}>
-            {['Usuario','Tipo','Pos.','Coins','XP','Estado','Fecha'].map(h => (
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 70px 90px 80px 80px 80px 90px', gap:6, padding:'0 0.5rem' }}>
+            {['Usuario','Tipo','Pos.','Pts. período','Coins','XP','Estado','Fecha'].map(h => (
               <p key={h} style={{ margin:0, fontFamily:'Cinzel,serif', fontSize:9, color:'rgba(255,255,255,0.35)', letterSpacing:1, textTransform:'uppercase' }}>{h}</p>
             ))}
           </div>
@@ -3227,7 +3229,7 @@ return (
             const fecha = new Date(row.created_at).toLocaleDateString('es-MX', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
             return (
               <div key={row.id} style={{
-                display:'grid', gridTemplateColumns:'1fr 1fr 70px 80px 80px 80px 90px',
+                display:'grid', gridTemplateColumns:'1fr 1fr 70px 90px 80px 80px 80px 90px',
                 gap:6, alignItems:'center',
                 background: row.claimed ? 'rgba(255,255,255,0.02)' : 'rgba(245,197,24,0.05)',
                 border:`1px solid ${row.claimed ? 'rgba(255,255,255,0.06)' : 'rgba(245,197,24,0.2)'}`,
@@ -3240,6 +3242,9 @@ return (
                 </span>
                 <span style={{ fontFamily:'Cinzel,serif', fontSize:11, fontWeight:900, color: row.position===1?'#F5C518':row.position===2?'#C0C0C0':row.position===3?'#CD7F32':'rgba(255,255,255,0.4)', textAlign:'center' }}>
                   {row.position===1?'🥇':row.position===2?'🥈':row.position===3?'🥉':`#${row.position}`}
+                </span>
+                <span style={{ fontFamily:'Cinzel,serif', fontSize:10, fontWeight:700, color: row.points_earned != null ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.25)', textAlign:'center' }} title="Puntos con los que terminó ese período">
+                  {row.points_earned != null ? `${row.points_earned.toLocaleString()} pts` : '—'}
                 </span>
                 <span style={{ fontFamily:'Cinzel,serif', fontSize:11, fontWeight:700, color:'#F5C518', textAlign:'center' }}>+{row.coins_reward}</span>
                 <span style={{ fontFamily:'Cinzel,serif', fontSize:11, fontWeight:700, color:'#60A5FA', textAlign:'center' }}>+{row.xp_reward}</span>
@@ -3462,14 +3467,15 @@ return (
                         .eq('claimed', false);
 
                       const { error: insErr } = await supabase.from('pending_rewards').insert({
-                        user_id:      player.user_id,
-                        category:     'community_ranking',
-                        period:       communityPeriod,
-                        period_key:   communityPeriod,
-                        position:     prize.position,
-                        coins_reward: prize.coins_reward || 0,
-                        xp_reward:    prize.xp_reward    || 0,
-                        claimed:      false,
+                        user_id:       player.user_id,
+                        category:      'community_ranking',
+                        period:        communityPeriod,
+                        period_key:    communityPeriod,
+                        position:      prize.position,
+                        coins_reward:  prize.coins_reward || 0,
+                        xp_reward:     prize.xp_reward    || 0,
+                        points_earned: player[pointsCol] || 0,
+                        claimed:       false,
                       });
                       if (insErr) { pushToast('❌ Insert: ' + insErr.message); continue; }
                       awarded++;
