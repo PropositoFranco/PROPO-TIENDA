@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState, lazy, Suspense, Fragment } from 'react';
-import { ProtectedRoute, AdminRoute, SorteosAdminRoute } from './ProtectedRoute';
+import { ProtectedRoute, AdminRoute, SorteosAdminRoute, PromptsAdminRoute } from './ProtectedRoute';
 import { useAuthStore } from '../store/useAuthStore';
 import AppLayout from '../components/layout/AppLayout';
 import MembershipGuard from './MembershipGuard';
@@ -178,6 +178,10 @@ export default function AppRouter() {
 
           <Route element={<SorteosAdminRoute />}>
             <Route path="/admin/sorteos" element={<SorteoAdminPage />} />
+          </Route>
+
+          <Route element={<PromptsAdminRoute />}>
+            <Route path="/admin/prompts" element={<SorteoAdminPage soloPrompts />} />
           </Route>
 
           <Route element={<AdminRoute />}>

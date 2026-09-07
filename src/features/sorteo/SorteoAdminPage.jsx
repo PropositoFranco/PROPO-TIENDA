@@ -81,7 +81,7 @@ function Badge({ activo }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-export default function SorteoAdminPage() {
+export default function SorteoAdminPage({ soloPrompts = false }) {
   const [eventos,       setEventos]       = useState([]);
   const [visitasPorEvento, setVisitasPorEvento] = useState({});
   const [eventoAbierto, setEventoAbierto] = useState(null);
@@ -92,7 +92,7 @@ export default function SorteoAdminPage() {
   const [errForm,       setErrForm]       = useState('');
   const [copiado,       setCopiado]       = useState('');
   const [masterStats,   setMasterStats]   = useState(null);
-  const [tabActiva,     setTabActiva]     = useState(() => localStorage.getItem('sorteosAdminTab') || 'sorteos');
+  const [tabActiva,     setTabActiva]     = useState(() => soloPrompts ? 'prompts' : (localStorage.getItem('sorteosAdminTab') || 'sorteos'));
   const [metricas,      setMetricas]      = useState(null);
   const [loadingMetricas, setLoadingMetricas] = useState(false);
   const [aliados,       setAliados]       = useState([]);
@@ -571,8 +571,11 @@ const cargarSellosCodigos = useCallback(async () => {
   }, [tabActiva, cargarAliados, cargarEventosActivos]);
 
   useEffect(() => {
+    // Un colaborador soloPrompts nunca debe pisar el último-tab-visto del admin general
+    // (comparten la misma key de localStorage si algún día usan el mismo navegador).
+    if (soloPrompts) return;
     localStorage.setItem('sorteosAdminTab', tabActiva);
-  }, [tabActiva]);
+  }, [tabActiva, soloPrompts]);
 
   useEffect(() => {
     if (tabActiva === 'sellos') cargarSellosCodigos();
@@ -765,6 +768,31 @@ const cargarSellosCodigos = useCallback(async () => {
   };
 
   // ── RENDER ───────────────────────────────────────────────────────────────────
+
+  // Puerta de aislamiento total: un colaborador con is_prompts_admin (y sin
+  // is_admin/is_sorteos_admin) llega aquí vía PromptsAdminRoute con soloPrompts=true.
+  // No renderiza NADA del árbol de sorteos — ni tabs, ni cabecera, ni efectos visuales
+  // de esa sección — solo su propia pestaña. Esto corta de raíz cualquier fuga visual
+  // hacia data de sorteos/aliados/ltv/etc., sin tocar ni una línea del render de abajo.
+  if (soloPrompts) {
+    return (
+      <div style={{ minHeight: '100vh', background: C.bg, padding: 'clamp(20px,4vw,40px)', fontFamily: 'sans-serif' }}>
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 5, color: C.goldDim, marginBottom: 6 }}>
+            TEMPLO DEL PROPÓSITO · COLABORADOR
+          </div>
+          <h1 style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 'clamp(20px,4vw,32px)', color: C.gold, margin: 0, letterSpacing: 2 }}>
+            📜 BIBLIOTECA DE PROMPTS
+          </h1>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>
+            Tu acceso de colaborador está limitado a esta sección.
+          </p>
+        </div>
+        <PromptsBibliotecaTab />
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: C.bg, padding: 'clamp(20px,4vw,40px)', fontFamily: 'sans-serif' }}>
 

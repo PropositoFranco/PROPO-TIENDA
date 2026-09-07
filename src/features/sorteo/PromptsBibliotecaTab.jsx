@@ -30,6 +30,184 @@ function copiarAlPortapapeles(texto) {
 
 const FORM_VACIO = { id: null, categoria: '', titulo: '', contenido: '', notas: '', orden: 0, activo: true };
 
+// ── Panel de colaboradores con acceso (otorgar_acceso_prompts / listar_accesos_prompts / revocar_acceso_prompts) ──
+function ColaboradoresPrompts() {
+  const [accesos, setAccesos]         = useState([]);
+  const [loadingAcc, setLoadingAcc]   = useState(true);
+  const [errorAcc, setErrorAcc]       = useState('');
+  const [email, setEmail]             = useState('');
+  const [invitando, setInvitando]     = useState(false);
+  const [errorInvitar, setErrorInvitar] = useState('');
+  const [okInvitar, setOkInvitar]     = useState('');
+  const [revocando, setRevocando]     = useState(null); // user_id en curso
+  const [confirmarRevocar, setConfirmarRevocar] = useState(null); // acceso a revocar
+
+  const cargarAccesos = useCallback(async () => {
+    setLoadingAcc(true);
+    setErrorAcc('');
+    const { data, error: err } = await supabase.rpc('listar_accesos_prompts');
+    if (err) setErrorAcc(err.message);
+    else setAccesos(data || []);
+    setLoadingAcc(false);
+  }, []);
+
+  useEffect(() => { cargarAccesos(); }, [cargarAccesos]);
+
+  async function invitar(e) {
+    e.preventDefault();
+    const correo = email.trim();
+    if (!correo) return;
+    setInvitando(true);
+    setErrorInvitar('');
+    setOkInvitar('');
+    const { data, error: err } = await supabase.rpc('otorgar_acceso_prompts', { p_email: correo });
+    setInvitando(false);
+    if (err) { setErrorInvitar(err.message); return; }
+    if (data?.ok === false) {
+      setErrorInvitar(data.error === 'sin_cuenta'
+        ? 'Ese correo todavía no tiene cuenta creada en la plataforma. Debe registrarse primero.'
+        : 'No se pudo otorgar el acceso.');
+      return;
+    }
+    setOkInvitar(`✓ Acceso otorgado a ${data.email}`);
+    setEmail('');
+    cargarAccesos();
+    setTimeout(() => setOkInvitar(''), 3000);
+  }
+
+  async function revocar(acceso) {
+    setRevocando(acceso.user_id);
+    const { error: err } = await supabase.rpc('revocar_acceso_prompts', { p_user_id: acceso.user_id });
+    setRevocando(null);
+    setConfirmarRevocar(null);
+    if (err) { setErrorAcc(err.message); return; }
+    cargarAccesos();
+  }
+
+  return (
+    <div
+      style={{
+        background: C.card, border: `1px solid ${C.border}`, borderRadius: 14,
+        padding: '18px 18px 16px', marginBottom: 24,
+      }}
+    >
+      <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 13, color: C.gold, letterSpacing: 1.5, marginBottom: 4 }}>
+        🗝️ COLABORADORES CON ACCESO
+      </div>
+      <p style={{ color: C.muted, fontSize: 11.5, marginBottom: 14, lineHeight: 1.5, maxWidth: 560 }}>
+        Invita por correo a alguien que ya tenga cuenta en la plataforma. Va a poder entrar directo a
+        /admin/prompts y administrar esta biblioteca — nada más, sin ver sorteos, aliados ni el resto del panel.
+      </p>
+
+      <form onSubmit={invitar} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: errorInvitar || okInvitar ? 10 : 16 }}>
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          placeholder="correo@ejemplo.com"
+          style={{ ...inputStyle, marginBottom: 0, flex: '1 1 220px', minWidth: 180 }}
+        />
+        <button
+          type="submit"
+          disabled={invitando || !email.trim()}
+          style={{
+            padding: '10px 20px',
+            background: invitando ? 'rgba(212,175,55,0.3)' : `linear-gradient(135deg,${C.gold},#9a7a00)`,
+            border: 'none', borderRadius: 8, color: '#0a0614',
+            fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1.5, fontWeight: 900,
+            cursor: invitando ? 'default' : 'pointer',
+            opacity: !email.trim() ? 0.6 : 1, whiteSpace: 'nowrap',
+          }}
+        >{invitando ? 'INVITANDO…' : '✉️ INVITAR COLABORADOR'}</button>
+      </form>
+
+      {errorInvitar && (
+        <div style={{ padding: '9px 12px', background: 'rgba(255,68,102,0.08)', border: '1px solid rgba(255,68,102,0.3)', borderRadius: 8, color: C.red, fontSize: 11.5, marginBottom: 14 }}>
+          {errorInvitar}
+        </div>
+      )}
+      {okInvitar && (
+        <div style={{ padding: '9px 12px', background: 'rgba(68,255,136,0.08)', border: '1px solid rgba(68,255,136,0.3)', borderRadius: 8, color: C.green, fontSize: 11.5, marginBottom: 14 }}>
+          {okInvitar}
+        </div>
+      )}
+
+      {loadingAcc && <p style={{ color: C.muted, fontSize: 11.5 }}>Cargando accesos…</p>}
+      {errorAcc && !loadingAcc && (
+        <div style={{ padding: '9px 12px', background: 'rgba(255,68,102,0.08)', border: '1px solid rgba(255,68,102,0.3)', borderRadius: 8, color: C.red, fontSize: 11.5 }}>
+          {errorAcc}
+        </div>
+      )}
+      {!loadingAcc && !errorAcc && accesos.length === 0 && (
+        <p style={{ color: C.muted, fontSize: 11.5, fontStyle: 'italic' }}>Todavía no le has dado acceso a nadie más.</p>
+      )}
+      {!loadingAcc && accesos.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {accesos.map(a => (
+            <div
+              key={a.user_id}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                padding: '9px 12px', background: 'rgba(255,255,255,0.025)',
+                border: `1px solid ${C.border}`, borderRadius: 8, flexWrap: 'wrap',
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12, color: C.text, fontWeight: 600, wordBreak: 'break-all' }}>{a.email}</div>
+                {a.otorgado_at && (
+                  <div style={{ fontSize: 9.5, color: C.muted, marginTop: 2 }}>
+                    desde {new Date(a.otorgado_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setConfirmarRevocar(a)}
+                disabled={revocando === a.user_id}
+                style={{
+                  padding: '7px 14px', background: 'rgba(255,68,102,0.08)',
+                  border: '1px solid rgba(255,68,102,0.25)', borderRadius: 8, color: C.red,
+                  fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, fontWeight: 900,
+                  cursor: revocando === a.user_id ? 'default' : 'pointer', whiteSpace: 'nowrap',
+                }}
+              >{revocando === a.user_id ? 'REVOCANDO…' : '🚫 REVOCAR'}</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {confirmarRevocar && (
+        <div
+          onClick={() => setConfirmarRevocar(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(4,2,14,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: C.card, border: `1.5px solid rgba(255,68,102,0.4)`, borderRadius: 16, padding: '26px 22px', maxWidth: 360, width: '100%', textAlign: 'center' }}
+          >
+            <div style={{ fontSize: 26, marginBottom: 8 }}>⚠️</div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 13, color: C.red, letterSpacing: 1.5, marginBottom: 8 }}>
+              ¿REVOCAR ACCESO?
+            </div>
+            <p style={{ color: C.muted, fontSize: 12, marginBottom: 18 }}>
+              "{confirmarRevocar.email}" dejará de poder entrar a /admin/prompts de inmediato.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button
+                onClick={() => setConfirmarRevocar(null)}
+                style={{ padding: '9px 16px', background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontFamily: 'Cinzel, serif', fontSize: 9.5, letterSpacing: 1, cursor: 'pointer' }}
+              >CANCELAR</button>
+              <button
+                onClick={() => revocar(confirmarRevocar)}
+                style={{ padding: '9px 16px', background: 'rgba(255,68,102,0.15)', border: '1px solid rgba(255,68,102,0.4)', borderRadius: 8, color: C.red, fontFamily: 'Cinzel, serif', fontSize: 9.5, letterSpacing: 1, fontWeight: 900, cursor: 'pointer' }}
+              >SÍ, REVOCAR</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Tarjeta individual de prompt ──────────────────────────────────────────────
 function PromptCard({ prompt, onEditar, onEliminar, onCopiar, copiado }) {
   const [expandido, setExpandido] = useState(false);
@@ -363,6 +541,9 @@ export default function PromptsBibliotecaTab() {
           Aquí administras todos los prompts/plantillas que usas con Claude y ChatGPT. Solo tú puedes editar. Tus colaboradores ven esta misma información, de solo lectura, en su propia página con contraseña.
         </p>
       </div>
+
+      {/* Colaboradores con acceso a esta pestaña (otorgar / listar / revocar) */}
+      <ColaboradoresPrompts />
 
       {/* Toolbar: buscar + nuevo */}
       <div className="pb-toolbar" style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
