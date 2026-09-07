@@ -167,7 +167,7 @@ export function PromptsAdminRoute() {
     </div>
   );
 
-  const puedeEntrar = profile.is_admin === true || profile.is_prompts_admin === true;
+  const puedeEntrar = profile.is_admin === true || profile.is_prompts_admin === true || profile.is_prompts_colaborador === true;
   if (!puedeEntrar) return <Navigate to="/hub" replace />;
   return <Outlet />;
 }

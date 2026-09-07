@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../../services/supabase';
+import { useAuthStore } from '../../store/useAuthStore';
 
 const C = {
   bg:      '#07040f',
@@ -209,7 +210,7 @@ function ColaboradoresPrompts() {
 }
 
 // ── Tarjeta individual de prompt ──────────────────────────────────────────────
-function PromptCard({ prompt, onEditar, onEliminar, onCopiar, copiado }) {
+function PromptCard({ prompt, onEditar, onEliminar, onCopiar, copiado, puedeAdministrar }) {
   const [expandido, setExpandido] = useState(false);
   const esLargo = prompt.contenido.length > 220;
   const textoMostrado = expandido || !esLargo ? prompt.contenido : prompt.contenido.slice(0, 220) + '…';
@@ -288,22 +289,26 @@ function PromptCard({ prompt, onEditar, onEliminar, onCopiar, copiado }) {
         >
           {copiado ? '✓ COPIADO' : '📋 COPIAR'}
         </button>
-        <button
-          onClick={() => onEditar(prompt)}
-          style={{
-            padding: '9px 14px', background: 'rgba(155,89,255,0.1)',
-            border: '1px solid rgba(155,89,255,0.3)', borderRadius: 8, color: C.purple,
-            fontFamily: 'Cinzel, serif', fontSize: 9.5, letterSpacing: 1.5, fontWeight: 900, cursor: 'pointer',
-          }}
-        >✏️ EDITAR</button>
-        <button
-          onClick={() => onEliminar(prompt)}
-          style={{
-            padding: '9px 14px', background: 'rgba(255,68,102,0.08)',
-            border: '1px solid rgba(255,68,102,0.25)', borderRadius: 8, color: C.red,
-            fontFamily: 'Cinzel, serif', fontSize: 9.5, letterSpacing: 1.5, fontWeight: 900, cursor: 'pointer',
-          }}
-        >🗑</button>
+        {puedeAdministrar && (
+          <>
+            <button
+              onClick={() => onEditar(prompt)}
+              style={{
+                padding: '9px 14px', background: 'rgba(155,89,255,0.1)',
+                border: '1px solid rgba(155,89,255,0.3)', borderRadius: 8, color: C.purple,
+                fontFamily: 'Cinzel, serif', fontSize: 9.5, letterSpacing: 1.5, fontWeight: 900, cursor: 'pointer',
+              }}
+            >✏️ EDITAR</button>
+            <button
+              onClick={() => onEliminar(prompt)}
+              style={{
+                padding: '9px 14px', background: 'rgba(255,68,102,0.08)',
+                border: '1px solid rgba(255,68,102,0.25)', borderRadius: 8, color: C.red,
+                fontFamily: 'Cinzel, serif', fontSize: 9.5, letterSpacing: 1.5, fontWeight: 900, cursor: 'pointer',
+              }}
+            >🗑</button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -424,6 +429,13 @@ const inputStyle = {
 
 // ══════════════════════════════════════════════════════════════════════════════
 export default function PromptsBibliotecaTab() {
+  const { profile } = useAuthStore();
+  // Full CRUD + invitar: admin general, sorteos_admin, o un prompts_admin real.
+  // Un colaborador invitado (is_prompts_colaborador) NUNCA cae en este true:
+  // solo ve y copia, la RLS del lado de Supabase además se lo hace cumplir aunque
+  // alguien intente forzar la UI.
+  const puedeAdministrar = profile?.is_admin === true || profile?.is_sorteos_admin === true || profile?.is_prompts_admin === true;
+
   const [prompts, setPrompts]     = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
@@ -538,12 +550,14 @@ export default function PromptsBibliotecaTab() {
           📜 BIBLIOTECA DE PROMPTS
         </div>
         <p style={{ color: C.muted, fontSize: 12, marginTop: 4, maxWidth: 620, lineHeight: 1.5 }}>
-          Aquí administras todos los prompts/plantillas que usas con Claude y ChatGPT. Solo tú puedes editar. Tus colaboradores ven esta misma información, de solo lectura, en su propia página con contraseña.
+          {puedeAdministrar
+            ? 'Aquí administras todos los prompts/plantillas que usas con Claude y ChatGPT. Solo tú puedes editar. Tus colaboradores ven esta misma información, de solo lectura, en su propia página con contraseña.'
+            : 'Busca el prompt que necesitas y cópialo. Solo el administrador puede crear, editar o borrar prompts desde aquí.'}
         </p>
       </div>
 
-      {/* Colaboradores con acceso a esta pestaña (otorgar / listar / revocar) */}
-      <ColaboradoresPrompts />
+      {/* Colaboradores con acceso a esta pestaña (otorgar / listar / revocar) — solo para quien administra */}
+      {puedeAdministrar && <ColaboradoresPrompts />}
 
       {/* Toolbar: buscar + nuevo */}
       <div className="pb-toolbar" style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
@@ -553,15 +567,17 @@ export default function PromptsBibliotecaTab() {
           placeholder="🔍 Buscar por título, contenido o categoría…"
           style={{ ...inputStyle, marginBottom: 0, flex: '1 1 260px', minWidth: 200 }}
         />
-        <button
-          onClick={abrirNuevo}
-          style={{
-            padding: '10px 20px', background: `linear-gradient(135deg,${C.gold},#9a7a00)`,
-            border: 'none', borderRadius: 8, color: '#0a0614',
-            fontFamily: 'Cinzel, serif', fontSize: 10.5, letterSpacing: 1.5, fontWeight: 900, cursor: 'pointer',
-            whiteSpace: 'nowrap',
-          }}
-        >➕ NUEVO PROMPT</button>
+        {puedeAdministrar && (
+          <button
+            onClick={abrirNuevo}
+            style={{
+              padding: '10px 20px', background: `linear-gradient(135deg,${C.gold},#9a7a00)`,
+              border: 'none', borderRadius: 8, color: '#0a0614',
+              fontFamily: 'Cinzel, serif', fontSize: 10.5, letterSpacing: 1.5, fontWeight: 900, cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >➕ NUEVO PROMPT</button>
+        )}
       </div>
 
       {/* Chips de categoría */}
@@ -606,6 +622,7 @@ export default function PromptsBibliotecaTab() {
               onEliminar={setConfirmarBorrar}
               onCopiar={copiar}
               copiado={copiadoId === p.id}
+              puedeAdministrar={puedeAdministrar}
             />
           ))}
         </div>
