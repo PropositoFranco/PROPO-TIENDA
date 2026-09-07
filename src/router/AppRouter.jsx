@@ -62,6 +62,7 @@ const CaminoParticipanteOnboardingPage = lazy(() => import('../features/camino/C
 const CaminoInstalarPage = lazy(() => import('../features/camino/CaminoInstalarPage'));
 const AdminMapaPage = lazy(() => import('../features/admin/AdminMapaPage'));
 const FinanzasAdminPage = lazy(() => import('../features/admin/FinanzasAdminPage'));
+const PromptsBibliotecaColaborador = lazy(() => import('../features/prompts/PromptsBibliotecaColaborador'));
 
 function SorteoRedirect() {
   const [destino, setDestino] = useState(null);
@@ -161,6 +162,7 @@ export default function AppRouter() {
           <Route path="/firma/:token" element={<FirmaAliadoPage />} />
           <Route path="/lider" element={<LiderDashboardPage />} />
           <Route path="/aliados" element={<MuroDeAliados />} />
+          <Route path="/biblioteca-prompts" element={<PromptsBibliotecaColaborador />} />
           <Route path="/camino" element={<CaminoLandingPage />} />
           <Route path="/camino/gestor/login" element={<CaminoGestorLoginPage />} />
 <Route path="/camino/gestor/panel" element={<CaminoGestorPanelPage />} />

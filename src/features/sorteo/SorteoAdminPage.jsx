@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../services/supabase';
 import LtvComisionesTab from './LtvComisionesTab';
+import PromptsBibliotecaTab from './PromptsBibliotecaTab';
 
 const C = {
   bg:      '#07040f',
@@ -801,6 +802,7 @@ const cargarSellosCodigos = useCallback(async () => {
             { id: 'camino',    label: `🗺️ CAMINO${interesadosCamino.filter(i => i.estado === 'pendiente').length > 0 ? ` (${interesadosCamino.filter(i => i.estado === 'pendiente').length})` : ''}` },
             { id: 'sellos',    label: '🔑 SELLOS' },
             { id: 'juntas',    label: '🎥 JUNTAS' },
+            { id: 'prompts',   label: '📜 PROMPTS' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1986,6 +1988,7 @@ const cargarSellosCodigos = useCallback(async () => {
 
       {/* ══ TAB: LTV / COMISIONES ══ */}
       {tabActiva === 'ltv' && <LtvComisionesTab />}
+      {tabActiva === 'prompts' && <PromptsBibliotecaTab />}
 
       {/* ══ TAB: CAMINO A LÍDER DIGITAL ══ */}
       {tabActiva === 'camino' && (
