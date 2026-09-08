@@ -43,16 +43,45 @@ function ColaboradoresPrompts() {
   const [revocando, setRevocando]     = useState(null); // user_id en curso
   const [confirmarRevocar, setConfirmarRevocar] = useState(null); // acceso a revocar
 
+  // Pistas (cursos) de Guías Líderes disponibles para asignar por persona
+  const [cursosGuias, setCursosGuias] = useState([]);
+  const [guardandoPista, setGuardandoPista] = useState(''); // `${user_id}:${slug}` en curso
+
   const cargarAccesos = useCallback(async () => {
     setLoadingAcc(true);
     setErrorAcc('');
-    const { data, error: err } = await supabase.rpc('listar_accesos_prompts');
-    if (err) setErrorAcc(err.message);
-    else setAccesos(data || []);
+    const [{ data: baseData, error: errBase }, { data: tracksData, error: errTracks }, { data: cursosData, error: errCursos }] = await Promise.all([
+      supabase.rpc('listar_accesos_prompts'),
+      supabase.rpc('guias_listar_colaboradores'),
+      supabase.from('guias_lideres').select('slug,titulo,icono,color').eq('activo', true).order('orden', { ascending: true }),
+    ]);
+    if (errBase) { setErrorAcc(errBase.message); setLoadingAcc(false); return; }
+    if (errCursos) setErrorAcc(errCursos.message);
+    setCursosGuias(cursosData || []);
+    const tracksPorUsuario = Object.fromEntries((tracksData || []).map(t => [t.user_id, t.tracks || []]));
+    setAccesos((baseData || []).map(a => ({ ...a, tracks: tracksPorUsuario[a.user_id] || [] })));
+    if (errTracks) setErrorAcc(errTracks.message);
     setLoadingAcc(false);
   }, []);
 
   useEffect(() => { cargarAccesos(); }, [cargarAccesos]);
+
+  async function alternarPista(acceso, slug) {
+    const key = `${acceso.user_id}:${slug}`;
+    const tracksActuales = acceso.tracks || [];
+    const nuevosTracks = tracksActuales.includes(slug)
+      ? tracksActuales.filter(s => s !== slug)
+      : [...tracksActuales, slug];
+
+    setGuardandoPista(key);
+    setAccesos(prev => prev.map(a => a.user_id === acceso.user_id ? { ...a, tracks: nuevosTracks } : a)); // optimista
+    const { error: err } = await supabase.rpc('guias_set_accesos', { p_user_id: acceso.user_id, p_slugs: nuevosTracks });
+    setGuardandoPista('');
+    if (err) {
+      setErrorAcc(err.message);
+      setAccesos(prev => prev.map(a => a.user_id === acceso.user_id ? { ...a, tracks: tracksActuales } : a)); // revierte
+    }
+  }
 
   async function invitar(e) {
     e.preventDefault();
@@ -61,19 +90,23 @@ function ColaboradoresPrompts() {
     setInvitando(true);
     setErrorInvitar('');
     setOkInvitar('');
-    const { data, error: err } = await supabase.rpc('otorgar_acceso_prompts', { p_email: correo });
+    const { data, error: err } = await supabase.functions.invoke('invitar-colaborador-prompts', {
+      body: { email: correo },
+    });
     setInvitando(false);
     if (err) { setErrorInvitar(err.message); return; }
     if (data?.ok === false) {
-      setErrorInvitar(data.error === 'sin_cuenta'
-        ? 'Ese correo todavía no tiene cuenta creada en la plataforma. Debe registrarse primero.'
-        : 'No se pudo otorgar el acceso.');
+      setErrorInvitar(data.error || 'No se pudo otorgar el acceso.');
       return;
     }
-    setOkInvitar(`✓ Acceso otorgado a ${data.email}`);
+    setOkInvitar(
+      data.invited
+        ? `✓ Invitación enviada a ${data.email} — en cuanto entre desde su correo, va a ver Prompts y Guías Líderes.`
+        : `✓ Acceso otorgado a ${data.email}`
+    );
     setEmail('');
     cargarAccesos();
-    setTimeout(() => setOkInvitar(''), 3000);
+    setTimeout(() => setOkInvitar(''), 5000);
   }
 
   async function revocar(acceso) {
@@ -96,9 +129,11 @@ function ColaboradoresPrompts() {
         🗝️ COLABORADORES CON ACCESO
       </div>
       <p style={{ color: C.muted, fontSize: 11.5, marginBottom: 14, lineHeight: 1.5, maxWidth: 560 }}>
-        Invita por correo a alguien que ya tenga cuenta en la plataforma. Va a poder entrar directo a
-        /admin/prompts y ver, de solo lectura (buscar y copiar, sin editar ni borrar), la Biblioteca de Prompts
-        y las Guías para Líderes — nada más, sin ver sorteos, aliados ni el resto del panel.
+        Invita por correo a quien sea — no necesita tener cuenta previa. Le va a llegar un correo con un botón
+        para entrar directo, de solo lectura (buscar y copiar, sin editar ni borrar), a la Biblioteca de Prompts
+        y las Guías para Líderes — nada más, sin ver sorteos, aliados ni el resto del panel. Abajo de cada persona
+        eliges exactamente qué pista de Guías Líderes le toca ver (Captador, Constructor…) — puedes marcar una,
+        varias, o ninguna todavía.
       </p>
 
       <form onSubmit={invitar} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: errorInvitar || okInvitar ? 10 : 16 }}>
@@ -149,29 +184,63 @@ function ColaboradoresPrompts() {
             <div
               key={a.user_id}
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-                padding: '9px 12px', background: 'rgba(255,255,255,0.025)',
-                border: `1px solid ${C.border}`, borderRadius: 8, flexWrap: 'wrap',
+                display: 'flex', flexDirection: 'column', gap: 10,
+                padding: '10px 12px', background: 'rgba(255,255,255,0.025)',
+                border: `1px solid ${C.border}`, borderRadius: 8,
               }}
             >
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 12, color: C.text, fontWeight: 600, wordBreak: 'break-all' }}>{a.email}</div>
-                {a.otorgado_at && (
-                  <div style={{ fontSize: 9.5, color: C.muted, marginTop: 2 }}>
-                    desde {new Date(a.otorgado_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </div>
-                )}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 12, color: C.text, fontWeight: 600, wordBreak: 'break-all' }}>{a.email}</div>
+                  {a.otorgado_at && (
+                    <div style={{ fontSize: 9.5, color: C.muted, marginTop: 2 }}>
+                      desde {new Date(a.otorgado_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setConfirmarRevocar(a)}
+                  disabled={revocando === a.user_id}
+                  style={{
+                    padding: '7px 14px', background: 'rgba(255,68,102,0.08)',
+                    border: '1px solid rgba(255,68,102,0.25)', borderRadius: 8, color: C.red,
+                    fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, fontWeight: 900,
+                    cursor: revocando === a.user_id ? 'default' : 'pointer', whiteSpace: 'nowrap',
+                  }}
+                >{revocando === a.user_id ? 'REVOCANDO…' : '🚫 REVOCAR'}</button>
               </div>
-              <button
-                onClick={() => setConfirmarRevocar(a)}
-                disabled={revocando === a.user_id}
-                style={{
-                  padding: '7px 14px', background: 'rgba(255,68,102,0.08)',
-                  border: '1px solid rgba(255,68,102,0.25)', borderRadius: 8, color: C.red,
-                  fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 1, fontWeight: 900,
-                  cursor: revocando === a.user_id ? 'default' : 'pointer', whiteSpace: 'nowrap',
-                }}
-              >{revocando === a.user_id ? 'REVOCANDO…' : '🚫 REVOCAR'}</button>
+
+              {cursosGuias.length > 0 && (
+                <div>
+                  <div style={{ fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 1.5, color: C.muted, marginBottom: 6 }}>
+                    🗺️ PISTAS DE GUÍAS LÍDERES QUE PUEDE VER
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {cursosGuias.map(curso => {
+                      const activa = (a.tracks || []).includes(curso.slug);
+                      const key = `${a.user_id}:${curso.slug}`;
+                      const enCurso = guardandoPista === key;
+                      return (
+                        <button
+                          key={curso.slug}
+                          onClick={() => alternarPista(a, curso.slug)}
+                          disabled={enCurso}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 5,
+                            padding: '5px 11px', borderRadius: 16, cursor: enCurso ? 'default' : 'pointer',
+                            fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 0.5, fontWeight: 700,
+                            background: activa ? `${curso.color}22` : 'rgba(255,255,255,0.03)',
+                            border: `1px solid ${activa ? curso.color : C.border}`,
+                            color: activa ? curso.color : C.muted, opacity: enCurso ? 0.6 : 1,
+                          }}
+                        >
+                          <span>{curso.icono}</span>{curso.titulo}{activa ? ' ✓' : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -213,8 +282,9 @@ function ColaboradoresPrompts() {
 // ── Tarjeta individual de prompt ──────────────────────────────────────────────
 function PromptCard({ prompt, onEditar, onEliminar, onCopiar, copiado, puedeAdministrar }) {
   const [expandido, setExpandido] = useState(false);
-  const esLargo = prompt.contenido.length > 220;
-  const textoMostrado = expandido || !esLargo ? prompt.contenido : prompt.contenido.slice(0, 220) + '…';
+  const contenidoSeguro = prompt.contenido || '';
+  const esLargo = contenidoSeguro.length > 220;
+  const textoMostrado = expandido || !esLargo ? contenidoSeguro : contenidoSeguro.slice(0, 220) + '…';
 
   return (
     <div
@@ -475,9 +545,9 @@ export default function PromptsBibliotecaTab() {
       if (filtroCategoria !== 'todas' && p.categoria !== filtroCategoria) return false;
       if (!q) return true;
       return (
-        p.titulo.toLowerCase().includes(q) ||
-        p.contenido.toLowerCase().includes(q) ||
-        p.categoria.toLowerCase().includes(q) ||
+        (p.titulo || '').toLowerCase().includes(q) ||
+        (p.contenido || '').toLowerCase().includes(q) ||
+        (p.categoria || '').toLowerCase().includes(q) ||
         (p.notas || '').toLowerCase().includes(q)
       );
     });

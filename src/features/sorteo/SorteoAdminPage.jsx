@@ -822,29 +822,61 @@ const cargarSellosCodigos = useCallback(async () => {
   return (
     <div style={{ minHeight: '100vh', background: C.bg, padding: 'clamp(20px,4vw,40px)', fontFamily: 'sans-serif' }}>
 
-      {/* Cabecera */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 5, color: C.goldDim, marginBottom: 6 }}>
-          TEMPLO DEL PROPÓSITO · ADMIN
+      {/* Cabecera épica */}
+      <div style={{
+        position: 'relative', overflow: 'hidden', marginBottom: 32,
+        borderRadius: 16, border: `1px solid ${C.border}`,
+        padding: 'clamp(20px,3vw,36px) clamp(20px,4vw,40px)',
+        background: `linear-gradient(180deg, rgba(7,4,15,0.55) 0%, rgba(7,4,15,0.88) 75%, ${C.bg} 100%), url('https://hdwzhwuhlrtrmhnecypm.supabase.co/storage/v1/object/public/banners/admin/admin-header-epic-bg.jpg') center / cover no-repeat`,
+      }}>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+          gap: 'clamp(20px,3vw,40px)', flexWrap: 'wrap',
+        }}>
+          {/* Izquierda — igual que antes */}
+          <div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 5, color: C.goldDim, marginBottom: 6 }}>
+              TEMPLO DEL PROPÓSITO · ADMIN
+            </div>
+            <h1 style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 'clamp(20px,4vw,32px)', color: C.gold, margin: 0, letterSpacing: 2, textShadow: '0 0 20px rgba(212,175,55,0.35)' }}>
+              🎲 SISTEMA DE RIFAS
+            </h1>
+            <p style={{ color: C.muted, fontSize: 13, marginTop: 8, fontStyle: 'italic', maxWidth: '42ch' }}>
+              Crea eventos de rifa continua — cada QR abre rondas automáticas sin parar.
+            </p>
+            <a
+              href="https://camino.propotienda.com/camino"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12,
+                padding: '8px 16px', background: 'linear-gradient(135deg,#9b59ff,#4a1a8a)',
+                border: '1px solid rgba(155,89,255,0.4)', borderRadius: 8, color: '#fff',
+                fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 10.5, letterSpacing: 1,
+                textDecoration: 'none', boxShadow: '0 3px 16px rgba(155,89,255,0.4)',
+              }}
+            >🗺️ IR AL REACT DE CAMINO</a>
+          </div>
+
+          {/* Derecha — nueva, "Tu kit para romperla" */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, textAlign: 'right' }}>
+            <div style={{ fontSize: 'clamp(26px,3.2vw,38px)', filter: 'drop-shadow(0 0 12px rgba(212,175,55,0.4))' }}>🏛️</div>
+            <div>
+              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 5, color: C.goldDim, marginBottom: 4 }}>
+                TU KIT PARA
+              </div>
+              <h2 style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 'clamp(18px,2.8vw,26px)', color: C.gold, margin: 0, letterSpacing: 2 }}>
+                ROMPERLA
+              </h2>
+              <p style={{ color: C.muted, fontSize: 11.5, marginTop: 4, maxWidth: '32ch' }}>
+                Todo lo que necesitas para hacer tu función bien.
+              </p>
+            </div>
+          </div>
         </div>
-        <h1 style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 'clamp(20px,4vw,32px)', color: C.gold, margin: 0, letterSpacing: 2 }}>
-          🎲 SISTEMA DE RIFAS
-        </h1>
-        <p style={{ color: C.muted, fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>
-          Crea eventos de rifa continua — cada QR abre rondas automáticas sin parar.
-        </p>
-        <a
-          href="https://camino.propotienda.com/camino"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12,
-            padding: '8px 16px', background: 'linear-gradient(135deg,#9b59ff,#4a1a8a)',
-            border: '1px solid rgba(155,89,255,0.4)', borderRadius: 8, color: '#fff',
-            fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 10.5, letterSpacing: 1,
-            textDecoration: 'none', boxShadow: '0 3px 16px rgba(155,89,255,0.4)',
-          }}
-        >🗺️ IR AL REACT DE CAMINO</a>
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
           {[
             { id: 'sorteos',   label: '🎲 SORTEOS' },
             { id: 'aliados',   label: '🤝 ALIADOS' },

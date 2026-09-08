@@ -1,10 +1,81 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../services/supabase';
 import { useAuthStore } from '../store/useAuthStore';
 
 const font = { title: '"Cinzel", serif', body: '"Crimson Text", serif' };
 
 const STORAGE_KEY = '_testimonio_popup_v2';
+
+// ---------------------------------------------------------------------------
+// OPTIMIZACIÓN 1: el CSS (incluidas las @keyframes) se inyecta UNA sola vez
+// en <head>, no cada vez que se abre el modal. Antes: un <style> nuevo cada
+// vez que `visible` pasaba a true -> el navegador tenía que re-parsear el CSS.
+// ---------------------------------------------------------------------------
+const STYLE_ID = 'testimonio-popup-styles';
+function injectStylesOnce() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById(STYLE_ID)) return;
+  const tag = document.createElement('style');
+  tag.id = STYLE_ID;
+  tag.textContent = `
+    @keyframes twIn {
+      from { opacity:0; transform: scale(.94) translateY(16px); }
+      to   { opacity:1; transform: scale(1) translateY(0); }
+    }
+    @keyframes twFade {
+      from { opacity:0; }
+      to   { opacity:1; }
+    }
+    .tw-overlay {
+      position:fixed; inset:0; z-index:99999;
+      background:rgba(4,2,14,.92);
+      display:flex; align-items:center; justify-content:center;
+      padding:1rem; overflow-y:auto; -webkit-overflow-scrolling:touch;
+      animation: twFade .25s ease-out;
+      /* OPTIMIZACIÓN: aísla el repintado del overlay del resto del árbol */
+      contain: layout style paint;
+    }
+    .tw-card {
+      max-width:420px; width:100%; max-height:calc(100vh - 2rem);
+      overflow-y:auto; margin:auto;
+      background: linear-gradient(180deg, rgba(24,10,40,.97) 0%, rgba(4,2,14,.97) 100%);
+      border:1.5px solid rgba(192,132,252,.35); border-radius:1.5rem;
+      padding:clamp(1.5rem,5vw,2.25rem); text-align:center;
+      /* sombra mucho más barata que el blur de 80px original */
+      box-shadow: 0 8px 24px rgba(0,0,0,.4), 0 0 0 1px rgba(192,132,252,.08);
+      position:relative;
+      animation: twIn .3s cubic-bezier(.16,1,.3,1);
+      will-change: transform, opacity;
+    }
+    .tw-card-glow {
+      position:absolute; top:0; left:20%; right:20%; height:1px;
+      background:linear-gradient(90deg,transparent,rgba(192,132,252,.8),transparent);
+    }
+    .tw-star { cursor:pointer; transition:transform .15s; font-size:1.6rem; }
+    .tw-star:hover { transform:scale(1.2); }
+    .tw-textarea {
+      width:100%; background:rgba(255,255,255,.05); border:1px solid rgba(192,132,252,.25);
+      border-radius:.625rem; padding:.75rem 1rem; color:#fff; resize:none; min-height:90px;
+      font-family:"Crimson Text",serif; font-size:1rem; line-height:1.5; outline:none;
+    }
+    .tw-textarea:focus { border-color:rgba(192,132,252,.6); }
+    .tw-btn-main {
+      width:100%; padding:.875rem; background:linear-gradient(135deg,#9333ea,#C084FC);
+      border:none; border-radius:.625rem; color:#000; font-family:"Cinzel",serif;
+      font-weight:700; font-size:.78rem; letter-spacing:.12em; text-transform:uppercase;
+      cursor:pointer; transition:filter .2s, transform .2s;
+    }
+    .tw-btn-main:hover { filter:brightness(1.1); transform:translateY(-1px); }
+    .tw-btn-main:disabled { opacity:.5; cursor:not-allowed; }
+    .tw-link-btn {
+      background:transparent; border:none; color:rgba(255,255,255,.22);
+      font-family:"Crimson Text",serif; font-size:.85rem; cursor:pointer; padding:.25rem;
+      transition: color .2s;
+    }
+    .tw-link-btn:hover { color:rgba(255,255,255,.5); }
+  `;
+  document.head.appendChild(tag);
+}
 
 export default function TestimonioPopup() {
   const user = useAuthStore(s => s.user);
@@ -13,6 +84,11 @@ export default function TestimonioPopup() {
   const [estrellas, setEstrellas] = useState(5);
   const [texto,   setTexto]     = useState('');
   const [sending, setSending]   = useState(false);
+  const cardRef = useRef(null);
+
+  useEffect(() => {
+    injectStylesOnce();
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -43,6 +119,17 @@ export default function TestimonioPopup() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [visible]);
 
+  // OPTIMIZACIÓN: una vez terminó la animación de entrada, quitamos
+  // will-change para que el navegador libere la capa de composición
+  // (dejarlo indefinidamente consume memoria de GPU sin necesidad).
+  useEffect(() => {
+    if (!visible || !cardRef.current) return;
+    const el = cardRef.current;
+    const clear = () => { el.style.willChange = 'auto'; };
+    el.addEventListener('animationend', clear, { once: true });
+    return () => el.removeEventListener('animationend', clear);
+  }, [visible]);
+
   const handleEnviar = async () => {
     if (texto.trim().length < 20) return;
     setSending(true);
@@ -64,45 +151,14 @@ export default function TestimonioPopup() {
 
   return (
     <div
+      className="tw-overlay"
       onClick={(e) => { if (e.target === e.currentTarget) snooze(); }}
-      style={{
-      position:'fixed', inset:0, zIndex:99999,
-      background:'rgba(2,1,10,.85)', backdropFilter:'blur(12px)',
-      display:'flex', alignItems:'center', justifyContent:'center',
-      padding:'1rem', overflowY:'auto', WebkitOverflowScrolling:'touch',
-      animation:'twIn .4s cubic-bezier(.16,1,.3,1)',
-    }}>
-      <style>{`
-        @keyframes twIn { from{opacity:0;transform:scale(.94) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
-        .tw-star { cursor:pointer; transition:transform .15s; font-size:1.6rem; }
-        .tw-star:hover { transform:scale(1.25); }
-        .tw-textarea { width:100%; background:rgba(255,255,255,.05); border:1px solid rgba(192,132,252,.25);
-          border-radius:.625rem; padding:.75rem 1rem; color:#fff; resize:none; min-height:90px;
-          font-family:"Crimson Text",serif; font-size:1rem; line-height:1.5; outline:none; }
-        .tw-textarea:focus { border-color:rgba(192,132,252,.6); }
-        .tw-btn-main { width:100%; padding:.875rem; background:linear-gradient(135deg,#9333ea,#C084FC);
-          border:none; border-radius:.625rem; color:#000; font-family:"Cinzel",serif;
-          font-weight:700; font-size:.78rem; letter-spacing:.12em; text-transform:uppercase;
-          cursor:pointer; transition:all .2s; }
-        .tw-btn-main:hover { filter:brightness(1.1); transform:translateY(-1px); }
-        .tw-btn-main:disabled { opacity:.5; cursor:not-allowed; }
-      `}</style>
-
-      <div style={{
-        maxWidth:'420px', width:'100%', maxHeight:'calc(100vh - 2rem)',
-        overflowY:'auto', margin:'auto',
-        background:'radial-gradient(ellipse at top,rgba(192,132,252,.12) 0%,rgba(4,2,14,.97) 70%)',
-        border:'1.5px solid rgba(192,132,252,.35)', borderRadius:'1.5rem',
-        padding:'clamp(1.5rem,5vw,2.25rem)', textAlign:'center',
-        boxShadow:'0 0 80px rgba(192,132,252,.15)', position:'relative',
-      }}>
-        {/* Línea brillo top */}
-        <div style={{ position:'absolute',top:0,left:'20%',right:'20%',height:'1px',
-          background:'linear-gradient(90deg,transparent,rgba(192,132,252,.8),transparent)' }}/>
+    >
+      <div className="tw-card" ref={cardRef}>
+        <div className="tw-card-glow" />
 
         {step === 'ask' && <>
-          <div style={{ fontSize:'2.5rem', marginBottom:'.5rem',
-            filter:'drop-shadow(0 0 12px rgba(192,132,252,.6))' }}>🏛️</div>
+          <div style={{ fontSize:'2.5rem', marginBottom:'.5rem' }}>🏛️</div>
           <h3 style={{ fontFamily:font.title, fontWeight:700,
             fontSize:'clamp(1rem,3vw,1.3rem)', color:'#fff', marginBottom:'.5rem' }}>
             ¿Cómo va tu experiencia<br/>en el Templo?
@@ -115,11 +171,7 @@ export default function TestimonioPopup() {
             style={{ marginBottom:'.75rem' }}>
             ⚡ Compartir mi experiencia
           </button>
-          <button onClick={snooze} style={{ background:'transparent', border:'none',
-            color:'rgba(255,255,255,.22)', fontFamily:font.body, fontSize:'.85rem',
-            cursor:'pointer', padding:'.25rem' }}
-            onMouseEnter={e=>e.target.style.color='rgba(255,255,255,.5)'}
-            onMouseLeave={e=>e.target.style.color='rgba(255,255,255,.22)'}>
+          <button onClick={snooze} className="tw-link-btn">
             Ahora no →
           </button>
         </>}
@@ -131,7 +183,6 @@ export default function TestimonioPopup() {
             Cuéntanos tu resultado real
           </h3>
 
-          {/* Estrellas */}
           <div style={{ display:'flex', justifyContent:'center', gap:'.35rem', marginBottom:'1rem' }}>
             {[1,2,3,4,5].map(n => (
               <span key={n} className="tw-star"
@@ -151,16 +202,14 @@ export default function TestimonioPopup() {
             disabled={sending || texto.trim().length < 20}>
             {sending ? '⏳ Enviando...' : '👑 Enviar testimonio'}
           </button>
-          <button onClick={snooze} style={{ background:'transparent', border:'none',
-            color:'rgba(255,255,255,.18)', fontFamily:font.body, fontSize:'.82rem',
-            cursor:'pointer', padding:'.5rem', display:'block', margin:'.5rem auto 0' }}>
+          <button onClick={snooze} className="tw-link-btn"
+            style={{ display:'block', margin:'.5rem auto 0' }}>
             Cancelar
           </button>
         </>}
 
         {step === 'thanks' && <>
-          <div style={{ fontSize:'3rem', marginBottom:'.75rem',
-            animation:'twIn .5s ease' }}>🎉</div>
+          <div style={{ fontSize:'3rem', marginBottom:'.75rem' }}>🎉</div>
           <h3 style={{ fontFamily:font.title, fontWeight:700,
             fontSize:'clamp(1rem,3vw,1.25rem)', color:'#C084FC', marginBottom:'.5rem' }}>
             ¡Gracias Templario!

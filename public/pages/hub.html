@@ -2826,13 +2826,13 @@ window.addEventListener('resize', scaleScene);
   border:1px solid var(--gold-dim); display:flex; align-items:center; justify-content:center;
   font-size:24px; box-shadow:0 0 16px rgba(212,175,55,0.35);">🧭</button>
 
-<div id="streak-modal" style="display:none;position:fixed;inset:0;z-index:999998;background:rgba(2,0,12,0.95);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px;">
+<div id="streak-modal" style="display:none;position:fixed;inset:0;z-index:999998;background:rgba(2,0,12,0.97);align-items:center;justify-content:center;padding:16px;">
   <div id="streak-modal-card" style="position:relative;max-width:360px;width:100%;border-radius:24px;padding:28px 22px;text-align:center;background:linear-gradient(155deg,rgba(212,175,55,0.1) 0%,rgba(8,3,26,0.99) 55%,rgba(2,0,12,1) 100%);border:1.5px solid rgba(212,175,55,0.7);box-shadow:0 0 80px rgba(212,175,55,0.35),0 0 160px rgba(124,58,237,0.2);">
     <div id="streak-modal-body"></div>
   </div>
 </div>
 
-<div id="streak-panel-overlay" style="display:none;position:fixed;inset:0;z-index:999997;background:rgba(2,0,12,0.9);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px;">
+<div id="streak-panel-overlay" style="display:none;position:fixed;inset:0;z-index:999997;background:rgba(2,0,12,0.95);align-items:center;justify-content:center;padding:16px;">
   <div id="streak-panel-card" style="position:relative;max-width:640px;width:100%;max-height:88vh;display:flex;flex-direction:column;border-radius:22px;padding:20px 0 22px;background:linear-gradient(155deg,rgba(212,175,55,0.1) 0%,rgba(8,3,26,0.99) 45%,rgba(2,0,12,1) 100%);border:1.5px solid rgba(212,175,55,0.55);box-shadow:0 0 80px rgba(212,175,55,0.3),0 0 160px rgba(124,58,237,0.18);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;padding:0 20px;">
       <div>
@@ -4281,7 +4281,7 @@ body.perf-low .guardian-circle-wrap .guardian-btn-core::after { animation-durati
     @keyframes sbpGold       { 0%{background-position:200% center} 100%{background-position:0% center} }
     @keyframes sbpChestPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
     @keyframes sbpUnlock     { 0%{transform:scale(.3) rotate(-20deg);opacity:0} 60%{transform:scale(1.2) rotate(5deg)} 100%{transform:scale(1) rotate(0);opacity:1} }
-    @keyframes sbpFlicker    { 0%,100%{filter:drop-shadow(0 0 4px rgba(212,175,55,0.6))} 50%{filter:drop-shadow(0 0 9px rgba(212,175,55,0.95))} }
+    @keyframes sbpFlicker    { 0%,100%{opacity:0.5} 50%{opacity:1} }
     @keyframes sbpShine      { 0%{background-position:-140% 0} 100%{background-position:240% 0} }
 
     /* ── Ícono del pase de racha en el header ── */
@@ -4328,7 +4328,16 @@ body.perf-low .guardian-circle-wrap .guardian-btn-core::after { animation-durati
     .pass-node-circle.today {
       background:linear-gradient(160deg, rgba(212,175,55,0.35), rgba(124,58,237,0.25));
       border-color:#d4af37;
+      box-shadow:0 0 9px rgba(212,175,55,0.6);
+    }
+    .pass-node-circle.today::after {
+      content:'';
+      position:absolute; inset:-5px; border-radius:50%;
+      box-shadow:0 0 14px rgba(212,175,55,0.9);
+      opacity:0.5;
       animation: sbpFlicker 2s ease-in-out infinite;
+      will-change: opacity;
+      pointer-events:none;
     }
     .pass-node-circle.claimed { opacity:0.55; border-color:rgba(74,222,128,0.5); }
     .pass-node-circle.available {
@@ -4377,6 +4386,20 @@ body.perf-low .guardian-circle-wrap .guardian-btn-core::after { animation-durati
     .pass-node-sub.available { color:#4ade80; }
     .pass-node-sub.claimed { color:rgba(74,222,128,0.6); }
     .pass-node-sub.locked { color:rgba(200,185,240,0.4); }
+
+    /* ── Pase de racha en dispositivos de gama media/baja:
+       apaga las animaciones infinitas (filter/opacity/background-position)
+       igual que ya se hace con .special-offer, .star, .particle, etc. ── */
+    body.perf-mid .pass-node-circle.today::after,
+    body.perf-low .pass-node-circle.today::after { display:none !important; }
+    body.perf-mid .pass-node-circle.available,
+    body.perf-low .pass-node-circle.available { animation:none !important; }
+    body.perf-mid .pass-node-tier.tier-legendary,
+    body.perf-low .pass-node-tier.tier-legendary {
+      animation:none !important; background:#facc15 !important; -webkit-background-clip:initial !important;
+    }
+    body.perf-low #streak-chest,
+    body.perf-mid #streak-chest { animation:none !important; filter:drop-shadow(0 0 10px rgba(212,175,55,0.6)) !important; }
 
     .pass-connector {
       flex:1 1 24px; min-width:24px; max-width:60px; height:4px; border-radius:4px;
