@@ -12,6 +12,9 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+// Ajusta esta ruta a donde guardes el archivo — se pensó para vivir junto
+// a este mismo componente, en src/features/lideres/.
+import GuiasLideresLectura from './GuiasLideresLectura';
 
 const SUPABASE_URL = 'https://hdwzhwuhlrtrmhnecypm.supabase.co';
 const ENDPOINT = `${SUPABASE_URL}/functions/v1/lider-dashboard`;
@@ -588,6 +591,7 @@ export default function LiderDashboardPage() {
   const [data, setData]         = useState(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError]       = useState('');
+  const [mostrarGuias, setMostrarGuias] = useState(false);
 
   useEffect(() => {
     const s = document.createElement('style');
@@ -633,9 +637,48 @@ export default function LiderDashboardPage() {
   };
 
   if (data) {
-    return data.rol === 'gerente'
-      ? <PantallaDashboardGerente data={data} />
-      : <PantallaDashboard data={data} />;
+    return (
+      <>
+        {data.rol === 'gerente'
+          ? <PantallaDashboardGerente data={data} />
+          : <PantallaDashboard data={data} />}
+
+        {/*
+          Botón flotante de "Mis guías" — no toca ni una línea de
+          PantallaDashboard/PantallaDashboardGerente. Solo se agrega
+          encima. Necesita que la Edge Function `lider-dashboard`
+          regrese un campo `guias` en su JSON (ver nota al final del
+          archivo con lo que hay que agregar ahí).
+        */}
+        <button
+          onClick={() => setMostrarGuias(true)}
+          aria-label="Ver mis guías"
+          style={{
+            position: 'fixed', bottom: 20, right: 20, zIndex: 9998,
+            width: 56, height: 56, borderRadius: '50%',
+            background: `linear-gradient(135deg, ${C.gold}, #9a7a00)`,
+            border: 'none', boxShadow: '0 4px 20px rgba(255,215,0,0.4)',
+            fontSize: 24, cursor: 'pointer',
+          }}
+        >🗺️</button>
+
+        {mostrarGuias && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: C.bg, overflowY: 'auto', padding: '24px 16px 60px' }}>
+            <div style={{ maxWidth: 460, margin: '0 auto' }}>
+              <button
+                onClick={() => setMostrarGuias(false)}
+                style={{
+                  marginBottom: 16, background: 'none', border: `1px solid ${C.border}`, borderRadius: 8,
+                  color: C.muted, padding: '8px 14px', fontFamily: 'Cinzel, serif', fontSize: 10,
+                  letterSpacing: 1, cursor: 'pointer',
+                }}
+              >← VOLVER</button>
+              <GuiasLideresLectura guias={data.guias || []} />
+            </div>
+          </div>
+        )}
+      </>
+    );
   }
   return (
     <PantallaCodigo

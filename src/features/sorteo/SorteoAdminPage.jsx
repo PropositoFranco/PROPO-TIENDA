@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../services/supabase';
 import LtvComisionesTab from './LtvComisionesTab';
 import PromptsBibliotecaTab from './PromptsBibliotecaTab';
+import GuiasLideresTab from './GuiasLideresTab';
 
 const C = {
   bg:      '#07040f',
@@ -831,6 +832,7 @@ const cargarSellosCodigos = useCallback(async () => {
             { id: 'sellos',    label: '🔑 SELLOS' },
             { id: 'juntas',    label: '🎥 JUNTAS' },
             { id: 'prompts',   label: '📜 PROMPTS' },
+            { id: 'guias',     label: '🗺️ GUÍAS LÍDERES' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -2017,6 +2019,7 @@ const cargarSellosCodigos = useCallback(async () => {
       {/* ══ TAB: LTV / COMISIONES ══ */}
       {tabActiva === 'ltv' && <LtvComisionesTab />}
       {tabActiva === 'prompts' && <PromptsBibliotecaTab />}
+      {tabActiva === 'guias' && <GuiasLideresTab />}
 
       {/* ══ TAB: CAMINO A LÍDER DIGITAL ══ */}
       {tabActiva === 'camino' && (
