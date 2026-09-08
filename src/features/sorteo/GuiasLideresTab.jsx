@@ -45,7 +45,7 @@ const inputStyle = {
 };
 
 // ── Tarjeta de guía (con editar/borrar, modo admin) ───────────────────────────
-function GuiaCard({ guia, onEditar, onEliminar, onCopiar, copiado }) {
+function GuiaCard({ guia, onEditar, onEliminar, onCopiar, copiado, puedeAdministrar }) {
   const [expandido, setExpandido] = useState(false);
   const esLargo = guia.contenido.length > 220;
   const textoMostrado = expandido || !esLargo ? guia.contenido : guia.contenido.slice(0, 220) + '…';
@@ -97,22 +97,26 @@ function GuiaCard({ guia, onEditar, onEliminar, onCopiar, copiado }) {
             fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1.5, fontWeight: 900, cursor: 'pointer',
           }}
         >{copiado ? '✓ COPIADO' : '📋 COPIAR'}</button>
-        <button
-          onClick={() => onEditar(guia)}
-          style={{
-            padding: '9px 14px', background: 'rgba(155,89,255,0.1)', border: '1px solid rgba(155,89,255,0.3)',
-            borderRadius: 8, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1.5,
-            fontWeight: 900, cursor: 'pointer',
-          }}
-        >✏️ EDITAR</button>
-        <button
-          onClick={() => onEliminar(guia)}
-          style={{
-            padding: '9px 14px', background: 'rgba(255,68,102,0.08)', border: '1px solid rgba(255,68,102,0.25)',
-            borderRadius: 8, color: C.red, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1.5,
-            fontWeight: 900, cursor: 'pointer',
-          }}
-        >🗑️</button>
+        {puedeAdministrar && (
+          <>
+            <button
+              onClick={() => onEditar(guia)}
+              style={{
+                padding: '9px 14px', background: 'rgba(155,89,255,0.1)', border: '1px solid rgba(155,89,255,0.3)',
+                borderRadius: 8, color: C.purple, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1.5,
+                fontWeight: 900, cursor: 'pointer',
+              }}
+            >✏️ EDITAR</button>
+            <button
+              onClick={() => onEliminar(guia)}
+              style={{
+                padding: '9px 14px', background: 'rgba(255,68,102,0.08)', border: '1px solid rgba(255,68,102,0.25)',
+                borderRadius: 8, color: C.red, fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1.5,
+                fontWeight: 900, cursor: 'pointer',
+              }}
+            >🗑️</button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -127,7 +131,7 @@ function ModalGuia({ form, setForm, categorias, onGuardar, onCerrar, guardando, 
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: '26px 22px', maxWidth: 480, width: '100%' }}
+        style={{ background: C.card, border: `1.5px solid ${C.borderHi}`, borderRadius: 16, padding: '26px 22px', maxWidth: 480, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}
       >
         <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 14, color: C.gold, letterSpacing: 1.5, marginBottom: 16 }}>
           {form.id ? '✏️ EDITAR GUÍA' : '➕ NUEVA GUÍA'}
@@ -171,7 +175,7 @@ function ModalGuia({ form, setForm, categorias, onGuardar, onCerrar, guardando, 
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-export default function GuiasLideresTab() {
+export default function GuiasLideresTab({ puedeAdministrar = true } = {}) {
   const [guias, setGuias]           = useState([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState('');
@@ -285,15 +289,17 @@ export default function GuiasLideresTab() {
           placeholder="🔍 Buscar por título, contenido o categoría…"
           style={{ ...inputStyle, marginBottom: 0, flex: '1 1 260px', minWidth: 200 }}
         />
-        <button
-          onClick={abrirNuevo}
-          style={{
-            padding: '10px 20px', background: `linear-gradient(135deg,${C.gold},#9a7a00)`,
-            border: 'none', borderRadius: 8, color: '#0a0614',
-            fontFamily: 'Cinzel, serif', fontSize: 10.5, letterSpacing: 1.5, fontWeight: 900, cursor: 'pointer',
-            whiteSpace: 'nowrap',
-          }}
-        >➕ NUEVA GUÍA</button>
+        {puedeAdministrar && (
+          <button
+            onClick={abrirNuevo}
+            style={{
+              padding: '10px 20px', background: `linear-gradient(135deg,${C.gold},#9a7a00)`,
+              border: 'none', borderRadius: 8, color: '#0a0614',
+              fontFamily: 'Cinzel, serif', fontSize: 10.5, letterSpacing: 1.5, fontWeight: 900, cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >➕ NUEVA GUÍA</button>
+        )}
       </div>
 
       <div className="gl-chips" style={{ marginBottom: 20 }}>
@@ -332,12 +338,13 @@ export default function GuiasLideresTab() {
               onEliminar={setConfirmarBorrar}
               onCopiar={copiar}
               copiado={copiadoId === g.id}
+              puedeAdministrar={puedeAdministrar}
             />
           ))}
         </div>
       )}
 
-      {modalAbierto && (
+      {modalAbierto && puedeAdministrar && (
         <ModalGuia
           form={form}
           setForm={setForm}
@@ -349,7 +356,7 @@ export default function GuiasLideresTab() {
         />
       )}
 
-      {confirmarBorrar && (
+      {confirmarBorrar && puedeAdministrar && (
         <div
           onClick={() => setConfirmarBorrar(null)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(4,2,14,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}

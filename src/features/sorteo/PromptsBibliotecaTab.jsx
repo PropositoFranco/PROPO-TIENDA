@@ -97,7 +97,8 @@ function ColaboradoresPrompts() {
       </div>
       <p style={{ color: C.muted, fontSize: 11.5, marginBottom: 14, lineHeight: 1.5, maxWidth: 560 }}>
         Invita por correo a alguien que ya tenga cuenta en la plataforma. Va a poder entrar directo a
-        /admin/prompts y administrar esta biblioteca — nada más, sin ver sorteos, aliados ni el resto del panel.
+        /admin/prompts y ver, de solo lectura (buscar y copiar, sin editar ni borrar), la Biblioteca de Prompts
+        y las Guías para Líderes — nada más, sin ver sorteos, aliados ni el resto del panel.
       </p>
 
       <form onSubmit={invitar} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: errorInvitar || okInvitar ? 10 : 16 }}>
@@ -190,7 +191,7 @@ function ColaboradoresPrompts() {
               ¿REVOCAR ACCESO?
             </div>
             <p style={{ color: C.muted, fontSize: 12, marginBottom: 18 }}>
-              "{confirmarRevocar.email}" dejará de poder entrar a /admin/prompts de inmediato.
+              "{confirmarRevocar.email}" dejará de poder entrar a /admin/prompts (Prompts y Guías Líderes) de inmediato.
             </p>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
               <button

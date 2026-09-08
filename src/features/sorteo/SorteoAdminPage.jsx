@@ -776,6 +776,12 @@ const cargarSellosCodigos = useCallback(async () => {
   // de esa sección — solo su propia pestaña. Esto corta de raíz cualquier fuga visual
   // hacia data de sorteos/aliados/ltv/etc., sin tocar ni una línea del render de abajo.
   if (soloPrompts) {
+    // El colaborador invitado ahora ve DOS pestañas propias (Prompts y Guías
+    // Líderes), ambas de solo lectura salvo copiar. Sigue sin renderizar NADA
+    // del árbol de sorteos — mismo aislamiento total de antes, solo que ahora
+    // cubre dos secciones en vez de una. Reusa tabActiva/setTabActiva, que ya
+    // existe en el componente; no se agrega ningún hook nuevo.
+    const subTabColab = tabActiva === 'guias' ? 'guias' : 'prompts';
     return (
       <div style={{ minHeight: '100vh', background: C.bg, padding: 'clamp(20px,4vw,40px)', fontFamily: 'sans-serif' }}>
         <div style={{ marginBottom: 32 }}>
@@ -783,13 +789,32 @@ const cargarSellosCodigos = useCallback(async () => {
             TEMPLO DEL PROPÓSITO · COLABORADOR
           </div>
           <h1 style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 'clamp(20px,4vw,32px)', color: C.gold, margin: 0, letterSpacing: 2 }}>
-            📜 BIBLIOTECA DE PROMPTS
+            {subTabColab === 'guias' ? '🗺️ GUÍAS LÍDERES' : '📜 BIBLIOTECA DE PROMPTS'}
           </h1>
           <p style={{ color: C.muted, fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>
-            Tu acceso de colaborador está limitado a esta sección.
+            Tu acceso de colaborador está limitado a estas secciones.
           </p>
+          <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+            {[
+              { id: 'prompts', label: '📜 PROMPTS' },
+              { id: 'guias',   label: '🗺️ GUÍAS LÍDERES' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setTabActiva(tab.id)}
+                style={{
+                  padding: '10px 18px', borderRadius: 8, cursor: 'pointer',
+                  fontFamily: 'Cinzel, serif', fontSize: 10.5, letterSpacing: 1, fontWeight: 900,
+                  background: subTabColab === tab.id ? `linear-gradient(135deg,${C.gold},#9a7a00)` : 'rgba(255,255,255,0.04)',
+                  color: subTabColab === tab.id ? '#0a0614' : C.muted,
+                  border: `1px solid ${subTabColab === tab.id ? C.gold : C.border}`,
+                }}
+              >{tab.label}</button>
+            ))}
+          </div>
         </div>
-        <PromptsBibliotecaTab />
+        {subTabColab === 'prompts' && <PromptsBibliotecaTab />}
+        {subTabColab === 'guias'   && <GuiasLideresTab puedeAdministrar={false} />}
       </div>
     );
   }
