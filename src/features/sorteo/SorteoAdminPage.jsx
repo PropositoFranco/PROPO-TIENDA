@@ -856,18 +856,35 @@ const cargarSellosCodigos = useCallback(async () => {
             >🗺️ IR AL REACT DE CAMINO</a>
           </div>
 
-          {/* Derecha — nueva, "Tu kit para romperla" */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, textAlign: 'right' }}>
+          {/* Derecha — "Tu kit para romperla". Antes casi no se leía sobre el fondo del
+              castillo (texto chico y apagado); ahora con más contraste, glow y un
+              destello animado en ROMPERLA para que sobresalga, épico. */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'right' }}>
+            <style>{`
+              @keyframes kitShimmer { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
+              @keyframes kitTwinkle { 0%, 100% { opacity: 0.15; transform: scale(0.7); } 50% { opacity: 1; transform: scale(1.2); } }
+              .kit-romperla-title {
+                background: linear-gradient(100deg, ${C.gold} 15%, #fff8dc 40%, ${C.gold} 65%);
+                background-size: 220% auto;
+                -webkit-background-clip: text; background-clip: text; color: transparent;
+                animation: kitShimmer 3.2s linear infinite;
+                filter: drop-shadow(0 0 16px rgba(212,175,55,0.6));
+              }
+              .kit-sparkle { position: absolute; pointer-events: none; color: #fff8dc; text-shadow: 0 0 8px rgba(255,255,255,0.95), 0 0 16px rgba(212,175,55,0.7); animation: kitTwinkle 1.9s ease-in-out infinite; }
+            `}</style>
+            <span className="kit-sparkle" style={{ top: -6, right: 6, fontSize: 12, animationDelay: '0s' }}>✦</span>
+            <span className="kit-sparkle" style={{ top: 30, right: -8, fontSize: 8, animationDelay: '.6s' }}>✦</span>
+            <span className="kit-sparkle" style={{ bottom: -2, right: 40, fontSize: 9, animationDelay: '1.1s' }}>✧</span>
             <div style={{ fontSize: 'clamp(26px,3.2vw,38px)', filter: 'drop-shadow(0 0 12px rgba(212,175,55,0.4))' }}>🏛️</div>
             <div>
-              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 5, color: C.goldDim, marginBottom: 4 }}>
+              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10.5, letterSpacing: 5, color: C.gold, marginBottom: 4, textShadow: '0 0 12px rgba(212,175,55,0.7), 0 1px 3px rgba(0,0,0,0.95)', fontWeight: 700 }}>
                 TU KIT PARA
               </div>
-              <h2 style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 'clamp(18px,2.8vw,26px)', color: C.gold, margin: 0, letterSpacing: 2 }}>
+              <h2 className="kit-romperla-title" style={{ fontFamily: 'Cinzel Decorative, serif', fontWeight: 900, fontSize: 'clamp(18px,2.8vw,26px)', margin: 0, letterSpacing: 2 }}>
                 ROMPERLA
               </h2>
-              <p style={{ color: C.muted, fontSize: 11.5, marginTop: 4, maxWidth: '32ch' }}>
-                Todo lo que necesitas para hacer tu función bien.
+              <p style={{ color: '#ece6f7', fontSize: 12.5, marginTop: 5, maxWidth: '32ch', fontWeight: 500, textShadow: '0 1px 4px rgba(0,0,0,0.95), 0 0 10px rgba(0,0,0,0.6)' }}>
+                Todo lo que necesitas para hacer tu función fácil y sin estrés.
               </p>
             </div>
           </div>

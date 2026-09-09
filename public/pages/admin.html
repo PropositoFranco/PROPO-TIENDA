@@ -2209,7 +2209,7 @@
   }
 
   function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
   </script>
 
@@ -2297,6 +2297,7 @@
   function toggleBonus(id,is_active){window.parent.postMessage({type:'toggle-bonus',id,is_active},'*');}
   function deleteBonus(id){if(!confirm('¿Eliminar este bonus?'))return;window.parent.postMessage({type:'delete-bonus',id},'*');}
   window.addEventListener('message',e=>{
+    if (e.source !== window.parent || e.origin !== window.location.origin) return;
     if(e.data?.type==='bonuses'){renderBonuses(e.data.data);}
     if(e.data?.type==='bonus-saved'){closeBonusForm();}
   });
@@ -5129,18 +5130,26 @@
       tbody.innerHTML = page.map(u => `
         <tr>
           <td><span class="${u.is_active ? 'badge-active' : 'badge-inactive'}"></span></td>
-          <td style="font-family:'Cinzel',serif;font-size:11px;">${u.skool_name || '—'}</td>
-          <td style="color:var(--gold2);font-size:11px;">${u.templario_name || '—'}</td>
-          <td style="font-size:11px;color:var(--text-dim);">${u.email || '—'}</td>
+          <td style="font-family:'Cinzel',serif;font-size:11px;">${escHtml(u.skool_name || '—')}</td>
+          <td style="color:var(--gold2);font-size:11px;">${escHtml(u.templario_name || '—')}</td>
+          <td style="font-size:11px;color:var(--text-dim);">${escHtml(u.email || '—')}</td>
           <td><span class="badge-cristal">🪙 ${(u.cristales || 0).toLocaleString()}</span></td>
           <td style="font-size:10px;color:var(--text-faint);">${u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>
           <td style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="act-btn" onclick="quickDeposit('${u.email}')">+ Cristales</button>
-            <button class="act-btn danger" onclick="revokeAccess('${u.email}')">Revocar</button>
+            <button class="act-btn" data-user-action="deposit" data-email="${escHtml(u.email)}">+ Cristales</button>
+            <button class="act-btn danger" data-user-action="revoke" data-email="${escHtml(u.email)}">Revocar</button>
           </td>
         </tr>`).join('');
     }
 
+    
+    tbody.querySelectorAll('button[data-user-action]').forEach(button => {
+      button.addEventListener('click', () => {
+        const email = button.dataset.email;
+        if (button.dataset.userAction === 'deposit') quickDeposit(email);
+        else revokeAccess(email);
+      });
+    });
     renderUserPagination(totalPages);
   }
 
@@ -5182,6 +5191,7 @@
 
 
   window.addEventListener('message', e => {
+    if (e.source !== window.parent || e.origin !== window.location.origin) return;
     if (e.data?.type === 'load-comp-dates') {
       const s = document.getElementById('comp-start');
       const en = document.getElementById('comp-end');
@@ -5996,6 +6006,7 @@
   }
 
   window.addEventListener('message', function(e) {
+    if (e.source !== window.parent || e.origin !== window.location.origin) return;
     const { type, data } = e.data || {};
     if (!type) return;
 

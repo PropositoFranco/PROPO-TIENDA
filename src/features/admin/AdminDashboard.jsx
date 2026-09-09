@@ -2010,7 +2010,7 @@ useEffect(() => {
   };
 const sendToFrame = (type, data) => {
     document.getElementById('admin-frame')
-      ?.contentWindow?.postMessage({ type, data }, '*');
+      ?.contentWindow?.postMessage({ type, data }, window.location.origin);
   };
 
   useEffect(() => { if (stats)    sendToFrame('stats',    stats);    }, [stats]);
@@ -2023,6 +2023,8 @@ const sendToFrame = (type, data) => {
 
   useEffect(() => {
     const handleMessage = async (event) => {
+      const frameWindow = document.getElementById('admin-frame')?.contentWindow;
+      if (!frameWindow || event.source !== frameWindow || event.origin !== window.location.origin) return;
       // =============================================
       // READY
       // =============================================
