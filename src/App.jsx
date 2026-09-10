@@ -81,13 +81,29 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
-    const pingActivity = () => {
-      import('./services/supabase').then(({ supabase }) => {
-        supabase.from('profiles').update({ last_login_date: new Date().toISOString() }).eq('id', user.id).then(() => {});
-      });
+    let disposed = false;
+    let pending = false;
+    const pingActivity = async () => {
+      if (pending || document.visibilityState !== 'visible') return;
+      pending = true;
+      try {
+        const { supabase } = await import('./services/supabase');
+        if (!disposed) {
+          const { error } = await supabase.rpc('record_activity');
+          if (error) console.warn('No se pudo registrar la actividad. Se reintentará.');
+        }
+      } catch {
+        // The next visible interval retries without interrupting navigation.
+      } finally { pending = false; }
     };
+    pingActivity();
     const activityInterval = setInterval(pingActivity, 5 * 60 * 1000);
-    return () => clearInterval(activityInterval);
+    document.addEventListener('visibilitychange', pingActivity);
+    return () => {
+      disposed = true;
+      clearInterval(activityInterval);
+      document.removeEventListener('visibilitychange', pingActivity);
+    };
   }, [user]);
 
 useEffect(() => {

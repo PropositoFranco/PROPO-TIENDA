@@ -178,14 +178,14 @@ function KpiPanel({ kpiData, kpiLastUpdated, loadKpis }) {
 
       {/* ── Gráfica logins 7 días ── */}
       <div style={card()}>
-        <span style={label}>Logins últimos 7 días</span>
+        <span style={label}>Usuarios activos por día</span>
         <div style={{ display:'flex', alignItems:'flex-end', gap:2, height:36 }}>
           {dayEntries.map(([dateStr, count], i) => {
             const pct = Math.round(count / maxDay * 100);
             const isToday = i === dayEntries.length - 1;
             return (
               <div key={dateStr} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:1 }}>
-                <span style={{ fontSize:6, color:isToday?c.gold:'rgba(255,255,255,0.2)' }}>{count||''}</span>
+                <span style={{ fontSize:6, color:isToday?c.gold:'rgba(255,255,255,0.2)' }}>{count == null ? '—' : count || ''}</span>
                 <div style={{ width:'100%', flex:1, display:'flex', alignItems:'flex-end' }}>
                   <div style={{
                     width:'100%',
@@ -195,7 +195,7 @@ function KpiPanel({ kpiData, kpiLastUpdated, loadKpis }) {
                   }}/>
                 </div>
                 <span style={{ fontSize:6, color:isToday?c.gold:'rgba(255,255,255,0.25)' }}>
-                  {dayLabels[new Date(dateStr).getDay()]}
+                  {dayLabels[new Date(dateStr + 'T12:00:00').getDay()]}
                 </span>
               </div>
             );
@@ -871,6 +871,9 @@ const [showReports,         setShowReports]         = useState(false);
 const [showKpis,       setShowKpis]       = useState(false);
 const [kpiData,        setKpiData]        = useState(null);
 const [kpiLoading,     setKpiLoading]     = useState(false);
+const kpiInFlight = useRef(false);
+const kpiAbortRef = useRef(null);
+const [kpiError, setKpiError] = useState('');
 const [revenueData,    setRevenueData]    = useState(null);
 const [kpiLastUpdated, setKpiLastUpdated] = useState(null);
 
@@ -1219,187 +1222,45 @@ const rejectTestimonio = async (id) => {
 };
 
 const loadKpis = async () => {
+  if (kpiInFlight.current) return;
+  const controller = new AbortController();
+  kpiAbortRef.current = controller;
+  kpiInFlight.current = true;
   setKpiLoading(true);
-  const { supabase } = await import('../../services/supabase.js');
+  setKpiError('');
   try {
-    const now             = new Date();
-    const startOfDay      = new Date(now.toDateString());
-    const yesterday       = new Date(now.getTime() - 86400000);
-    const startOfYesterday= new Date(yesterday.toDateString());
-    const startOfWeek     = new Date(now); startOfWeek.setDate(now.getDate() - now.getDay()); startOfWeek.setHours(0,0,0,0);
-    const startOf7d       = new Date(now.getTime() - 7  * 86400000);
-    const startOf30d      = new Date(now.getTime() - 30 * 86400000);
-
-    const [
-      { count: totalUsers },
-      { count: activeThisWeek },
-      { count: activeToday },
-      { count: activeYesterday },
-      { count: newThisWeek },
-      { count: newThisMonth },
-      { count: newToday },
-      { count: paidMembers },
-      { count: missionsCompleted7d },
-      { count: ordersToday },
-      { count: ordersTotal },
-      { count: referralsDone },
-      { data: rankDist },
-      { data: topActive },
-      { data: topOrderUsers },
-      { data: topMissionUsers },
-      { data: productsSold },
-      { data: topTemplarios },
-      { data: evidences7d },
-      { count: totalPromoRedeemed },
-    ] = await Promise.all([
-      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false),
-      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false).gte('last_login_date', startOfWeek.toISOString()),
-      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false).gte('last_login_date', startOfDay.toISOString()),
-      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false).gte('last_login_date', startOfYesterday.toISOString()).lt('last_login_date', startOfDay.toISOString()),
-      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false).gte('created_at', startOfWeek.toISOString()),
-      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false).gte('created_at', startOf30d.toISOString()),
-      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false).gte('created_at', startOfDay.toISOString()),
-      supabase.from('profiles').select('id', { count:'exact', head:true }).eq('is_test_user', false).eq('membership_status', 'active'),
-      supabase.from('user_missions').select('id', { count:'exact', head:true }).gte('completed_at', startOf7d.toISOString()),
-      supabase.from('orders').select('id', { count:'exact', head:true }).gte('created_at', startOfDay.toISOString()),
-      supabase.from('orders').select('id', { count:'exact', head:true }),
-      supabase.from('referrals').select('id', { count:'exact', head:true }).eq('status', 'rewarded'),
-      supabase.from('profiles').select('rank').eq('is_test_user', false).limit(300),
-      supabase.from('profiles').select('templario_name, level, xp, last_login_date').eq('is_test_user', false).gte('last_login_date', startOfDay.toISOString()).order('xp', { ascending:false }).limit(5),
-      // Top compradores (productos más canjeados por usuario)
-      supabase.from('orders').select('user_id').gte('created_at', startOf30d.toISOString()).limit(500),
-      // Top usuarios por misiones completadas
-      supabase.from('user_missions').select('user_id').gte('completed_at', startOf30d.toISOString()).limit(500),
-      // Productos más vendidos
-      supabase.from('orders').select('items').not('items', 'is', null).limit(500),
-      // Top Templarios del juego
-      supabase.from('templo_players').select('id, char_name, weekly_points, correct, xp, streak, level').order('weekly_points', { ascending:false }).limit(5),
-      // Evidencias enviadas últimos 7 días
-      supabase.from('community_posts').select('id, created_at').gte('created_at', startOf7d.toISOString()).limit(200),
-      // Códigos promo canjeados
-      supabase.from('orders').select('id', { count:'exact', head:true }).not('promo_code', 'is', null),
+    const { supabase } = await import('../../services/supabase.js');
+    if (controller.signal.aborted) return;
+    const [metrics, revenue] = await Promise.allSettled([
+      supabase.rpc('admin_get_dashboard_kpis').abortSignal(controller.signal).throwOnError(),
+      supabase.rpc('admin_get_revenue_kpis').abortSignal(controller.signal).throwOnError(),
     ]);
-
-    // ── Panel de Ingresos (dinero real) ──
-    const { data: revenueKpis, error: revenueErr } = await supabase.rpc('admin_get_revenue_kpis');
-    if (revenueErr) console.error('[revenue] Error cargando KPIs de ingresos:', revenueErr);
-    setRevenueData(revenueKpis || null);
-
-    const dropAlert = (activeYesterday || 0) > 0
-      ? Math.round(((activeToday || 0) - (activeYesterday || 0)) / (activeYesterday || 1) * 100)
-      : 0;
-    const convRate = paidMembers ? Math.round(paidMembers / (totalUsers || 1) * 100) : 0;
-
-    // Distribución de ranks
-    const rankMap = {};
-    (rankDist || []).forEach(r => { rankMap[r.rank] = (rankMap[r.rank] || 0) + 1; });
-
-    // Logins por día — últimos 7 días
-    const { data: loginDays } = await supabase
-      .from('profiles').select('last_login_date')
-      .eq('is_test_user', false)
-      .gte('last_login_date', startOf7d.toISOString()).not('last_login_date', 'is', null);
-    const dayBuckets = {};
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 86400000);
-      dayBuckets[d.toDateString()] = 0;
+    if (controller.signal.aborted) return;
+    const errors = [];
+    if (metrics.status === 'fulfilled' && metrics.value.data) {
+      setKpiData(metrics.value.data);
+      setKpiLastUpdated(new Date(metrics.value.data.updatedAt));
+      if (metrics.value.data.unreadableOrders > 0) {
+        errors.push('Hay ' + metrics.value.data.unreadableOrders + ' órdenes con artículos inválidos; revisa sus productos.');
+      }
+    } else {
+      errors.push('No se pudieron actualizar las métricas. Se conservan los últimos datos disponibles.');
     }
-    (loginDays || []).forEach(r => {
-      const key = new Date(r.last_login_date).toDateString();
-      if (key in dayBuckets) dayBuckets[key]++;
-    });
-
-    // Top compradores — agrupar por user_id
-    const ordersByUser = {};
-    (topOrderUsers || []).forEach(o => { ordersByUser[o.user_id] = (ordersByUser[o.user_id] || 0) + 1; });
-    const topBuyersIds = Object.entries(ordersByUser).sort((a,b) => b[1]-a[1]).slice(0,5).map(([id,cnt]) => ({ id, cnt }));
-    let topBuyersEnriched = topBuyersIds;
-    if (topBuyersIds.length) {
-      const { data: buyerProfiles } = await supabase.from('profiles').select('id, templario_name').in('id', topBuyersIds.map(b => b.id).filter(Boolean));
-      const bmap = {}; (buyerProfiles || []).forEach(p => { bmap[p.id] = p.templario_name; });
-      topBuyersEnriched = topBuyersIds.map(b => ({ ...b, name: bmap[b.id] || b.id.slice(0,8) }));
+    if (revenue.status === 'fulfilled' && revenue.value.data) {
+      setRevenueData(revenue.value.data);
+    } else {
+      setRevenueData(null);
+      errors.push('No se pudieron actualizar los ingresos.');
     }
-
-    // Top usuarios por misiones
-    const missionsByUser = {};
-    (topMissionUsers || []).forEach(m => { missionsByUser[m.user_id] = (missionsByUser[m.user_id] || 0) + 1; });
-    const topMissionIds = Object.entries(missionsByUser).sort((a,b) => b[1]-a[1]).slice(0,5).map(([id,cnt]) => ({ id, cnt }));
-    let topMissionEnriched = topMissionIds;
-    if (topMissionIds.length) {
-      const { data: mProfiles } = await supabase.from('profiles').select('id, templario_name').in('id', topMissionIds.map(m => m.id).filter(Boolean));
-      const mmap = {}; (mProfiles || []).forEach(p => { mmap[p.id] = p.templario_name; });
-      topMissionEnriched = topMissionIds.map(m => ({ ...m, name: mmap[m.id] || m.id.slice(0,8) }));
-    }
-
-    // Productos más vendidos
-    const productCount = {};
-    (productsSold || []).forEach(order => {
-      try {
-        const parsed = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-        (Array.isArray(parsed) ? parsed : []).forEach(item => {
-          const key = item.product_id || '?';
-          productCount[key] = (productCount[key] || 0) + 1;
-        });
-      } catch (_) {}
-    });
-    const topProductIds = Object.entries(productCount).sort((a,b) => b[1]-a[1]).slice(0,5).map(([id,cnt]) => ({ id, cnt }));
-    let topProducts = topProductIds.map(p => ({ title: p.id.slice(0,8), cnt: p.cnt }));
-    if (topProductIds.length) {
-      const { data: productRows } = await supabase.from('products').select('id, name').in('id', topProductIds.map(p => p.id).filter(id => id !== '?'));
-      const pmap = {}; (productRows || []).forEach(p => { pmap[p.id] = p.name; });
-      topProducts = topProductIds.map(p => ({ title: pmap[p.id] || p.id.slice(0,8), cnt: p.cnt }));
-    }
-
-    // Evidencias por día últimos 7d
-    const evidenceBuckets = {};
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 86400000);
-      evidenceBuckets[d.toDateString()] = 0;
-    }
-    (evidences7d || []).forEach(e => {
-      const key = new Date(e.created_at).toDateString();
-      if (key in evidenceBuckets) evidenceBuckets[key]++;
-    });
-
-    // Templarios enriched
-    const templarioIds = (topTemplarios || []).map(p => p.id);
-    let templarioNames = {};
-    if (templarioIds.length) {
-      const { data: tProfiles } = await supabase.from('profiles').select('id, templario_name').in('id', templarioIds.filter(Boolean));
-      (tProfiles || []).forEach(p => { templarioNames[p.id] = p.templario_name; });
-    }
-    const topTemplariosEnriched = (topTemplarios || []).map(p => ({ ...p, name: templarioNames[p.id] || p.char_name || 'Templario' }));
-
-    setKpiData({
-      totalUsers:           totalUsers         || 0,
-      activeThisWeek:       activeThisWeek     || 0,
-      activeToday:          activeToday        || 0,
-      activeYesterday:      activeYesterday    || 0,
-      dropAlert,
-      newThisWeek:          newThisWeek        || 0,
-      newThisMonth:         newThisMonth       || 0,
-      newToday:             newToday           || 0,
-      paidMembers:          paidMembers        || 0,
-      convRate,
-      missionsCompleted7d:  missionsCompleted7d || 0,
-      ordersToday:          ordersToday        || 0,
-      ordersTotal:          ordersTotal        || 0,
-      referralsDone:        referralsDone      || 0,
-      totalPromoRedeemed:   totalPromoRedeemed || 0,
-      rankMap,
-      dayBuckets,
-      topActive:            topActive          || [],
-      topBuyers:            topBuyersEnriched,
-      topMissionUsers:      topMissionEnriched,
-      topProducts,
-      topTemplarios:        topTemplariosEnriched,
-      evidenceBuckets,
-    });
-    setKpiLastUpdated(new Date());
-  } catch (err) {
-    pushToast('❌ Error KPIs: ' + err.message);
+    setKpiError(errors.join(' '));
+  } catch {
+    if (!controller.signal.aborted) setKpiError('No se pudieron cargar las métricas. Intenta actualizar de nuevo.');
   } finally {
-    setKpiLoading(false);
+    if (kpiAbortRef.current === controller) {
+      kpiAbortRef.current = null;
+      kpiInFlight.current = false;
+      setKpiLoading(false);
+    }
   }
 };
 const [reports,             setReports]             = useState([]);
@@ -1918,13 +1779,21 @@ useEffect(() => {
 
 // ── Auto-carga KPIs al entrar y refresca cada 60s ──
   useEffect(() => {
-    loadKpis();
-    loadHistoryPendingCount();
-    const interval = setInterval(() => {
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
       loadKpis();
       loadHistoryPendingCount();
-    }, 60000);
-    return () => clearInterval(interval);
+    };
+    refresh();
+    const interval = setInterval(refresh, 60000);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', refresh);
+      kpiAbortRef.current?.abort();
+      kpiAbortRef.current = null;
+      kpiInFlight.current = false;
+    };
   }, []);
 
   useEffect(() => { if (showPrizes) loadPrizes(); }, [showPrizes]);
@@ -2025,6 +1894,7 @@ const sendToFrame = (type, data) => {
     const handleMessage = async (event) => {
       const frameWindow = document.getElementById('admin-frame')?.contentWindow;
       if (!frameWindow || event.source !== frameWindow || event.origin !== window.location.origin) return;
+      if (!event.data || typeof event.data !== 'object' || Array.isArray(event.data) || typeof event.data.type !== 'string') return;
       // =============================================
       // READY
       // =============================================
@@ -4270,11 +4140,15 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
                     </p>
                   </div>
                   <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                    <button onClick={() => loadKpis()} style={{ background:'rgba(245,200,70,0.12)', border:'1px solid rgba(245,200,70,0.35)', borderRadius:8, color:'#f5c842', fontFamily:'Cinzel,serif', fontSize:9, fontWeight:700, cursor:'pointer', padding:'0.35rem 0.75rem' }}>↺ ACTUALIZAR</button>
+                    <button disabled={kpiLoading} onClick={() => loadKpis()} style={{ background:'rgba(245,200,70,0.12)', border:'1px solid rgba(245,200,70,0.35)', borderRadius:8, color:'#f5c842', fontFamily:'Cinzel,serif', fontSize:9, fontWeight:700, cursor:'pointer', padding:'0.35rem 0.75rem' }}>↺ ACTUALIZAR</button>
                     <button onClick={() => setShowKpis(false)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.4)', fontSize:22, cursor:'pointer', lineHeight:1 }}>✕</button>
                   </div>
                 </div>
 
+                {kpiData?.activityTrackingSince && <p style={{ color:'rgba(255,255,255,0.6)', fontSize:12, margin:0 }}>
+                  Actividad diaria registrada desde {kpiData.activityTrackingSince}. Los días anteriores no tienen historial completo. Horario de Ciudad de México.
+                </p>}
+                {kpiError && <p role="alert" style={{ color:'#fca5a5', fontSize:13, margin:0 }}>{kpiError}</p>}
                 {kpiLoading && !kpiData ? (
                   <p style={{ color:'rgba(245,200,70,0.5)', fontFamily:'Cinzel,serif', fontSize:11, textAlign:'center', padding:'3rem', letterSpacing:3 }}>CARGANDO MÉTRICAS…</p>
                 ) : kpiData ? (
@@ -4308,7 +4182,7 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
                     <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
                       {[
                         { label:'USUARIOS TOTALES',  val:kpiData.totalUsers.toLocaleString(),   color:'#f5c842', icon:'👥', sub:`${kpiData.activeThisWeek} activos esta semana` },
-                        { label:'ACTIVOS HOY',        val:kpiData.activeToday,                   color:'#4ade80', icon:'🟢', sub: kpiData.dropAlert !== 0 ? `${kpiData.dropAlert > 0 ? '▲' : '▼'} ${Math.abs(kpiData.dropAlert)}% vs ayer` : 'sin cambio vs ayer', subColor: kpiData.dropAlert < -30 ? '#ef4444' : kpiData.dropAlert > 10 ? '#4ade80' : 'rgba(255,255,255,0.35)' },
+                        { label:'ACTIVOS HOY',        val:kpiData.activeToday,                   color:'#4ade80', icon:'🟢', sub: kpiData.dropAlert != null && kpiData.dropAlert !== 0 ? `${kpiData.dropAlert > 0 ? '▲' : '▼'} ${Math.abs(kpiData.dropAlert)}% vs ayer` : kpiData.dropAlert == null ? 'sin comparación disponible' : 'sin cambio vs ayer', subColor: kpiData.dropAlert < -30 ? '#ef4444' : kpiData.dropAlert > 10 ? '#4ade80' : 'rgba(255,255,255,0.35)' },
                         { label:'MEMBRESÍAS ACTIVAS', val:kpiData.paidMembers,                   color:'#c084fc', icon:'💎', sub:`${Math.round(kpiData.paidMembers/Math.max(kpiData.totalUsers,1)*100)}% del total` },
                         { label:'CONVERSIÓN',         val:`${kpiData.convRate}%`,                color: kpiData.convRate > 20 ? '#4ade80' : kpiData.convRate > 10 ? '#f5c842' : '#ef4444', icon:'📈', sub:'usuarios pagados / total' },
                       ].map(it => (
@@ -4377,7 +4251,7 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
 
                       {/* Gráfica logins 7 días — más grande */}
                       <div style={{ background:'rgba(18,10,38,0.95)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:12, padding:'1rem', display:'flex', flexDirection:'column', gap:8 }}>
-                        <p style={{ margin:0, fontFamily:'Cinzel,serif', fontSize:9, letterSpacing:2, color:'rgba(212,175,55,0.5)', textTransform:'uppercase' }}>Logins últimos 7 días</p>
+                        <p style={{ margin:0, fontFamily:'Cinzel,serif', fontSize:9, letterSpacing:2, color:'rgba(212,175,55,0.5)', textTransform:'uppercase' }}>Usuarios activos por día</p>
                         <div style={{ display:'flex', alignItems:'flex-end', gap:6, height:80, flex:1 }}>
                           {Object.entries(kpiData.dayBuckets).map(([dateStr,count],i) => {
                             const max = Math.max(...Object.values(kpiData.dayBuckets),1);
@@ -4386,11 +4260,11 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
                             const labels = ['D','L','M','M','J','V','S'];
                             return (
                               <div key={dateStr} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, height:'100%', justifyContent:'flex-end' }}>
-                                <span style={{ fontFamily:'Cinzel,serif', fontSize:9, color: isToday?'#f5c842':'rgba(255,255,255,0.4)', fontWeight: isToday?700:400 }}>{count||''}</span>
+                                <span style={{ fontFamily:'Cinzel,serif', fontSize:9, color: isToday?'#f5c842':'rgba(255,255,255,0.4)', fontWeight: isToday?700:400 }}>{count == null ? '—' : count || ''}</span>
                                 <div style={{ width:'100%', display:'flex', alignItems:'flex-end', flex:1 }}>
                                   <div style={{ width:'100%', height:`${Math.max(pct,4)}%`, background: isToday?'linear-gradient(180deg,#f5c842,#d97706)':'linear-gradient(180deg,rgba(124,58,237,0.8),rgba(124,58,237,0.3))', borderRadius:'3px 3px 0 0', transition:'height 0.5s' }}/>
                                 </div>
-                                <span style={{ fontFamily:'Cinzel,serif', fontSize:8, color: isToday?'#f5c842':'rgba(255,255,255,0.3)' }}>{labels[new Date(dateStr).getDay()]}</span>
+                                <span style={{ fontFamily:'Cinzel,serif', fontSize:8, color: isToday?'#f5c842':'rgba(255,255,255,0.3)' }}>{labels[new Date(dateStr + 'T12:00:00').getDay()]}</span>
                               </div>
                             );
                           })}
@@ -4482,11 +4356,11 @@ if (delErr) pushToast('⚠ Reset parcial: ' + delErr.message);
                             const labels = ['D','L','M','M','J','V','S'];
                             return (
                               <div key={dateStr} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:2, height:'100%', justifyContent:'flex-end' }}>
-                                <span style={{ fontFamily:'Cinzel,serif', fontSize:8, color: isToday?'#c084fc':'rgba(255,255,255,0.3)' }}>{count||''}</span>
+                                <span style={{ fontFamily:'Cinzel,serif', fontSize:8, color: isToday?'#c084fc':'rgba(255,255,255,0.3)' }}>{count == null ? '—' : count || ''}</span>
                                 <div style={{ width:'100%', display:'flex', alignItems:'flex-end', flex:1 }}>
                                   <div style={{ width:'100%', height:`${Math.max(pct,4)}%`, background: isToday?'linear-gradient(180deg,#c084fc,#7c3aed)':'linear-gradient(180deg,rgba(192,132,252,0.6),rgba(124,58,237,0.3))', borderRadius:'3px 3px 0 0' }}/>
                                 </div>
-                                <span style={{ fontFamily:'Cinzel,serif', fontSize:7, color: isToday?'#c084fc':'rgba(255,255,255,0.25)' }}>{labels[new Date(dateStr).getDay()]}</span>
+                                <span style={{ fontFamily:'Cinzel,serif', fontSize:7, color: isToday?'#c084fc':'rgba(255,255,255,0.25)' }}>{labels[new Date(dateStr + 'T12:00:00').getDay()]}</span>
                               </div>
                             );
                           })}
